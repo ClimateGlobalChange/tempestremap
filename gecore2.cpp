@@ -71,6 +71,15 @@ try {
 	meshOutput.ConstructEdgeMap();
 	AnnounceEndBlock(NULL);
 
+	// Construct the reverse node array on both meshes
+	AnnounceStartBlock("Constructing reverse node array on input mesh");
+	meshInput.ConstructReverseNodeArray();
+	AnnounceEndBlock(NULL);
+
+	AnnounceStartBlock("Constructing reverse node array on output mesh");
+	meshOutput.ConstructReverseNodeArray();
+	AnnounceEndBlock(NULL);
+
 	// Construct the overlap mesh
 	Mesh meshOverlap;
 

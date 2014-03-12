@@ -1,1 +1,14 @@
 *.swp
+*.o
+*.d
+*.bak
+*.g
+gecore2
+
+UnitTest
+
+MeshToTxt
+
+GenerateRLLMesh
+
+GenerateCSMesh

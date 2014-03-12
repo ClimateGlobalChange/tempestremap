@@ -384,12 +384,26 @@ public:
 		edges[ixPrev][1] = ixNode;
 	}
 
+public:
+	///	<summary>
+	///		Possible locations of nodes.
+	///	</summary>
+	enum NodeLocation {
+		NodeLocation_Exterior = 0,
+		NodeLocation_Default = NodeLocation_Exterior,
+		NodeLocation_Interior = 1,
+		NodeLocation_Edge = 2,
+		NodeLocation_Corner = 3
+	};
+
 	///	<summary>
 	///		Determine if this face contains the specified point.
 	///	</summary>
-	bool ContainsNode(
+	void ContainsNode(
 		const NodeVector & nodevec,
-		const Node & node
+		const Node & node,
+		NodeLocation & loc,
+		int & ixLocation
 	) const;
 };
 
@@ -397,6 +411,13 @@ public:
 ///		A vector of Faces.
 ///	</summary>
 typedef std::vector<Face> FaceVector;
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		A reverse node array stores all faces associated with a given node.
+///	</summary>
+typedef std::vector< std::set<int> > ReverseNodeArray;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -421,6 +442,11 @@ public:
 	///	</summary>
 	EdgeMap edgemap;
 
+	///	<summary>
+	///		ReverseNodeArray for this mesh.
+	///	</summary>
+	ReverseNodeArray revnodearray;
+
 public:
 	///	<summary>
 	///		Default constructor.
@@ -442,6 +468,11 @@ public:
 	void ConstructEdgeMap();
 
 	///	<summary>
+	///		Construct the ReverseNodeArray from the NodeVector and FaceVector.
+	///	</summary>
+	void ConstructReverseNodeArray();
+
+	///	<summary>
 	///		Write the mesh to a NetCDF file.
 	///	</summary>
 	void Write(const std::string & strFile) const;
@@ -452,6 +483,24 @@ public:
 	void Read(const std::string & strFile);
 
 };
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate all intersections between the two edges.
+///	</summary>
+///	<returns>
+///		Returns false if lines are coincident, true otherwise.
+///	</returns>
+bool CalculateEdgeIntersections(
+	const Node & nodeFirstBegin,
+	const Node & nodeFirstEnd,
+	const Edge::Type typeFirst,
+	const Node & nodeSecondBegin,
+	const Node & nodeSecondEnd,
+	const Edge::Type typeSecond,
+	std::vector<Node> & nodeIntersections
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 

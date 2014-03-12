@@ -25,6 +25,8 @@ GENERATECSMESH_FILES= GenerateCSMesh.cpp $(FILES)
 
 MESHTOTXT_FILES= MeshToTxt.cpp $(FILES)
 
+UNITTEST_FILES= UnitTest.cpp $(FILES)
+
 GECORE2_FILES= gecore2.cpp $(FILES)
 
 # Load system-specific defaults
@@ -36,7 +38,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh MeshToTxt gecore2
+all: GenerateRLLMesh GenerateCSMesh MeshToTxt UnitTest gecore2
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -47,6 +49,8 @@ GenerateCSMesh: $(GENERATECSMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt: $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
+UnitTest: $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -56,7 +60,7 @@ gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o)
 ## Clean
 ##
 clean:
-	rm -f GenerateRLLMesh GenerateCSMesh MeshToTxt gecore2 *.o
+	rm -f GenerateRLLMesh GenerateCSMesh MeshToTxt UnitTest gecore2 *.o
 	rm -rf $(DEPDIR)
 	rm -rf $(BUILDDIR)
 

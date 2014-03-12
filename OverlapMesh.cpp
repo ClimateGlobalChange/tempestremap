@@ -45,19 +45,57 @@ void GenerateOverlapMesh(
 			0.25 * (node0.z + node1.z + node2.z + node3.z));
 */
 		//printf("%1.10e %1.10e %1.10e\n", newnode.x, newnode.y, newnode.z);
-		bool fFound = false;
+
+		// Find the face(s) that contains this node
+		// Note: This algorithm can likely be dramatically improved
+		std::set<int> setStartingFaces;
+
 		for (int l = 0; l < meshSecond.faces.size(); l++) {
-			if (meshSecond.faces[l].ContainsNode(nodevecSecond, nodeBegin)) {
-				fFound = true;
+			Face::NodeLocation loc;
+			int ixLocation;
+
+			meshSecond.faces[l].ContainsNode(
+				nodevecSecond,
+				nodeBegin,
+				loc,
+				ixLocation);
+
+			if (loc == Face::NodeLocation_Interior) {
+				setStartingFaces.insert(l);
 				break;
+			}
+			if (loc == Face::NodeLocation_Edge) {
+				setStartingFaces.insert(l);
+			}
+			if (loc == Face::NodeLocation_Corner) {
+				setStartingFaces.insert(l);
 			}
 		}
 
-		if (!fFound) {
+		if (setStartingFaces.size() == 0) {
 			_EXCEPTIONT("Cannot find starting face");
 		}
 
-		// Find a face on the second mesh that overlaps this face
+		// Find the actual starting face
+		if (setStartingFaces.size() > 1) {
+
+			// Do something special
+		}
+
+		// Current face on second mesh
+		int ixSecondFace = *(setStartingFaces.begin());
+
+		// Trace along edge
+		for (;;) {
+			// Equation for edge: For a great circle arc
+
+			// Find all intersections between this edge and the second face
+			const Face & faceCurrent = meshSecond.faces[ixSecondFace];
+			for (int i = 0; i < faceCurrent.edges.size(); i++) {
+
+			}
+			break;
+		}
 
 		// Look at neighboring faces and check for overlap
 	}
