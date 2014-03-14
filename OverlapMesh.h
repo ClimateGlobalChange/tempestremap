@@ -21,6 +21,21 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Find the face(s) in mesh that contain node.
+///	</summary>
+void FindFaceFromNode(
+	const Mesh & mesh,
+	const Node & node,
+	std::set<int> & setFaceIndices
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the mesh obtained by overlapping meshes meshFirst and
+///		meshSecond.
+///	</summary>
 void GenerateOverlapMesh(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,

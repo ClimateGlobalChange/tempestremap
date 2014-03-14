@@ -87,6 +87,11 @@ try {
 	GenerateOverlapMesh(meshInput, meshOutput, meshOverlap);
 	AnnounceEndBlock(NULL);
 
+	// Write the overlap mesh
+	AnnounceStartBlock("Writing overlap mesh");
+	meshOverlap.Write("overlap.g");
+	AnnounceEndBlock(NULL);
+
 	AnnounceBanner();
 
 } catch(Exception & e) {

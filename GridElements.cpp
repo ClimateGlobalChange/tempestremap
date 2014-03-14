@@ -118,6 +118,15 @@ void Face::ContainsNode(
 /// Mesh
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::Clear() {
+	nodes.clear();
+	faces.clear();
+	edgemap.clear();
+	revnodearray.clear();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::ConstructEdgeMap() {
 
 	// Construct the edge map
@@ -390,7 +399,8 @@ bool CalculateEdgeIntersections(
 	const Node & nodeSecondBegin,
 	const Node & nodeSecondEnd,
 	const Edge::Type typeSecond,
-	std::vector<Node> & nodeIntersections
+	std::vector<Node> & nodeIntersections,
+	bool fIncludeFirstBeginNode
 ) {
 	static const double Tolerance = 1.0e-12;
 
@@ -416,6 +426,14 @@ bool CalculateEdgeIntersections(
 		node22 = nodeSecondEnd;
 	}
 
+	// Check for coincident nodes
+	if (node11 == node12) {
+		_EXCEPTIONT("Coincident nodes used to define edge");
+	}
+	if (node21 == node22) {
+		_EXCEPTIONT("Coincident nodes used to define edge");
+	}
+
 	// Clear the intersection vector
 	nodeIntersections.clear();
 
@@ -423,72 +441,214 @@ bool CalculateEdgeIntersections(
 	if ((typeFirst  == Edge::Type_GreatCircleArc) &&
 		(typeSecond == Edge::Type_GreatCircleArc)
 	) {
-		double dDenom =
-			+ node11.x * (node12.y * node21.z - node12.z * node21.y)
-			- node11.y * (node12.x * node21.z - node12.z * node21.x)
-			+ node11.z * (node12.x * node21.y - node12.y * node21.x);
+		// n11 dot n12
+		double dN11oN12 =
+			+ node11.x * node12.x
+			+ node11.y * node12.y
+			+ node11.z * node12.z;
 
-		double dNumerA =
-			+ node12.x * (node21.y * node22.z - node21.z * node22.y)
-			- node12.y * (node21.x * node22.z - node21.z * node22.x)
-			+ node12.z * (node21.x * node22.y - node21.y * node22.x);
+		// Cross product of second vectors
+		Node nodeN21xN22(
+			+ node21.y * node22.z - node21.z * node22.y,
+			- node21.x * node22.z + node21.z * node22.x,
+			+ node21.x * node22.y - node21.y * node22.x);
 
-		double dNumerB =
-			- node11.x * (node21.y * node22.z - node21.z * node22.y)
-			+ node11.y * (node21.x * node22.z - node21.z * node22.x)
-			- node11.z * (node21.x * node22.y - node21.y * node22.x);
+		// Other Cross products
+		Node nodeN12xN21(
+			+ node12.y * node21.z - node12.z * node21.y,
+			- node12.x * node21.z + node12.z * node21.x,
+			+ node12.x * node21.y - node12.y * node21.x);
+
+		Node nodeN12xN22(
+			+ node12.y * node22.z - node12.z * node22.y,
+			- node12.x * node22.z + node12.z * node22.x,
+			+ node12.x * node22.y - node12.y * node22.x);
+
+		// n12 dot (n21 cross n22)
+		double dN12oN21xN22 =
+			+ node12.x * nodeN21xN22.x
+			+ node12.y * nodeN21xN22.y
+			+ node12.z * nodeN21xN22.z;
+
+		// n11 dot (n21 cross n22)
+		double dN11oN21xN22 =
+			+ node11.x * nodeN21xN22.x
+			+ node11.y * nodeN21xN22.y
+			+ node11.z * nodeN21xN22.z;
+
+		// Check if all four vectors lay in the same plane (coincident lines)
+		if ((fabs(dN11oN21xN22) < Tolerance) &&
+		    (fabs(dN12oN21xN22) < Tolerance)
+		) {
+			// If coincident, check for intersections
+			Node nodeN11xN12(
+				+ node11.y * node12.z - node11.z * node12.y,
+				- node11.x * node12.z + node11.z * node12.x,
+				+ node11.x * node12.y - node11.y * node12.x);
+
+			// Use the largest element of the cross product
+			double dA0;
+			double dA1;
+			double dB0;
+			double dB1;
+
+			if ((fabs(nodeN11xN12.x) > fabs(nodeN11xN12.y)) &&
+				(fabs(nodeN11xN12.x) > fabs(nodeN11xN12.z))
+			) {
+				dA0 = - node12.y * node21.z + node12.z * node21.y;
+				dA1 = - node12.y * node22.z + node12.z * node22.y;
+
+				dB0 = + node11.y * node21.z - node11.z * node21.y;
+				dB1 = + node11.y * node22.z - node11.z * node22.y;
+
+				dA0 /= - nodeN11xN12.x;
+				dA1 /= - nodeN11xN12.x;
+				dB0 /= - nodeN11xN12.x;
+				dB1 /= - nodeN11xN12.x;
+
+			} else if (
+				(fabs(nodeN11xN12.y) > fabs(nodeN11xN12.x)) &&
+				(fabs(nodeN11xN12.y) > fabs(nodeN11xN12.z))
+			) {
+				dA0 = - node12.x * node21.z + node12.z * node21.x;
+				dA1 = - node12.x * node22.z + node12.z * node22.x;
+
+				dB0 = + node11.x * node21.z - node11.z * node21.x;
+				dB1 = + node11.x * node22.z - node11.z * node22.x;
+
+				dA0 /= - nodeN11xN12.y;
+				dA1 /= - nodeN11xN12.y;
+				dB0 /= - nodeN11xN12.y;
+				dB1 /= - nodeN11xN12.y;
+
+			} else {
+				dA0 = - node12.x * node21.y + node12.y * node21.x;
+				dA1 = - node12.x * node22.y + node12.y * node22.x;
+
+				dB0 = + node11.x * node21.y - node11.y * node21.x;
+				dB1 = + node11.x * node22.y - node11.y * node22.x;
+
+				dA0 /= nodeN11xN12.z;
+				dA1 /= nodeN11xN12.z;
+				dB0 /= nodeN11xN12.z;
+				dB1 /= nodeN11xN12.z;
+			}
+
+			// Insert in order from FirstBegin to FirstEnd
+			if (dA0 < dA1) {
+				if ((dA0 > -Tolerance) && (dB0 > -Tolerance)) {
+					nodeIntersections.push_back(node21);
+				}
+				if ((dA1 > -Tolerance) && (dB1 > -Tolerance)) {
+					nodeIntersections.push_back(node22);
+				}
+			} else {
+				if ((dA1 > -Tolerance) && (dB1 > -Tolerance)) {
+					nodeIntersections.push_back(node22);
+				}
+				if ((dA0 > -Tolerance) && (dB0 > -Tolerance)) {
+					nodeIntersections.push_back(node21);
+				}
+			}
+
+			// Remove intersections that coincide with the first begin node
+			if (!fIncludeFirstBeginNode) {
+				for (int i = 0; i < nodeIntersections.size(); i++) {
+					if (nodeIntersections[i] == nodeFirstBegin) {
+						nodeIntersections.erase(nodeIntersections.begin()+i);
+					}
+				}
+			}
+
+			return true;
+		}
+
+		// Solution coefficients
+		double dA0;
+		double dB0;
+		double dC0;
+		double dD0;
 
 		double dNumerC =
-			- node11.x * (node12.y * node22.z - node12.z * node22.y)
-			+ node11.y * (node12.x * node22.z - node12.z * node22.x)
-			- node11.z * (node12.x * node22.y - node12.y * node22.x);
+			+ node11.x * nodeN12xN22.x
+			+ node11.y * nodeN12xN22.y
+			+ node11.z * nodeN12xN22.z;
 
-		if (dDenom == 0.0) {
-			_EXCEPTIONT("Coincident nodes");
+		double dNumerD =
+			+ node11.x * nodeN12xN21.x
+			+ node11.y * nodeN12xN21.y
+			+ node11.z * nodeN12xN21.z;
+
+		// node12 is farthest from the plane defining node21 and node22
+		if (fabs(dN11oN21xN22) < fabs(dN12oN21xN22)) {
+
+			double dNumerB =
+				+ node11.x * nodeN21xN22.x
+				+ node11.y * nodeN21xN22.y
+				+ node11.z * nodeN21xN22.z;
+
+			double dMB = - dNumerB / dN12oN21xN22;
+			double dMC = - dNumerC / dN12oN21xN22;
+			double dMD = + dNumerD / dN12oN21xN22;
+
+			double dDenom = dMB * dMB + 2.0 * dMB * dN11oN12 + 1.0;
+
+			if (fabs(dDenom) < Tolerance) {
+				_EXCEPTIONT("Unknown case");
+			}
+
+			dA0 = 1.0 / sqrt(dDenom);
+			dB0 = dA0 * dMB;
+			dC0 = dA0 * dMC;
+			dD0 = dA0 * dMD;
+
+		// node11 is farthest from the plane defining node21 and node22
+		} else {
+
+			double dNumerA =
+				+ node12.x * nodeN21xN22.x
+				+ node12.y * nodeN21xN22.y
+				+ node12.z * nodeN21xN22.z;
+
+			double dMA = - dNumerA / dN11oN21xN22;
+			double dMC = + dNumerC / dN11oN21xN22;
+			double dMD = - dNumerD / dN11oN21xN22;
+
+			double dDenom = dMA * dMA + 2.0 * dMA * dN11oN12 + 1.0;
+
+			if (fabs(dDenom) < Tolerance) {
+				_EXCEPTIONT("Unknown case");
+			}
+
+			dB0 = 1.0 / sqrt(dDenom);
+			dA0 = dB0 * dMA;
+			dC0 = dB0 * dMC;
+			dD0 = dB0 * dMD;
 		}
 
-		double dMA = dNumerA / dDenom;
-		double dMB = dNumerB / dDenom;
-		double dMC = dNumerC / dDenom;
-
-		double dDotNode =
-			node11.x * node12.x + node11.y * node12.y + node11.z * node12.z;
-
-		double dDenomD =
-			+ dMA * dMA + 2.0 * dMA * dMB * dDotNode + dMB * dMB;
-
-		if (fabs(dDenomD) < Tolerance) {
-			return false;
-		}
-
-		double dD0 = + 1.0 / sqrt(dDenomD);
-		double dD1 = - dD0;
-
-		if ((dMA > -Tolerance) &&
-			(dMB > -Tolerance) &&
-			(dMC > -Tolerance) &&
+		// Check if first solution lies within interval
+		if ((dA0 > -Tolerance) &&
+			(dB0 > -Tolerance) &&
+			(dC0 > -Tolerance) &&
 			(dD0 > -Tolerance)
 		) {
-			nodeIntersections.resize(1);
+			nodeIntersections.push_back(Node(
+				(node11.x * dA0 + node12.x * dB0),
+				(node11.y * dA0 + node12.y * dB0),
+				(node11.z * dA0 + node12.z * dB0)));
 
-			nodeIntersections[0].x =
-				(node11.x * dMA + node12.x * dMB) * dD0;
-			nodeIntersections[0].y =
-				(node11.y * dMA + node12.y * dMB) * dD0;
-			nodeIntersections[0].z =
-				(node11.z * dMA + node12.z * dMB) * dD0;
+		// Check if second solution lies within interval
+		} else if (
+			(dA0 < Tolerance) &&
+			(dB0 < Tolerance) &&
+			(dC0 < Tolerance) &&
+			(dD0 < Tolerance)
+		) {
+			nodeIntersections.push_back(Node(
+				- (node11.x * dA0 + node12.x * dB0),
+				- (node11.y * dA0 + node12.y * dB0),
+				- (node11.z * dA0 + node12.z * dB0)));
 		}
-/*
-		if ((dMA < 0.0) && (dMB < 0.0)) {
-			nodeIntersections[1].x =
-				(node11.x * dMA + node12.x * dMB) * dD1;
-			nodeIntersections[1].y =
-				(node11.y * dMA + node12.y * dMB) * dD1;
-			nodeIntersections[1].z =
-				(node11.z * dMA + node12.z * dMB) * dD1;
-		}
-*/
-		return true;
 
 	// First edge is a line of constant latitude; second is a great circle arc
 	} else if (
@@ -507,9 +667,10 @@ bool CalculateEdgeIntersections(
 			// Check for equatorial great circle arc
 			if (fabs(node12.z) < Tolerance) {
 				if (fabs(node21.z) < Tolerance) {
-					return false;
-				} else {
+					_EXCEPTIONT("Not implemented");
 					return true;
+				} else {
+					return false;
 				}
 			}
 
@@ -687,17 +848,16 @@ bool CalculateEdgeIntersections(
 			}
 		}
 
-		return true;
-
 	// Both edges are lines of constant latitude
 	} else if (
 		(typeFirst  == Edge::Type_ConstantLatitude) &&
 		(typeSecond == Edge::Type_ConstantLatitude)
 	) {
 		if (fabs(node11.z - node21.z) < Tolerance) {
-			return false;
-		} else {
+			_EXCEPTIONT("Not implemented");
 			return true;
+		} else {
+			return false;
 		}
 
 	// Unknown
@@ -705,7 +865,16 @@ bool CalculateEdgeIntersections(
 		_EXCEPTIONT("Invalid Edge::Type");
 	}
 
-	_EXCEPTION();
+	// If the begin node is not to be included, erase from intersections
+	if (!fIncludeFirstBeginNode) {
+		for (int i = 0; i < nodeIntersections.size(); i++) {
+			if (nodeIntersections[i] == nodeFirstBegin) {
+				nodeIntersections.erase(nodeIntersections.begin()+i);
+			}
+		}
+	}
+
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

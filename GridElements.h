@@ -23,6 +23,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include <cmath>
 
 #include "Exception.h"
 
@@ -63,6 +64,21 @@ public:
 		y(_y),
 		z(_z)
 	{ }
+
+	///	<summary>
+	///		Equality operator using floating point tolerance.
+	///	</summary>
+	bool operator== (const Node & node) const {
+		static const double Tolerance = 1.0e-12;
+
+		if ((fabs(x - node.x) < Tolerance) &&
+			(fabs(y - node.y) < Tolerance) &&
+			(fabs(z - node.z) < Tolerance)
+		) {
+			return true;
+		}
+		return false;
+	}
 };
 
 ///	<summary>
@@ -323,6 +339,8 @@ typedef EdgeMap::value_type EdgeMapPair;
 
 typedef EdgeMap::iterator EdgeMapIterator;
 
+typedef EdgeMap::const_iterator EdgeMapConstIterator;
+
 typedef std::vector<EdgeMap::iterator> EdgeMapIteratorVector;
 
 typedef std::set<Edge> EdgeSet;
@@ -463,6 +481,11 @@ public:
 
 public:
 	///	<summary>
+	///		Clear the contents of the mesh.
+	///	</summary>
+	void Clear();
+
+	///	<summary>
 	///		Construct the EdgeMap from the NodeVector and FaceVector.
 	///	</summary>
 	void ConstructEdgeMap();
@@ -490,7 +513,10 @@ public:
 ///		Calculate all intersections between the two edges.
 ///	</summary>
 ///	<returns>
-///		Returns false if lines are coincident, true otherwise.
+///		Returns true if lines are coincident, false otherwise.
+///
+///		If lines are coincident, intersections includes any nodes of Second
+///		that are contained in First, ordered from FirstBegin to FirstEnd.
 ///	</returns>
 bool CalculateEdgeIntersections(
 	const Node & nodeFirstBegin,
@@ -499,7 +525,8 @@ bool CalculateEdgeIntersections(
 	const Node & nodeSecondBegin,
 	const Node & nodeSecondEnd,
 	const Edge::Type typeSecond,
-	std::vector<Node> & nodeIntersections
+	std::vector<Node> & nodeIntersections,
+	bool fIncludeFirstBeginNode = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////
