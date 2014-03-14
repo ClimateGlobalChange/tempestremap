@@ -79,6 +79,13 @@ public:
 		}
 		return false;
 	}
+
+	///	<summary>
+	///		Magnitude of this node.
+	///	</summary>
+	double Magnitude() const {
+		return sqrt(x * x + y * y + z * z);
+	}
 };
 
 ///	<summary>
@@ -149,6 +156,12 @@ public:
 		node[1] = node1;
 		type = _type;
 	}
+
+	///	<summary>
+	///		Virtual destructor.
+	///	</summary>
+	virtual ~Edge()
+	{ }
 
 	///	<summary>
 	///		Flip the order of the nodes stored in the segment.  Note that this
@@ -381,17 +394,6 @@ public:
 	}
 
 	///	<summary>
-	///		Edge accessor.
-	///	</summary>
-	inline const Edge & GetEdge(int ix) const {
-		return edges[ix];
-	}
-
-	inline Edge & GetEdge(int ix) {
-		return edges[ix];
-	}
-
-	///	<summary>
 	///		Set a node.
 	///	</summary>
 	void SetNode(int ixLocal, int ixNode) {
@@ -415,7 +417,8 @@ public:
 	};
 
 	///	<summary>
-	///		Determine if this face contains the specified point.
+	///		Determine if this face contains the specified point, and whether
+	///		the point is along an edge or at a corner.
 	///	</summary>
 	void ContainsNode(
 		const NodeVector & nodevec,
@@ -527,6 +530,19 @@ bool CalculateEdgeIntersections(
 	const Edge::Type typeSecond,
 	std::vector<Node> & nodeIntersections,
 	bool fIncludeFirstBeginNode = true
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the node which is a small increment closer to nodeEnd
+///		from nodeBegin.
+///	</summary>
+void NudgeAlongEdge(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type type,
+	Node & nodeNudged
 );
 
 ///////////////////////////////////////////////////////////////////////////////

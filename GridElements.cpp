@@ -317,7 +317,7 @@ void Mesh::Write(const std::string & strFile) const {
 	int * nEdgeType = new int[NodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
 		for (int k = 0; k < NodesPerElement; k++) {
-			nEdgeType[k] = static_cast<int>(faces[i].GetEdge(k).type);
+			nEdgeType[k] = static_cast<int>(faces[i].edges[k].type);
 		}
 		varEdgeTypes->set_cur(i, 0);
 		varEdgeTypes->put(nEdgeType, 1, NodesPerElement);
@@ -381,10 +381,10 @@ void Mesh::Read(const std::string & strFile) {
 	for (int i = 0; i < nElementCount; i++) {
 		varEdgeTypes->set_cur(i, 0);
 		varEdgeTypes->get(nEdgeTypes, 1, NodesPerElement);
-		faces[i].GetEdge(0).type = static_cast<Edge::Type>(nEdgeTypes[0]);
-		faces[i].GetEdge(1).type = static_cast<Edge::Type>(nEdgeTypes[1]);
-		faces[i].GetEdge(2).type = static_cast<Edge::Type>(nEdgeTypes[2]);
-		faces[i].GetEdge(3).type = static_cast<Edge::Type>(nEdgeTypes[3]);
+		faces[i].edges[0].type = static_cast<Edge::Type>(nEdgeTypes[0]);
+		faces[i].edges[1].type = static_cast<Edge::Type>(nEdgeTypes[1]);
+		faces[i].edges[2].type = static_cast<Edge::Type>(nEdgeTypes[2]);
+		faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
 	}
 }
 
@@ -878,3 +878,53 @@ bool CalculateEdgeIntersections(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void NudgeAlongEdge(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type type,
+	Node & nodeNudged
+) {
+	static const double Nudge = 1.0e-5;
+
+	Node nodeDelta(
+		nodeEnd.x - nodeBegin.x,
+		nodeEnd.y - nodeBegin.y,
+		nodeEnd.z - nodeBegin.z);
+
+	double dModNudge = Nudge / nodeDelta.Magnitude();
+
+	// Edge is a great circle arc
+	if (type == Edge::Type_GreatCircleArc) {
+
+		nodeNudged.x = nodeBegin.x * (1.0 - dModNudge) + dModNudge * nodeEnd.x;
+		nodeNudged.y = nodeBegin.y * (1.0 - dModNudge) + dModNudge * nodeEnd.y;
+		nodeNudged.z = nodeBegin.z * (1.0 - dModNudge) + dModNudge * nodeEnd.z;
+
+		double dAbsNodeNudge = nodeNudged.Magnitude();
+
+		nodeNudged.x /= dAbsNodeNudge;
+		nodeNudged.y /= dAbsNodeNudge;
+		nodeNudged.z /= dAbsNodeNudge;
+
+	// Edge is a line of constant latitude
+	} else if (type == Edge::Type_ConstantLatitude) {
+		nodeNudged.x = nodeBegin.x * (1.0 - dModNudge) + dModNudge * nodeEnd.x;
+		nodeNudged.y = nodeBegin.y * (1.0 - dModNudge) + dModNudge * nodeEnd.y;
+		nodeNudged.z = nodeBegin.z;
+
+		double dAbsNodeNudge =
+			sqrt(nodeNudged.x * nodeNudged.x + nodeNudged.y * nodeNudged.y);
+
+		double dRadius = sqrt(1.0 - nodeNudged.z * nodeNudged.z);
+
+		nodeNudged.x *= dRadius / dAbsNodeNudge;
+		nodeNudged.y *= dRadius / dAbsNodeNudge;
+
+	} else {
+		_EXCEPTIONT("Invalid edge");
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+

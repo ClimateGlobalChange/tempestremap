@@ -137,7 +137,7 @@ void TestEdgeIntersections01() {
 		node21, node22, Edge::Type_GreatCircleArc,
 		nodeIntersections);
 
-	if (!fFound) {
+	if (fFound) {
 		printf("(d) Coincident lines\n");
 	} else {
 		printf("(d) Non-coincident lines\n");

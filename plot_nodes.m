@@ -7,8 +7,11 @@ set(hf, 'Position', [100 100 600 600]);
 % Plot nodes
 nodes = load(nodefile);
 
-plot3(nodes(:,1), nodes(:,2), nodes(:,3), 'k.');
-
+plot3(nodes(1:82,1), nodes(1:82,2), nodes(1:82,3), 'k.');
+hold on;
+nn = size(nodes,1);
+plot3(nodes(83:nn,1), nodes(83:nn,2), nodes(83:nn,3), 'r.');
+hold off;
 grid;
 
 % Plot faces

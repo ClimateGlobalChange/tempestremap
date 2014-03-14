@@ -27,7 +27,38 @@
 void FindFaceFromNode(
 	const Mesh & mesh,
 	const Node & node,
-	std::set<int> & setFaceIndices
+	std::vector<int> & vecFaceIndices
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Find the face index in mesh that is near nodeBegin and is found by
+///		traveling towards nodeEnd along an edge of type edgetype.  Only faces
+///		from vecPossibleFaces are considered.
+///	</summary>
+void FindFaceNearNode(
+	const Mesh & mesh,
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type edgetype,
+	const std::vector<int> & vecPossibleFaces,
+	std::vector<int> & vecFaceIndices
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Find the face index in mesh that is near the node with index ixNode
+///		and is found by traveling towards nodeEnd along an edge of type
+///		edgetype.
+///	</summary>
+void FindFaceNearNode(
+	const Mesh & mesh,
+	int ixNode,
+	const Node & nodeEnd,
+	const Edge::Type edgetype,
+	std::vector<int> & vecFaceIndices
 );
 
 ///////////////////////////////////////////////////////////////////////////////
