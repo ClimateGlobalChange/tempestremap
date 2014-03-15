@@ -11,7 +11,10 @@ plot3(nodes(1:82,1), nodes(1:82,2), nodes(1:82,3), 'k.');
 hold on;
 nn = size(nodes,1);
 plot3(nodes(83:nn,1), nodes(83:nn,2), nodes(83:nn,3), 'r.');
+%gix=17;
+%plot3(nodes(gix,1), nodes(gix,2), nodes(gix,3), 'g.');
 hold off;
+
 grid;
 
 % Plot faces

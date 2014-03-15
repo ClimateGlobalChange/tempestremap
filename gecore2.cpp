@@ -80,6 +80,7 @@ try {
 	meshOutput.ConstructReverseNodeArray();
 	AnnounceEndBlock(NULL);
 
+#pragma message "Need to deal with coincident nodes on First and Second mesh"
 	// Construct the overlap mesh
 	Mesh meshOverlap;
 

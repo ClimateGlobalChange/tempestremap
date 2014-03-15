@@ -232,6 +232,10 @@ public:
 	///		Equality operator.
 	///	</summary>
 	bool operator==(const Edge & edge) const {
+		if (edge.type != type) {
+			return false;
+		}
+
 		if ((node[0] == edge.node[0]) &&
 			(node[1] == edge.node[1])
 		) {

@@ -661,8 +661,8 @@ bool CalculateEdgeIntersections(
 		double dCrossY = - node11.x * node12.z + node11.z * node12.x;
 		double dCrossZ = + node11.x * node12.y - node11.y * node12.x;
 
-		// Case when node11.z is on the equator
-		if (fabs(node11.z) < Tolerance) {
+		// node12.z is larger than node11.z
+		if (fabs(node11.z) < fabs(node12.z)) {
 
 			// Check for equatorial great circle arc
 			if (fabs(node12.z) < Tolerance) {
@@ -759,7 +759,7 @@ bool CalculateEdgeIntersections(
 				}
 			}
 
-		// Case when node11.z is not on the equator
+		// node11.z is larger than node12.z
 		} else {
 
 			// Quadratic coefficients, used to solve for B
@@ -893,6 +893,10 @@ void NudgeAlongEdge(
 		nodeEnd.z - nodeBegin.z);
 
 	double dModNudge = Nudge / nodeDelta.Magnitude();
+
+	if (fabs(dModNudge) < 1.0e-12) {
+		_EXCEPTIONT("Coincident Begin and End nodes");
+	}
 
 	// Edge is a great circle arc
 	if (type == Edge::Type_GreatCircleArc) {
