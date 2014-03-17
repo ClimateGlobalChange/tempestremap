@@ -99,8 +99,8 @@ try {
 		face.SetNode(2, (i+1) % nLongitudes + 1);
 		face.SetNode(3, 0);
 
-		face.GetEdge(1).type = Edge::Type_ConstantLatitude;
-		face.GetEdge(3).type = Edge::Type_ConstantLatitude;
+		face.edges[1].type = Edge::Type_ConstantLatitude;
+		face.edges[3].type = Edge::Type_ConstantLatitude;
 
 		faces.push_back(face);
 	}
@@ -117,8 +117,8 @@ try {
 			face.SetNode(2, iNextLatNodeIx + (i + 1) % nLongitudes);
 			face.SetNode(3, iThisLatNodeIx + (i + 1) % nLongitudes);
 
-			face.GetEdge(1).type = Edge::Type_ConstantLatitude;
-			face.GetEdge(3).type = Edge::Type_ConstantLatitude;
+			face.edges[1].type = Edge::Type_ConstantLatitude;
+			face.edges[3].type = Edge::Type_ConstantLatitude;
 
 			faces.push_back(face);
 		}
@@ -135,8 +135,8 @@ try {
 			face.SetNode(2, iThisLatNodeIx + i);
 			face.SetNode(3, iNorthPolarNodeIx);
 
-			face.GetEdge(1).type = Edge::Type_ConstantLatitude;
-			face.GetEdge(3).type = Edge::Type_ConstantLatitude;
+			face.edges[1].type = Edge::Type_ConstantLatitude;
+			face.edges[3].type = Edge::Type_ConstantLatitude;
 
 			faces.push_back(face);
 		}

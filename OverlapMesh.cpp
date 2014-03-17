@@ -625,36 +625,21 @@ void GenerateOverlapMesh(
 		}
 
 		///////////////////////////////////////////////////////////////////////
-		// Build the SubMesh associated with this face
-/*
-		// Build a set of all nodes on the boundary of faceFirstCurrent
-		std::map<int, int> mapExitNodes;
-		std::map<int, int> mapExitEdges;
-		for (int j = 0; j < vecTracedPath.size(); j++) {
-			if (vecTracedPath[j].inttype == IntersectType_Node) {
-				mapExitNodes.insert(
-					std::pair<int,int>(
-						vecTracedPath[j][0],
-						(j+1) % vecTracedPath.size()));
-			}
-			if (vecTracedPath[j].inttype == IntersectType_Edge) {
-				mapExitEdges.insert(
-					std::pair<int,int>(
-						vecTracedPath[j][0],
-						(j+1) % vecTracedPath.size()));
-			}
-		}
-*/
+		// Find faces associated with the TracedPath
+
 		// Array indicating which elements of vecTracedPath have been used
 		std::vector<bool> vecTracedPathUsed;
 		vecTracedPathUsed.resize(vecTracedPath.size(), false);
 
 		// The set of interior faces (from the Second mesh)
-		std::set<int> setInteriorFaces;
+		std::set<int> setSecondFacesAdded;
 		for (int j = 0; j < vecTracedPath.size(); j++) {
-			setInteriorFaces.insert(vecTracedPath[j].ixSecondFace);
+			setSecondFacesAdded.insert(vecTracedPath[j].ixSecondFace);
 			//printf("%i %i %i\n", vecTracedPath[j][0], vecTracedPath[j][1], vecTracedPath[j].ixSecondFace);
 		}
+
+		// Set of faces from meshSecond that should be added
+		std::set<int> setSecondFacesToAdd;
 
 		// Loop through all possible starting PathSegments
 		for (int j = 0; j < vecTracedPath.size(); j++) {
@@ -717,6 +702,18 @@ void GenerateOverlapMesh(
 					const Edge & edgeSecondCurrent =
 						faceSecondCurrent.edges[ixCurrentSecondEdge];
 
+					// Identical endpoints; advance the edge
+					if (edgeSecondCurrent[0] == edgeSecondCurrent[1]) {
+						ixCurrentSecondEdge =
+							(ixCurrentSecondEdge + 1)
+								% faceSecondCurrent.edges.size();
+
+						ixCurrentOverlapNode =
+							ixOverlapSecondNodesBegin + edgeSecondCurrent[1];
+
+						continue;
+					}
+
 					// Determine if this edge exits onto FirstMesh
 					int ixExitNode = InvalidNode;
 
@@ -768,6 +765,24 @@ void GenerateOverlapMesh(
 						}
 					}
 
+					// Add the interior face to the list of faces to be added
+					EdgeMapConstIterator iter =
+						meshSecond.edgemap.find(edgeSecondCurrent);
+
+					if (iter == meshSecond.edgemap.end()) {
+						_EXCEPTIONT("Logic error");
+					}
+
+					const FacePair & facepair = iter->second;
+
+					if (facepair[0] == ixCurrentSecondFace) {
+						setSecondFacesToAdd.insert(facepair[1]);
+					} else if (facepair[1] == ixCurrentSecondFace) {
+						setSecondFacesToAdd.insert(facepair[0]);
+					} else {
+						_EXCEPTIONT("Logic error");
+					}
+
 					// An exit node is found
 					if (ixExitNode != InvalidNode) {
 
@@ -799,7 +814,7 @@ void GenerateOverlapMesh(
 						ixOverlapSecondNodesBegin + edgeSecondCurrent[0],
 						ixOverlapSecondNodesBegin + edgeSecondCurrent[1]);
 
-					// Push this edge into the overlap face
+					// Push this edge into the overlap mesh
 					faceOverlap.edges.push_back(Edge(
 						ixCurrentOverlapNode,
 						ixOverlapSecondNodesBegin + edgeSecondCurrent[1],
@@ -839,8 +854,31 @@ ContinueToNextFace:
 			}
 		}
 
-		// FIX:REMOVE
-		//break;
+		///////////////////////////////////////////////////////////////////////
+		// Find interior faces from meshSecond to add to meshOverlap
+
+		// Remove added faces from set of faces to add
+		std::set<int>::iterator iterToAdd;
+		std::set<int>::iterator iterAdded = setSecondFacesAdded.begin();
+		for (; iterAdded != setSecondFacesAdded.end(); iterAdded++) {
+			iterToAdd = setSecondFacesToAdd.find(*iterAdded);
+
+			if (iterToAdd != setSecondFacesToAdd.end()) {
+				setSecondFacesToAdd.erase(iterToAdd);
+			}
+		}
+
+		iterToAdd = setSecondFacesToAdd.begin();
+		for (; iterToAdd != setSecondFacesToAdd.end(); iterToAdd++) {
+			Face face = meshSecond.faces[*iterToAdd];
+
+			for (int i = 0; i < face.edges.size(); i++) {
+				face.edges[i][0] += ixOverlapSecondNodesBegin;
+				face.edges[i][1] += ixOverlapSecondNodesBegin;
+			}
+
+			meshOverlap.faces.push_back(face);
+		}
 	}
 /*
 	meshOverlap.faces.clear();

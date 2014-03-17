@@ -174,7 +174,15 @@ void Mesh::ConstructReverseNodeArray() {
 void Mesh::Write(const std::string & strFile) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
-	const int NodesPerElement = 4;
+
+	// Determine the maximum number of nodes per element
+	int nNodesPerElement = 0;
+	for (int i = 0; i < faces.size(); i++) {
+		if (faces[i].edges.size() > nNodesPerElement) {
+			nNodesPerElement = faces[i].edges.size();
+		}
+	}
+	Announce("Max nodes per element: %i", nNodesPerElement);
 
 	// Output to a NetCDF Exodus file
 	NcFile ncOut(strFile.c_str(), NcFile::Replace);
@@ -198,7 +206,8 @@ void Mesh::Write(const std::string & strFile) const {
 	NcDim * dimNumElementBlocks = ncOut.add_dim("num_el_blk", 1);
 	NcDim * dimNumQARec = ncOut.add_dim("num_qa_rec", 1);
 	NcDim * dimElementBlock1 = ncOut.add_dim("num_el_in_blk1", nElementCount);
-	NcDim * dimNodesPerElement = ncOut.add_dim("num_nod_per_el1", 4);
+	NcDim * dimNodesPerElement =
+		ncOut.add_dim("num_nod_per_el1", nNodesPerElement);
 	NcDim * dimAttBlock1 = ncOut.add_dim("num_att_in_blk1", 1);
 
 	// Global attributes
@@ -276,20 +285,19 @@ void Mesh::Write(const std::string & strFile) const {
 
 	varFaces->add_att("elem_type", "SHELL4");
 
-	int * nConnect = new int[NodesPerElement];
+	int * nConnect = new int[nNodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
-		if (faces[i].edges.size() == 3) {
-			for (int k = 0; k < 3; k++) {
-				nConnect[k] = faces[i][k] + 1;
-			}
-			nConnect[3] = nConnect[2];
-		} else {
-			for (int k = 0; k < NodesPerElement; k++) {
-				nConnect[k] = faces[i][k] + 1;
-			}
+		int nEdges = faces[i].edges.size();
+		int k = 0;
+		for (; k < nEdges; k++) {
+			nConnect[k] = faces[i][k] + 1;
 		}
+		for (; k < nNodesPerElement; k++) {
+			nConnect[k] = nConnect[nEdges-1];
+		}
+
 		varFaces->set_cur(i, 0);
-		varFaces->put(nConnect, 1, NodesPerElement);
+		varFaces->put(nConnect, 1, nNodesPerElement);
 	}
 
 	delete[] nConnect;
@@ -321,13 +329,13 @@ void Mesh::Write(const std::string & strFile) const {
 		ncOut.add_var("edge_type", ncInt,
 			dimElementBlock1, dimNodesPerElement);
 
-	int * nEdgeType = new int[NodesPerElement];
+	int * nEdgeType = new int[nNodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
-		for (int k = 0; k < NodesPerElement; k++) {
+		for (int k = 0; k < nNodesPerElement; k++) {
 			nEdgeType[k] = static_cast<int>(faces[i].edges[k].type);
 		}
 		varEdgeTypes->set_cur(i, 0);
-		varEdgeTypes->put(nEdgeType, 1, NodesPerElement);
+		varEdgeTypes->put(nEdgeType, 1, nNodesPerElement);
 	}
 	delete[] nEdgeType;
 }
@@ -336,10 +344,12 @@ void Mesh::Write(const std::string & strFile) const {
 
 void Mesh::Read(const std::string & strFile) {
 
-	const int NodesPerElement = 4;
-
 	// Input from a NetCDF Exodus file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
+
+	// Determine number of nodes per element
+	NcDim * dimNodesPerElement = ncFile.get_dim("num_nod_per_el1");
+	int nNodesPerElement = dimNodesPerElement->size();
 
 	// Number of nodes
 	NcDim * dimNodes = ncFile.get_dim("num_nodes");
@@ -367,32 +377,34 @@ void Mesh::Read(const std::string & strFile) {
 	}
 
 	// Load in face array
-	faces.resize(nElementCount, Face(4));
+	faces.resize(nElementCount, Face(nNodesPerElement));
 
 	NcVar * varFaces = ncFile.get_var("connect1");
 
-	int nNodes[NodesPerElement];
+	int * nNodes = new int[nNodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
 		varFaces->set_cur(i, 0);
-		varFaces->get(nNodes, 1, NodesPerElement);
-		faces[i].SetNode(0, nNodes[0]-1);
-		faces[i].SetNode(1, nNodes[1]-1);
-		faces[i].SetNode(2, nNodes[2]-1);
-		faces[i].SetNode(3, nNodes[3]-1);
+		varFaces->get(nNodes, 1, nNodesPerElement);
+
+		for (int j = 0; j < nNodesPerElement; j++) {
+			faces[i].SetNode(j, nNodes[j]-1);
+		}
 	}
+	delete[] nNodes;
 
 	// Load in edge type array
 	NcVar * varEdgeTypes = ncFile.get_var("edge_type");
 
-	int nEdgeTypes[NodesPerElement];
+	int * nEdgeTypes = new int[nNodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
 		varEdgeTypes->set_cur(i, 0);
-		varEdgeTypes->get(nEdgeTypes, 1, NodesPerElement);
+		varEdgeTypes->get(nEdgeTypes, 1, nNodesPerElement);
 		faces[i].edges[0].type = static_cast<Edge::Type>(nEdgeTypes[0]);
 		faces[i].edges[1].type = static_cast<Edge::Type>(nEdgeTypes[1]);
 		faces[i].edges[2].type = static_cast<Edge::Type>(nEdgeTypes[2]);
 		faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
 	}
+	delete[] nEdgeTypes;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
