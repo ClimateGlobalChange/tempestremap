@@ -192,11 +192,14 @@ int FindFaceNearNode(
 				node1.y - node0.y,
 				node1.z - node0.z);
 
-			printf("%1.5e %1.5e %1.5e : %1.5e %1.5e %1.5e\n",
-				nodeDeltaA.x, nodeDeltaA.y, nodeDeltaA.z,
-				nodeDeltaB.x, nodeDeltaB.y, nodeDeltaB.z);
+			double dDot =
+				+ nodeDeltaA.x * nodeDeltaB.x
+				+ nodeDeltaA.y * nodeDeltaB.y
+				+ nodeDeltaA.z * nodeDeltaB.z;
 
-			_EXCEPTION();
+			if (dDot > 0.0) {
+				return ixPossibleFace;
+			}
 
 		} else if (loc == Face::NodeLocation_Corner) {
 			_EXCEPTIONT("Coincident nodes away from fixed node!");
@@ -205,7 +208,8 @@ int FindFaceNearNode(
 			return ixPossibleFace;
 		}
 	}
-	return 0;
+
+	_EXCEPTIONT("No face found matching criteria");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -279,7 +283,7 @@ int FindFaceNearNode(
 		}
 	}
 
-	_EXCEPTIONT("No face found!");
+	_EXCEPTIONT("No face found matching criteria");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -308,8 +312,8 @@ void GenerateOverlapMesh(
 	const int ixOverlapNewNodesBegin = meshOverlap.nodes.size();
 
 	int ixCurrentFirstFace = 0;
-	//for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	for (int ixCurrentFirstFace = 0; ixCurrentFirstFace < 9; ixCurrentFirstFace++) {
+	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 36; ixCurrentFirstFace < 41; ixCurrentFirstFace++) {
 
 		///////////////////////////////////////////////////////////////////////
 		// Build the PathSegmentVector around this face
@@ -352,6 +356,7 @@ void GenerateOverlapMesh(
 
 		printf("\nFaces: %i %i\n", ixCurrentFirstFace, ixCurrentSecondFace);
 
+#pragma message "Collapse these two loops into one loop"
 		// Trace along all edges of current face
 		for (int i = 0; i < faceFirstCurrent.edges.size(); i++) {
 
@@ -452,10 +457,9 @@ void GenerateOverlapMesh(
 				const Node & nodeSecondEdge1 =
 					nodevecSecond[edgeSecondCurrent[1]];
 
-				// Push new intersection into overlap array
-				int ixOverlapNodeNext =
-					static_cast<int>(meshOverlap.nodes.size());
+				int ixOverlapNodeNext;
 
+				// FirstEdge hits nodeSecondEdge0
 				if (nodeIntersections[0] == nodeSecondEdge0) {
 					ixOverlapNodeNext =
 						ixOverlapSecondNodesBegin + edgeSecondCurrent[0];
@@ -481,6 +485,8 @@ void GenerateOverlapMesh(
 
 					continue;
 				}
+
+				// FirstEdge hits nodeSecondEdge1
 				if (nodeIntersections[0] == nodeSecondEdge1) {
 					ixOverlapNodeNext =
 						ixOverlapSecondNodesBegin + edgeSecondCurrent[1];
@@ -509,56 +515,112 @@ void GenerateOverlapMesh(
 					continue;
 				}
 
-				// Intersection is exactly the end point of this edge
+				// Intersection with edge is exactly the end point of
+				// edgeFirstCurrent
 				if (nodeIntersections[0] ==
 				        meshOverlap.nodes[edgeFirstCurrent[1]]
 				) {
+					// Next edge
+					int iNext = (i + 1) % faceFirstCurrent.edges.size();
+
+					const Edge & edgeFirstNext =
+						faceFirstCurrent.edges[iNext];
+
+					// Update SecondMesh face
+					EdgeMapConstIterator iter =
+						meshSecond.edgemap.find(edgeSecondCurrent);
+
+					if (iter == meshSecond.edgemap.end()) {
+						_EXCEPTIONT("Logic error");
+					}
+
+					const FacePair & facepair = iter->second;
+
+					std::vector<int> vecPossibleFaces;
+					vecPossibleFaces.push_back(facepair[0]);
+					vecPossibleFaces.push_back(facepair[1]);
+
+					int ixNextSecondFace =
+						FindFaceNearNode(
+							meshSecond,
+							nodevecFirst[edgeFirstNext[0]],
+							nodevecFirst[edgeFirstNext[1]],
+							edgeFirstNext.type,
+							vecPossibleFaces);
+
+					if (ixNextSecondFace != ixCurrentSecondFace) {
+						vecTracedPath.push_back(PathSegment(
+							ixOverlapNodeCurrent,
+							edgeFirstCurrent[1],
+							edgeFirstCurrent.type,
+							ixCurrentFirstFace,
+							ixCurrentSecondFace,
+							ixIntersectionSecondEdge,
+							edgeSecondCurrent));
+					} else {
+						vecTracedPath.push_back(PathSegment(
+							ixOverlapNodeCurrent,
+							edgeFirstCurrent[1],
+							edgeFirstCurrent.type,
+							ixCurrentFirstFace,
+							ixCurrentSecondFace,
+							IntersectType_None,
+							ixIntersectionSecondEdge));
+
+					}
+
+					// Update OverlapNodeCurrent
+					ixOverlapNodeCurrent = edgeFirstCurrent[1];
+
+					ixCurrentSecondFace = ixNextSecondFace;
+
+					break;
+
+				// General intersection between edgeFirstCurrent and
+				// edgeSecondCurrent.
+				} else {
+
+					// Push a new intersection into the array of nodes
+					ixOverlapNodeNext =
+						static_cast<int>(meshOverlap.nodes.size());
+
+					meshOverlap.nodes.push_back(nodeIntersections[0]);
+
+					// Intersection found with edge
 					vecTracedPath.push_back(PathSegment(
 						ixOverlapNodeCurrent,
-						edgeFirstCurrent[1],
+						ixOverlapNodeNext,
 						edgeFirstCurrent.type,
 						ixCurrentFirstFace,
 						ixCurrentSecondFace,
-						IntersectType_None,
-						0));
+						ixIntersectionSecondEdge,
+						edgeSecondCurrent));
 
-					// FIX: Determine if we need to cross Second faces
+					// Update OverlapNodeCurrent
+					ixOverlapNodeCurrent = ixOverlapNodeNext;
 
-					break;
+					// Update SecondMesh face
+					EdgeMapConstIterator iter =
+						meshSecond.edgemap.find(edgeSecondCurrent);
+
+					if (iter == meshSecond.edgemap.end()) {
+						_EXCEPTIONT("Logic error");
+					}
+
+					const FacePair & facepair = iter->second;
+
+					std::vector<int> vecPossibleFaces;
+					vecPossibleFaces.push_back(facepair[0]);
+					vecPossibleFaces.push_back(facepair[1]);
+
+					ixCurrentSecondFace = 
+						FindFaceNearNode(
+							meshSecond,
+							nodeIntersections[0],
+							meshOverlap.nodes[edgeFirstCurrent[1]],
+							edgeFirstCurrent.type,
+							vecPossibleFaces);
 				}
-
-				// Push a new intersection into the array of nodes
-				meshOverlap.nodes.push_back(nodeIntersections[0]);
-
-				// Intersection found; advance to next face
-				vecTracedPath.push_back(PathSegment(
-					ixOverlapNodeCurrent,
-					ixOverlapNodeNext,
-					edgeFirstCurrent.type,
-					ixCurrentFirstFace,
-					ixCurrentSecondFace,
-					ixIntersectionSecondEdge,
-					edgeSecondCurrent));
-
-				// Move across an edge
-				EdgeMapConstIterator iter =
-					meshSecond.edgemap.find(edgeSecondCurrent);
-
-				if (iter == meshSecond.edgemap.end()) {
-					_EXCEPTIONT("Logic error");
-				}
-
-				const FacePair & facepair = iter->second;
-
-				if (facepair[0] == ixCurrentSecondFace) {
-					ixCurrentSecondFace = facepair[1];
-				} else if (facepair[1] == ixCurrentSecondFace) {
-					ixCurrentSecondFace = facepair[0];
-				} else {
-					_EXCEPTIONT("Logic error");
-				}
-
-				ixOverlapNodeCurrent = ixOverlapNodeNext;
 			}
 		}
 
@@ -591,6 +653,7 @@ void GenerateOverlapMesh(
 		std::set<int> setInteriorFaces;
 		for (int j = 0; j < vecTracedPath.size(); j++) {
 			setInteriorFaces.insert(vecTracedPath[j].ixSecondFace);
+			//printf("%i %i %i\n", vecTracedPath[j][0], vecTracedPath[j][1], vecTracedPath[j].ixSecondFace);
 		}
 
 		// Loop through all possible starting PathSegments
@@ -667,6 +730,10 @@ void GenerateOverlapMesh(
 							faceSecondCurrent[vecTracedPath[k].ixIntersect];
 
 						IntersectType inttype = vecTracedPath[k].inttype;
+
+						if (ixCurrentOverlapNode == vecTracedPath[k][1]) {
+							continue;
+						}
 /*
 						printf("%i %i %i\n",
 							vecTracedPath[k][1],
@@ -701,24 +768,29 @@ void GenerateOverlapMesh(
 						}
 					}
 
-					// This edge exits; push the edge into the Face and loop
+					// An exit node is found
 					if (ixExitNode != InvalidNode) {
 
-						printf("S: %i %i\n",
-							ixCurrentOverlapNode, ixExitNode);
+						// Check if the traced path becomes active
+						int jNext = (k + 1) % vecTracedPath.size();
+						if (vecTracedPath[jNext].ixSecondFace ==
+							ixCurrentSecondFace
+						) {
 
-						faceOverlap.edges.push_back(Edge(
-							ixCurrentOverlapNode,
-							ixExitNode,
-							edgeSecondCurrent.type));
+							printf("S: %i %i\n",
+								ixCurrentOverlapNode, ixExitNode);
 
-#pragma message "FIX: What if edge only touches meshFirst then reverses back into meshSecond?"
-						j = (k + 1) % vecTracedPath.size();
+							faceOverlap.edges.push_back(Edge(
+								ixCurrentOverlapNode,
+								ixExitNode,
+								edgeSecondCurrent.type));
 
-						if (ixExitNode == ixOverlapOriginNode) {
-							goto ContinueToNextFace;
-						} else {
-							break;
+							j = jNext;
+							if (ixExitNode == ixOverlapOriginNode) {
+								goto ContinueToNextFace;
+							} else {
+								break;
+							}
 						}
 					}
 

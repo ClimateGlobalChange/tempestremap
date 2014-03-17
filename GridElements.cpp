@@ -278,8 +278,15 @@ void Mesh::Write(const std::string & strFile) const {
 
 	int * nConnect = new int[NodesPerElement];
 	for (int i = 0; i < nElementCount; i++) {
-		for (int k = 0; k < NodesPerElement; k++) {
-			nConnect[k] = faces[i][k] + 1;
+		if (faces[i].edges.size() == 3) {
+			for (int k = 0; k < 3; k++) {
+				nConnect[k] = faces[i][k] + 1;
+			}
+			nConnect[3] = nConnect[2];
+		} else {
+			for (int k = 0; k < NodesPerElement; k++) {
+				nConnect[k] = faces[i][k] + 1;
+			}
 		}
 		varFaces->set_cur(i, 0);
 		varFaces->put(nConnect, 1, NodesPerElement);
