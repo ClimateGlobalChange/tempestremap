@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    GenerateRLLMesh.cpp
+///	\file    GenerateCSMesh.cpp
 ///	\author  Paul Ullrich
 ///	\version March 7, 2014
 ///
@@ -112,9 +112,9 @@ void GenerateFacesFromQuad(
 		for (int i = 0; i < nResolution; i++) {
 			Face face(4);
 			face.SetNode(0, edgeBot[i+1]);
-			face.SetNode(1, edgeBot[i]);
+			face.SetNode(1, edgeTop[i+1]);
 			face.SetNode(2, edgeTop[i]);
-			face.SetNode(3, edgeTop[i+1]);
+			face.SetNode(3, edgeBot[i]);
 
 			vecFaces.push_back(face);
 		}

@@ -20,7 +20,7 @@
 #include "GridElements.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-
+/*
 ///	<summary>
 ///		Find the face(s) in mesh that contain node.
 ///	</summary>
@@ -58,7 +58,7 @@ int FindFaceNearNode(
 	const Node & nodeEnd,
 	const Edge::Type edgetype
 );
-
+*/
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
@@ -68,7 +68,8 @@ int FindFaceNearNode(
 void GenerateOverlapMesh(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,
-	Mesh & meshOverlap
+	Mesh & meshOverlap,
+	int nVerbosity = 0
 );
 
 ///////////////////////////////////////////////////////////////////////////////

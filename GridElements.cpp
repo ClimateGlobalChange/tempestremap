@@ -35,7 +35,13 @@ void Face::ContainsNode(
 
 	// Set of edges which "contain" this node
 	std::set<int> setContainedEdgeIx;
-
+/*
+	node.Print("Node");
+	nodevec[edges[0][0]].Print("n0");
+	nodevec[edges[1][0]].Print("n1");
+	nodevec[edges[2][0]].Print("n2");
+	nodevec[edges[3][0]].Print("n3");
+*/
 	// Loop through all edges of this face
 	for (int i = 0; i < edges.size(); i++) {
 
@@ -54,25 +60,29 @@ void Face::ContainsNode(
 				+ (nb.x * na.z - na.x * nb.z) * node.y
 				+ (na.x * nb.y - nb.x * na.y) * node.z;
 
-			if (dDotNorm > Tolerance) {
+			//printf("Norm1: %i %1.5e\n", i, dDotNorm);
+
+			if (dDotNorm < - Tolerance) {
 				loc = NodeLocation_Exterior;
 				ixLocation = 0;
 				return;
 			}
-			if (dDotNorm > - Tolerance) {
+			if (dDotNorm < Tolerance) {
 				setContainedEdgeIx.insert(i);
 			}
 
 		} else if (edges[i].type == Edge::Type_ConstantLatitude) {
-			double dDotNorm =
-				  (na.x * nb.y - nb.x * na.y) * (node.z - na.z);
+			double dAlignment = (na.x * nb.y - nb.x * na.y);
+			double dDotNorm = dAlignment / fabs(dAlignment) * (node.z - na.z);
 
-			if (dDotNorm > Tolerance) {
+			//printf("Norm2: %i %1.5e %1.5e %1.5e %1.5e\n", i, dAlignment, node.z, na.z, dDotNorm);
+
+			if (dDotNorm < - Tolerance) {
 				loc = NodeLocation_Exterior;
 				ixLocation = 0;
 				return;
 			}
-			if (dDotNorm > - Tolerance) {
+			if (dDotNorm < Tolerance) {
 				setContainedEdgeIx.insert(i);
 			}
 
@@ -90,16 +100,22 @@ void Face::ContainsNode(
 
 	// Node is coincident with a corner of this face
 	if (setContainedEdgeIx.size() == 2) {
+
 		std::set<int>::iterator iter;
-		
+
 		iter = setContainedEdgeIx.begin();
 		int ix0 = *(iter);
 
 		iter++;
 		int ix1 = *(iter);
 
+		if ((ix0 == 0) && (ix1 != 1)) {
+			ixLocation = 0;
+		} else {
+			ixLocation = ix1;
+		}
+
 		loc = NodeLocation_Corner;
-		ixLocation = ix1;
 		return;
 	}
 
@@ -112,6 +128,21 @@ void Face::ContainsNode(
 	loc = NodeLocation_Interior;
 	ixLocation = 0;
 	return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Face::RemoveZeroEdges() {
+
+	// Loop through all edges of this face
+	for (int i = 0; i < edges.size(); i++) {
+
+		// Remove zero edges
+		if (edges[i][0] == edges[i][1]) {
+			edges.erase(edges.begin()+i);
+			i--;
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -393,18 +424,161 @@ void Mesh::Read(const std::string & strFile) {
 	delete[] nNodes;
 
 	// Load in edge type array
-	NcVar * varEdgeTypes = ncFile.get_var("edge_type");
+	bool fHasEdgeType = false;
 
-	int * nEdgeTypes = new int[nNodesPerElement];
-	for (int i = 0; i < nElementCount; i++) {
-		varEdgeTypes->set_cur(i, 0);
-		varEdgeTypes->get(nEdgeTypes, 1, nNodesPerElement);
-		faces[i].edges[0].type = static_cast<Edge::Type>(nEdgeTypes[0]);
-		faces[i].edges[1].type = static_cast<Edge::Type>(nEdgeTypes[1]);
-		faces[i].edges[2].type = static_cast<Edge::Type>(nEdgeTypes[2]);
-		faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
+	for (int v = 0; v < ncFile.num_vars(); v++) {
+		if (strcmp(ncFile.get_var(v)->name(), "edge_type") == 0) {
+			fHasEdgeType = true;
+			break;
+		}
 	}
-	delete[] nEdgeTypes;
+
+	if (fHasEdgeType) {
+		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
+
+		int * nEdgeTypes = new int[nNodesPerElement];
+		for (int i = 0; i < nElementCount; i++) {
+			varEdgeTypes->set_cur(i, 0);
+			varEdgeTypes->get(nEdgeTypes, 1, nNodesPerElement);
+			faces[i].edges[0].type = static_cast<Edge::Type>(nEdgeTypes[0]);
+			faces[i].edges[1].type = static_cast<Edge::Type>(nEdgeTypes[1]);
+			faces[i].edges[2].type = static_cast<Edge::Type>(nEdgeTypes[2]);
+			faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
+		}
+		delete[] nEdgeTypes;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::RemoveZeroEdges() {
+
+	// Remove zero edges from all Faces
+	for (int i = 0; i < faces.size(); i++) {
+		faces[i].RemoveZeroEdges();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::Validate() const {
+
+	// Validate that edges are oriented counter-clockwise
+	for (int i = 0; i < faces.size(); i++) {
+		const Face & face = faces[i];
+
+		const int nEdges = face.edges.size();
+
+		for (int j = 0; j < nEdges; j++) {
+
+			// Check for zero edges
+			for(;;) {
+				if (face.edges[j][0] == face.edges[j][1]) {
+					j++;
+				} else {
+					break;
+				}
+				if (j == nEdges) {
+					break;
+				}
+			}
+
+			if (j == nEdges) {
+				break;
+			}
+
+			// Find the next non-zero edge
+			int jNext = (j + 1) % nEdges;
+
+			for(;;) {
+				if (face.edges[jNext][0] == face.edges[jNext][1]) {
+					jNext++;
+				} else {
+					break;
+				}
+				if (jNext == nEdges) {
+					jNext = 0;
+				}
+				if (jNext == ((j + 1) % nEdges)) {
+					_EXCEPTIONT("Mesh validation failed: "
+						"No edge information on Face");
+				}
+			}
+
+			// Get edges
+			const Edge & edge0 = face.edges[j];
+			const Edge & edge1 = face.edges[(j + 1) % nEdges];
+
+			if (edge0[1] != edge1[0]) {
+				_EXCEPTIONT("Mesh validation failed: Edge cyclicity error");
+			}
+
+			const Node & node0 = nodes[edge0[0]];
+			const Node & node1 = nodes[edge0[1]];
+			const Node & node2 = nodes[edge1[1]];
+
+			// Vectors along edges
+			Node vecD1;
+			vecD1.x = node0.x - node1.x;
+			vecD1.y = node0.y - node1.y;
+			vecD1.z = node0.z - node1.z;
+
+			Node vecD2;
+			vecD2.x = node2.x - node1.x;
+			vecD2.y = node2.y - node1.y;
+			vecD2.z = node2.z - node1.z;
+
+			// Compute cross-product
+			Node vecCross;
+			vecCross.x = + vecD1.y * vecD2.z - vecD1.z * vecD2.y;
+			vecCross.y = + vecD1.z * vecD2.x - vecD1.x * vecD2.z;
+			vecCross.z = + vecD1.x * vecD2.y - vecD1.y * vecD2.x;
+
+			// Dot cross product with radial vector
+			double dDot =
+				  node1.x * vecCross.x
+				+ node1.y * vecCross.y
+				+ node1.z * vecCross.z;
+
+			if (dDot > 0.0) {
+				printf("\nError detected (orientation):\n");
+				printf("  Face %i, Edge %i, Orientation %1.5e\n",
+					i, j, dDot);
+
+				printf("  (x,y,z):\n");
+				printf("    n0: %1.5e %1.5e %1.5e\n", node0.x, node0.y, node0.z);
+				printf("    n1: %1.5e %1.5e %1.5e\n", node1.x, node1.y, node1.z);
+				printf("    n2: %1.5e %1.5e %1.5e\n", node2.x, node2.y, node2.z);
+
+				double dR0 = sqrt(
+					node0.x * node0.x + node0.y * node0.y + node0.z * node0.z);
+				double dLat0 = asin(node0.z / dR0);
+				double dLon0 = atan2(node0.y, node0.x);
+
+				double dR1 = sqrt(
+					node1.x * node1.x + node1.y * node1.y + node1.z * node1.z);
+				double dLat1 = asin(node1.z / dR1);
+				double dLon1 = atan2(node1.y, node1.x);
+
+				double dR2 = sqrt(
+					node2.x * node2.x + node2.y * node2.y + node2.z * node2.z);
+				double dLat2 = asin(node2.z / dR2);
+				double dLon2 = atan2(node2.y, node2.x);
+
+				printf("  (lambda, phi):\n");
+				printf("    n0: %1.5e %1.5e\n", dLon0, dLat0);
+				printf("    n1: %1.5e %1.5e\n", dLon1, dLat1);
+				printf("    n2: %1.5e %1.5e\n", dLon2, dLat2);
+
+				printf("  X-Product:\n");
+				printf("    %1.5e %1.5e %1.5e\n",
+					vecCross.x, vecCross.y, vecCross.z);
+
+				_EXCEPTIONT(
+					"Mesh validation failed: Clockwise element detected");
+			}
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -414,14 +588,14 @@ void Mesh::Read(const std::string & strFile) {
 bool CalculateEdgeIntersections(
 	const Node & nodeFirstBegin,
 	const Node & nodeFirstEnd,
-	const Edge::Type typeFirst,
+	Edge::Type typeFirst,
 	const Node & nodeSecondBegin,
 	const Node & nodeSecondEnd,
-	const Edge::Type typeSecond,
+	Edge::Type typeSecond,
 	std::vector<Node> & nodeIntersections,
 	bool fIncludeFirstBeginNode
 ) {
-	static const double Tolerance = 1.0e-12;
+	static const double Tolerance = 1.0e-10;
 
 	// Make a locally modifyable version of the Nodes
 	Node node11;
@@ -437,6 +611,9 @@ bool CalculateEdgeIntersections(
 		node12 = nodeSecondEnd;
 		node21 = nodeFirstBegin;
 		node22 = nodeFirstEnd;
+
+		typeFirst = Edge::Type_GreatCircleArc;
+		typeSecond = Edge::Type_ConstantLatitude;
 
 	} else {
 		node11 = nodeFirstBegin;
@@ -460,6 +637,121 @@ bool CalculateEdgeIntersections(
 	if ((typeFirst  == Edge::Type_GreatCircleArc) &&
 		(typeSecond == Edge::Type_GreatCircleArc)
 	) {
+
+		// Cross products
+		Node nodeN11xN12(
+			node11.y * node12.z - node11.z * node12.y,
+			node11.z * node12.x - node11.x * node12.z,
+			node11.x * node12.y - node11.y * node12.x);
+
+		Node nodeN21xN22(
+			node21.y * node22.z - node21.z * node22.y,
+			node21.z * node22.x - node21.x * node22.z,
+			node21.x * node22.y - node21.y * node22.x);
+
+		// Check for coincident lines
+		double dDot1 = DotProduct(nodeN11xN12, node21);
+		double dDot2 = DotProduct(nodeN21xN22, node11);
+
+		// A line which is coincident with both planes
+		Node nodeLine;
+
+		// Coincident planes
+		if ((fabs(dDot1) < Tolerance) &&
+			(fabs(dDot2) < Tolerance)
+		) {
+			return true;
+
+		// node21 is coplanar with the first arc
+		} else if (fabs(dDot1) < Tolerance) {
+			nodeLine = node21;
+
+		// node11 is coplanar with the second arc
+		} else if (fabs(dDot2) < Tolerance) {
+			nodeLine = node11;
+
+		// Line of intersection is the cross product of cross products
+		} else {
+			nodeLine.x =
+				nodeN11xN12.y * nodeN21xN22.z - nodeN11xN12.z * nodeN21xN22.y;
+			nodeLine.y = 
+				nodeN11xN12.z * nodeN21xN22.x - nodeN11xN12.x * nodeN21xN22.z;
+			nodeLine.z = 
+				nodeN11xN12.x * nodeN21xN22.y - nodeN11xN12.y * nodeN21xN22.x;
+
+			// Verify coplanarity
+			double dDotDebug1 = DotProduct(nodeLine, nodeN11xN12);
+			double dDotDebug2 = DotProduct(nodeLine, nodeN21xN22);
+
+			if ((fabs(dDotDebug1) > Tolerance) ||
+				(fabs(dDotDebug2) > Tolerance)
+			) {
+				printf("%1.5e %1.5e\n", dDotDebug1, dDotDebug2);
+				_EXCEPTIONT("Logic error");
+			}
+		}
+
+		// Find the intersection point
+		double dMagLine = nodeLine.Magnitude();
+
+		nodeLine.x /= dMagLine;
+		nodeLine.y /= dMagLine;
+		nodeLine.z /= dMagLine;
+
+		// Check whether each podal point falls within the range
+		double dAngle11;
+		double dAngle12;
+		double dAngle21;
+		double dAngle22;
+
+		double dAngle1 = 1.0 - DotProduct(node11, node12);
+		double dAngle2 = 1.0 - DotProduct(node21, node22);
+
+		// Check positive node
+		dAngle11 = 1.0 - DotProduct(nodeLine, node11);
+		dAngle12 = 1.0 - DotProduct(nodeLine, node12);
+		dAngle21 = 1.0 - DotProduct(nodeLine, node21);
+		dAngle22 = 1.0 - DotProduct(nodeLine, node22);
+
+		if ((dAngle11 < dAngle1 + Tolerance) &&
+			(dAngle12 < dAngle1 + Tolerance) &&
+			(dAngle21 < dAngle2 + Tolerance) &&
+			(dAngle22 < dAngle2 + Tolerance)
+		) {
+			if ((nodeLine == nodeFirstBegin) && !fIncludeFirstBeginNode) {
+				return false;
+			}
+
+			nodeIntersections.push_back(nodeLine);
+			return false;
+		}
+
+		// Check negative node
+		nodeLine.x *= (-1.0);
+		nodeLine.y *= (-1.0);
+		nodeLine.z *= (-1.0);
+
+		dAngle11 = 1.0 - DotProduct(nodeLine, node11);
+		dAngle12 = 1.0 - DotProduct(nodeLine, node12);
+		dAngle21 = 1.0 - DotProduct(nodeLine, node21);
+		dAngle22 = 1.0 - DotProduct(nodeLine, node22);
+
+		if ((dAngle11 < dAngle1 + Tolerance) &&
+			(dAngle12 < dAngle1 + Tolerance) &&
+			(dAngle21 < dAngle2 + Tolerance) &&
+			(dAngle22 < dAngle2 + Tolerance)
+		) {
+			if ((nodeLine == nodeFirstBegin) && !fIncludeFirstBeginNode) {
+				return false;
+			}
+
+			nodeIntersections.push_back(nodeLine);
+			return false;
+		}
+
+		// No intersections
+		return false;
+/*
 		// n11 dot n12
 		double dN11oN12 =
 			+ node11.x * node12.x
@@ -612,10 +904,6 @@ bool CalculateEdgeIntersections(
 
 			double dDenom = dMB * dMB + 2.0 * dMB * dN11oN12 + 1.0;
 
-			if (fabs(dDenom) < Tolerance) {
-				_EXCEPTIONT("Unknown case");
-			}
-
 			dA0 = 1.0 / sqrt(dDenom);
 			dB0 = dA0 * dMB;
 			dC0 = dA0 * dMC;
@@ -634,10 +922,6 @@ bool CalculateEdgeIntersections(
 			double dMD = - dNumerD / dN11oN21xN22;
 
 			double dDenom = dMA * dMA + 2.0 * dMA * dN11oN12 + 1.0;
-
-			if (fabs(dDenom) < Tolerance) {
-				_EXCEPTIONT("Unknown case");
-			}
 
 			dB0 = 1.0 / sqrt(dDenom);
 			dA0 = dB0 * dMA;
@@ -668,30 +952,36 @@ bool CalculateEdgeIntersections(
 				- (node11.y * dA0 + node12.y * dB0),
 				- (node11.z * dA0 + node12.z * dB0)));
 		}
-
+*/
 	// First edge is a line of constant latitude; second is a great circle arc
 	} else if (
 		(typeFirst  == Edge::Type_GreatCircleArc) &&
 		(typeSecond == Edge::Type_ConstantLatitude)
 	) {
+		// Check for coincident edges (edges along the equator)
+		if ((fabs(node11.z) < Tolerance) &&
+			(fabs(node12.z) < Tolerance) &&
+			(fabs(node21.z) < Tolerance)
+		) {
+			return true;
+		}
 
 		// Cross product of basis vectors for great circle plane
-		double dCrossX = + node11.y * node12.z - node11.z * node12.y;
-		double dCrossY = - node11.x * node12.z + node11.z * node12.x;
-		double dCrossZ = + node11.x * node12.y - node11.y * node12.x;
+		double dCrossX = node11.y * node12.z - node11.z * node12.y;
+		double dCrossY = node11.z * node12.x - node11.x * node12.z;
+		double dCrossZ = node11.x * node12.y - node11.y * node12.x;
+
+		// Maximum Z value reached by great circle arc along sphere
+		double dAbsCross2 =
+			dCrossX * dCrossX + dCrossY * dCrossY + dCrossZ * dCrossZ;
+
+		double dAbsEqCross2 =
+			dCrossX * dCrossX + dCrossY * dCrossY;
+
+		double dMaxZ = sqrt(dAbsEqCross2 / dAbsCross2);
 
 		// node12.z is larger than node11.z
 		if (fabs(node11.z) < fabs(node12.z)) {
-
-			// Check for equatorial great circle arc
-			if (fabs(node12.z) < Tolerance) {
-				if (fabs(node21.z) < Tolerance) {
-					_EXCEPTIONT("Not implemented");
-					return true;
-				} else {
-					return false;
-				}
-			}
 
 			// Quadratic coefficients, used to solve for A
 			double dDTermA = (dCrossY * dCrossY + dCrossX * dCrossX)
@@ -707,7 +997,8 @@ bool CalculateEdgeIntersections(
 			double dCross2 = node21.x * node22.y - node21.y * node22.x;
 
 			// Only one solution
-			if (fabs(dDisc) < Tolerance) {
+			//if (fabs(dDisc) < Tolerance) {
+			if (fabs(dMaxZ - fabs(node21.z)) < Tolerance) {
 
 				// Components of intersection in node1 basis
 				double dA = - dDTermB / (2.0 * dDTermA);
@@ -735,6 +1026,7 @@ bool CalculateEdgeIntersections(
 					nodeIntersections[0].z = node21.z;
 				}
 
+			// Possibly multiple solutiosn
 			} else {
 				double dSqrtDisc =
 					sqrt(dDTermB * dDTermB - 4.0 * dDTermA * dDTermC);
@@ -795,7 +1087,8 @@ bool CalculateEdgeIntersections(
 			double dCross2 = node21.x * node22.y - node21.y * node22.x;
 
 			// Only one solution
-			if (fabs(dDisc) < Tolerance) {
+			//if (fabs(dDisc) < Tolerance) {
+			if (fabs(dMaxZ - fabs(node21.z)) < Tolerance) {
 
 				// Components of intersection in node1 basis
 				double dB = - dDTermB / (2.0 * dDTermA);
@@ -873,7 +1166,6 @@ bool CalculateEdgeIntersections(
 		(typeSecond == Edge::Type_ConstantLatitude)
 	) {
 		if (fabs(node11.z - node21.z) < Tolerance) {
-			_EXCEPTIONT("Not implemented");
 			return true;
 		} else {
 			return false;
@@ -881,7 +1173,8 @@ bool CalculateEdgeIntersections(
 
 	// Unknown
 	} else {
-		_EXCEPTIONT("Invalid Edge::Type");
+		_EXCEPTION2("Invalid Edge::Type (%i, %i)",
+			typeFirst, typeSecond);
 	}
 
 	// If the begin node is not to be included, erase from intersections
@@ -898,13 +1191,113 @@ bool CalculateEdgeIntersections(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool IsPositivelyOrientedEdge(
+	const Node & nodeBegin,
+	const Node & nodeEnd
+) {
+	const double Tolerance = 1.0e-12;
+
+	if ((fabs(nodeBegin.x - nodeEnd.x) < Tolerance) &&
+		(fabs(nodeBegin.y - nodeEnd.y) < Tolerance) &&
+		(fabs(nodeBegin.z - nodeEnd.z) > Tolerance)
+	) {
+		_EXCEPTIONT("Latitude line of zero length");
+	}
+
+	// Both nodes in positive y half-plane
+	if ((nodeBegin.y >= 0.0) && (nodeEnd.y >= 0.0)) {
+		if (nodeEnd.x < nodeBegin.x) {
+			return true;
+		} else {
+			return false;
+		}
+
+	// Both nodes in negative y half-plane
+	} else if ((nodeBegin.y <= 0.0) && (nodeEnd.y <= 0.0)) {
+		if (nodeEnd.x > nodeBegin.x) {
+			return true;
+		} else {
+			return false;
+		}
+
+	// Both nodes in positive x half-plane
+	} else if ((nodeBegin.x >= 0.0) && (nodeEnd.x >= 0.0)) {
+		if (nodeEnd.y > nodeBegin.y) {
+			return true;
+		} else {
+			return false;
+		}
+
+	// Both nodes in negative x half-plane
+	} else if ((nodeBegin.x <= 0.0) && (nodeEnd.x <= 0.0)) {
+		if (nodeEnd.y < nodeBegin.y) {
+			return true;
+		} else {
+			return false;
+		}
+
+	// Arc length too large
+	} else {
+		_EXCEPTIONT("Arc length too large to determine orientation.");
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GetLocalDirection(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type edgetype,
+	Node & nodeDir
+) {
+
+	// Direction along a great circle arc
+	if (edgetype == Edge::Type_GreatCircleArc) {
+
+		// Cartesian direction
+		nodeDir.x = (nodeEnd.x - nodeBegin.x);
+		nodeDir.y = (nodeEnd.y - nodeBegin.y);
+		nodeDir.z = (nodeEnd.z - nodeBegin.z);
+
+		// Project onto surface of the sphere
+		double dDotDirBegin =
+			  nodeDir.x * nodeBegin.x
+			+ nodeDir.y * nodeBegin.y
+			+ nodeDir.z * nodeBegin.z;
+
+		double dNormNodeBegin =
+			  nodeBegin.x * nodeBegin.x
+			+ nodeBegin.y * nodeBegin.y
+			+ nodeBegin.z * nodeBegin.z;
+
+		nodeDir.x -= dDotDirBegin / dNormNodeBegin * nodeBegin.x;
+		nodeDir.y -= dDotDirBegin / dNormNodeBegin * nodeBegin.y;
+		nodeDir.z -= dDotDirBegin / dNormNodeBegin * nodeBegin.z;
+
+	// Direction along a line of constant latitude
+	} else if (edgetype == Edge::Type_ConstantLatitude) {
+		nodeDir.z = 0.0;
+
+		if (IsPositivelyOrientedEdge(nodeBegin, nodeEnd)) {
+			nodeDir.x = - nodeBegin.y;
+			nodeDir.y = + nodeBegin.x;
+		} else {
+			nodeDir.x = + nodeBegin.y;
+			nodeDir.y = - nodeBegin.x;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void NudgeAlongEdge(
 	const Node & nodeBegin,
 	const Node & nodeEnd,
 	const Edge::Type type,
-	Node & nodeNudged
+	Node & nodeNudged,
+	double Nudge
 ) {
-	static const double Nudge = 1.0e-5;
+	//static const double Nudge = 1.0e-6;
 
 	Node nodeDelta(
 		nodeEnd.x - nodeBegin.x,
@@ -947,6 +1340,40 @@ void NudgeAlongEdge(
 	} else {
 		_EXCEPTIONT("Invalid edge");
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int BuildCoincidentNodeVector(
+	const Mesh & meshFirst,
+	const Mesh & meshSecond,
+	std::vector<int> & vecSecondToFirstCoincident
+) {
+	int nCoincidentNodes = 0;
+
+	// Sort nodes
+	std::map<Node, int> setSortedFirstNodes;
+	for (int i = 0; i < meshFirst.nodes.size(); i++) {
+		setSortedFirstNodes.insert(
+			std::pair<Node, int>(meshFirst.nodes[i], i));
+	}
+
+	// Resize array
+	vecSecondToFirstCoincident.resize(meshSecond.nodes.size(), InvalidNode);
+
+	// For each node in meshSecond determine if a corresponding node
+	// exists in meshFirst.
+	for (int i = 0; i < meshSecond.nodes.size(); i++) {
+		std::map<Node, int>::const_iterator iter =
+			setSortedFirstNodes.find(meshSecond.nodes[i]);
+
+		if (iter != setSortedFirstNodes.end()) {
+			vecSecondToFirstCoincident[i] = iter->second;
+			nCoincidentNodes++;
+		}
+	}
+
+	return nCoincidentNodes;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

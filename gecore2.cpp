@@ -55,11 +55,23 @@ try {
 	// Load input mesh
 	AnnounceStartBlock("Loading input mesh");
 	Mesh meshInput(strInputMesh);
+	meshInput.RemoveZeroEdges();
+	AnnounceEndBlock(NULL);
+
+	// Validate mesh
+	AnnounceStartBlock("Validate input mesh");
+	meshInput.Validate();
 	AnnounceEndBlock(NULL);
 
 	// Load output mesh
 	AnnounceStartBlock("Loading output mesh");
 	Mesh meshOutput(strOutputMesh);
+	meshOutput.RemoveZeroEdges();
+	AnnounceEndBlock(NULL);
+
+	// Validate mesh
+	AnnounceStartBlock("Validate output mesh");
+	meshOutput.Validate();
 	AnnounceEndBlock(NULL);
 
 	// Construct the edge map on both meshes

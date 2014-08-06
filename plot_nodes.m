@@ -9,10 +9,12 @@ nodes = load(nodefile);
 
 plot3(nodes(:,1), nodes(:,2), nodes(:,3), 'k.');
 hold on;
-nn = size(nodes,1);
-plot3(nodes(83:nn,1), nodes(83:nn,2), nodes(83:nn,3), 'r.');
-%gix=74;
-%plot3(nodes(gix,1), nodes(gix,2), nodes(gix,3), 'g.');
+%nn = size(nodes,1);
+%plot3(nodes(83:nn,1), nodes(83:nn,2), nodes(83:nn,3), 'r.');
+gix=[];
+for i=1:length(gix)
+    plot3(nodes(gix(i),1), nodes(gix(i),2), nodes(gix(i),3), 'go');
+end
 hold off;
 
 grid;
@@ -38,6 +40,7 @@ hold on;
 for i = 1:size(xfaces,1)
     patch(xfaces(i,:), yfaces(i,:), zfaces(i,:),'w');
 end
+%patch(xfaces(11816,:), yfaces(11816,:), zfaces(11816,:),'r');
 hold off;
 
 set(gca, 'FontSize', 14);

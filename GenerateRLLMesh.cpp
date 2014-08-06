@@ -95,8 +95,8 @@ try {
 	for (int i = 0; i < nLongitudes; i++) {
 		Face face(4);
 		face.SetNode(0, 0);
-		face.SetNode(1, i + 1);
-		face.SetNode(2, (i+1) % nLongitudes + 1);
+		face.SetNode(1, (i+1) % nLongitudes + 1);
+		face.SetNode(2, i + 1);
 		face.SetNode(3, 0);
 
 		face.edges[1].type = Edge::Type_ConstantLatitude;
@@ -112,10 +112,10 @@ try {
 
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
-			face.SetNode(0, iThisLatNodeIx + i);
-			face.SetNode(1, iNextLatNodeIx + i);
-			face.SetNode(2, iNextLatNodeIx + (i + 1) % nLongitudes);
-			face.SetNode(3, iThisLatNodeIx + (i + 1) % nLongitudes);
+			face.SetNode(0, iThisLatNodeIx + (i + 1) % nLongitudes);
+			face.SetNode(1, iNextLatNodeIx + (i + 1) % nLongitudes);
+			face.SetNode(2, iNextLatNodeIx + i);
+			face.SetNode(3, iThisLatNodeIx + i);
 
 			face.edges[1].type = Edge::Type_ConstantLatitude;
 			face.edges[3].type = Edge::Type_ConstantLatitude;
@@ -131,8 +131,8 @@ try {
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
 			face.SetNode(0, iNorthPolarNodeIx);
-			face.SetNode(1, iThisLatNodeIx + (i + 1) % nLongitudes);
-			face.SetNode(2, iThisLatNodeIx + i);
+			face.SetNode(1, iThisLatNodeIx + i);
+			face.SetNode(2, iThisLatNodeIx + (i + 1) % nLongitudes);
 			face.SetNode(3, iNorthPolarNodeIx);
 
 			face.edges[1].type = Edge::Type_ConstantLatitude;

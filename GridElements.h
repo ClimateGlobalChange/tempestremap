@@ -81,10 +81,51 @@ public:
 	}
 
 	///	<summary>
+	///		Inequality operator.
+	///	</summary>
+	bool operator!= (const Node & node) const {
+		return !((*this) == node);
+	}
+
+	///	<summary>
+	///		Comparator operator using floating point tolerance.
+	///	</summary>
+	bool operator< (const Node & node) const {
+		static const double Tolerance = 1.0e-12;
+
+		if (x - node.x <= -Tolerance) {
+			return true;
+		} else if (x - node.x >= Tolerance) {
+			return false;
+		}
+
+		if (y - node.y <= -Tolerance) {
+			return true;
+		} else if (y - node.y >= Tolerance) {
+			return false;
+		}
+
+		if (z - node.z <= -Tolerance) {
+			return true;
+		} else if (z - node.z >= Tolerance) {
+			return false;
+		}
+
+		return false;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	double Magnitude() const {
 		return sqrt(x * x + y * y + z * z);
+	}
+
+	///	<summary>
+	///		Output node to stdout.
+	///	</summary>
+	void Print(const char * szName) const {
+		printf("%s: %1.15e %1.15e %1.15e\n", szName, x, y, z);
 	}
 };
 
@@ -252,6 +293,13 @@ public:
 	}
 
 	///	<summary>
+	///		Inequality operator.
+	///	</summary>
+	bool operator!=(const Edge & edge) const {
+		return !((*this) == edge);
+	}
+
+	///	<summary>
 	///		Return the node that is shared between segments.
 	///	</summary>
 	int CommonNode(
@@ -413,6 +461,7 @@ public:
 	///		Possible locations of nodes.
 	///	</summary>
 	enum NodeLocation {
+		NodeLocation_Undefined = (-1),
 		NodeLocation_Exterior = 0,
 		NodeLocation_Default = NodeLocation_Exterior,
 		NodeLocation_Interior = 1,
@@ -430,6 +479,11 @@ public:
 		NodeLocation & loc,
 		int & ixLocation
 	) const;
+
+	///	<summary>
+	///		Remove zero Edges (Edges with repeated Node indices)
+	///	</summary>
+	void RemoveZeroEdges();
 };
 
 ///	<summary>
@@ -512,9 +566,28 @@ public:
 	///	</summary>
 	void Read(const std::string & strFile);
 
+	///	<summary>
+	///		Remove zero edges from all Faces.
+	///	</summary>
+	void RemoveZeroEdges();
+
+	///	<summary>
+	///		Validate the Mesh.
+	///	</summary>
+	void Validate() const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the dot product between two Nodes.
+///	</summary>
+inline double DotProduct(
+	const Node & node1,
+	const Node & node2
+) {
+	return (node1.x * node2.x + node1.y * node2.y + node1.z * node2.z);
+}
 
 ///	<summary>
 ///		Calculate all intersections between the two edges.
@@ -539,6 +612,30 @@ bool CalculateEdgeIntersections(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Determine if an edge is positively oriented
+///		(aligned with increasing longitude).
+///	</summary>
+bool IsPositivelyOrientedEdge(
+	const Node & nodeBegin,
+	const Node & nodeEnd
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Get the local direction vector along the surface of the sphere
+///		for the given edge.
+///	</summary>
+void GetLocalDirection(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type edgetype,
+	Node & nodeDir
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Calculate the node which is a small increment closer to nodeEnd
 ///		from nodeBegin.
 ///	</summary>
@@ -546,7 +643,23 @@ void NudgeAlongEdge(
 	const Node & nodeBegin,
 	const Node & nodeEnd,
 	const Edge::Type type,
-	Node & nodeNudged
+	Node & nodeNudged,
+	double Nudge = 1.0e-6
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Build the mapping function for nodes on meshSecond which are
+///		coincident with nodes on meshFirst.
+///	</summary>
+///	<returns>
+///		The number of coincident nodes on meshSecond.
+///	</returns>
+int BuildCoincidentNodeVector(
+	const Mesh & meshFirst,
+	const Mesh & meshSecond,
+	std::vector<int> & vecSecondToFirstCoincident
 );
 
 ///////////////////////////////////////////////////////////////////////////////
