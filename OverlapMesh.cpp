@@ -14,6 +14,7 @@
 ///		or implied warranty.
 ///	</remarks>
 
+#include "Defines.h"
 #include "OverlapMesh.h"
 
 #include "Announce.h"
@@ -155,9 +156,6 @@ void FindFaceFromNode(
 	const Node & node,
 	FindFaceStruct & aFindFaceStruct
 ) {
-#ifdef VERBOSE
-	printf("---\n");
-#endif
 	// Reset the FaceStruct
 	aFindFaceStruct.vecFaceIndices.clear();
 	aFindFaceStruct.vecFaceLocations.clear();
@@ -181,20 +179,20 @@ void FindFaceFromNode(
 
 #ifdef VERBOSE
 		printf("%i\n", l);
-		printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
-		printf("n0: %1.5e %1.5e %1.5e\n",
+		printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
+		printf("n0: %1.5Le %1.5Le %1.5Le\n",
 			mesh.nodes[mesh.faces[l][0]].x,
 			mesh.nodes[mesh.faces[l][0]].y,
 			mesh.nodes[mesh.faces[l][0]].z);
-		printf("n1: %1.5e %1.5e %1.5e\n",
+		printf("n1: %1.5Le %1.5Le %1.5Le\n",
 			mesh.nodes[mesh.faces[l][1]].x,
 			mesh.nodes[mesh.faces[l][1]].y,
 			mesh.nodes[mesh.faces[l][1]].z);
-		printf("n2: %1.5e %1.5e %1.5e\n",
+		printf("n2: %1.5Le %1.5Le %1.5Le\n",
 			mesh.nodes[mesh.faces[l][2]].x,
 			mesh.nodes[mesh.faces[l][2]].y,
 			mesh.nodes[mesh.faces[l][2]].z);
-		printf("n3: %1.5e %1.5e %1.5e\n",
+		printf("n3: %1.5Le %1.5Le %1.5Le\n",
 			mesh.nodes[mesh.faces[l][3]].x,
 			mesh.nodes[mesh.faces[l][3]].y,
 			mesh.nodes[mesh.faces[l][3]].z);
@@ -239,7 +237,7 @@ void FindFaceFromNode(
 	// Edges can only have two adjacent Faces
 	if (aFindFaceStruct.loc == Face::NodeLocation_Edge) {
 		if (aFindFaceStruct.vecFaceIndices.size() != 2) {
-			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
 			_EXCEPTION1("Multiple co-located edges detected (%i)",
 				(int)(aFindFaceStruct.vecFaceIndices.size()));
 		}
@@ -248,7 +246,7 @@ void FindFaceFromNode(
 	// Corners must have at least three adjacent Faces
 	if (aFindFaceStruct.loc == Face::NodeLocation_Corner) {
 		if (aFindFaceStruct.vecFaceIndices.size() < 3) {
-			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
 			_EXCEPTION1("Two Faced corner detected (%i)",
 				(int)(aFindFaceStruct.vecFaceIndices.size()));
 		}
@@ -267,9 +265,6 @@ void FindFaceFromNode(
 	const std::vector<int> & vecPossibleFaces,
 	FindFaceStruct & aFindFaceStruct
 ) {
-#ifdef VERBOSE
-	printf("---\n");
-#endif
 	// Reset the FaceStruct
 	aFindFaceStruct.vecFaceIndices.clear();
 	aFindFaceStruct.vecFaceLocations.clear();
@@ -350,12 +345,9 @@ int FindFaceNearNode(
 	const Node & nodeEnd,
 	const Edge::Type edgetype
 ) {
-#ifdef VERBOSE
-	printf("---\n");
-#endif
-	static const double Tolerance = 1.0e-12;
+	static const Real Tolerance = HighTolerance;
 
-	// Get the begin node
+	// Get the reference point
 	const Node & nodeBegin = mesh.nodes[ixNode];
 
 	// Get the set of faces adjacent this node
@@ -369,7 +361,11 @@ int FindFaceNearNode(
 	// surface of the sphere at nodeBegin
 	Node nodeDirA;
 
+	//GetLocalDirection(nodeBegin, nodeEnd, nodeRef, edgetype, nodeDirA);
 	GetLocalDirection(nodeBegin, nodeEnd, edgetype, nodeDirA);
+
+	// Possible faces
+	std::vector<int> vecPossibleFaces;
 
 	// Loop through all faces
 	std::set<int>::const_iterator iter = setNearbyFaces.begin();
@@ -429,25 +425,15 @@ int FindFaceNearNode(
 		Node nodeDirL;
 		Node nodeDirR;
 
-		GetLocalDirection(nodeBegin, node0, edgePrev.type, nodeDirL);
-		GetLocalDirection(nodeBegin, node2, edgeThis.type, nodeDirR);
-/*
+		GetLocalDirection(node1, node0, edgePrev.type, nodeDirL);
+		GetLocalDirection(node1, node2, edgeThis.type, nodeDirR);
+
 		// Verify coplanarity
-		Node nodeX;
-		nodeX.x = nodeDirA.y * nodeDirL.z - nodeDirA.z * nodeDirL.y;
-		nodeX.y = nodeDirA.z * nodeDirL.x - nodeDirA.x * nodeDirL.z;
-		nodeX.z = nodeDirA.x * nodeDirL.y - nodeDirA.y * nodeDirL.x;
+		Node nodeX(CrossProduct(nodeDirA, nodeDirL));
 
-		double dDotPlanar =
-			  nodeX.x * nodeDirR.x
-			+ nodeX.y * nodeDirR.y
-			+ nodeX.z * nodeDirR.z;
-
-		printf("Planarity: %1.10e\n", dDotPlanar);
-*/
-		double dMagA = nodeDirA.Magnitude();
-		double dMagL = nodeDirL.Magnitude();
-		double dMagR = nodeDirR.Magnitude();
+		Real dMagA = nodeDirA.Magnitude();
+		Real dMagL = nodeDirL.Magnitude();
+		Real dMagR = nodeDirR.Magnitude();
 
 		if (fabs(dMagA) < Tolerance) {
 			_EXCEPTIONT("Zero magnitude of path Edge (possible zero Edge)");
@@ -459,29 +445,18 @@ int FindFaceNearNode(
 			_EXCEPTIONT("Zero magnitude of outgoing Edge");
 		}
 
-		double dDotLR =
-			  nodeDirL.x * nodeDirR.x
-			+ nodeDirL.y * nodeDirR.y
-			+ nodeDirL.z * nodeDirR.z;
+		Real dDotLR = DotProduct(nodeDirL, nodeDirR);
+		Real dDotLA = DotProduct(nodeDirL, nodeDirA);
+		Real dDotRA = DotProduct(nodeDirR, nodeDirA);
 
-		double dDotLA =
-			  nodeDirL.x * nodeDirA.x
-			+ nodeDirL.y * nodeDirA.y
-			+ nodeDirL.z * nodeDirA.z;
-
-		double dDotRA =
-			  nodeDirR.x * nodeDirA.x
-			+ nodeDirR.y * nodeDirA.y
-			+ nodeDirR.z * nodeDirA.z;
-
-		double dNormDotLR = dDotLR / dMagL / dMagR;
-		double dNormDotLA = dDotLA / dMagL / dMagA;
-		double dNormDotRA = dDotRA / dMagR / dMagA;
+		Real dNormDotLR = dDotLR / dMagL / dMagR;
+		Real dNormDotLA = dDotLA / dMagL / dMagA;
+		Real dNormDotRA = dDotRA / dMagR / dMagA;
 
 		// These values mimic the monotone structure of acos()
-		double dAngleLR = 1.0 - dNormDotLR;
-		double dAngleLA = 1.0 - dNormDotLA;
-		double dAngleRA = 1.0 - dNormDotRA;
+		Real dAngleLR = 1.0 - dNormDotLR;
+		Real dAngleLA = 1.0 - dNormDotLA;
+		Real dAngleRA = 1.0 - dNormDotRA;
 
 #ifdef VERBOSE
 		printf("Face: %i\n", (*iter));
@@ -489,7 +464,15 @@ int FindFaceNearNode(
 		nodeDirA.Print("DirA");
 		nodeDirL.Print("DirL");
 		nodeDirR.Print("DirR");
-		printf("Angles: %1.5e %1.5e %1.5e\n", dAngleLR, dAngleLA, dAngleRA);
+		printf("Angles: %1.15Le %1.15Le %1.15Le\n", dAngleLR, dAngleLA, dAngleRA);
+		//printf("Mags: %1.15Le %1.15Le %1.15Le\n", dMagL, dMagR, dMagA);
+
+		Real dDotPlanar = DotProduct(nodeX, nodeDirR);
+
+		if (fabs(dDotPlanar) > Tolerance) {
+			printf("Planarity: %1.10Le\n", dDotPlanar);
+			_EXCEPTIONT("Planarity failure");
+		}
 #endif
 
 		// Sanity check for angles
@@ -603,7 +586,7 @@ int FindFaceNearNodeOld(
 	const Node & nodeEnd,
 	const Edge::Type edgetype
 ) {
-	static const double Tolerance = 1.0e-12;
+	static const Real Tolerance = ReferenceTolerance;
 
 	// Beginning node
 	const Node & nodeBegin = mesh.nodes[ixNode];
@@ -650,10 +633,7 @@ int FindFaceNearNodeOld(
 
 			// Edge is a great circle arc
 			if (edge.type == Edge::Type_GreatCircleArc) {
-				double dDotNorm =
-					  (na.y * nb.z - nb.y * na.z) * nodeEnd.x
-					+ (nb.x * na.z - na.x * nb.z) * nodeEnd.y
-					+ (na.x * nb.y - nb.x * na.y) * nodeEnd.z;
+				Real dDotNorm = DotProduct(CrossProduct(na, nb), nodeEnd);
 
 				if (fabs(dDotNorm) < Tolerance) {
 					if (iEdgeId != (-1)) {
@@ -667,8 +647,8 @@ int FindFaceNearNodeOld(
 
 			// Edge is a line of constant latitude
 			} else if (edge.type == Edge::Type_ConstantLatitude) {
-				double dAlignment = (na.x * nb.y - nb.x * na.y);
-				double dDotNorm = dAlignment / fabs(dAlignment) * (nodeBegin.z - na.z);
+				Real dAlignment = (na.x * nb.y - nb.x * na.y);
+				Real dDotNorm = dAlignment / fabs(dAlignment) * (nodeBegin.z - na.z);
 
 				if (fabs(dDotNorm) < Tolerance) {
 					if (iEdgeId != (-1)) {
@@ -718,10 +698,7 @@ int FindFaceNearNodeOld(
 			(fabs(nodeEnd.z) > Tolerance)
 		) {
 			if ((nodeBegin == na) || (nodeBegin == nb)) {
-				double dDotNorm =
-					  (na.y * nb.z - nb.y * na.z) * nodeEnd.x
-					+ (nb.x * na.z - na.x * nb.z) * nodeEnd.y
-					+ (na.x * nb.y - nb.x * na.y) * nodeEnd.z;
+				Real dDotNorm = DotProduct(CrossProduct(na, nb), nodeEnd);
 
 				if (dDotNorm < 0.0) {
 					return (vecPossibleFaces[0].first);
@@ -733,20 +710,10 @@ int FindFaceNearNodeOld(
 			}
 		}
 
-		Node nodeDeltaA(
-			nodeEnd.x - nodeBegin.x,
-			nodeEnd.y - nodeBegin.y,
-			nodeEnd.z - nodeBegin.z);
+		Node nodeDeltaA = nodeEnd - nodeBegin;
+		Node nodeDeltaB = nb - na;
 
-		Node nodeDeltaB(
-			nb.x - na.x,
-			nb.y - na.y,
-			nb.z - na.z);
-
-		double dDot =
-			+ nodeDeltaA.x * nodeDeltaB.x
-			+ nodeDeltaA.y * nodeDeltaB.y
-			+ nodeDeltaA.z * nodeDeltaB.z;
+		Real dDot = DotProduct(nodeDeltaA, nodeDeltaB);
 
 		if (dDot > 0.0) {
 			return (vecPossibleFaces[0].first);
@@ -767,7 +734,7 @@ int FindFaceNearNode(
 	const Edge::Type edgetype,
 	const FindFaceStruct & aFindFaceStruct
 ) {
-	static const double Tolerance = 1.0e-12;
+	static const Real Tolerance = ReferenceTolerance;
 
 	const std::vector<int> & vecPossibleFaces =
 		aFindFaceStruct.vecFaceIndices;
@@ -810,10 +777,8 @@ int FindFaceNearNode(
 		if (fCoincident) {
 
 			// Calculate orientation
-			double dOrientation =
-				  (node1.x - node0.x) * (nodeEnd.x - nodeBegin.x)
-				+ (node1.y - node0.y) * (nodeEnd.y - nodeBegin.y)
-				+ (node1.z - node0.z) * (nodeEnd.z - nodeBegin.z);
+			Real dOrientation =
+				DotProduct((node1 - node0), (nodeEnd - nodeBegin));
 
 			//if (edge0.type != edgetype) {
 			//	_EXCEPTIONT("Logic error");
@@ -858,10 +823,7 @@ int FindFaceNearNode(
 			(edgetype == Edge::Type_GreatCircleArc)
 		) {
 			// Outward-pointing normal to first great circle arc
-			Node nodeNormal;
-			nodeNormal.x = (node0.y * node1.z) - (node0.z * node1.y);
-			nodeNormal.y = (node0.z * node1.x) - (node0.x * node1.z);
-			nodeNormal.z = (node0.x * node1.y) - (node0.y * node1.x);
+			Node nodeNormal(CrossProduct(node0, node1));
 
 			// Direction along second great circle arc projected onto
 			// surface of the sphere at nodeBegin
@@ -870,15 +832,13 @@ int FindFaceNearNode(
 			GetLocalDirection(nodeBegin, nodeEnd, edgetype, nodeDir);
 
 			// Dot product to determine direction of motion
-			double dDot =
-				  nodeNormal.x * nodeDir.x
-				+ nodeNormal.y * nodeDir.y
-				+ nodeNormal.z * nodeDir.z;
-/*
-			printf("Norm: %1.5e %1.5e %1.5e\n", nodeNormal.x, nodeNormal.y, nodeNormal.z);
-			printf("Dir: %1.5e %1.5e %1.5e\n", nodeDir.x, nodeDir.y, nodeDir.z);
-			printf("%1.5e\n", dDot);
-*/
+			Real dDot = DotProduct(nodeNormal, nodeDir);
+
+			printf("Faces: %i %i\n", aFindFaceStruct.vecFaceIndices[0], aFindFaceStruct.vecFaceIndices[1]);
+			printf("Norm: %1.5Le %1.5Le %1.5Le\n", nodeNormal.x, nodeNormal.y, nodeNormal.z);
+			printf("Dir: %1.5Le %1.5Le %1.5Le\n", nodeDir.x, nodeDir.y, nodeDir.z);
+			printf("%1.5Le\n", dDot);
+
 			if (dDot > Tolerance) {
 				return aFindFaceStruct.vecFaceIndices[0];
 
@@ -952,10 +912,7 @@ int FindFaceNearNode(
 			(edge0.type == Edge::Type_GreatCircleArc)
 		) {
 			// Exterior pointing normal to great circle arc
-			Node nodeNormal;
-			nodeNormal.x = (node1.y * node0.z) - (node1.z * node0.y);
-			nodeNormal.y = (node1.z * node0.x) - (node1.x * node0.z);
-			//nodeNormal.z = (node1.x * node0.y) - (node1.y * node0.x);
+			Node nodeNormal(CrossProduct(node1, node0));
 
 			// Direction of line of constant latitude
 			Node nodeDir;
@@ -963,7 +920,7 @@ int FindFaceNearNode(
 			GetLocalDirection(nodeBegin, nodeEnd, edgetype, nodeDir);
 
 			// Dot product
-			double dDot = nodeDir.x * nodeNormal.x + nodeDir.y * nodeNormal.y;
+			Real dDot = DotProduct(nodeDir, nodeNormal);
 /*
 			printf("F: %i %i\n",
 				aFindFaceStruct.vecFaceIndices[0],
@@ -972,7 +929,7 @@ int FindFaceNearNode(
 			printf("E1: %i %i\n", edge1[0], edge1[1]);
 			nodeNormal.Print("Norm");
 			nodeDir.Print("Dir ");
-			printf("Dot: %1.5e\n", dDot);
+			printf("Dot: %1.5Le\n", dDot);
 
 			printf("%i %i\n",
 				aFindFaceStruct.vecFaceIndices[0],
@@ -1027,10 +984,10 @@ int FindFaceNearNode(
 			nodeEnd,
 			edgetype);
 
-	// This function does not handle Interior or Exterior nodes
-	} else {
-		_EXCEPTIONT("Invalid Node location");
 	}
+
+	// This function does not handle Interior or Exterior nodes
+	_EXCEPTIONT("Invalid Node location");
 
 /*
 	// Locations
@@ -1075,7 +1032,7 @@ int FindFaceNearNode(
 		Node nodeNudged;
 		NudgeAlongEdge(nodeBegin, nodeEnd, edgetype, nodeNudged);
 
-		//printf("A: %1.5e %1.5e %1.5e\n", nodeBegin.x, nodeBegin.y, nodeBegin.z);
+		//printf("A: %1.5Le %1.5Le %1.5Le\n", nodeBegin.x, nodeBegin.y, nodeBegin.z);
 
 		int ixFaceSuggestion = (-1);
 		for (int i = 0; i < vecPossibleFaces.size(); i++) {
@@ -1110,7 +1067,7 @@ int FindFaceNearNode(
 //////////////////////////////////////////////////////////////////////////////
 /*
 	// Find the nudged node towards nodeEnd with type edgetype
-	double dNudgeAmt = 1.0e-6;
+	Real dNudgeAmt = 1.0e-6;
 
 	Node nodeNudged;
 	NudgeAlongEdge(nodeBegin, nodeEnd, edgetype, nodeNudged, dNudgeAmt);
@@ -1189,7 +1146,7 @@ int FindFaceNearNode(
 			(fabs(nodeEnd.z) > Tolerance)
 		) {
 			if ((nodeBegin == na) || (nodeBegin == nb)) {
-				double dDotNorm =
+				Real dDotNorm =
 					  (na.y * nb.z - nb.y * na.z) * nodeEnd.x
 					+ (nb.x * na.z - na.x * nb.z) * nodeEnd.y
 					+ (na.x * nb.y - nb.x * na.y) * nodeEnd.z;
@@ -1214,7 +1171,7 @@ int FindFaceNearNode(
 			nb.y - na.y,
 			nb.z - na.z);
 
-		double dDot =
+		Real dDot =
 			+ nodeDeltaA.x * nodeDeltaB.x
 			+ nodeDeltaA.y * nodeDeltaB.y
 			+ nodeDeltaA.z * nodeDeltaB.z;
@@ -1240,13 +1197,13 @@ int FindFaceNearNodeOld(
 	const Edge::Type edgetype,
 	const FindFaceStruct & aFindFaceStruct
 ) {
-	const double Tolerance = 1.0e-12;
+	const Real Tolerance = ReferenceTolerance;
 
 	const std::vector<int> & vecPossibleFaces =
 		aFindFaceStruct.vecFaceIndices;
 
 	// Find the nudged node towards nodeEnd with type edgetype
-	double dNudgeAmt = 1.0e-6;
+	Real dNudgeAmt = 1.0e-6;
 
 	Node nodeNudged;
 	NudgeAlongEdge(nodeBegin, nodeEnd, edgetype, nodeNudged, dNudgeAmt);
@@ -1324,7 +1281,7 @@ int FindFaceNearNodeOld(
 			(fabs(nodeEnd.z) > Tolerance)
 		) {
 			if ((nodeBegin == na) || (nodeBegin == nb)) {
-				double dDotNorm =
+				Real dDotNorm =
 					  (na.y * nb.z - nb.y * na.z) * nodeEnd.x
 					+ (nb.x * na.z - na.x * nb.z) * nodeEnd.y
 					+ (na.x * nb.y - nb.x * na.y) * nodeEnd.z;
@@ -1349,7 +1306,7 @@ int FindFaceNearNodeOld(
 			nb.y - na.y,
 			nb.z - na.z);
 
-		double dDot =
+		Real dDot =
 			+ nodeDeltaA.x * nodeDeltaB.x
 			+ nodeDeltaA.y * nodeDeltaB.y
 			+ nodeDeltaA.z * nodeDeltaB.z;
@@ -1458,8 +1415,8 @@ void GenerateOverlapMesh(
 	int ixCurrentFirstFace = 0;
 
 #pragma message "OpenMP here"
-	//for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	for (int ixCurrentFirstFace = 389; ixCurrentFirstFace < 390; ixCurrentFirstFace++) {
+	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 389; ixCurrentFirstFace < 390; ixCurrentFirstFace++) {
 
 		///////////////////////////////////////////////////////////////////////
 		// Build the PathSegmentVector around this face
@@ -1533,6 +1490,7 @@ void GenerateOverlapMesh(
 			// Initialize the trace
 			const Edge & edgeFirstCurrent = faceFirstCurrent.edges[i];
 
+			const Node & nodeFirstBegin = nodevecFirst[edgeFirstCurrent[0]];
 			const Node & nodeFirstEnd = nodevecFirst[edgeFirstCurrent[1]];
 
 			int ixOverlapNodeCurrent = edgeFirstCurrent[0];
@@ -1540,6 +1498,10 @@ void GenerateOverlapMesh(
 
 			// Repeat until we hit the end of this edge
 			for (;;) {
+
+#ifdef VERBOSE
+				printf("---\n");
+#endif
 
 				const Face & faceSecondCurrent =
 					meshSecond.faces[ixCurrentSecondFace];
@@ -1574,6 +1536,13 @@ void GenerateOverlapMesh(
 							edgeSecondCurrent.type,
 							nodeIntersections,
 							false);
+/*
+					if (nodeIntersections.size() >= 1) {
+						nodeIntersections[0].Print("int");
+						meshOverlap.nodes[ixOverlapNodeCurrent].Print("B");
+						std::cout << (nodeIntersections[i] == meshOverlap.nodes[ixOverlapNodeCurrent]) << std::endl;
+					}
+*/
 /*
 					for (int i = 0; i < nodeIntersections.size(); i++) {
 						if (nodeIntersections[i] == meshOverlap.nodes[ixOverlapNodeCurrent]) {
@@ -1675,11 +1644,11 @@ void GenerateOverlapMesh(
 								edgeSecondCurrent[0],
 								nodevecFirst[edgeFirstNext[1]],
 								edgeFirstNext.type);
-/*
+
 						if (ixNextSecondFace == ixCurrentSecondFace) {
 							printf("WARNING: Face does not change across Edge (1)\n");
 						}
-*/
+
 						// If face changes insert a Node bifurcation
 						if (ixNextSecondFace != ixCurrentSecondFace) {
 							vecTracedPath.push_back(PathSegment(
@@ -1700,11 +1669,11 @@ void GenerateOverlapMesh(
 								edgeSecondCurrent[1],
 								nodevecFirst[edgeFirstNext[1]],
 								edgeFirstNext.type);
-/*
+
 						if (ixNextSecondFace == ixCurrentSecondFace) {
 							printf("WARNING: Face does not change across Edge (2)\n");
 						}
-*/
+
 						// If face changes insert a Node bifuraction
 						if (ixNextSecondFace != ixCurrentSecondFace) {
 							vecTracedPath.push_back(PathSegment(
@@ -1741,11 +1710,11 @@ void GenerateOverlapMesh(
 								nodevecFirst[edgeFirstNext[1]],
 								edgeFirstNext.type,
 								aNextFindFaceStruct);
-/*
+
 						if (ixNextSecondFace == ixCurrentSecondFace) {
 							printf("WARNING: Face does not change across Edge (3)\n");
 						}
-*/
+
 /*
 						int ixOldSecondFace =
 							FindFaceNearNodeOld(
@@ -1899,27 +1868,42 @@ void GenerateOverlapMesh(
 
 					const FacePair & facepair = iter->second;
 
-					std::vector<int> vecPossibleFaces;
-					vecPossibleFaces.push_back(facepair[0]);
-					vecPossibleFaces.push_back(facepair[1]);
-
-					FindFaceStruct aNextFindFaceStruct;
-
-					FindFaceFromNode(
-						meshSecond,
-						nodeIntersections[0],
-						vecPossibleFaces,
-						aNextFindFaceStruct);
-
 					int ixPrevSecondFace = ixCurrentSecondFace;
 
-					ixCurrentSecondFace = 
-						FindFaceNearNode(
+					FindFaceStruct aNextFindFaceStruct;
+/*
+					// Face always changes across great circle arc
+					if ((edgeFirstCurrent.type  == Edge::Type_GreatCircleArc) &&
+						(edgeSecondCurrent.type == Edge::Type_GreatCircleArc)
+					) {
+						if (facepair[0] == ixCurrentSecondFace) {
+							ixCurrentSecondFace = facepair[1];
+						} else {
+							ixCurrentSecondFace = facepair[0];
+						}
+						printf("%i\n", ixCurrentSecondFace);
+
+					// General intersection
+					} else {
+*/
+						std::vector<int> vecPossibleFaces;
+						vecPossibleFaces.push_back(facepair[0]);
+						vecPossibleFaces.push_back(facepair[1]);
+
+						FindFaceFromNode(
 							meshSecond,
 							nodeIntersections[0],
-							meshOverlap.nodes[edgeFirstCurrent[1]],
-							edgeFirstCurrent.type,
+							vecPossibleFaces,
 							aNextFindFaceStruct);
+
+						ixCurrentSecondFace = 
+							FindFaceNearNode(
+								meshSecond,
+								nodeIntersections[0],
+								meshOverlap.nodes[edgeFirstCurrent[1]],
+								edgeFirstCurrent.type,
+								aNextFindFaceStruct);
+//					}
 
 					if (ixPrevSecondFace == ixCurrentSecondFace) {
 						printf("WARNING: Face does not change across Edge (3)\n");
@@ -1934,7 +1918,8 @@ void GenerateOverlapMesh(
 							aNextFindFaceStruct);
 
 					printf("C: %i %i\n", ixCurrentSecondFace, ixOldSecondFace);
-
+*/
+/*
 					if (ixCurrentSecondFace != ixOldSecondFace) {
 						printf("Type: %i\n", edgeFirstCurrent.type);
 						printf("Loc: %i\n", aNextFindFaceStruct.loc);

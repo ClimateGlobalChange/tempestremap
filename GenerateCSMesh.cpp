@@ -26,15 +26,15 @@
 int InsertCSSubNode(
 	int ix0,
 	int ix1,
-	double alpha,
+	Real alpha,
 	NodeVector & nodes
 ) {
-	double dX = nodes[ix0].x + (nodes[ix1].x - nodes[ix0].x) * alpha;
-	double dY = nodes[ix0].y + (nodes[ix1].y - nodes[ix0].y) * alpha;
-	double dZ = nodes[ix0].z + (nodes[ix1].z - nodes[ix0].z) * alpha;
+	Real dX = nodes[ix0].x + (nodes[ix1].x - nodes[ix0].x) * alpha;
+	Real dY = nodes[ix0].y + (nodes[ix1].y - nodes[ix0].y) * alpha;
+	Real dZ = nodes[ix0].z + (nodes[ix1].z - nodes[ix0].z) * alpha;
 
 	// Project to sphere
-	double dRadius = sqrt(dX*dX + dY*dY + dZ*dZ);
+	Real dRadius = sqrt(dX*dX + dY*dY + dZ*dZ);
 
 	dX /= dRadius;
 	dY /= dRadius;
@@ -65,8 +65,8 @@ void GenerateCSMultiEdgeVertices(
 	for (i = 1; i < nRefineLevel; i++) {
 
 		// Nodes along line in Cartesian geometry
-		double alpha =
-			static_cast<double>(i) / static_cast<double>(nRefineLevel);
+		Real alpha =
+			static_cast<Real>(i) / static_cast<Real>(nRefineLevel);
 
 		alpha = 0.5 * (tan(0.25 * M_PI * (2.0 * alpha - 1.0)) + 1.0);
 
@@ -156,7 +156,7 @@ try {
 	FaceVector & faces = mesh.faces;
 
 	// Generate corner points
-	double dInvDeltaX = 1.0 / sqrt(3.0);
+	Real dInvDeltaX = 1.0 / sqrt(3.0);
 
 	nodes.push_back(Node(+dInvDeltaX, -dInvDeltaX, -dInvDeltaX));
 	nodes.push_back(Node(+dInvDeltaX, +dInvDeltaX, -dInvDeltaX));

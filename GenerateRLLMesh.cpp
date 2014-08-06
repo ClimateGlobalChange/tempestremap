@@ -23,6 +23,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#define ONLY_GREAT_CIRCLES
+
+///////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char** argv) {
 
 try {
@@ -71,20 +75,20 @@ try {
 	nodes.push_back(Node(0.0, 0.0, -1.0));
 	for (int j = 1; j < nLatitudes; j++) {
 		for (int i = 0; i < nLongitudes; i++) {
-			double dPhiFrac =
-				  static_cast<double>(j)
-				/ static_cast<double>(nLatitudes);
+			Real dPhiFrac =
+				  static_cast<Real>(j)
+				/ static_cast<Real>(nLatitudes);
 
-			double dLambdaFrac =
-				  static_cast<double>(i)
-				/ static_cast<double>(nLongitudes);
+			Real dLambdaFrac =
+				  static_cast<Real>(i)
+				/ static_cast<Real>(nLongitudes);
 
-			double dPhi = M_PI * (dPhiFrac - 0.5);
-			double dLambda = 2.0 * M_PI * dLambdaFrac;
+			Real dPhi = M_PI * (dPhiFrac - 0.5);
+			Real dLambda = 2.0 * M_PI * dLambdaFrac;
 
-			double dX = cos(dPhi) * cos(dLambda);
-			double dY = cos(dPhi) * sin(dLambda);
-			double dZ = sin(dPhi);
+			Real dX = cos(dPhi) * cos(dLambda);
+			Real dY = cos(dPhi) * sin(dLambda);
+			Real dZ = sin(dPhi);
 
 			nodes.push_back(Node(dX, dY, dZ));
 		}
@@ -99,8 +103,10 @@ try {
 		face.SetNode(2, i + 1);
 		face.SetNode(3, 0);
 
+#ifndef ONLY_GREAT_CIRCLES
 		face.edges[1].type = Edge::Type_ConstantLatitude;
 		face.edges[3].type = Edge::Type_ConstantLatitude;
+#endif
 
 		faces.push_back(face);
 	}
@@ -117,8 +123,10 @@ try {
 			face.SetNode(2, iNextLatNodeIx + i);
 			face.SetNode(3, iThisLatNodeIx + i);
 
+#ifndef ONLY_GREAT_CIRCLES
 			face.edges[1].type = Edge::Type_ConstantLatitude;
 			face.edges[3].type = Edge::Type_ConstantLatitude;
+#endif
 
 			faces.push_back(face);
 		}
@@ -135,8 +143,10 @@ try {
 			face.SetNode(2, iThisLatNodeIx + (i + 1) % nLongitudes);
 			face.SetNode(3, iNorthPolarNodeIx);
 
+#ifndef ONLY_GREAT_CIRCLES
 			face.edges[1].type = Edge::Type_ConstantLatitude;
 			face.edges[3].type = Edge::Type_ConstantLatitude;
+#endif
 
 			faces.push_back(face);
 		}

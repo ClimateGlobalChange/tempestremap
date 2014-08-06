@@ -19,6 +19,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "Defines.h"
+
 #include <vector>
 #include <set>
 #include <map>
@@ -38,9 +40,9 @@ public:
 	///	<summary>
 	///		Cartesian coordinates (x,y,z) of this node.
 	///	</summary>
-	double x;
-	double y;
-	double z;
+	Real x;
+	Real y;
+	Real z;
 
 public:
 	///	<summary>
@@ -56,9 +58,9 @@ public:
 	///		Constructor.
 	///	</summary>
 	Node(
-		double _x,
-		double _y,
-		double _z
+		Real _x,
+		Real _y,
+		Real _z
 	) :
 		x(_x),
 		y(_y),
@@ -69,7 +71,7 @@ public:
 	///		Equality operator using floating point tolerance.
 	///	</summary>
 	bool operator== (const Node & node) const {
-		static const double Tolerance = 1.0e-12;
+		static const Real Tolerance = ReferenceTolerance;
 
 		if ((fabs(x - node.x) < Tolerance) &&
 			(fabs(y - node.y) < Tolerance) &&
@@ -91,7 +93,7 @@ public:
 	///		Comparator operator using floating point tolerance.
 	///	</summary>
 	bool operator< (const Node & node) const {
-		static const double Tolerance = 1.0e-12;
+		static const Real Tolerance = ReferenceTolerance;
 
 		if (x - node.x <= -Tolerance) {
 			return true;
@@ -115,9 +117,20 @@ public:
 	}
 
 	///	<summary>
+	///		Difference between two nodes.
+	///	</summary>
+	Node operator-(const Node & node) const {
+		Node nodeDiff;
+		nodeDiff.x = x - node.x;
+		nodeDiff.y = y - node.y;
+		nodeDiff.z = z - node.z;
+		return nodeDiff;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
-	double Magnitude() const {
+	Real Magnitude() const {
 		return sqrt(x * x + y * y + z * z);
 	}
 
@@ -125,7 +138,7 @@ public:
 	///		Output node to stdout.
 	///	</summary>
 	void Print(const char * szName) const {
-		printf("%s: %1.15e %1.15e %1.15e\n", szName, x, y, z);
+		printf("%s: %1.15Le %1.15Le %1.15Le\n", szName, x, y, z);
 	}
 };
 
@@ -582,11 +595,25 @@ public:
 ///	<summary>
 ///		Calculate the dot product between two Nodes.
 ///	</summary>
-inline double DotProduct(
+inline Real DotProduct(
 	const Node & node1,
 	const Node & node2
 ) {
 	return (node1.x * node2.x + node1.y * node2.y + node1.z * node2.z);
+}
+
+///	<summary>
+///		Calculate the cross product between two Nodes.
+///	</summary>
+inline Node CrossProduct(
+	const Node & node1,
+	const Node & node2
+) {
+	Node nodeCross;
+	nodeCross.x = node1.y * node2.z - node1.z * node2.y;
+	nodeCross.y = node1.z * node2.x - node1.x * node2.z;
+	nodeCross.z = node1.x * node2.y - node1.y * node2.x;
+	return nodeCross;
 }
 
 ///	<summary>
@@ -629,6 +656,20 @@ bool IsPositivelyOrientedEdge(
 void GetLocalDirection(
 	const Node & nodeBegin,
 	const Node & nodeEnd,
+	const Node & nodeRef,
+	const Edge::Type edgetype,
+	Node & nodeDir
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Get the local direction vector along the surface of the sphere
+///		for the given edge.
+///	</summary>
+void GetLocalDirection(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
 	const Edge::Type edgetype,
 	Node & nodeDir
 );
@@ -644,7 +685,7 @@ void NudgeAlongEdge(
 	const Node & nodeEnd,
 	const Edge::Type type,
 	Node & nodeNudged,
-	double Nudge = 1.0e-6
+	Real Nudge = 1.0e-6
 );
 
 ///////////////////////////////////////////////////////////////////////////////

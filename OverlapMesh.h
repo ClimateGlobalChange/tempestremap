@@ -17,6 +17,8 @@
 #ifndef _OVERLAPMESH_H_
 #define _OVERLAPMESH_H_
 
+#include "Defines.h"
+
 #include "GridElements.h"
 
 ///////////////////////////////////////////////////////////////////////////////

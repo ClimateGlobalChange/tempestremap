@@ -59,9 +59,9 @@ try {
 	FILE * fpNodes = fopen(strOutputNodes.c_str(), "w");
 	for (int i = 0; i < meshInput.nodes.size(); i++) {
 		fprintf(fpNodes, "%1.10e %1.10e %1.10e\n",
-			meshInput.nodes[i].x,
-			meshInput.nodes[i].y,
-			meshInput.nodes[i].z);
+			static_cast<double>(meshInput.nodes[i].x),
+			static_cast<double>(meshInput.nodes[i].y),
+			static_cast<double>(meshInput.nodes[i].z));
 	}
 	fclose(fpNodes);
 	AnnounceEndBlock("Done!");
