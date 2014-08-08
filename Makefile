@@ -17,7 +17,9 @@ LDFILES= -lnetcdf -lnetcdf_c++
 # Local files
 FILES= Announce.cpp \
        GridElements.cpp \
-       OverlapMesh.cpp
+       OverlapMesh.cpp \
+       MeshUtilitiesFuzzy.cpp \
+       MeshUtilitiesExact.cpp
 
 GENERATERLLMESH_FILES= GenerateRLLMesh.cpp $(FILES)
 
@@ -38,7 +40,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh MeshToTxt UnitTest gecore2
+all: GenerateRLLMesh GenerateCSMesh MeshToTxt gecore2
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -49,8 +51,8 @@ GenerateCSMesh: $(GENERATECSMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt: $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-UnitTest: $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+#UnitTest: $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o)
+#	$(CC) $(LDFLAGS) -o $@ $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)

@@ -3,6 +3,9 @@
 *.d
 *.bak
 *.g
+*.dat
+*.txt
+*.m~
 gecore2
 
 UnitTest
@@ -12,3 +15,5 @@ MeshToTxt
 GenerateRLLMesh
 
 GenerateCSMesh
+
+gecorereal

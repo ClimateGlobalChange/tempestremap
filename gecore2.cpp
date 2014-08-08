@@ -51,7 +51,19 @@ try {
 	EndCommandLine(argv)
 
 	AnnounceBanner();
-
+/*
+	FixedPoint fp1(0.5);
+	FixedPoint fp1b(5.0e-10);
+	FixedPoint fp2(-0.5);
+	FixedPoint fp2b(5.0e-10);
+	fp1 += fp1b;
+	fp2 += fp2b;
+	FixedPoint fp = fp1 * fp2;
+	fp1.Print(); printf("\n");
+	fp2.Print(); printf("\n");
+	fp.Print();
+	_EXCEPTION();
+*/
 	// Load input mesh
 	AnnounceStartBlock("Loading input mesh");
 	Mesh meshInput(strInputMesh);
