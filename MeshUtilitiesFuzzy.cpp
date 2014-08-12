@@ -25,14 +25,119 @@ bool MeshUtilitiesFuzzy::AreNodesEqual(
 	const Node & node1
 ) {
 	static const Real Tolerance = ReferenceTolerance;
-
+/*
 	if ((fabs(node0.x - node1.x) < Tolerance) &&
 		(fabs(node0.y - node1.y) < Tolerance) &&
 		(fabs(node0.z - node1.z) < Tolerance)
 	) {
 		return true;
 	}
+*/
+#pragma message "Verify that Nodes aren't pointing in opposite directions"
+	double dDot00 = DotProduct(node0, node0);
+	double dDot01 = DotProduct(node0, node1);
+	double dDot11 = DotProduct(node1, node1);
+
+	if (fabs(dDot01 * dDot01 - dDot00 * dDot11) < Tolerance) {
+		return true;
+	}
+
 	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void MeshUtilitiesFuzzy::ContainsNode(
+	const Face & face,
+	const NodeVector & nodevec,
+	const Node & node,
+	Face::NodeLocation & loc,
+	int & ixLocation
+) const {
+	static const Real Tolerance = ReferenceTolerance;
+
+	// Set of edges which "contain" this node
+	std::set<int> setContainedEdgeIx;
+
+	// Loop through all edges of this face
+	for (int i = 0; i < face.edges.size(); i++) {
+
+		// Paired edges means edge is invalid
+		if (face.edges[i][0] == face.edges[i][1]) {
+			_EXCEPTIONT("Zero Edge detected");
+		}
+
+		// Check which side of the face this edge is on
+		const Node & na = nodevec[face.edges[i][0]];
+		const Node & nb = nodevec[face.edges[i][1]];
+
+		if (face.edges[i].type == Edge::Type_GreatCircleArc) {
+			Real dDotNorm = DotProduct(CrossProduct(na, nb), node);
+
+			if (dDotNorm <= - Tolerance) {
+				loc = Face::NodeLocation_Exterior;
+				ixLocation = 0;
+				return;
+			}
+			if (dDotNorm < Tolerance) {
+				setContainedEdgeIx.insert(i);
+			}
+
+		} else if (face.edges[i].type == Edge::Type_ConstantLatitude) {
+			Real dAlignment = (na.x * nb.y - nb.x * na.y);
+			Real dDotNorm = dAlignment / fabs(dAlignment) * (node.z - na.z);
+
+			if (dDotNorm <= - Tolerance) {
+				loc = Face::NodeLocation_Exterior;
+				ixLocation = 0;
+				return;
+			}
+			if (dDotNorm < Tolerance) {
+				setContainedEdgeIx.insert(i);
+			}
+
+		} else {
+			_EXCEPTIONT("Invalid EdgeType");
+		}
+	}
+
+	// Check if the node is contained on an edge
+	if (setContainedEdgeIx.size() == 1) {
+		loc = Face::NodeLocation_Edge;
+		ixLocation = *(setContainedEdgeIx.begin());
+		return;
+	}
+
+	// Node is coincident with a corner of this face
+	if (setContainedEdgeIx.size() == 2) {
+
+		std::set<int>::iterator iter;
+
+		iter = setContainedEdgeIx.begin();
+		int ix0 = *(iter);
+
+		iter++;
+		int ix1 = *(iter);
+
+		if ((ix0 == 0) && (ix1 != 1)) {
+			ixLocation = 0;
+		} else {
+			ixLocation = ix1;
+		}
+
+		loc = Face::NodeLocation_Corner;
+		return;
+	}
+
+	// Node occurs in more than two edges; error.
+	if (setContainedEdgeIx.size() > 2) {
+		_EXCEPTIONT("Logic error: Node occurs in more than two edges");
+	}
+
+	// Default; node occurs in the interior of the face
+	loc = Face::NodeLocation_Interior;
+	ixLocation = 0;
+	return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -130,6 +235,99 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 				_EXCEPTIONT("Logic error");
 			}
 		}
+/*
+		// True if nodeLine is in the fan of node11 and node12.  False if
+		// -nodeLine is in the fan of node11 and node12.
+		bool fFirstPosModeInRange = true;
+		bool fSecondPosModeInRange = true;
+
+		Real dDenom;
+		Real dC;
+		Real dD;
+
+		// Determine if nodeLine is in the fan of [node11, node12]
+		if (fabs(nodeN11xN12.x) > Tolerance) {
+			dDenom = nodeN11xN12.x;
+
+			dC = nodeLine.y * node12.z - nodeLine.z * node12.y;
+			dD = nodeLine.z * node11.y - nodeLine.y * node11.z;
+
+		} else if (fabs(nodeN11xN12.y) > Tolerance) {
+			dDenom = nodeN11xN12.y;
+
+			dC = nodeLine.z * node12.x - nodeLine.x * node12.z;
+			dD = nodeLine.x * node11.z - nodeLine.z * node11.x;
+
+		} else if (fabs(nodeN11xN12.z) > Tolerance) {
+			dDenom = nodeN11xN12.z;
+
+			dC = nodeLine.x * node12.y - nodeLine.y * node12.x;
+			dD = nodeLine.y * node11.x - nodeLine.x * node11.y;
+
+		} else {
+			_EXCEPTIONT("Zero Cross product detected");
+		}
+
+		if ((dC <= -Tolerance) && (dD >= Tolerance)) {
+			return false;
+		} else if ((dC >= Tolerance) && (dD <= -Tolerance)) {
+			return false;
+		} else if ((dC >= -Tolerance) && (dD >= -Tolerance)) {
+			fFirstPosModeInRange = (dDenom > 0.0);
+		} else {
+			fFirstPosModeInRange = (dDenom < 0.0);
+		}
+
+		// If we have reached this point then nodeLine is in the fan
+		// of [node11, node12].  Now determine if nodeLine is in the
+		// fan of [node21, node22].
+		if (fabs(nodeN21xN22.x) > Tolerance) {
+			dDenom = nodeN21xN22.x;
+
+			dC = nodeLine.y * node22.z - nodeLine.z * node22.y;
+			dD = nodeLine.z * node21.y - nodeLine.y * node21.z;
+
+		} else if (fabs(nodeN21xN22.y) > Tolerance) {
+			dDenom = nodeN21xN22.y;
+
+			dC = nodeLine.z * node22.x - nodeLine.x * node22.z;
+			dD = nodeLine.x * node21.z - nodeLine.z * node21.x;
+
+		} else if (fabs(nodeN21xN22.z) > Tolerance) {
+			dDenom = nodeN21xN22.z;
+
+			dC = nodeLine.x * node22.y - nodeLine.y * node22.x;
+			dD = nodeLine.y * node21.x - nodeLine.x * node21.y;
+
+		} else {
+			_EXCEPTIONT("Zero Cross product detected");
+		}
+
+		if ((dC <= -Tolerance) && (dD >= Tolerance)) {
+			return false;
+		} else if ((dC >= Tolerance) && (dD <= -Tolerance)) {
+			return false;
+		} else if ((dC >= -Tolerance) && (dD >= -Tolerance)) {
+			fSecondPosModeInRange = (dDenom > 0.0);
+		} else {
+			fSecondPosModeInRange = (dDenom < 0.0);
+		}
+
+		// Verify fans are not antipodal
+		if (fFirstPosModeInRange != fSecondPosModeInRange) {
+			return false;
+		}
+
+		// Solution exists
+		if (!fFirstPosModeInRange) {
+			nodeLine.x = - nodeLine.x;
+			nodeLine.y = - nodeLine.y;
+			nodeLine.z = - nodeLine.z;
+		} 
+
+		nodeIntersections.push_back(nodeLine);
+		return false;
+*/
 
 		// Find the intersection point
 		Real dMagLine = nodeLine.Magnitude();
@@ -195,6 +393,7 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 
 		// No intersections
 		return false;
+
 /*
 		// n11 dot n12
 		Real dN11oN12 =
@@ -665,110 +864,6 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 	}
 
 	return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void MeshUtilitiesFuzzy::FindFaceFromNode(
-	const Mesh & mesh,
-	const Node & node,
-	FindFaceStruct & aFindFaceStruct
-) {
-	// Reset the FaceStruct
-	aFindFaceStruct.vecFaceIndices.clear();
-	aFindFaceStruct.vecFaceLocations.clear();
-	aFindFaceStruct.loc = Face::NodeLocation_Undefined;
-
-	// Loop through all faces to find overlaps
-	// Note: This algorithm can likely be dramatically improved
-	for (int l = 0; l < mesh.faces.size(); l++) {
-		Face::NodeLocation loc;
-		int ixLocation;
-
-		mesh.faces[l].ContainsNode(
-			mesh.nodes,
-			node,
-			loc,
-			ixLocation);
-
-		if (loc == Face::NodeLocation_Exterior) {
-			continue;
-		}
-
-#ifdef VERBOSE
-		printf("%i\n", l);
-		printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
-		printf("n0: %1.5Le %1.5Le %1.5Le\n",
-			mesh.nodes[mesh.faces[l][0]].x,
-			mesh.nodes[mesh.faces[l][0]].y,
-			mesh.nodes[mesh.faces[l][0]].z);
-		printf("n1: %1.5Le %1.5Le %1.5Le\n",
-			mesh.nodes[mesh.faces[l][1]].x,
-			mesh.nodes[mesh.faces[l][1]].y,
-			mesh.nodes[mesh.faces[l][1]].z);
-		printf("n2: %1.5Le %1.5Le %1.5Le\n",
-			mesh.nodes[mesh.faces[l][2]].x,
-			mesh.nodes[mesh.faces[l][2]].y,
-			mesh.nodes[mesh.faces[l][2]].z);
-		printf("n3: %1.5Le %1.5Le %1.5Le\n",
-			mesh.nodes[mesh.faces[l][3]].x,
-			mesh.nodes[mesh.faces[l][3]].y,
-			mesh.nodes[mesh.faces[l][3]].z);
-#endif
-
-		if (aFindFaceStruct.loc == Face::NodeLocation_Undefined) {
-			aFindFaceStruct.loc = loc;
-		}
-
-		// Node is in the interior of this face
-		if (loc == Face::NodeLocation_Interior) {
-			if (loc != aFindFaceStruct.loc) {
-				_EXCEPTIONT("No consensus on location of Node");
-			}
-
-			aFindFaceStruct.vecFaceIndices.push_back(l);
-			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
-			break;
-		}
-
-		// Node is on the edge of this face
-		if (loc == Face::NodeLocation_Edge) {
-			if (loc != aFindFaceStruct.loc) {
-				_EXCEPTIONT("No consensus on location of Node");
-			}
-
-			aFindFaceStruct.vecFaceIndices.push_back(l);
-			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
-		}
-
-		// Node is at the corner of this face
-		if (loc == Face::NodeLocation_Corner) {
-			if (loc != aFindFaceStruct.loc) {
-				_EXCEPTIONT("No consensus on location of Node");
-			}
-
-			aFindFaceStruct.vecFaceIndices.push_back(l);
-			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
-		}
-	}
-
-	// Edges can only have two adjacent Faces
-	if (aFindFaceStruct.loc == Face::NodeLocation_Edge) {
-		if (aFindFaceStruct.vecFaceIndices.size() != 2) {
-			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
-			_EXCEPTION1("Multiple co-located edges detected (%i)",
-				(int)(aFindFaceStruct.vecFaceIndices.size()));
-		}
-	}
-
-	// Corners must have at least three adjacent Faces
-	if (aFindFaceStruct.loc == Face::NodeLocation_Corner) {
-		if (aFindFaceStruct.vecFaceIndices.size() < 3) {
-			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
-			_EXCEPTION1("Two Faced corner detected (%i)",
-				(int)(aFindFaceStruct.vecFaceIndices.size()));
-		}
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

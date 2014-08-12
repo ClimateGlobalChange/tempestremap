@@ -18,6 +18,7 @@ LDFILES= -lnetcdf -lnetcdf_c++
 FILES= Announce.cpp \
        GridElements.cpp \
        OverlapMesh.cpp \
+       MeshUtilities.cpp \
        MeshUtilitiesFuzzy.cpp \
        MeshUtilitiesExact.cpp
 

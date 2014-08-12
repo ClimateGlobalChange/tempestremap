@@ -19,10 +19,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define USE_EXACT_ARITHMETIC
-
-///////////////////////////////////////////////////////////////////////////////
-
 #include "Defines.h"
 
 #include "FixedPoint.h"
@@ -125,29 +121,7 @@ public:
 
 		return (*this);
 	}
-/*
-	///	<summary>
-	///		Equality operator using floating point tolerance.
-	///	</summary>
-	bool operator== (const Node & node) const {
-		static const Real Tolerance = ReferenceTolerance;
 
-		if ((fabs(x - node.x) < Tolerance) &&
-			(fabs(y - node.y) < Tolerance) &&
-			(fabs(z - node.z) < Tolerance)
-		) {
-			return true;
-		}
-		return false;
-	}
-
-	///	<summary>
-	///		Inequality operator.
-	///	</summary>
-	bool operator!= (const Node & node) const {
-		return !((*this) == node);
-	}
-*/
 	///	<summary>
 	///		Comparator operator using floating point tolerance.
 	///	</summary>
@@ -205,6 +179,42 @@ public:
 	void Print(const char * szName) const {
 		printf("%s: %1.15Le %1.15Le %1.15Le\n", szName, x, y, z);
 	}
+
+#ifdef USE_EXACT_ARITHMETIC
+	///	<summary>
+	///		Output node to stdout.
+	///	</summary>
+	void PrintX(const char * szName) const {
+		printf("%s:\n", szName);
+		printf("  X: "); fx.Print(); printf("\n");
+		printf("  Y: "); fy.Print(); printf("\n");
+		printf("  Z: "); fz.Print(); printf("\n");
+	}
+
+	///	<summary>
+	///		Output node to stdout.
+	///	</summary>
+	void PrintMX() const {
+		printf("[");
+		fx.Print(); printf(", ");
+		fy.Print(); printf(", ");
+		fz.Print(); printf("]\n");
+	}
+
+	///	<summary>
+	///		Output node to stdout.
+	///	</summary>
+	void PrintNorm() const {
+		Real dx = fx.ToReal();
+		Real dy = fy.ToReal();
+		Real dz = fz.ToReal();
+
+		Real mag = sqrt(dx * dx + dy * dy + dz * dz);
+
+		printf("%1.15Le %1.15Le %1.15Le\n", dx / mag, dy / mag, dz / mag);
+	}
+
+#endif
 };
 
 ///	<summary>
@@ -546,7 +556,7 @@ public:
 		NodeLocation_Edge = 2,
 		NodeLocation_Corner = 3
 	};
-
+/*
 	///	<summary>
 	///		Determine if this face contains the specified Node, and whether
 	///		the Node is along an edge or at a corner.
@@ -569,7 +579,7 @@ public:
 		int & ixLocation
 	) const;
 #endif
-
+*/
 	///	<summary>
 	///		Determine the Edge index corresponding to the given Edge.  If the
 	///		Edge is not found an Exception is thrown.
@@ -773,6 +783,20 @@ inline Node CrossProductX(
 	nodeCross.fy = node1.fz * node2.fx - node1.fx * node2.fz;
 	nodeCross.fz = node1.fx * node2.fy - node1.fy * node2.fx;
 	return nodeCross;
+}
+
+///	<summary>
+///		Calculate the product of a Node with a scalar.
+///	</summary>
+inline Node ScalarProductX(
+	const FixedPoint & fp,
+	const Node & node
+) {
+	Node nodeProduct(node);
+	nodeProduct.fx *= fp;
+	nodeProduct.fy *= fp;
+	nodeProduct.fz *= fp;
+	return nodeProduct;
 }
 #endif
 

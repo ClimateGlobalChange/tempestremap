@@ -23,6 +23,7 @@
 #include <vector>
 #include <iostream>
 
+#include "Defines.h"
 #include "Exception.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,13 +73,26 @@ public:
 	///	</summary>
 	inline void Normalize() {
 		uint64_t nCarryover;
-		for (size_t i = 0; i < Digits; i++) {
+		for (int i = 0; i < Digits; i++) {
 			nCarryover = m_vecDigits[i] / MaximumDigit;
 			m_vecDigits[i] = m_vecDigits[i] % MaximumDigit;
 			m_vecDigits[i+1] += nCarryover;
 		}
 		if (nCarryover != 0) {
 			_EXCEPTIONT("FixedPoint overflow");
+		}
+
+		// Check for zero
+		bool fIsZero = true;
+		for (int i = 0; i < Digits; i++) {
+			if (m_vecDigits[i] != 0) {
+				fIsZero = false;
+				break;
+			}
+		}
+		if (fIsZero) {
+			m_iSign = 0;
+			m_iDecimal = 1;
 		}
 	}
 
@@ -109,6 +123,12 @@ public:
 			m_iSign = -1;
 		}
 
+		if (m_vecDigits[0] == MaximumDigit) {
+			m_vecDigits[0] = MaximumDigit-1;
+		} else if (m_vecDigits[0] > MaximumDigit) {
+			_EXCEPTIONT("FixedPoint cannot be set by value larger than 1");
+		}
+
 		m_iDecimal = 1;
 
 		Normalize();
@@ -122,11 +142,16 @@ private:
 		const FixedPoint & fp,
 		bool fDifference
 	) {
+		// Check for zero
+		if (fp.m_iSign == 0) {
+			return;
+		}
+
 		// Shift decimal
 		int iShift;
 		if (m_iDecimal < fp.m_iDecimal) {
 			int i;
-			for (i = fp.m_iDecimal; i >= m_iDecimal; i--) {
+			for (i = Digits-1; i >= fp.m_iDecimal - m_iDecimal; i--) {
 				m_vecDigits[i] = m_vecDigits[i - fp.m_iDecimal + m_iDecimal];
 			}
 			for (; i >= 0; i--) {
@@ -162,47 +187,69 @@ private:
 				}
 			}
 
+			if (m_iSign == 0) {
+				m_iSign = iFPSign;
+			}
+
 		// Signs are different, difference values
 		} else {
+
+			// Determine the first non-zero digit
 			int iEnd;
-			for (iEnd = Digits-1; iEnd >= 0; iEnd--) {
-				if ((m_vecDigits[iEnd] != 0) || (fp.m_vecDigits[iEnd] != 0)) {
+			for (iEnd = Digits-1; iEnd >= iShift; iEnd--) {
+				if ((m_vecDigits[iEnd] != 0) ||
+					(fp.m_vecDigits[iEnd - iShift] != 0)
+				) {
 					break;
 				}
 			}
 
-			if (iEnd == (-1)) {
-				return;
+			// Both values are zero
+			if (iEnd == iShift - 1) {
+				_EXCEPTIONT("Logic error");
 			}
 
-			for (int i = iShift; i <= iEnd; i++) {
-				m_vecDigits[i] -= fp.m_vecDigits[i - iShift];
+			if (iShift != 0) {
+				printf("Shift: %i\n", iShift);
+			}
 
-				if (m_vecDigits[i] < 0) {
-					if (i == iEnd) {
-						m_vecDigits[i] *= -1;
-						m_iSign = - m_iSign;
-					} else {
-						for (int j = 0; j < Digits; j++) {
-							if (m_vecDigits[j] != 0) {
-							}
-						}
+			// Determine which value is larger in magnitude
+			bool fIAmLarger = true;
+			for (int i = iEnd; i >= iShift; i--) {
+				if (m_vecDigits[i] > fp.m_vecDigits[i - iShift]) {
+					break;
+				} else if (m_vecDigits[i] < fp.m_vecDigits[i - iShift]) {
+					fIAmLarger = false;
+					break;
+				}
+			}
+
+			// This value is larger in magnitude
+			if (fIAmLarger) {
+				for (int i = iShift; i <= iEnd; i++) {
+					m_vecDigits[i] -= fp.m_vecDigits[i - iShift];
+
+					if (m_vecDigits[i] < 0) {
 						m_vecDigits[i] += MaximumDigit;
 						m_vecDigits[i+1] -= 1;
 					}
 				}
+
+			// fp is larger in magnitude
+			} else {
+				m_iSign = - m_iSign;
+				for (int i = iShift; i <= iEnd; i++) {
+					m_vecDigits[i] = fp.m_vecDigits[i - iShift] - m_vecDigits[i];
+
+					if (m_vecDigits[i] < 0) {
+						m_vecDigits[i] += MaximumDigit;
+						m_vecDigits[i+1] += 1;
+					}
+				}
 			}
 		}
-/*
-		// Check for zero
-		for (int i = 0; i < Digits; i++) {
-			if (m_vecDigits[i] != 0) {
-				return;
-			}
-		}
-		m_iSign = 0;
-		m_iDecimal = 1;
-*/
+
+		Normalize();
 	}
 
 	///	<summary>
@@ -236,11 +283,11 @@ private:
 			}
 		}
 
-		Normalize();
-
 		m_iDecimal = fpTemp.m_iDecimal + fp.m_iDecimal;
 
 		m_iSign = fpTemp.m_iSign * fp.m_iSign;
+
+		Normalize();
 	}
 
 public:
@@ -307,6 +354,14 @@ public:
 	}
 
 	///	<summary>
+	///		Negation operator.
+	///	</summary>
+	inline const FixedPoint & Negate() {
+		m_iSign = - m_iSign;
+		return (*this);
+	}
+
+	///	<summary>
 	///		Returns true if this number is positive.
 	///	</summary>
 	bool IsPositive() const {
@@ -343,10 +398,36 @@ public:
 
 public:
 	///	<summary>
+	///		Convert this number to a double.
+	///	</summary>
+	Real ToReal() const {
+		if (m_iSign == 0) {
+			return 0.0;
+		}
+		if (m_iDecimal == 0) {
+			_EXCEPTIONT("Invalid value of m_iDecimal");
+		}
+
+		Real dOut = 0.0;
+		if (m_iDecimal >= 1) {
+			dOut += static_cast<Real>(m_vecDigits[m_iDecimal-1]) * 1.0e-16;
+		}
+		if (m_iDecimal >= 2) {
+			dOut += static_cast<Real>(m_vecDigits[m_iDecimal-2]) * 1.0e-32;
+		}
+
+		if (m_iSign == -1) {
+			dOut *= -1.0;
+		}
+
+		return dOut;
+	}
+
+	///	<summary>
 	///		Print this number
 	///	</summary>
 	void Print() const {
-		printf("(%i) ", m_iDecimal);
+		//printf("(%i) ", m_iDecimal);
 		if (m_iSign < 0) {
 			printf("-");
 		}

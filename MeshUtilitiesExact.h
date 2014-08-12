@@ -17,18 +17,46 @@
 #ifndef _MESHUTILITIESEXACT_H_
 #define _MESHUTILITIESEXACT_H_
 
+#include "Defines.h"
 #include "GridElements.h"
+#include "MeshUtilities.h"
 
 #include <vector>
+
+#ifdef USE_EXACT_ARITHMETIC
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
 ///		Various implementations of methods for determining Faces from Nodes.
 ///	</summary>
-class MeshUtilitiesExact {
+class MeshUtilitiesExact : public MeshUtilities {
 
 public:
+///	<summary>
+	///		Overwrite the fuzzy coordinate values with exact values.
+	///	</summary>
+	inline void ToRealCoords(
+		Node & node
+	) {
+		node.x = node.fx.ToReal();
+		node.y = node.fy.ToReal();
+		node.z = node.fz.ToReal();
+
+		Real dMag = sqrt(node.x * node.x + node.y * node.y + node.z * node.z);
+
+		if (dMag == 0.0) {
+			node.fx.Print(); printf("\n");
+			node.fy.Print(); printf("\n");
+			node.fz.Print(); printf("\n");
+			_EXCEPTIONT("Zero magnitude Node detected");
+		}
+
+		node.x /= dMag;
+		node.y /= dMag;
+		node.z /= dMag;
+	}
+
 	///	<summary>
 	///		Determine if two Nodes are equal.
 	///	</summary>
@@ -36,6 +64,18 @@ public:
 		const Node & node0,
 		const Node & node1
 	);
+
+	///	<summary>
+	///		Determine if face contains node, and whether
+	///		the Node is along an edge or at a corner.
+	///	</summary>
+	virtual void ContainsNode(
+		const Face & face,
+		const NodeVector & nodevec,
+		const Node & node,
+		Face::NodeLocation & loc,
+		int & ixLocation
+	) const;
 
 	///	<summary>
 	///		Calculate all intersections between the Edge connecting
@@ -61,15 +101,6 @@ public:
 	);
 
 	///	<summary>
-	///		Find all Face indices that contain this Node.
-	///	</summary>
-	void FindFaceFromNode(
-		const Mesh & mesh,
-		const Node & node,
-		FindFaceStruct & aFindFaceStruct
-	);
-
-	///	<summary>
 	///		Find the Face that is near ixNode in the direction of nodeEnd.
 	///	</summary>
 	int FindFaceNearNode(
@@ -92,6 +123,8 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+#endif
 
 #endif
 

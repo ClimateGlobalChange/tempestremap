@@ -18,6 +18,7 @@
 #define _MESHUTILITIESFUZZY_H_
 
 #include "GridElements.h"
+#include "MeshUtilities.h"
 
 #include <vector>
 
@@ -26,9 +27,17 @@
 ///	<summary>
 ///		Various implementations of methods for determining Faces from Nodes.
 ///	</summary>
-class MeshUtilitiesFuzzy {
+class MeshUtilitiesFuzzy : public MeshUtilities {
 
 public:
+	///	<summary>
+	///		Do nothing.
+	///	</summary>
+	inline void ToRealCoords(
+		Node & node
+	) {
+	}
+
 	///	<summary>
 	///		Determine if two Nodes are equal.
 	///	</summary>
@@ -36,6 +45,18 @@ public:
 		const Node & node0,
 		const Node & node1
 	);
+
+	///	<summary>
+	///		Determine if face contains node, and whether
+	///		the Node is along an edge or at a corner.
+	///	</summary>
+	virtual void ContainsNode(
+		const Face & face,
+		const NodeVector & nodevec,
+		const Node & node,
+		Face::NodeLocation & loc,
+		int & ixLocation
+	) const;
 
 	///	<summary>
 	///		Calculate all intersections between the Edge connecting
@@ -58,15 +79,6 @@ public:
 		Edge::Type typeSecond,
 		std::vector<Node> & nodeIntersections,
 		bool fIncludeFirstBeginNode = false
-	);
-
-	///	<summary>
-	///		Find all Face indices that contain this Node.
-	///	</summary>
-	void FindFaceFromNode(
-		const Mesh & mesh,
-		const Node & node,
-		FindFaceStruct & aFindFaceStruct
 	);
 
 	///	<summary>

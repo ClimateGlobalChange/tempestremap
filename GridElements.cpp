@@ -26,191 +26,6 @@
 /// Face
 ///////////////////////////////////////////////////////////////////////////////
 
-void Face::ContainsNode(
-	const NodeVector & nodevec,
-	const Node & node,
-	Face::NodeLocation & loc,
-	int & ixLocation
-) const {
-	static const Real Tolerance = ReferenceTolerance;
-
-	// Set of edges which "contain" this node
-	std::set<int> setContainedEdgeIx;
-
-	// Loop through all edges of this face
-	for (int i = 0; i < edges.size(); i++) {
-
-		// Paired edges means edge is invalid
-		if (edges[i][0] == edges[i][1]) {
-			_EXCEPTIONT("Zero Edge detected");
-		}
-
-		// Check which side of the face this edge is on
-		const Node & na = nodevec[edges[i][0]];
-		const Node & nb = nodevec[edges[i][1]];
-
-		if (edges[i].type == Edge::Type_GreatCircleArc) {
-			Real dDotNorm = DotProduct(CrossProduct(na, nb), node);
-
-			//printf("Norm1: %i %1.5e\n", i, dDotNorm);
-
-			if (dDotNorm < - Tolerance) {
-				loc = NodeLocation_Exterior;
-				ixLocation = 0;
-				return;
-			}
-			if (dDotNorm < Tolerance) {
-				setContainedEdgeIx.insert(i);
-			}
-
-		} else if (edges[i].type == Edge::Type_ConstantLatitude) {
-			Real dAlignment = (na.x * nb.y - nb.x * na.y);
-			Real dDotNorm = dAlignment / fabs(dAlignment) * (node.z - na.z);
-
-			//printf("Norm2: %i %1.5e %1.5e %1.5e %1.5e\n", i, dAlignment, node.z, na.z, dDotNorm);
-
-			if (dDotNorm < - Tolerance) {
-				loc = NodeLocation_Exterior;
-				ixLocation = 0;
-				return;
-			}
-			if (dDotNorm < Tolerance) {
-				setContainedEdgeIx.insert(i);
-			}
-
-		} else {
-			_EXCEPTIONT("Invalid EdgeType");
-		}
-	}
-
-	// Check if the node is contained on an edge
-	if (setContainedEdgeIx.size() == 1) {
-		loc = NodeLocation_Edge;
-		ixLocation = *(setContainedEdgeIx.begin());
-		return;
-	}
-
-	// Node is coincident with a corner of this face
-	if (setContainedEdgeIx.size() == 2) {
-
-		std::set<int>::iterator iter;
-
-		iter = setContainedEdgeIx.begin();
-		int ix0 = *(iter);
-
-		iter++;
-		int ix1 = *(iter);
-
-		if ((ix0 == 0) && (ix1 != 1)) {
-			ixLocation = 0;
-		} else {
-			ixLocation = ix1;
-		}
-
-		loc = NodeLocation_Corner;
-		return;
-	}
-
-	// Node occurs in more than two edges; error.
-	if (setContainedEdgeIx.size() > 2) {
-		_EXCEPTIONT("Logic error: Node occurs in more than two edges");
-	}
-
-	// Default; node occurs in the interior of the face
-	loc = NodeLocation_Interior;
-	ixLocation = 0;
-	return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef USE_EXACT_ARITHMETIC
-
-void Face::ContainsNodeX(
-	const NodeVector & nodevec,
-	const Node & node,
-	Face::NodeLocation & loc,
-	int & ixLocation
-) const {
-
-	// Set of edges which "contain" this node
-	std::set<int> setContainedEdgeIx;
-
-	// Loop through all Edges of this face
-	for (int i = 0; i < edges.size(); i++) {
-
-		// Paired Edges means Edge is invalid
-		if (edges[i][0] == edges[i][1]) {
-			_EXCEPTIONT("Zero Edge detected");
-		}
-
-		// Check which side of the Face this Edge is on
-		const Node & na = nodevec[edges[i][0]];
-		const Node & nb = nodevec[edges[i][1]];
-
-		if (edges[i].type == Edge::Type_GreatCircleArc) {
-			FixedPoint fpDotNorm = DotProductX(CrossProductX(na, nb), node);
-
-			if (fpDotNorm.IsNegative()) {
-				loc = NodeLocation_Exterior;
-				ixLocation = 0;
-				return;
-			}
-			if (fpDotNorm.IsZero()) {
-				setContainedEdgeIx.insert(i);
-			}
-
-		} else if (edges[i].type == Edge::Type_ConstantLatitude) {
-			_EXCEPTIONT("Unimplemented");
-
-		} else {
-			_EXCEPTIONT("Invalid EdgeType");
-		}
-	}
-
-	// Check if the node is contained on an edge
-	if (setContainedEdgeIx.size() == 1) {
-		loc = NodeLocation_Edge;
-		ixLocation = *(setContainedEdgeIx.begin());
-		return;
-	}
-
-	// Node is coincident with a corner of this face
-	if (setContainedEdgeIx.size() == 2) {
-
-		std::set<int>::iterator iter;
-
-		iter = setContainedEdgeIx.begin();
-		int ix0 = *(iter);
-
-		iter++;
-		int ix1 = *(iter);
-
-		if ((ix0 == 0) && (ix1 != 1)) {
-			ixLocation = 0;
-		} else {
-			ixLocation = ix1;
-		}
-
-		loc = NodeLocation_Corner;
-		return;
-	}
-
-	// Node occurs in more than two edges; error.
-	if (setContainedEdgeIx.size() > 2) {
-		_EXCEPTIONT("Logic error: Node occurs in more than two edges");
-	}
-
-	// Default; node occurs in the interior of the face
-	loc = NodeLocation_Interior;
-	ixLocation = 0;
-	return;
-}
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
 int Face::GetEdgeIndex(
 	const Edge & edge
 ) const {
@@ -630,15 +445,43 @@ void Mesh::Validate() const {
 			_EXCEPTION();
 */
 			// Compute cross-product
-			Node vecCross(CrossProductIX(nodeD1, nodeD2));
+			Node nodeCross(CrossProductIX(nodeD1, nodeD2));
 
 			// Dot cross product with radial vector
-			Real dDot = DotProduct(node1, vecCross);
+			Real dDot = DotProduct(node1, nodeCross);
 
 #ifdef USE_EXACT_ARITHMETIC
-			FixedPoint dDotX = DotProductX(node1, vecCross);
+			FixedPoint dDotX = DotProductX(node1, nodeCross);
+
+			printf("%1.15Le : ", nodeCross.x); nodeCross.fx.Print(); printf("\n");
+
+			if (fabs(nodeCross.x - nodeCross.fx.ToReal()) > ReferenceTolerance) {
+				printf("X0: %1.15Le : ", node0.x); node0.fx.Print(); printf("\n");
+				printf("Y0: %1.15Le : ", node0.y); node0.fy.Print(); printf("\n");
+				printf("Z0: %1.15Le : ", node0.z); node0.fz.Print(); printf("\n");
+				printf("X1: %1.15Le : ", node1.x); node1.fx.Print(); printf("\n");
+				printf("Y1: %1.15Le : ", node1.y); node1.fy.Print(); printf("\n");
+				printf("Z1: %1.15Le : ", node1.z); node1.fz.Print(); printf("\n");
+				printf("X2: %1.15Le : ", node2.x); node2.fx.Print(); printf("\n");
+				printf("Y2: %1.15Le : ", node2.y); node2.fy.Print(); printf("\n");
+				printf("Z2: %1.15Le : ", node2.z); node2.fz.Print(); printf("\n");
+
+				printf("X1: %1.15Le : ", nodeD1.x); nodeD1.fx.Print(); printf("\n");
+				printf("Y1: %1.15Le : ", nodeD1.y); nodeD1.fy.Print(); printf("\n");
+				printf("Z1: %1.15Le : ", nodeD1.z); nodeD1.fz.Print(); printf("\n");
+				printf("X2: %1.15Le : ", nodeD2.x); nodeD2.fx.Print(); printf("\n");
+				printf("Y2: %1.15Le : ", nodeD2.y); nodeD2.fy.Print(); printf("\n");
+				printf("Z2: %1.15Le : ", nodeD2.z); nodeD2.fz.Print(); printf("\n");
+				_EXCEPTIONT("FixedPoint mismatch (X)");
+			}
+			if (fabs(nodeCross.y - nodeCross.fy.ToReal()) > ReferenceTolerance) {
+				_EXCEPTIONT("FixedPoint mismatch (Y)");
+			}
+			if (fabs(nodeCross.z - nodeCross.fz.ToReal()) > ReferenceTolerance) {
+				_EXCEPTIONT("FixedPoint mismatch (Z)");
+			}
+
 #endif
-			printf("%1.15Le : ", vecCross.x); vecCross.fx.Print(); printf("\n");
 
 			if (dDot > 0.0) {
 				printf("\nError detected (orientation):\n");
@@ -672,7 +515,7 @@ void Mesh::Validate() const {
 
 				printf("  X-Product:\n");
 				printf("    %1.5Le %1.5Le %1.5Le\n",
-					vecCross.x, vecCross.y, vecCross.z);
+					nodeCross.x, nodeCross.y, nodeCross.z);
 
 				_EXCEPTIONT(
 					"Mesh validation failed: Clockwise element detected");

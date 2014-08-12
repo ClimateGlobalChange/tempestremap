@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    OverlapMesh.h
+///	\file    MeshUtilities.h
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 7, 2014
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -14,22 +14,39 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#ifndef _DEFINES_H_
-#define _DEFINES_H_
+#ifndef _MESHUTILITIES_H_
+#define _MESHUTILITIES_H_
+
+#include "GridElements.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define USE_EXACT_ARITHMETIC
+class MeshUtilities {
 
-///////////////////////////////////////////////////////////////////////////////
+public:
+	///	<summary>
+	///		Determine if this face contains the specified Node, and whether
+	///		the Node is along an edge or at a corner.
+	///	</summary>
+	virtual void ContainsNode(
+		const Face & face,
+		const NodeVector & nodevec,
+		const Node & node,
+		Face::NodeLocation & loc,
+		int & ixLocation
+	) const = 0;
 
-typedef long double Real;
+	///	<summary>
+	///		Find all Face indices that contain this Node.
+	///	</summary>
+	void FindFaceFromNode(
+		const Mesh & mesh,
+		const Node & node,
+		FindFaceStruct & aFindFaceStruct
+	);
 
-static const Real HighTolerance = 1.0e-10;
-
-static const Real ReferenceTolerance = 1.0e-12;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif
-
