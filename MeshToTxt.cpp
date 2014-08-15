@@ -36,7 +36,7 @@ try {
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineString(strInputMesh, "in_mesh", "");
+		CommandLineString(strInputMesh, "in", "");
 		CommandLineString(strOutputNodes, "out_nodes", "nodes.dat");
 		CommandLineString(strOutputFaces, "out_faces", "faces.dat");
 

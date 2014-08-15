@@ -25,20 +25,11 @@ bool MeshUtilitiesFuzzy::AreNodesEqual(
 	const Node & node1
 ) {
 	static const Real Tolerance = ReferenceTolerance;
-/*
+
 	if ((fabs(node0.x - node1.x) < Tolerance) &&
 		(fabs(node0.y - node1.y) < Tolerance) &&
 		(fabs(node0.z - node1.z) < Tolerance)
 	) {
-		return true;
-	}
-*/
-#pragma message "Verify that Nodes aren't pointing in opposite directions"
-	double dDot00 = DotProduct(node0, node0);
-	double dDot01 = DotProduct(node0, node1);
-	double dDot11 = DotProduct(node1, node1);
-
-	if (fabs(dDot01 * dDot01 - dDot00 * dDot11) < Tolerance) {
 		return true;
 	}
 
@@ -231,7 +222,7 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 			if ((fabs(dDotDebug1) > Tolerance) ||
 				(fabs(dDotDebug2) > Tolerance)
 			) {
-				printf("%1.5Le %1.5Le\n", dDotDebug1, dDotDebug2);
+				printf("%1.5e %1.5e\n", dDotDebug1, dDotDebug2);
 				_EXCEPTIONT("Logic error");
 			}
 		}
@@ -892,7 +883,14 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 
 	//GetLocalDirection(nodeBegin, nodeEnd, nodeRef, edgetype, nodeDirA);
 	GetLocalDirection(nodeBegin, nodeEnd, edgetype, nodeDirA);
+/*
+	Real dDotNbNb = DotProduct(nodeBegin, nodeBegin);
+	Real dDotNeNb = DotProduct(nodeEnd, nodeBegin);
 
+	Node nodeLocalE =
+		ScalarProduct(dDotNbNb, nodeEnd)
+		- ScalarProduct(dDotNeNb, nodeBegin);
+*/
 	// Loop through all faces
 	std::set<int>::const_iterator iter = setNearbyFaces.begin();
 	for (; iter != setNearbyFaces.end(); iter++) {
@@ -946,6 +944,58 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 		if (!AreNodesEqual(node1, nodeBegin)) {
 			_EXCEPTIONT("Logic error");
 		}
+/*
+		// Local left and right vectors (up to a scaling factor)
+		Real dDotN0Nb = DotProduct(node0, nodeBegin);
+		Real dDotN2Nb = DotProduct(node2, nodeBegin);
+
+		Node nodeLocal0 =
+			ScalarProduct(dDotNbNb, node0)
+			- ScalarProduct(dDotN0Nb, nodeBegin);
+
+		Node nodeLocal2 =
+			ScalarProduct(dDotNbNb, node2)
+			- ScalarProduct(dDotN2Nb, nodeBegin);
+
+		Node nodeLocalCross = CrossProduct(nodeLocal0, nodeLocal2);
+
+		// Determine if nodeLocalE is in the fan of [nodeLocal0, nodeLocal2]
+		Real dDenom;
+		Real d2;
+		Real d0;
+		if (fabs(nodeLocalCross.x) > Tolerance) {
+			dDenom = nodeLocalCross.x;
+
+			d2 = nodeLocalE.y * nodeLocal2.z - nodeLocalE.z * nodeLocal2.y;
+			d0 = nodeLocalE.z * nodeLocal0.y - nodeLocalE.y * nodeLocal0.z;
+
+		} else if (fabs(nodeLocalCross.y) > Tolerance) {
+			dDenom = nodeLocalCross.y;
+
+			d2 = nodeLocalE.z * nodeLocal2.x - nodeLocalE.x * nodeLocal2.z;
+			d0 = nodeLocalE.x * nodeLocal0.z - nodeLocalE.z * nodeLocal0.x;
+
+		} else if (fabs(nodeLocalCross.z) > Tolerance) {
+			dDenom = nodeLocalCross.z;
+
+			d2 = nodeLocalE.x * nodeLocal2.y - nodeLocalE.y * nodeLocal2.x;
+			d0 = nodeLocalE.y * nodeLocal0.x - nodeLocalE.x * nodeLocal0.y;
+
+		} else {
+			_EXCEPTIONT("Zero Cross product detected");
+		}
+
+		if (dDenom > 0.0) {
+			if ((d2 > -Tolerance) && (d0 > Tolerance)) {
+				return (*iter);
+			}
+
+		} else {
+			if ((d2 < Tolerance) && (d0 < -Tolerance)) {
+				return (*iter);
+			}
+		}
+*/
 
 		// Direction vectors towards each of the nodes
 		Node nodeDirL;
@@ -990,8 +1040,8 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 		nodeDirA.Print("DirA");
 		nodeDirL.Print("DirL");
 		nodeDirR.Print("DirR");
-		printf("Angles: %1.15Le %1.15Le %1.15Le\n", dAngleLR, dAngleLA, dAngleRA);
-		//printf("Mags: %1.15Le %1.15Le %1.15Le\n", dMagL, dMagR, dMagA);
+		printf("Angles: %1.15e %1.15e %1.15e\n", dAngleLR, dAngleLA, dAngleRA);
+		//printf("Mags: %1.15e %1.15e %1.15e\n", dMagL, dMagR, dMagA);
 
 		Real dDotPlanar = DotProduct(nodeX, nodeDirR);
 
@@ -1016,13 +1066,6 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 		}
 		if (fabs(dAngleLR - 2.0) < Tolerance) {
 			_EXCEPTIONT("180 degree angle detected, cannot continue");
-		}
-
-		// Direction vector inside face
-		if ((dAngleLA < dAngleLR - Tolerance) &&
-			(dAngleRA < dAngleLR - Tolerance)
-		) {
-			return (*iter);
 		}
 
 		// This line makes zero angle with the L edge (special case)
@@ -1097,7 +1140,13 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 					continue;
 				}
 			}
+		}
 
+		// Direction vector inside face
+		if ((dAngleLA < dAngleLR) &&
+			(dAngleRA < dAngleLR)
+		) {
+			return (*iter);
 		}
 	}
 
@@ -1214,9 +1263,9 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 			Real dDot = DotProduct(nodeNormal, nodeDir);
 
 			printf("Faces: %i %i\n", aFindFaceStruct.vecFaceIndices[0], aFindFaceStruct.vecFaceIndices[1]);
-			printf("Norm: %1.5Le %1.5Le %1.5Le\n", nodeNormal.x, nodeNormal.y, nodeNormal.z);
-			printf("Dir: %1.5Le %1.5Le %1.5Le\n", nodeDir.x, nodeDir.y, nodeDir.z);
-			printf("%1.5Le\n", dDot);
+			printf("Norm: %1.5e %1.5e %1.5e\n", nodeNormal.x, nodeNormal.y, nodeNormal.z);
+			printf("Dir: %1.5e %1.5e %1.5e\n", nodeDir.x, nodeDir.y, nodeDir.z);
+			printf("%1.5e\n", dDot);
 
 			if (dDot > Tolerance) {
 				return aFindFaceStruct.vecFaceIndices[0];
@@ -1308,7 +1357,7 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 			printf("E1: %i %i\n", edge1[0], edge1[1]);
 			nodeNormal.Print("Norm");
 			nodeDir.Print("Dir ");
-			printf("Dot: %1.5Le\n", dDot);
+			printf("Dot: %1.5e\n", dDot);
 
 			printf("%i %i\n",
 				aFindFaceStruct.vecFaceIndices[0],

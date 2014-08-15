@@ -49,20 +49,20 @@ void MeshUtilities::FindFaceFromNode(
 
 #ifdef VERBOSE
 		printf("%i\n", l);
-		printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
-		printf("n0: %1.5Le %1.5Le %1.5Le\n",
+		printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+		printf("n0: %1.5e %1.5e %1.5e\n",
 			mesh.nodes[mesh.faces[l][0]].x,
 			mesh.nodes[mesh.faces[l][0]].y,
 			mesh.nodes[mesh.faces[l][0]].z);
-		printf("n1: %1.5Le %1.5Le %1.5Le\n",
+		printf("n1: %1.5e %1.5e %1.5e\n",
 			mesh.nodes[mesh.faces[l][1]].x,
 			mesh.nodes[mesh.faces[l][1]].y,
 			mesh.nodes[mesh.faces[l][1]].z);
-		printf("n2: %1.5Le %1.5Le %1.5Le\n",
+		printf("n2: %1.5e %1.5e %1.5e\n",
 			mesh.nodes[mesh.faces[l][2]].x,
 			mesh.nodes[mesh.faces[l][2]].y,
 			mesh.nodes[mesh.faces[l][2]].z);
-		printf("n3: %1.5Le %1.5Le %1.5Le\n",
+		printf("n3: %1.5e %1.5e %1.5e\n",
 			mesh.nodes[mesh.faces[l][3]].x,
 			mesh.nodes[mesh.faces[l][3]].y,
 			mesh.nodes[mesh.faces[l][3]].z);
@@ -107,7 +107,7 @@ void MeshUtilities::FindFaceFromNode(
 	// Edges can only have two adjacent Faces
 	if (aFindFaceStruct.loc == Face::NodeLocation_Edge) {
 		if (aFindFaceStruct.vecFaceIndices.size() != 2) {
-			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
+			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
 			_EXCEPTION1("Multiple co-located edges detected (%i)",
 				(int)(aFindFaceStruct.vecFaceIndices.size()));
 		}
@@ -116,7 +116,7 @@ void MeshUtilities::FindFaceFromNode(
 	// Corners must have at least three adjacent Faces
 	if (aFindFaceStruct.loc == Face::NodeLocation_Corner) {
 		if (aFindFaceStruct.vecFaceIndices.size() < 3) {
-			printf("n: %1.5Le %1.5Le %1.5Le\n", node.x, node.y, node.z);
+			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
 			_EXCEPTION1("Two Faced corner detected (%i)",
 				(int)(aFindFaceStruct.vecFaceIndices.size()));
 		}

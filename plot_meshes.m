@@ -17,10 +17,10 @@ nodeset = unique(faces1(facelist1,:));
 plot3(nodes1(nodeset,1), nodes1(nodeset,2), nodes1(nodeset,3), 'k.');
 hold on;
 
-%nodeix = 1363;
-%plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'mo','MarkerSize',12);
-%nodeix = 1356;
-%plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'ro','MarkerSize',12);
+nodeix = 687+1;
+plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'mo','MarkerSize',12);
+nodeix = 3691+1;
+plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'ro','MarkerSize',12);
 
 xnodes = nodes1(:,1);
 ynodes = nodes1(:,2);
@@ -54,8 +54,8 @@ nodeset = unique(faces2(facelist2,:));
 
 plot3(nodes2(nodeset,1), nodes2(nodeset,2), nodes2(nodeset,3), 'bo');
 
-nodeix = 1945;
-%plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'mo','MarkerSize',12);
+nodeix = 124856+1; %132478 + 1 - size(nodes1,1);
+%plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'go','MarkerSize',12);
 nodeix = 18;
 %plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'ro','MarkerSize',12);
 

@@ -21,6 +21,8 @@
 #include <cmath>
 #include <iostream>
 
+#include "netcdfcpp.h"
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #define ONLY_GREAT_CIRCLES
@@ -158,6 +160,15 @@ try {
 
 	// Output the mesh
 	mesh.Write(strOutputFile);
+
+	// Add rectilinear properties
+	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
+	ncOutput.add_att("rectilinear", "true");
+	ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
+	ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
+	ncOutput.add_att("rectilinear_dim0_name", "lat");
+	ncOutput.add_att("rectilinear_dim1_name", "lon");
+	ncOutput.close();
 
 	// Announce
 	std::cout << "..Mesh generator exited successfully" << std::endl;

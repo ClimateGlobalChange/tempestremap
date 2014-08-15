@@ -133,6 +133,7 @@ void GeneratePath(
 	const Mesh & meshSecond,
 	const std::vector<int> & vecSecondNodeMap,
 	int ixCurrentFirstFace,
+	NodeMap & mapOverlapNodes,
 	PathSegmentVector & vecTracedPath,
 	Mesh & meshOverlap
 ) {
@@ -292,9 +293,21 @@ void GeneratePath(
 							nodeLastIntersection);
 
 					if (fEqualNodes) {
-						nodeIntersections.erase(nodeIntersections.begin()+i);
-						i--;
+							nodeIntersections.erase(nodeIntersections.begin()+i);
+							i--;
 					}
+/*
+						bool fBeginPoint =
+							utils.AreNodesEqual(
+								nodeIntersections[i],
+								meshOverlap.nodes[edgeFirstCurrent[0]]);
+
+						if (!fBeginPoint) {
+							nodeIntersections.erase(nodeIntersections.begin()+i);
+							i--;
+						}
+					}
+*/
 				}
 
 				if (fCoincidentEdge) {
@@ -314,20 +327,25 @@ void GeneratePath(
 
 			// Done with this edge
 			if (nodeIntersections.size() == 0) {
-/*
+
+				// DEBUG: Verify that endpoint is in this element
 				Face::NodeLocation loc;
 				int ixLocation;
 
-				meshSecond.faces[ixCurrentSecondFace].ContainsNode(
+				utils.ContainsNode(
+					meshSecond.faces[ixCurrentSecondFace],
 					meshSecond.nodes,
 					meshOverlap.nodes[edgeFirstCurrent[1]],
 					loc,
 					ixLocation);
 
-				if (loc == Face::NodeLocation_Edge) {
-					_EXCEPTIONT("Intersection failure");
+				if (loc == Face::NodeLocation_Exterior) {
+					_EXCEPTIONT("Edge endpoint failure");
 				}
-*/
+
+				printf("Done with Edge (%i)\n", loc);
+
+				// Add the final PathSegment for this Edge
 				vecTracedPath.push_back(PathSegment(
 					ixOverlapNodeCurrent,
 					edgeFirstCurrent[1],
@@ -384,10 +402,30 @@ void GeneratePath(
 			meshOverlap.nodes[edgeFirstCurrent[0]].PrintMX();
 			meshOverlap.nodes[edgeFirstCurrent[1]].PrintMX();
 */
+/*
 			bool fIntersectEndpoint =
 				utils.AreNodesEqual(
 					nodeIntersections[0],
 					meshOverlap.nodes[edgeFirstCurrent[1]]);
+*/
+			// Determine if this Face contains the endpoint of the Edge
+			Face::NodeLocation loc0;
+			int ixLocation0;
+
+			utils.ContainsNode(
+				meshSecond.faces[ixCurrentSecondFace],
+				meshSecond.nodes,
+				meshOverlap.nodes[edgeFirstCurrent[1]],
+				loc0,
+				ixLocation0);
+
+			bool fIntersectEndpoint = false;
+			if ((loc0 == Face::NodeLocation_Edge) ||
+				(loc0 == Face::NodeLocation_Corner)
+			) {
+				fIntersectEndpoint = true;
+			}
+
 /*
 			if (dynamic_cast<MeshUtilitiesExact*>(&utils) != NULL) {
 				FixedPoint fp1 =
@@ -625,7 +663,17 @@ void GeneratePath(
 				ixOverlapNodeNext =
 					static_cast<int>(meshOverlap.nodes.size());
 
-				meshOverlap.nodes.push_back(nodeIntersections[0]);
+				NodeMap::const_iterator iterNodeMap =
+					mapOverlapNodes.find(nodeIntersections[0]);
+
+				if (iterNodeMap == mapOverlapNodes.end()) {
+					meshOverlap.nodes.push_back(nodeIntersections[0]);
+					mapOverlapNodes.insert(
+						NodeMap::value_type(
+							nodeIntersections[0], ixOverlapNodeNext));
+				} else {
+					ixOverlapNodeNext = iterNodeMap->second;
+				}
 
 				// Intersection found with edge
 				vecTracedPath.push_back(PathSegment(
@@ -726,6 +774,8 @@ bool GenerateOverlapFaces(
 	const Mesh & meshSecond,
 	const std::vector<int> & vecSecondNodeMap,
 	const PathSegmentVector & vecTracedPath,
+	int ixCurrentFirstFace,
+	NodeMap & mapOverlapNodes,
 	Mesh & meshOverlap
 ) {
 
@@ -773,6 +823,11 @@ bool GenerateOverlapFaces(
 			// Loop along edge of FirstFace until we find a branch
 			// into SecondMesh or hit our origin.
 			for (;; j++) {
+				if (j >= vecTracedPath.size()) {
+					printf("ERROR: Invalid TracedPathEdge index\n");
+					return false;
+				}
+
 				faceOverlap.edges.push_back(vecTracedPath[j]);
 
 				// Mark traced path edge as used
@@ -822,7 +877,7 @@ bool GenerateOverlapFaces(
 						(ixCurrentSecondEdge + 1)
 							% faceSecondCurrent.edges.size();
 
-					ixCurrentOverlapNode =
+					ixCurrentOverlapNode = //edgeSecondCurrent[1];
 						vecSecondNodeMap[edgeSecondCurrent[1]];
 
 					continue;
@@ -848,14 +903,14 @@ bool GenerateOverlapFaces(
 
 					// Check for node intersections
 					if (inttype == IntersectType_Node) {
-						if (vecTracedPath[k][1] ==
+						if (vecTracedPath[k][1] == //edgeSecondCurrent[0]
 							vecSecondNodeMap[edgeSecondCurrent[0]]
 						) {
 							ixExitNode = vecTracedPath[k][1];
 							break;
 						}
 
-						if (vecTracedPath[k][1] ==
+						if (vecTracedPath[k][1] == //edgeSecondCurrent[1]
 							vecSecondNodeMap[edgeSecondCurrent[1]]
 						) {
 							ixExitNode = vecTracedPath[k][1];
@@ -918,12 +973,15 @@ bool GenerateOverlapFaces(
 
 				printf("T: %i (%i) %i\n",
 					ixCurrentOverlapNode,
+					//edgeSecondCurrent[0],
+					//edgeSecondCurrent[1]);
 					vecSecondNodeMap[edgeSecondCurrent[0]],
 					vecSecondNodeMap[edgeSecondCurrent[1]]);
 
 				// Push this edge into the overlap mesh
 				faceOverlap.edges.push_back(Edge(
 					ixCurrentOverlapNode,
+					//edgeSecondCurrent[1],
 					vecSecondNodeMap[edgeSecondCurrent[1]],
 					edgeSecondCurrent.type));
 
@@ -933,6 +991,7 @@ bool GenerateOverlapFaces(
 						% faceSecondCurrent.edges.size();
 
 				ixCurrentOverlapNode =
+					//edgeSecondCurrent[1];
 					vecSecondNodeMap[edgeSecondCurrent[1]];
 
 				if (ixCurrentOverlapNode == ixOverlapOriginNode) {
@@ -942,9 +1001,16 @@ bool GenerateOverlapFaces(
 		}
 
 ContinueToNextFace:
+		if (faceOverlap.edges.size() < 3) {
+			printf("ERROR: Overlap Face containing only two Nodes detected\n");
+			return false;
+		}
+
 		printf("PUSH %lu\n", faceOverlap.edges.size());
 		// Push this Face into the overlap Mesh
 		meshOverlap.faces.push_back(faceOverlap);
+		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
+		meshOverlap.vecSecondFaceIx.push_back(ixCurrentSecondFace);
 
 		// Reset the search counter
 		j = 0;
@@ -986,14 +1052,18 @@ ContinueToNextFace:
 
 		for (int i = 0; i < faceOverlapCurrent.edges.size(); i++) {
 			faceOverlapCurrent.edges[i][0] =
+				//faceSecondCurrent.edges[i][0];
 				vecSecondNodeMap[faceSecondCurrent.edges[i][0]];
 			faceOverlapCurrent.edges[i][1] =
+				//faceSecondCurrent.edges[i][1];
 				vecSecondNodeMap[faceSecondCurrent.edges[i][1]];
 			faceOverlapCurrent.edges[i].type =
 				faceSecondCurrent.edges[i].type;
 		}
 
 		meshOverlap.faces.push_back(faceOverlapCurrent);
+		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
+		meshOverlap.vecSecondFaceIx.push_back(*iterToAdd);
 
 		setSecondFacesAdded.insert(*iterToAdd);
 
@@ -1049,7 +1119,7 @@ void GenerateOverlapMesh(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,
 	Mesh & meshOverlap,
-	int nVerbosity
+	OverlapMeshMethod method
 ) {
 	meshOverlap.Clear();
 
@@ -1058,32 +1128,31 @@ void GenerateOverlapMesh(
 	const NodeVector & nodevecSecond = meshSecond.nodes;
 	const NodeVector & nodevecOverlap = meshOverlap.nodes;
 
-	// Construct the coincident node vector
+	// Check for coincident Nodes between meshFirst and meshSecond
 	std::vector<int> vecSecondNodeMap;
+
 	int nCoincidentNodes =
 		BuildCoincidentNodeVector(
 			meshFirst, meshSecond, vecSecondNodeMap);
 
-	Announce("Number of coincident nodes [%i]", nCoincidentNodes);
+	Announce("Number of coincident nodes between mesh A and B [%i]",
+		nCoincidentNodes);
+
+	// Overlap node map
+	NodeMap mapOverlapNodes;
 
 	// Insert all nodes from the two NodeVectors
 	for (int i = 0; i < nodevecFirst.size(); i++) {
 		meshOverlap.nodes.push_back(nodevecFirst[i]);
+		mapOverlapNodes.insert(NodeMap::value_type(nodevecFirst[i], i));
 	}
-	const int ixOverlapSecondNodesBegin = meshOverlap.nodes.size();
 
 	for (int i = 0; i < nodevecSecond.size(); i++) {
-		meshOverlap.nodes.push_back(nodevecSecond[i]);
-		if (vecSecondNodeMap[i] != InvalidNode) {
-			continue;
-		}
-	}
-	const int ixOverlapNewNodesBegin = meshOverlap.nodes.size();
-
-	// Build the meshSecond node map
-	for (int i = 0; i < vecSecondNodeMap.size(); i++) {
 		if (vecSecondNodeMap[i] == InvalidNode) {
-			vecSecondNodeMap[i] = ixOverlapSecondNodesBegin + i;
+			int ix = static_cast<int>(meshOverlap.nodes.size());
+			meshOverlap.nodes.push_back(nodevecSecond[i]);
+			mapOverlapNodes.insert(NodeMap::value_type(nodevecSecond[i], ix));
+			vecSecondNodeMap[i] = ix;
 		}
 	}
 
@@ -1092,28 +1161,42 @@ void GenerateOverlapMesh(
 
 #pragma message "OpenMP here"
 	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	//for (int ixCurrentFirstFace = 84; ixCurrentFirstFace < 85; ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 4075; ixCurrentFirstFace < 4076; ixCurrentFirstFace++) {
 
 		// Generate the path
 		PathSegmentVector vecTracedPath;
-/*
-		GeneratePath<MeshUtilitiesFuzzy>(
-			meshFirst,
-			meshSecond,
-			vecSecondNodeMap,
-			ixCurrentFirstFace,
-			vecTracedPath,
-			meshOverlap
-		);
-*/
-		GeneratePath<MeshUtilitiesExact>(
-			meshFirst,
-			meshSecond,
-			vecSecondNodeMap,
-			ixCurrentFirstFace,
-			vecTracedPath,
-			meshOverlap
-		);
+
+		if (method == OverlapMeshMethod_Fuzzy) {
+			GeneratePath<MeshUtilitiesFuzzy>(
+				meshFirst,
+				meshSecond,
+				vecSecondNodeMap,
+				ixCurrentFirstFace,
+				mapOverlapNodes,
+				vecTracedPath,
+				meshOverlap
+			);
+		}
+
+		if (method == OverlapMeshMethod_Exact) {
+#ifdef USE_EXACT_ARITHMETIC
+			GeneratePath<MeshUtilitiesExact>(
+				meshFirst,
+				meshSecond,
+				vecSecondNodeMap,
+				ixCurrentFirstFace,
+				mapOverlapNodes,
+				vecTracedPath,
+				meshOverlap
+			);
+#else
+			_EXCEPTIONT("Exact option unavailable");
+#endif
+		}
+
+		if (method == OverlapMeshMethod_Mixed) {
+			_EXCEPTIONT("Not implemented yet!");
+		}
 
 		// Find Faces associated with the TracedPath
 		bool fSuccess =
@@ -1121,12 +1204,15 @@ void GenerateOverlapMesh(
 				meshSecond,
 				vecSecondNodeMap,
 				vecTracedPath,
+				ixCurrentFirstFace,
+				mapOverlapNodes,
 				meshOverlap
 			);
-
+/*
 		if (!fSuccess) {
 			_EXCEPTIONT("OverlapMesh generation failed");
 		}
+*/
 	}
 }
 

@@ -285,6 +285,12 @@ private:
 
 		m_iDecimal = fpTemp.m_iDecimal + fp.m_iDecimal;
 
+		if (m_iDecimal > Digits) {
+			Print(); printf("\n");
+			fp.Print(); printf("\n");
+			_EXCEPTIONT("FixedPoint overflow");
+		}
+
 		m_iSign = fpTemp.m_iSign * fp.m_iSign;
 
 		Normalize();
@@ -408,12 +414,13 @@ public:
 			_EXCEPTIONT("Invalid value of m_iDecimal");
 		}
 
+		const Real dInv = 1.0 / static_cast<double>(MaximumDigit);
+
+		Real dCurrentInv = dInv;
 		Real dOut = 0.0;
-		if (m_iDecimal >= 1) {
-			dOut += static_cast<Real>(m_vecDigits[m_iDecimal-1]) * 1.0e-16;
-		}
-		if (m_iDecimal >= 2) {
-			dOut += static_cast<Real>(m_vecDigits[m_iDecimal-2]) * 1.0e-32;
+		for (int i = 1; i <= m_iDecimal; i++) {
+			dOut += static_cast<Real>(m_vecDigits[m_iDecimal-i]) * dCurrentInv;
+			dCurrentInv *= dInv;
 		}
 
 		if (m_iSign == -1) {

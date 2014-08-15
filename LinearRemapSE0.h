@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    OverlapMesh.h
+///	\file    LinearRemapSE0.h
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 14, 2014
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -14,35 +14,25 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#ifndef _OVERLAPMESH_H_
-#define _OVERLAPMESH_H_
+#ifndef _LINEARREMAPSE0_H_
+#define _LINEARREMAPSE0_H_
 
-#include "Defines.h"
+///////////////////////////////////////////////////////////////////////////////
 
 #include "GridElements.h"
+#include "DataMatrix3D.h"
+
+class OfflineMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-///	<summary>
-///		Method to use to generate overlap mesh
-///	</summary>
-enum OverlapMeshMethod {
-	OverlapMeshMethod_Fuzzy,
-	OverlapMeshMethod_Exact,
-	OverlapMeshMethod_Mixed,
-};
-
-///////////////////////////////////////////////////////////////////////////////
-
-///	<summary>
-///		Generate the mesh obtained by overlapping meshes meshFirst and
-///		meshSecond.
-///	</summary>
-void GenerateOverlapMesh(
-	const Mesh & meshFirst,
-	const Mesh & meshSecond,
-	Mesh & meshOverlap,
-	OverlapMeshMethod method
+void LinearRemapSE0(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	OfflineMap & mapRemap
 );
 
 ///////////////////////////////////////////////////////////////////////////////

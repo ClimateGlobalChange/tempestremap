@@ -109,6 +109,129 @@ void Mesh::ConstructReverseNodeArray() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real Mesh::CalculateFaceAreas() {
+
+	const Real Tolerance = ReferenceTolerance;
+
+	vecFaceArea.resize(faces.size());
+	for (int i = 0; i < faces.size(); i++) {
+		const Face & face = faces[i];
+
+		double dAccumulatedExcess = 0.0;
+
+		int nEdges = static_cast<int>(face.edges.size());
+
+		double dFaceArea = 0.0;
+
+		for (int j = 0; j < nEdges; j++) {
+
+			// Get Nodes bounding this Node
+			int jPrev = (j + nEdges - 1) % nEdges;
+			int jNext = (j + 1) % nEdges;
+
+			const Node & node0 = nodes[face[jPrev]];
+			const Node & node1 = nodes[face[j]];
+			const Node & node2 = nodes[face[jNext]];
+
+			// Calculate area using Karney's method
+			// http://osgeo-org.1560.x6.nabble.com/Area-of-a-spherical-polygon-td3841625.html
+			double dLon1 = atan2(node1.y, node1.x);
+			double dLat1 = asin(node1.z);
+
+			double dLon2 = atan2(node2.y, node2.x);
+			double dLat2 = asin(node2.z);
+
+			if ((dLon1 < -0.5 * M_PI) && (dLon2 > 0.5 * M_PI)) {
+				dLon1 += 2.0 * M_PI;
+			}
+			if ((dLon2 < -0.5 * M_PI) && (dLon1 > 0.5 * M_PI)) {
+				dLon2 += 2.0 * M_PI;
+			}
+
+			double dLamLat1 = 2.0 * atanh(tan(dLat1 / 2.0));
+			double dLamLat2 = 2.0 * atanh(tan(dLat2 / 2.0));
+
+			double dS = tan(0.5 * (dLon2 - dLon1))
+				* tanh(0.5 * (dLamLat1 + dLamLat2));
+
+			dFaceArea -= 2.0 * atan(dS);
+/*
+			// Calculate angle between Nodes
+			Real dDotN0N1 = DotProduct(node0, node1);
+			Real dDotN0N2 = DotProduct(node0, node2);
+			Real dDotN2N1 = DotProduct(node2, node1);
+
+			Real dDotN0N0 = DotProduct(node0, node0);
+			Real dDotN1N1 = DotProduct(node1, node1);
+			Real dDotN2N2 = DotProduct(node2, node2);
+
+			Real dDenom0 = dDotN0N0 * dDotN1N1 - dDotN0N1 * dDotN0N1;
+			Real dDenom2 = dDotN2N2 * dDotN1N1 - dDotN2N1 * dDotN2N1;
+
+			if ((dDenom0 < Tolerance) || (dDenom2 < Tolerance)) {
+				continue;
+			}
+
+			// Angle between nodes
+			double dDenom = sqrt(dDenom0 * dDenom2);
+
+			double dRatio =
+				(dDotN1N1 * dDotN0N2 - dDotN0N1 * dDotN2N1) / dDenom;
+
+			if (dRatio > 1.0) {
+				dRatio = 1.0;
+			} else if (dRatio < -1.0) {
+				dRatio = -1.0;
+			}
+
+			dAccumulatedExcess += acos(dRatio);
+*/
+			//printf("[%1.15e %1.15e %1.15e],\n", node1.x, node1.y, node1.z);
+			//printf("%1.15e %1.15e\n",  dDotN1N1, dDotN2N2);
+
+		}
+
+		//double dPlanarSum = static_cast<double>(nEdges-2) * M_PI;
+
+		if (dFaceArea < 0.0) {
+			dFaceArea += 2.0 * M_PI;
+			//printf("%1.15e %1.15e\n", dFaceArea, dAccumulatedExcess - dPlanarSum);
+			//_EXCEPTIONT("Negative area element detected");
+		}
+/*
+		if (dPlanarSum > dAccumulatedExcess) {
+			printf("%1.15e %1.15e\n", dPlanarSum, dAccumulatedExcess);
+			_EXCEPTIONT("Negative area element detected");
+		}
+*/
+		vecFaceArea[i] = dFaceArea;
+	}
+
+	// Calculate accumulated area carefully
+	static const int Jump = 4;
+	std::vector<double> vecFaceAreaBak = vecFaceArea;
+	for (;;) {
+		if (vecFaceAreaBak.size() == 1) {
+			break;
+		}
+		for (int i = 0; i <= (vecFaceAreaBak.size()-1) / Jump; i++) {
+			int ixRef = Jump * i;
+			vecFaceAreaBak[i] = vecFaceAreaBak[ixRef];
+			for (int j = 1; j < Jump; j++) {
+				if (ixRef + j >= vecFaceAreaBak.size()) {
+					break;
+				}
+				vecFaceAreaBak[i] += vecFaceAreaBak[ixRef + j];
+			}
+		}
+		vecFaceAreaBak.resize((vecFaceAreaBak.size()-1) / Jump + 1);
+	}
+
+	return vecFaceAreaBak[0];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::Write(const std::string & strFile) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
@@ -276,6 +399,32 @@ void Mesh::Write(const std::string & strFile) const {
 		varEdgeTypes->put(nEdgeType, 1, nNodesPerElement);
 	}
 	delete[] nEdgeType;
+
+	// Source elements from mesh 1
+	if (vecFirstFaceIx.size() != 0) {
+		if (vecFirstFaceIx.size() != nElementCount) {
+			_EXCEPTIONT("Incorrect size of vecFirstFaceIx");
+		}
+
+		NcVar * varFirstMeshSourceFace =
+			ncOut.add_var("face_source_1", ncInt, dimElementBlock1);
+
+		varFirstMeshSourceFace->set_cur((long)0);
+		varFirstMeshSourceFace->put(&(vecFirstFaceIx[0]), nElementCount);
+	}
+
+	// Source elements from mesh 2
+	if (vecSecondFaceIx.size() != 0) {
+		if (vecSecondFaceIx.size() != nElementCount) {
+			_EXCEPTIONT("Incorrect size of vecSecondFaceIx");
+		}
+
+		NcVar * varSecondMeshSourceFace =
+			ncOut.add_var("face_source_2", ncInt, dimElementBlock1);
+
+		varSecondMeshSourceFace->set_cur((long)0);
+		varSecondMeshSourceFace->put(&(vecSecondFaceIx[0]), nElementCount);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -318,9 +467,9 @@ void Mesh::Read(const std::string & strFile) {
 		nodes[i].fy.Set(nodes[i].y);
 		nodes[i].fz.Set(nodes[i].z);
 /*
-		printf("%1.15Le : ", nodes[i].x); nodes[i].fx.Print(); printf("\n");
-		printf("%1.15Le : ", nodes[i].y); nodes[i].fy.Print(); printf("\n");
-		printf("%1.15Le : ", nodes[i].z); nodes[i].fz.Print(); printf("\n");
+		printf("%1.15e : ", nodes[i].x); nodes[i].fx.Print(); printf("\n");
+		printf("%1.15e : ", nodes[i].y); nodes[i].fy.Print(); printf("\n");
+		printf("%1.15e : ", nodes[i].z); nodes[i].fz.Print(); printf("\n");
 */
 #endif
 	}
@@ -341,16 +490,25 @@ void Mesh::Read(const std::string & strFile) {
 	}
 	delete[] nNodes;
 
-	// Load in edge type array
+	// Check for variables
 	bool fHasEdgeType = false;
+	bool fHasFirstMeshSourceFace = false;
+	bool fHasSecondMeshSourceFace = false;
 
 	for (int v = 0; v < ncFile.num_vars(); v++) {
 		if (strcmp(ncFile.get_var(v)->name(), "edge_type") == 0) {
 			fHasEdgeType = true;
-			break;
+		}
+		if (strcmp(ncFile.get_var(v)->name(), "face_source_1") == 0) {
+			fHasFirstMeshSourceFace = true;
+		}
+		if (strcmp(ncFile.get_var(v)->name(), "face_source_2") == 0) {
+			fHasSecondMeshSourceFace = true;
 		}
 	}
 
+
+	// Load in edge type array
 	if (fHasEdgeType) {
 		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
 
@@ -364,6 +522,22 @@ void Mesh::Read(const std::string & strFile) {
 			faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
 		}
 		delete[] nEdgeTypes;
+	}
+
+	// Load in first mesh source face ix
+	if (fHasFirstMeshSourceFace) {
+		NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
+		vecFirstFaceIx.resize(nElementCount);
+		varFaceSource1->set_cur((long)0);
+		varFaceSource1->get(&(vecFirstFaceIx[0]), nElementCount);
+	}
+
+	// Load in second mesh source face ix
+	if (fHasSecondMeshSourceFace) {
+		NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
+		vecSecondFaceIx.resize(nElementCount);
+		varFaceSource2->set_cur((long)0);
+		varFaceSource2->get(&(vecSecondFaceIx[0]), nElementCount);
 	}
 }
 
@@ -453,25 +627,25 @@ void Mesh::Validate() const {
 #ifdef USE_EXACT_ARITHMETIC
 			FixedPoint dDotX = DotProductX(node1, nodeCross);
 
-			printf("%1.15Le : ", nodeCross.x); nodeCross.fx.Print(); printf("\n");
+			printf("%1.15e : ", nodeCross.x); nodeCross.fx.Print(); printf("\n");
 
 			if (fabs(nodeCross.x - nodeCross.fx.ToReal()) > ReferenceTolerance) {
-				printf("X0: %1.15Le : ", node0.x); node0.fx.Print(); printf("\n");
-				printf("Y0: %1.15Le : ", node0.y); node0.fy.Print(); printf("\n");
-				printf("Z0: %1.15Le : ", node0.z); node0.fz.Print(); printf("\n");
-				printf("X1: %1.15Le : ", node1.x); node1.fx.Print(); printf("\n");
-				printf("Y1: %1.15Le : ", node1.y); node1.fy.Print(); printf("\n");
-				printf("Z1: %1.15Le : ", node1.z); node1.fz.Print(); printf("\n");
-				printf("X2: %1.15Le : ", node2.x); node2.fx.Print(); printf("\n");
-				printf("Y2: %1.15Le : ", node2.y); node2.fy.Print(); printf("\n");
-				printf("Z2: %1.15Le : ", node2.z); node2.fz.Print(); printf("\n");
+				printf("X0: %1.15e : ", node0.x); node0.fx.Print(); printf("\n");
+				printf("Y0: %1.15e : ", node0.y); node0.fy.Print(); printf("\n");
+				printf("Z0: %1.15e : ", node0.z); node0.fz.Print(); printf("\n");
+				printf("X1: %1.15e : ", node1.x); node1.fx.Print(); printf("\n");
+				printf("Y1: %1.15e : ", node1.y); node1.fy.Print(); printf("\n");
+				printf("Z1: %1.15e : ", node1.z); node1.fz.Print(); printf("\n");
+				printf("X2: %1.15e : ", node2.x); node2.fx.Print(); printf("\n");
+				printf("Y2: %1.15e : ", node2.y); node2.fy.Print(); printf("\n");
+				printf("Z2: %1.15e : ", node2.z); node2.fz.Print(); printf("\n");
 
-				printf("X1: %1.15Le : ", nodeD1.x); nodeD1.fx.Print(); printf("\n");
-				printf("Y1: %1.15Le : ", nodeD1.y); nodeD1.fy.Print(); printf("\n");
-				printf("Z1: %1.15Le : ", nodeD1.z); nodeD1.fz.Print(); printf("\n");
-				printf("X2: %1.15Le : ", nodeD2.x); nodeD2.fx.Print(); printf("\n");
-				printf("Y2: %1.15Le : ", nodeD2.y); nodeD2.fy.Print(); printf("\n");
-				printf("Z2: %1.15Le : ", nodeD2.z); nodeD2.fz.Print(); printf("\n");
+				printf("X1: %1.15e : ", nodeD1.x); nodeD1.fx.Print(); printf("\n");
+				printf("Y1: %1.15e : ", nodeD1.y); nodeD1.fy.Print(); printf("\n");
+				printf("Z1: %1.15e : ", nodeD1.z); nodeD1.fz.Print(); printf("\n");
+				printf("X2: %1.15e : ", nodeD2.x); nodeD2.fx.Print(); printf("\n");
+				printf("Y2: %1.15e : ", nodeD2.y); nodeD2.fy.Print(); printf("\n");
+				printf("Z2: %1.15e : ", nodeD2.z); nodeD2.fz.Print(); printf("\n");
 				_EXCEPTIONT("FixedPoint mismatch (X)");
 			}
 			if (fabs(nodeCross.y - nodeCross.fy.ToReal()) > ReferenceTolerance) {
@@ -485,13 +659,13 @@ void Mesh::Validate() const {
 
 			if (dDot > 0.0) {
 				printf("\nError detected (orientation):\n");
-				printf("  Face %i, Edge %i, Orientation %1.5Le\n",
+				printf("  Face %i, Edge %i, Orientation %1.5e\n",
 					i, j, dDot);
 
 				printf("  (x,y,z):\n");
-				printf("    n0: %1.5Le %1.5Le %1.5Le\n", node0.x, node0.y, node0.z);
-				printf("    n1: %1.5Le %1.5Le %1.5Le\n", node1.x, node1.y, node1.z);
-				printf("    n2: %1.5Le %1.5Le %1.5Le\n", node2.x, node2.y, node2.z);
+				printf("    n0: %1.5e %1.5e %1.5e\n", node0.x, node0.y, node0.z);
+				printf("    n1: %1.5e %1.5e %1.5e\n", node1.x, node1.y, node1.z);
+				printf("    n2: %1.5e %1.5e %1.5e\n", node2.x, node2.y, node2.z);
 
 				Real dR0 = sqrt(
 					node0.x * node0.x + node0.y * node0.y + node0.z * node0.z);
@@ -509,12 +683,12 @@ void Mesh::Validate() const {
 				Real dLon2 = atan2(node2.y, node2.x);
 
 				printf("  (lambda, phi):\n");
-				printf("    n0: %1.5Le %1.5Le\n", dLon0, dLat0);
-				printf("    n1: %1.5Le %1.5Le\n", dLon1, dLat1);
-				printf("    n2: %1.5Le %1.5Le\n", dLon2, dLat2);
+				printf("    n0: %1.5e %1.5e\n", dLon0, dLat0);
+				printf("    n1: %1.5e %1.5e\n", dLon1, dLat1);
+				printf("    n2: %1.5e %1.5e\n", dLon2, dLat2);
 
 				printf("  X-Product:\n");
-				printf("    %1.5Le %1.5Le %1.5Le\n",
+				printf("    %1.5e %1.5e %1.5e\n",
 					nodeCross.x, nodeCross.y, nodeCross.z);
 
 				_EXCEPTIONT(
@@ -656,56 +830,54 @@ void GetLocalDirection(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void NudgeAlongEdge(
-	const Node & nodeBegin,
-	const Node & nodeEnd,
-	const Edge::Type type,
-	Node & nodeNudged,
-	Real Nudge
+void EqualizeCoincidentNodes(
+	const Mesh & meshFirst,
+	Mesh & meshSecond
 ) {
-	//static const Real Nudge = 1.0e-6;
+	int nCoincidentNodes = 0;
 
-	Node nodeDelta(
-		nodeEnd.x - nodeBegin.x,
-		nodeEnd.y - nodeBegin.y,
-		nodeEnd.z - nodeBegin.z);
-
-	Real dModNudge = Nudge / nodeDelta.Magnitude();
-
-	if (fabs(dModNudge) < 1.0e-12) {
-		_EXCEPTIONT("Coincident Begin and End nodes");
+	// Sort nodes
+	std::map<Node, int> setSortedFirstNodes;
+	for (int i = 0; i < meshFirst.nodes.size(); i++) {
+		setSortedFirstNodes.insert(
+			std::pair<Node, int>(meshFirst.nodes[i], i));
 	}
 
-	// Edge is a great circle arc
-	if (type == Edge::Type_GreatCircleArc) {
+	// For each node in meshSecond determine if a corresponding node
+	// exists in meshFirst.
+	for (int i = 0; i < meshSecond.nodes.size(); i++) {
+		std::map<Node, int>::const_iterator iter =
+			setSortedFirstNodes.find(meshSecond.nodes[i]);
 
-		nodeNudged.x = nodeBegin.x * (1.0 - dModNudge) + dModNudge * nodeEnd.x;
-		nodeNudged.y = nodeBegin.y * (1.0 - dModNudge) + dModNudge * nodeEnd.y;
-		nodeNudged.z = nodeBegin.z * (1.0 - dModNudge) + dModNudge * nodeEnd.z;
-
-		Real dAbsNodeNudge = nodeNudged.Magnitude();
-
-		nodeNudged.x /= dAbsNodeNudge;
-		nodeNudged.y /= dAbsNodeNudge;
-		nodeNudged.z /= dAbsNodeNudge;
-
-	// Edge is a line of constant latitude
-	} else if (type == Edge::Type_ConstantLatitude) {
-		nodeNudged.x = nodeBegin.x * (1.0 - dModNudge) + dModNudge * nodeEnd.x;
-		nodeNudged.y = nodeBegin.y * (1.0 - dModNudge) + dModNudge * nodeEnd.y;
-		nodeNudged.z = nodeBegin.z;
-
-		Real dAbsNodeNudge =
-			sqrt(nodeNudged.x * nodeNudged.x + nodeNudged.y * nodeNudged.y);
-
-		Real dRadius = sqrt(1.0 - nodeNudged.z * nodeNudged.z);
-
-		nodeNudged.x *= dRadius / dAbsNodeNudge;
-		nodeNudged.y *= dRadius / dAbsNodeNudge;
-
-	} else {
-		_EXCEPTIONT("Invalid edge");
+		if (iter != setSortedFirstNodes.end()) {
+			meshSecond.nodes[i] = iter->first;
+		}
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void EqualizeCoincidentNodes(
+	Mesh & mesh
+) {
+	int nCoincidentNodes = 0;
+
+	// Sort nodes
+	std::map<Node, int> mapSortedNodes;
+	for (int i = 0; i < mesh.nodes.size(); i++) {
+		std::map<Node, int>::const_iterator iter =
+			mapSortedNodes.find(mesh.nodes[i]);
+
+		if (iter != mapSortedNodes.end()) {
+			nCoincidentNodes++;
+			mesh.nodes[i] = iter->first;
+		} else {
+			mapSortedNodes.insert(
+				std::pair<Node, int>(mesh.nodes[i], i));
+		}
+	}
+
+	printf("Coincident nodes: %i\n", nCoincidentNodes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

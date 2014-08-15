@@ -126,7 +126,7 @@ public:
 	///		Comparator operator using floating point tolerance.
 	///	</summary>
 	bool operator< (const Node & node) const {
-		static const Real Tolerance = ReferenceTolerance;
+		static const Real Tolerance = 1.0e-8; //ReferenceTolerance;
 
 		if (x - node.x <= -Tolerance) {
 			return true;
@@ -177,7 +177,7 @@ public:
 	///		Output node to stdout.
 	///	</summary>
 	void Print(const char * szName) const {
-		printf("%s: %1.15Le %1.15Le %1.15Le\n", szName, x, y, z);
+		printf("%s: %1.15e %1.15e %1.15e\n", szName, x, y, z);
 	}
 
 #ifdef USE_EXACT_ARITHMETIC
@@ -211,7 +211,7 @@ public:
 
 		Real mag = sqrt(dx * dx + dy * dy + dz * dz);
 
-		printf("%1.15Le %1.15Le %1.15Le\n", dx / mag, dy / mag, dz / mag);
+		printf("%1.15e %1.15e %1.15e\n", dx / mag, dy / mag, dz / mag);
 	}
 
 #endif
@@ -221,6 +221,11 @@ public:
 ///		A vector for the storage of Nodes.
 ///	</summary>
 typedef std::vector<Node> NodeVector;
+
+///	<summary>
+///		A map between Nodes and indices.
+///	</summary>
+typedef std::map<Node, int> NodeMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -623,6 +628,21 @@ public:
 	FaceVector faces;
 
 	///	<summary>
+	///		Vector of first mesh Face indices.
+	///	</summary>
+	std::vector<int> vecFirstFaceIx;
+
+	///	<summary>
+	///		Vector of second mesh Face indices.
+	///	</summary>
+	std::vector<int> vecSecondFaceIx;
+
+	///	<summary>
+	///		Vector of Face areas.
+	///	</summary>
+	std::vector<double> vecFaceArea;
+
+	///	<summary>
 	///		EdgeMap for this mesh.
 	///	</summary>
 	EdgeMap edgemap;
@@ -661,6 +681,20 @@ public:
 	///		Construct the ReverseNodeArray from the NodeVector and FaceVector.
 	///	</summary>
 	void ConstructReverseNodeArray();
+
+	///	<summary>
+	///		Calculate Face areas.
+	///	</summary>
+	Real CalculateFaceAreas();
+
+	///	<summary>
+	///		Sort Faces by the specified Face index.
+	///	</summary>
+	void SortBySourceFaceIx(
+		bool fSortByFirstIndex
+	) {
+		_EXCEPTIONT("Not implemented");
+	}
 
 	///	<summary>
 	///		Write the mesh to a NetCDF file.
@@ -760,6 +794,20 @@ inline Node CrossProductIX(
 	return nodeCross;
 }
 
+///	<summary>
+///		Calculate the product of a Node with a scalar.
+///	</summary>
+inline Node ScalarProduct(
+	const Real & d,
+	const Node & node
+) {
+	Node nodeProduct(node);
+	nodeProduct.x *= d;
+	nodeProduct.y *= d;
+	nodeProduct.z *= d;
+	return nodeProduct;
+}
+
 #ifdef USE_EXACT_ARITHMETIC
 ///	<summary>
 ///		Calculate the exact dot product between two Nodes.
@@ -841,15 +889,21 @@ void GetLocalDirection(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Calculate the node which is a small increment closer to nodeEnd
-///		from nodeBegin.
+///		For all Nodes on meshSecond that are "nearby" a Node on meshFirst,
+///		set the Node equal to the meshFirst Node.
 ///	</summary>
-void NudgeAlongEdge(
-	const Node & nodeBegin,
-	const Node & nodeEnd,
-	const Edge::Type type,
-	Node & nodeNudged,
-	Real Nudge = 1.0e-6
+void EqualizeCoincidentNodes(
+	const Mesh & meshFirst,
+	Mesh & meshSecond
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Equate coincident nodes on mesh.
+///	</summary>
+void EqualizeCoincidentNodes(
+	Mesh & mesh
 );
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    OverlapMesh.h
+///	\file    FiniteElementTools.h
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 14, 2014
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -14,38 +14,22 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#ifndef _OVERLAPMESH_H_
-#define _OVERLAPMESH_H_
-
 #include "Defines.h"
-
-#include "GridElements.h"
-
-///////////////////////////////////////////////////////////////////////////////
-
-///	<summary>
-///		Method to use to generate overlap mesh
-///	</summary>
-enum OverlapMeshMethod {
-	OverlapMeshMethod_Fuzzy,
-	OverlapMeshMethod_Exact,
-	OverlapMeshMethod_Mixed,
-};
+#include "DataVector.h"
+#include "DataMatrix3D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
-///	<summary>
-///		Generate the mesh obtained by overlapping meshes meshFirst and
-///		meshSecond.
-///	</summary>
-void GenerateOverlapMesh(
-	const Mesh & meshFirst,
-	const Mesh & meshSecond,
-	Mesh & meshOverlap,
-	OverlapMeshMethod method
+class Mesh;
+
+///////////////////////////////////////////////////////////////////////////////
+
+double GenerateMetaData(
+	const Mesh & mesh,
+	int nP,
+	DataMatrix3D<int> & dataGLLnodes,
+	DataMatrix3D<double> & dataGLLJacobian
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-
-#endif
 

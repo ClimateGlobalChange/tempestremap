@@ -26,13 +26,12 @@ bool MeshUtilitiesExact::AreNodesEqual(
 	const Node & node0,
 	const Node & node1
 ) {
-	FixedPoint fpDot00 = DotProductX(node0, node0);
-	FixedPoint fpDot01 = DotProductX(node0, node1);
-	FixedPoint fpDot11 = DotProductX(node1, node1);
+	Node nodeCross = CrossProductX(node0, node1);
 
-	FixedPoint fpProd = fpDot01 * fpDot01 - fpDot00 * fpDot11;
-
-	if (fpProd.IsZero()) {
+	if (nodeCross.fx.IsZero() &&
+		nodeCross.fy.IsZero() &&
+		nodeCross.fz.IsZero()
+	) {
 		return true;
 	}
 
@@ -96,15 +95,15 @@ void MeshUtilitiesExact::ContainsNode(
 			FixedPoint fp1 = nodeCrossX.fy * node.fy;
 			FixedPoint fp2 = nodeCrossX.fz * node.fz;
 
-			printf("(X) %1.15Le : ", nodeCross.x); nodeCrossX.fx.Print(); printf("\n");
-			printf("(Y) %1.15Le : ", nodeCross.y); nodeCrossX.fy.Print(); printf("\n");
-			printf("(Z) %1.15Le : ", nodeCross.z); nodeCrossX.fz.Print(); printf("\n");
+			printf("(X) %1.15e : ", nodeCross.x); nodeCrossX.fx.Print(); printf("\n");
+			printf("(Y) %1.15e : ", nodeCross.y); nodeCrossX.fy.Print(); printf("\n");
+			printf("(Z) %1.15e : ", nodeCross.z); nodeCrossX.fz.Print(); printf("\n");
 
-			printf("(X) %1.15Le : ", nodeCross.x * node.x); fp0.Print(); printf("\n");
-			printf("(Y) %1.15Le : ", nodeCross.y * node.y); fp1.Print(); printf("\n");
-			printf("(Z) %1.15Le : ", nodeCross.z * node.z); fp2.Print(); printf("\n");
+			printf("(X) %1.15e : ", nodeCross.x * node.x); fp0.Print(); printf("\n");
+			printf("(Y) %1.15e : ", nodeCross.y * node.y); fp1.Print(); printf("\n");
+			printf("(Z) %1.15e : ", nodeCross.z * node.z); fp2.Print(); printf("\n");
 
-			printf("%1.15Le : ", dDotNorm); fpDotNorm.Print(); printf("\n");
+			printf("%1.15e : ", dDotNorm); fpDotNorm.Print(); printf("\n");
 */
 			if (fpDotNorm.IsNegative()) {
 				loc = Face::NodeLocation_Exterior;
@@ -429,20 +428,20 @@ bool MeshUtilitiesExact::CalculateEdgeIntersections(
 		FixedPoint fpb = nodeN21xN22.fy * node11.fy;
 	!	FixedPoint fpc = nodeN21xN22.fz * node11.fz;
 
-		printf("X: %1.15Le : ", nodeN11xN12.x); nodeN11xN12.fx.Print(); printf("\n");
-		printf("Y: %1.15Le : ", nodeN11xN12.y); nodeN11xN12.fy.Print(); printf("\n");
-		printf("Z: %1.15Le : ", nodeN11xN12.z); nodeN11xN12.fz.Print(); printf("\n");
+		printf("X: %1.15e : ", nodeN11xN12.x); nodeN11xN12.fx.Print(); printf("\n");
+		printf("Y: %1.15e : ", nodeN11xN12.y); nodeN11xN12.fy.Print(); printf("\n");
+		printf("Z: %1.15e : ", nodeN11xN12.z); nodeN11xN12.fz.Print(); printf("\n");
 
-		printf("X: %1.15Le : ", nodeN21xN22.x); nodeN21xN22.fx.Print(); printf("\n");
-		printf("Y: %1.15Le : ", nodeN21xN22.y); nodeN21xN22.fy.Print(); printf("\n");
-		printf("Z: %1.15Le : ", nodeN21xN22.z); nodeN21xN22.fz.Print(); printf("\n");
+		printf("X: %1.15e : ", nodeN21xN22.x); nodeN21xN22.fx.Print(); printf("\n");
+		printf("Y: %1.15e : ", nodeN21xN22.y); nodeN21xN22.fy.Print(); printf("\n");
+		printf("Z: %1.15e : ", nodeN21xN22.z); nodeN21xN22.fz.Print(); printf("\n");
 
-		printf("X: %1.15Le : ", node11.x); node11.fx.Print(); printf("\n");
-		printf("Y: %1.15Le : ", node11.y); node11.fy.Print(); printf("\n");
-		printf("Z: %1.15Le : ", node11.z); node11.fz.Print(); printf("\n");
+		printf("X: %1.15e : ", node11.x); node11.fx.Print(); printf("\n");
+		printf("Y: %1.15e : ", node11.y); node11.fy.Print(); printf("\n");
+		printf("Z: %1.15e : ", node11.z); node11.fz.Print(); printf("\n");
 
-		printf("I1: %1.15Le : ", dDot1); fp1.Print(); printf("\n");
-		printf("I2: %1.15Le : ", dDot2); fp2.Print(); printf("\n");
+		printf("I1: %1.15e : ", dDot1); fp1.Print(); printf("\n");
+		printf("I2: %1.15e : ", dDot2); fp2.Print(); printf("\n");
 */
 
 	}
