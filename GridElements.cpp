@@ -113,7 +113,7 @@ Real Mesh::CalculateFaceAreas() {
 
 	const Real Tolerance = ReferenceTolerance;
 
-	vecFaceArea.resize(faces.size());
+	vecFaceArea.Initialize(faces.size());
 	for (int i = 0; i < faces.size(); i++) {
 		const Face & face = faces[i];
 
@@ -208,8 +208,12 @@ Real Mesh::CalculateFaceAreas() {
 	}
 
 	// Calculate accumulated area carefully
-	static const int Jump = 4;
-	std::vector<double> vecFaceAreaBak = vecFaceArea;
+	static const int Jump = 10;
+	std::vector<double> vecFaceAreaBak;
+	vecFaceAreaBak.resize(vecFaceArea.GetRows());
+	memcpy(&(vecFaceAreaBak[0]), &(vecFaceArea[0]),
+		vecFaceArea.GetRows() * sizeof(double));
+
 	for (;;) {
 		if (vecFaceAreaBak.size() == 1) {
 			break;

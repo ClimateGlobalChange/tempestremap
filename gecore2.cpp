@@ -105,6 +105,9 @@ try {
 	// Order of polynomial in each element
 	int nP;
 
+	// Use bubble on interior of spectral element nodes
+	bool fBubble;
+
 	// Output mesh file
 	std::string strOutputMesh;
 
@@ -125,11 +128,12 @@ try {
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineStringD(strMethod, "method", "", "[se]");
+		//CommandLineStringD(strMethod, "method", "", "[se]");
 		CommandLineString(strInputMesh, "in_mesh", "");
 		CommandLineString(strOutputMesh, "out_mesh", "");
 		CommandLineString(strMetaFile, "in_meta", "");
 		CommandLineInt(nP, "np", 4);
+		CommandLineBool(fBubble, "bubble");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputWeights, "out_weights", "");
@@ -184,15 +188,16 @@ try {
 			GenerateMetaData(
 				meshInput,
 				nP,
+				fBubble,
 				dataGLLNodes,
 				dataGLLJacobian);
 
 		Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
 		AnnounceEndBlock(NULL);
 
-		if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-14) {
+		if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
 			Announce("WARNING: Significant mismatch between numerical area "
-				"and geometric area");
+				"and geometric area\n\t(correct with --bubble)");
 		}
 	}
 
@@ -200,6 +205,13 @@ try {
 		_EXCEPTIONT("Number of element does not match between metadata and "
 			"input mesh");
 	}
+
+	// Generate the unique Jacobian
+	DataVector<double> vecInputAreas;
+	GenerateUniqueJacobian(
+		dataGLLNodes,
+		dataGLLJacobian,
+		vecInputAreas);
 
 	// Load output mesh
 	AnnounceStartBlock("Loading output mesh");
@@ -238,11 +250,18 @@ try {
 		dataGLLJacobian,
 		mapRemap
 	);
+
+	// Determine first-order and conservative properties of map
+	mapRemap.IsFirstOrder(1.0e-8);
+	mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+
 	AnnounceEndBlock(NULL);
 
 	if (strInputData != "") {
 		AnnounceStartBlock("Applying offline map to data");
 		mapRemap.Apply(
+			vecInputAreas,
+			meshOutput.vecFaceArea,
 			strInputData,
 			strOutputData,
 			vecVariableStrings);

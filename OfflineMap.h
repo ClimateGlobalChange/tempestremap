@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+class Mesh;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
@@ -41,6 +43,8 @@ public:
 	///		Apply the offline map to a data file.
 	///	</summary>
 	void Apply(
+		const DataVector<double> & vecAreaInput,
+		const DataVector<double> & vecAreaOutput,
 		const std::string & strInputDataFile,
 		const std::string & strOutputDataFile,
 		const std::vector<std::string> & vecVariables
@@ -58,6 +62,23 @@ public:
 	///	</summary>
 	void Write(
 		const std::string & strOutput
+	);
+
+public:
+	///	<summary>
+	///		Determine if the map is first-order accurate.
+	///	</summary>
+	bool IsFirstOrder(
+		double dTolerance
+	);
+
+	///	<summary>
+	///		Determine if the map is conservative.
+	///	</summary>
+	bool IsConservative(
+		const DataVector<double> & vecInputAreas,
+		const DataVector<double> & vecOutputAreas,
+		double dTolerance
 	);
 
 public:

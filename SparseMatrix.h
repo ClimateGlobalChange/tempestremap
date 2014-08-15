@@ -105,6 +105,8 @@ public:
 			dataRows[ix] = iter->first.first;
 			dataCols[ix] = iter->first.second;
 			dataEntries[ix] = iter->second;
+
+			ix++;
 		}
 	}
 

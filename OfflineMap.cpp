@@ -24,6 +24,8 @@
 #include "DataVector.h"
 #include "DataMatrix.h"
 
+#include <cmath>
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeOutputDimensionsFromFile(
@@ -69,6 +71,8 @@ void OfflineMap::InitializeOutputDimensionsFromFile(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Apply(
+	const DataVector<double> & vecAreaInput,
+	const DataVector<double> & vecAreaOutput,
 	const std::string & strInputDataFile,
 	const std::string & strOutputDataFile,
 	const std::vector<std::string> & vecVariables
@@ -140,7 +144,7 @@ void OfflineMap::Apply(
 	for (int v = 0; v < vecVariables.size(); v++) {
 		NcVar * var = ncInput.get_var(vecVariables[v].c_str());
 
-		Announce(vecVariables[v].c_str());
+		AnnounceStartBlock(vecVariables[v].c_str());
 
 		// Create new output variable
 		NcVar * varOut = NULL;
@@ -185,8 +189,22 @@ void OfflineMap::Apply(
 				dataInDouble[i] = static_cast<double>(dataIn[i]);
 			}
 
+			// Announce input mass
+			double dInputMass = 0.0;
+			for (int i = 0; i < nCol; i++) {
+				dInputMass += dataInDouble[i] * vecAreaInput[i];
+			}
+			Announce("Input Mass:  %1.15e", dInputMass);
+
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
+
+			// Announce output mass
+			double dOutputMass = 0.0;
+			for (int i = 0; i < nColOut; i++) {
+				dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
+			}
+			Announce("Output Mass: %1.15e", dOutputMass);
 
 			// Cast the data to float
 			int ix = 0;
@@ -219,6 +237,7 @@ void OfflineMap::Apply(
 				}
 			}
 		}
+		AnnounceEndBlock(NULL);
 	}
 }
 
@@ -287,6 +306,84 @@ void OfflineMap::Write(
 
 	varS->set_cur((long)0);
 	varS->put(&(vecS[0]), nS);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::IsFirstOrder(
+	double dTolerance
+) {
+
+	// Get map entries
+	DataVector<int> dataRows;
+	DataVector<int> dataCols;
+	DataVector<double> dataEntries;
+
+	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+
+	// Calculate row sums
+	DataVector<double> dRowSums;
+	dRowSums.Initialize(m_mapRemap.GetRows());
+
+	for (int i = 0; i < dataRows.GetRows(); i++) {
+		dRowSums[dataRows[i]] += dataEntries[i];
+	}
+
+	// Verify all row sums are equal to 1
+	bool fFirstOrder = true;
+	for (int i = 0; i < dRowSums.GetRows(); i++) {
+		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
+			fFirstOrder = false;
+			Announce("OfflineMap is not first order in row %i (%1.15e)",
+				i, dRowSums[i]);
+		}
+	}
+
+	return fFirstOrder;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::IsConservative(
+	const DataVector<double> & vecInputAreas,
+	const DataVector<double> & vecOutputAreas,
+	double dTolerance
+) {
+	if (vecInputAreas.GetRows() != m_mapRemap.GetColumns()) {
+		_EXCEPTIONT("vecInputAreas has not been computed");
+	}
+	if (vecOutputAreas.GetRows() != m_mapRemap.GetRows()) {
+		_EXCEPTIONT("vecOutputAreas has not been computed");
+	}
+
+	// Get map entries
+	DataVector<int> dataRows;
+	DataVector<int> dataCols;
+	DataVector<double> dataEntries;
+
+	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+
+	// Calculate column sums
+	DataVector<double> dColumnSums;
+	dColumnSums.Initialize(m_mapRemap.GetColumns());
+
+	for (int i = 0; i < dataRows.GetRows(); i++) {
+		dColumnSums[dataCols[i]] +=
+			dataEntries[i] * vecOutputAreas[dataRows[i]];
+	}
+
+	// Verify all column sums equal the input Jacobian
+	bool fConservative = true;
+	for (int i = 0; i < dColumnSums.GetRows(); i++) {
+		if (fabs(dColumnSums[i] - vecInputAreas[i]) > dTolerance) {
+			fConservative = false;
+			Announce("OfflineMap is not conservative in column "
+				"%i (%1.15e / %1.15e)",
+				i, dColumnSums[i], vecInputAreas[i]);
+		}
+	}
+
+	return fConservative;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

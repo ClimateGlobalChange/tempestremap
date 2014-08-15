@@ -30,6 +30,7 @@
 #include <cmath>
 
 #include "Exception.h"
+#include "DataVector.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -640,7 +641,7 @@ public:
 	///	<summary>
 	///		Vector of Face areas.
 	///	</summary>
-	std::vector<double> vecFaceArea;
+	DataVector<double> vecFaceArea;
 
 	///	<summary>
 	///		EdgeMap for this mesh.

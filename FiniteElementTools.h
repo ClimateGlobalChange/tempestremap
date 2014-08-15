@@ -27,8 +27,17 @@ class Mesh;
 double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
+	bool fBubble,
 	DataMatrix3D<int> & dataGLLnodes,
 	DataMatrix3D<double> & dataGLLJacobian
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GenerateUniqueJacobian(
+	const DataMatrix3D<int> & dataGLLnodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	DataVector<double> & dataUniqueJacobian
 );
 
 ///////////////////////////////////////////////////////////////////////////////

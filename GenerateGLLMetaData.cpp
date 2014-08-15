@@ -36,6 +36,9 @@ try {
 	// Polynomial order
 	int nP;
 
+	// Use of bubble to adjust areas
+	bool fBubble;
+
 	// Output metadata file
 	std::string strOutput;
 
@@ -60,6 +63,12 @@ try {
 	Mesh meshInput(strMesh);
 	AnnounceEndBlock(NULL);
 
+	// Calculate Face areas
+	AnnounceStartBlock("Calculating input mesh Face areas");
+	double dTotalAreaInput = meshInput.CalculateFaceAreas();
+	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
+	AnnounceEndBlock(NULL);
+
 	// Calculate metadata
 	DataMatrix3D<int> dataGLLnodes;
 	DataMatrix3D<double> dataGLLJacobian;
@@ -69,6 +78,7 @@ try {
 		GenerateMetaData(
 			meshInput,
 			nP,
+			fBubble,
 			dataGLLnodes,
 			dataGLLJacobian
 		);

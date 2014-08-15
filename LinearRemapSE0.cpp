@@ -58,6 +58,8 @@ void LinearRemapSE0(
 				dTotalJacobian += dataGLLJacobian[p][q][ixCurrentFirstMeshFace];
 			}
 			}
+
+			ixLastFirstMeshFace = ixCurrentFirstMeshFace;
 		}
 
 		// Determine remap coefficients

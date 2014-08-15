@@ -25,6 +25,7 @@
 double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
+	bool fBubble,
 	DataMatrix3D<int> & dataGLLnodes,
 	DataMatrix3D<double> & dataGLLJacobian
 ) {
@@ -51,6 +52,13 @@ double GenerateMetaData(
 	// Growing array of Jacobian values
 	std::vector<double> vecGLLJacobian;
 
+	// Verify face areas are available
+	if (fBubble) {
+		if (mesh.vecFaceArea.GetRows() != nElements) {
+			_EXCEPTIONT("Face area information unavailable or incorrect");
+		}
+	}
+
 	// Write metadata
 	for (int k = 0; k < nElements; k++) {
 		const Face & face = mesh.faces[k];
@@ -59,6 +67,8 @@ double GenerateMetaData(
 		if (face.edges.size() != 4) {
 			_EXCEPTIONT("Input mesh must only contain quadrilateral elements");
 		}
+
+		double dFaceNumericalArea = 0.0;
 
 		for (int j = 0; j < nP; j++) {
 		for (int i = 0; i < nP; i++) {
@@ -162,14 +172,71 @@ double GenerateMetaData(
 				_EXCEPTIONT("Nonpositive Jacobian detected");
 			}
 
-			dAccumulatedJacobian += dJacobian;
+			dFaceNumericalArea += dJacobian;
 
 			dataGLLJacobian[j][i][k] = dJacobian;
 		}
 		}
+
+		// Apply bubble adjustment to area
+		if (fBubble && (dFaceNumericalArea != mesh.vecFaceArea[k])) {
+			double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
+			for (int j = 0; j < nP; j++) {
+			for (int i = 0; i < nP; i++) {
+				dataGLLJacobian[j][i][k] +=
+					dMassDifference * dW[i] * dW[j];
+ 			}
+			}
+
+			dFaceNumericalArea += dMassDifference;
+		}
+
+		// Accumulate area from element
+		dAccumulatedJacobian += dFaceNumericalArea;
 	}
 
 	return dAccumulatedJacobian;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GenerateUniqueJacobian(
+	const DataMatrix3D<int> & dataGLLnodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	DataVector<double> & dataUniqueJacobian
+) {
+	// Verify correct array sizes
+	if ((dataGLLnodes.GetRows() != dataGLLJacobian.GetRows()) ||
+		(dataGLLnodes.GetColumns() != dataGLLJacobian.GetColumns()) ||
+		(dataGLLnodes.GetSubColumns() != dataGLLJacobian.GetSubColumns())
+	) {
+		_EXCEPTIONT("Dimension mismatch in dataGLLnodes / dataGLLJacobian");
+	}
+
+	// Find the maximum index of GLLnodes
+	int iMaximumIndex = 0;
+
+	for (int i = 0; i < dataGLLnodes.GetRows(); i++) {
+	for (int j = 0; j < dataGLLnodes.GetColumns(); j++) {
+	for (int k = 0; k < dataGLLnodes.GetSubColumns(); k++) {
+		if (dataGLLnodes[i][j][k] > iMaximumIndex) {
+			iMaximumIndex = dataGLLnodes[i][j][k];
+		}
+	}
+	}
+	}
+
+	// Resize unique Jacobian array
+	dataUniqueJacobian.Initialize(iMaximumIndex);
+
+	for (int i = 0; i < dataGLLnodes.GetRows(); i++) {
+	for (int j = 0; j < dataGLLnodes.GetColumns(); j++) {
+	for (int k = 0; k < dataGLLnodes.GetSubColumns(); k++) {
+		dataUniqueJacobian[dataGLLnodes[i][j][k]-1] +=
+			dataGLLJacobian[i][j][k];
+	}
+	}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
