@@ -28,6 +28,8 @@
 
 #define VERBOSE
 
+//#define CHECK_AREAS
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
@@ -1041,11 +1043,21 @@ ContinueToNextFace:
 		}
 	}
 
-	iterToAdd = setSecondFacesToAdd.begin();
-	while (iterToAdd != setSecondFacesToAdd.end()) {
+	for (;;) {
 
-		const Face & faceSecondCurrent =
-			meshSecond.faces[*iterToAdd];
+		// Take the next Face from the ToAdd set
+		if (setSecondFacesToAdd.size() == 0) {
+			break;
+		}
+
+		iterToAdd = setSecondFacesToAdd.begin();
+
+		int ixFaceToAdd = *iterToAdd;
+
+		setSecondFacesToAdd.erase(iterToAdd);
+		setSecondFacesAdded.insert(ixFaceToAdd);
+
+		const Face & faceSecondCurrent = meshSecond.faces[ixFaceToAdd];
 
 		// Add this face to meshOverlap
 		Face faceOverlapCurrent(faceSecondCurrent.edges.size());
@@ -1063,11 +1075,9 @@ ContinueToNextFace:
 
 		meshOverlap.faces.push_back(faceOverlapCurrent);
 		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
-		meshOverlap.vecSecondFaceIx.push_back(*iterToAdd);
+		meshOverlap.vecSecondFaceIx.push_back(ixFaceToAdd);
 
-		setSecondFacesAdded.insert(*iterToAdd);
-
-		// Add further interior faces
+		// Add further interior faces that are Edge-neighbors of this Face
 		bool fMoreFacesToAdd = false;
 
 		for (int i = 0; i < faceSecondCurrent.edges.size(); i++) {
@@ -1085,28 +1095,21 @@ ContinueToNextFace:
 				_EXCEPTIONT("Edge not found in EdgeMap");
 			}
 
-			int iOtherFace;
-			if (iterEdge->second[0] == *iterToAdd) {
-				iOtherFace = iterEdge->second[1];
-			} else if (iterEdge->second[1] == *iterToAdd) {
-				iOtherFace = iterEdge->second[0];
+			int ixOtherFace;
+			if (iterEdge->second[0] == ixFaceToAdd) {
+				ixOtherFace = iterEdge->second[1];
+			} else if (iterEdge->second[1] == ixFaceToAdd) {
+				ixOtherFace = iterEdge->second[0];
 			} else {
 				_EXCEPTIONT("EdgeMap consistency error");
 			}
 
-			if (setSecondFacesAdded.find(iOtherFace) ==
+			if (setSecondFacesAdded.find(ixOtherFace) ==
 				setSecondFacesAdded.end()
 			) {
-				setSecondFacesToAdd.insert(iOtherFace);
+				setSecondFacesToAdd.insert(ixOtherFace);
 				fMoreFacesToAdd = true;
 			}
-		}
-
-		if (fMoreFacesToAdd) {
-			setSecondFacesToAdd.erase(iterToAdd);
-			iterToAdd = setSecondFacesToAdd.begin();
-		} else {
-			iterToAdd++;
 		}
 	}
 
@@ -1156,12 +1159,18 @@ void GenerateOverlapMesh(
 		}
 	}
 
+	// Estimate meshOverlap size
+
 	// Loop through all Faces on the first Mesh
 	int ixCurrentFirstFace = 0;
 
 #pragma message "OpenMP here"
 	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
 	//for (int ixCurrentFirstFace = 4075; ixCurrentFirstFace < 4076; ixCurrentFirstFace++) {
+
+#ifdef CHECK_AREAS
+		Real dFirstFaceArea = meshFirst.CalculateFaceArea(ixCurrentFirstFace);
+#endif
 
 		// Generate the path
 		PathSegmentVector vecTracedPath;
@@ -1198,6 +1207,9 @@ void GenerateOverlapMesh(
 			_EXCEPTIONT("Not implemented yet!");
 		}
 
+#ifdef CHECK_AREAS
+		int nMeshOverlapPrevFaces = meshOverlap.faces.size();
+#endif
 		// Find Faces associated with the TracedPath
 		bool fSuccess =
 			GenerateOverlapFaces(
@@ -1208,6 +1220,24 @@ void GenerateOverlapMesh(
 				mapOverlapNodes,
 				meshOverlap
 			);
+
+#ifdef CHECK_AREAS
+		int nMeshOverlapCurrentFaces = meshOverlap.faces.size();
+
+		Real dOverlapAreas = 0.0;
+		for (int i = nMeshOverlapPrevFaces; i < nMeshOverlapCurrentFaces; i++) {
+			dOverlapAreas += meshOverlap.CalculateFaceArea(i);
+		}
+
+		if (fabs(dOverlapAreas - dFirstFaceArea) > ReferenceTolerance) {
+			printf("Area inconsistency (%i : %1.15e %1.15e)\n",
+				ixCurrentFirstFace,
+				dFirstFaceArea,
+				dOverlapAreas);
+			_EXCEPTION();
+		}
+#endif
+
 /*
 		if (!fSuccess) {
 			_EXCEPTIONT("OverlapMesh generation failed");

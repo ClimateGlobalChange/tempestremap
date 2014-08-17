@@ -684,6 +684,11 @@ public:
 	void ConstructReverseNodeArray();
 
 	///	<summary>
+	///		Calculate the area of a single Face.
+	///	</summary>
+	Real CalculateFaceArea(int iFace) const;
+
+	///	<summary>
 	///		Calculate Face areas.
 	///	</summary>
 	Real CalculateFaceAreas();
