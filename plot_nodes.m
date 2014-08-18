@@ -11,7 +11,7 @@ nodes = load(nodefile);
 hold on;
 %nn = size(nodes,1);
 %plot3(nodes(83:nn,1), nodes(83:nn,2), nodes(83:nn,3), 'r.');
-gix=[266851 2916]+1;
+gix=[]+1;
 for i=1:length(gix)
     plot3(nodes(gix(i),1), nodes(gix(i),2), nodes(gix(i),3), 'go');
 end

@@ -26,12 +26,32 @@ class OfflineMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Generate the OfflineMap for linear conserative element-average
+///		spectral element to element average remapping.
+///	</summary>
 void LinearRemapSE0(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for cubic conserative element-average
+///		spectral element to element average remapping.
+///	</summary>
+void LinearRemapSE4(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	bool fMonotone,
 	OfflineMap & mapRemap
 );
 

@@ -16,6 +16,7 @@ LDFILES= -lnetcdf -lnetcdf_c++
 
 # Local files
 FILES= Announce.cpp \
+       PolynomialInterp.cpp \
        GridElements.cpp \
        OverlapMesh.cpp \
        MeshUtilities.cpp \

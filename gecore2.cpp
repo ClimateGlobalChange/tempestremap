@@ -126,6 +126,9 @@ try {
 	// Output data file
 	std::string strOutputData;
 
+	// Name of the ncol variable
+	std::string strNColName;
+
 	// Parse the command line
 	BeginCommandLine()
 		//CommandLineStringD(strMethod, "method", "", "[se]");
@@ -139,6 +142,7 @@ try {
 		CommandLineString(strOutputWeights, "out_weights", "");
 		CommandLineString(strInputData, "in_data", "");
 		CommandLineString(strOutputData, "out_data", "");
+		CommandLineString(strNColName, "ncol_name", "ncol");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -242,18 +246,19 @@ try {
 	OfflineMap mapRemap;
 	mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
-	LinearRemapSE0(
+	LinearRemapSE4(
 		meshInput,
 		meshOutput,
 		meshOverlap,
 		dataGLLNodes,
 		dataGLLJacobian,
+		false,
 		mapRemap
 	);
 
 	// Determine first-order and conservative properties of map
-	mapRemap.IsFirstOrder(1.0e-8);
-	mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+	//mapRemap.IsFirstOrder(1.0e-8);
+	//mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
 
 	AnnounceEndBlock(NULL);
 
@@ -264,7 +269,8 @@ try {
 			meshOutput.vecFaceArea,
 			strInputData,
 			strOutputData,
-			vecVariableStrings);
+			vecVariableStrings,
+			strNColName);
 		AnnounceEndBlock(NULL);
 	}
 /*

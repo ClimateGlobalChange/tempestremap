@@ -109,111 +109,12 @@ void Mesh::ConstructReverseNodeArray() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Real Mesh::CalculateFaceArea(
-	int iFace
-) const {
-	const Real Tolerance = ReferenceTolerance;
-
-	const Face & face = faces[iFace];
-
-	double dAccumulatedExcess = 0.0;
-
-	int nEdges = static_cast<int>(face.edges.size());
-
-	double dFaceArea = 0.0;
-
-	for (int j = 0; j < nEdges; j++) {
-
-		// Get Nodes bounding this Node
-		int jPrev = (j + nEdges - 1) % nEdges;
-		int jNext = (j + 1) % nEdges;
-
-		const Node & node0 = nodes[face[jPrev]];
-		const Node & node1 = nodes[face[j]];
-		const Node & node2 = nodes[face[jNext]];
-
-		// Calculate area using Karney's method
-		// http://osgeo-org.1560.x6.nabble.com/Area-of-a-spherical-polygon-td3841625.html
-		double dLon1 = atan2(node1.y, node1.x);
-		double dLat1 = asin(node1.z);
-
-		double dLon2 = atan2(node2.y, node2.x);
-		double dLat2 = asin(node2.z);
-
-		if ((dLon1 < -0.5 * M_PI) && (dLon2 > 0.5 * M_PI)) {
-			dLon1 += 2.0 * M_PI;
-		}
-		if ((dLon2 < -0.5 * M_PI) && (dLon1 > 0.5 * M_PI)) {
-			dLon2 += 2.0 * M_PI;
-		}
-
-		double dLamLat1 = 2.0 * atanh(tan(dLat1 / 2.0));
-		double dLamLat2 = 2.0 * atanh(tan(dLat2 / 2.0));
-
-		double dS = tan(0.5 * (dLon2 - dLon1))
-			* tanh(0.5 * (dLamLat1 + dLamLat2));
-
-		dFaceArea -= 2.0 * atan(dS);
-/*
-		// Calculate angle between Nodes
-		Real dDotN0N1 = DotProduct(node0, node1);
-		Real dDotN0N2 = DotProduct(node0, node2);
-		Real dDotN2N1 = DotProduct(node2, node1);
-
-		Real dDotN0N0 = DotProduct(node0, node0);
-		Real dDotN1N1 = DotProduct(node1, node1);
-		Real dDotN2N2 = DotProduct(node2, node2);
-
-		Real dDenom0 = dDotN0N0 * dDotN1N1 - dDotN0N1 * dDotN0N1;
-		Real dDenom2 = dDotN2N2 * dDotN1N1 - dDotN2N1 * dDotN2N1;
-
-		if ((dDenom0 < Tolerance) || (dDenom2 < Tolerance)) {
-			continue;
-		}
-
-		// Angle between nodes
-		double dDenom = sqrt(dDenom0 * dDenom2);
-
-		double dRatio =
-			(dDotN1N1 * dDotN0N2 - dDotN0N1 * dDotN2N1) / dDenom;
-
-		if (dRatio > 1.0) {
-			dRatio = 1.0;
-		} else if (dRatio < -1.0) {
-			dRatio = -1.0;
-		}
-
-		dAccumulatedExcess += acos(dRatio);
-*/
-		//printf("[%1.15e %1.15e %1.15e],\n", node1.x, node1.y, node1.z);
-		//printf("%1.15e %1.15e\n",  dDotN1N1, dDotN2N2);
-
-	}
-
-	//double dPlanarSum = static_cast<double>(nEdges-2) * M_PI;
-
-	if (dFaceArea < 0.0) {
-		dFaceArea += 2.0 * M_PI;
-		//printf("%1.15e %1.15e\n", dFaceArea, dAccumulatedExcess - dPlanarSum);
-		//_EXCEPTIONT("Negative area element detected");
-	}
-/*
-	if (dPlanarSum > dAccumulatedExcess) {
-		printf("%1.15e %1.15e\n", dPlanarSum, dAccumulatedExcess);
-		_EXCEPTIONT("Negative area element detected");
-	}
-*/
-	return dFaceArea;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 Real Mesh::CalculateFaceAreas() {
 
 	// Calculate the area of each Face
 	vecFaceArea.Initialize(faces.size());
 	for (int i = 0; i < faces.size(); i++) {
-		vecFaceArea[i] = CalculateFaceArea(i);
+		vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
 	}
 
 	// Calculate accumulated area carefully
@@ -925,6 +826,104 @@ int BuildCoincidentNodeVector(
 	}
 
 	return nCoincidentNodes;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceArea(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	const Real Tolerance = ReferenceTolerance;
+
+	double dAccumulatedExcess = 0.0;
+
+	int nEdges = static_cast<int>(face.edges.size());
+
+	double dFaceArea = 0.0;
+
+	for (int j = 0; j < nEdges; j++) {
+
+		// Get Nodes bounding this Node
+		int jPrev = (j + nEdges - 1) % nEdges;
+		int jNext = (j + 1) % nEdges;
+
+		const Node & node0 = nodes[face[jPrev]];
+		const Node & node1 = nodes[face[j]];
+		const Node & node2 = nodes[face[jNext]];
+
+		// Calculate area using Karney's method
+		// http://osgeo-org.1560.x6.nabble.com/Area-of-a-spherical-polygon-td3841625.html
+		double dLon1 = atan2(node1.y, node1.x);
+		double dLat1 = asin(node1.z);
+
+		double dLon2 = atan2(node2.y, node2.x);
+		double dLat2 = asin(node2.z);
+
+		if ((dLon1 < -0.5 * M_PI) && (dLon2 > 0.5 * M_PI)) {
+			dLon1 += 2.0 * M_PI;
+		}
+		if ((dLon2 < -0.5 * M_PI) && (dLon1 > 0.5 * M_PI)) {
+			dLon2 += 2.0 * M_PI;
+		}
+
+		double dLamLat1 = 2.0 * atanh(tan(dLat1 / 2.0));
+		double dLamLat2 = 2.0 * atanh(tan(dLat2 / 2.0));
+
+		double dS = tan(0.5 * (dLon2 - dLon1))
+			* tanh(0.5 * (dLamLat1 + dLamLat2));
+
+		dFaceArea -= 2.0 * atan(dS);
+/*
+		// Calculate angle between Nodes
+		Real dDotN0N1 = DotProduct(node0, node1);
+		Real dDotN0N2 = DotProduct(node0, node2);
+		Real dDotN2N1 = DotProduct(node2, node1);
+
+		Real dDotN0N0 = DotProduct(node0, node0);
+		Real dDotN1N1 = DotProduct(node1, node1);
+		Real dDotN2N2 = DotProduct(node2, node2);
+
+		Real dDenom0 = dDotN0N0 * dDotN1N1 - dDotN0N1 * dDotN0N1;
+		Real dDenom2 = dDotN2N2 * dDotN1N1 - dDotN2N1 * dDotN2N1;
+
+		if ((dDenom0 < Tolerance) || (dDenom2 < Tolerance)) {
+			continue;
+		}
+
+		// Angle between nodes
+		double dDenom = sqrt(dDenom0 * dDenom2);
+
+		double dRatio =
+			(dDotN1N1 * dDotN0N2 - dDotN0N1 * dDotN2N1) / dDenom;
+
+		if (dRatio > 1.0) {
+			dRatio = 1.0;
+		} else if (dRatio < -1.0) {
+			dRatio = -1.0;
+		}
+
+		dAccumulatedExcess += acos(dRatio);
+*/
+		//printf("[%1.15e %1.15e %1.15e],\n", node1.x, node1.y, node1.z);
+		//printf("%1.15e %1.15e\n",  dDotN1N1, dDotN2N2);
+
+	}
+
+	//double dPlanarSum = static_cast<double>(nEdges-2) * M_PI;
+
+	if (dFaceArea < 0.0) {
+		dFaceArea += 2.0 * M_PI;
+		//printf("%1.15e %1.15e\n", dFaceArea, dAccumulatedExcess - dPlanarSum);
+		//_EXCEPTIONT("Negative area element detected");
+	}
+/*
+	if (dPlanarSum > dAccumulatedExcess) {
+		printf("%1.15e %1.15e\n", dPlanarSum, dAccumulatedExcess);
+		_EXCEPTIONT("Negative area element detected");
+	}
+*/
+	return dFaceArea;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

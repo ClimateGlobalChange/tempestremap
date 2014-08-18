@@ -15,10 +15,193 @@
 ///	</remarks>
 
 #include "FiniteElementTools.h"
+#include "PolynomialInterp.h"
 #include "GridElements.h"
 #include "GaussLobattoQuadrature.h"
 
 #include <map>
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ApplyLocalMap(
+	const Face & face,
+	const NodeVector & nodes,
+	double dAlpha,
+	double dBeta,
+	Node & nodeG,
+	Node & dDx1G,
+	Node & dDx2G
+) {
+	// Calculate nodal locations on the plane
+	double dXc =
+		  nodes[face[0]].x * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].x *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].x *        dAlpha  *        dBeta
+		+ nodes[face[3]].x * (1.0 - dAlpha) *        dBeta;
+
+	double dYc =
+		  nodes[face[0]].y * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].y *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].y *        dAlpha  *        dBeta
+		+ nodes[face[3]].y * (1.0 - dAlpha) *        dBeta;
+
+	double dZc =
+		  nodes[face[0]].z * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].z *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].z *        dAlpha  *        dBeta
+		+ nodes[face[3]].z * (1.0 - dAlpha) *        dBeta;
+
+	double dR = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
+
+	// Check if this Node exists in the NodeMap
+	nodeG.x = dXc / dR;
+	nodeG.y = dYc / dR;
+	nodeG.z = dZc / dR;
+
+	// Pointwise basis vectors in Cartesian geometry
+	Node dDx1F(
+		(1.0 - dBeta) * (nodes[face[1]].x - nodes[face[0]].x)
+		+      dBeta  * (nodes[face[2]].x - nodes[face[3]].x),
+		(1.0 - dBeta) * (nodes[face[1]].y - nodes[face[0]].y)
+		+      dBeta  * (nodes[face[2]].y - nodes[face[3]].y),
+		(1.0 - dBeta) * (nodes[face[1]].z - nodes[face[0]].z)
+		+      dBeta  * (nodes[face[2]].z - nodes[face[3]].z));
+
+	Node dDx2F(
+		(1.0 - dAlpha) * (nodes[face[3]].x - nodes[face[0]].x)
+		+      dAlpha  * (nodes[face[2]].x - nodes[face[1]].x),
+		(1.0 - dAlpha) * (nodes[face[3]].y - nodes[face[0]].y)
+		+      dAlpha  * (nodes[face[2]].y - nodes[face[1]].y),
+		(1.0 - dAlpha) * (nodes[face[3]].z - nodes[face[0]].z)
+		+      dAlpha  * (nodes[face[2]].z - nodes[face[1]].z));
+
+	// Pointwise basis vectors in spherical geometry
+	double dDenomTerm = 1.0 / (dR * dR * dR);
+
+	dDx1G = Node(
+		- dXc * (dYc * dDx1F.y + dZc * dDx1F.z)
+			+ (dYc * dYc + dZc * dZc) * dDx1F.x,
+		- dYc * (dXc * dDx1F.x + dZc * dDx1F.z)
+			+ (dXc * dXc + dZc * dZc) * dDx1F.y,
+		- dZc * (dXc * dDx1F.x + dYc * dDx1F.y)
+			+ (dXc * dXc + dYc * dYc) * dDx1F.z);
+
+	dDx2G = Node(
+		- dXc * (dYc * dDx2F.y + dZc * dDx2F.z)
+			+ (dYc * dYc + dZc * dZc) * dDx2F.x,
+		- dYc * (dXc * dDx2F.x + dZc * dDx2F.z)
+			+ (dXc * dXc + dZc * dZc) * dDx2F.y,
+		- dZc * (dXc * dDx2F.x + dYc * dDx2F.y)
+			+ (dXc * dXc + dYc * dYc) * dDx2F.z);
+
+	dDx1G.x *= dDenomTerm;
+	dDx1G.y *= dDenomTerm;
+	dDx1G.z *= dDenomTerm;
+
+	dDx2G.x *= dDenomTerm;
+	dDx2G.y *= dDenomTerm;
+	dDx2G.z *= dDenomTerm;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ApplyInverseMap(
+	const Face & face,
+	const NodeVector & nodes,
+	const Node & node,
+	double & dAlpha,
+	double & dBeta
+) {
+	// Forward map quantities
+	Node nodeG;
+	Node nodeDx1G;
+	Node nodeDx2G;
+
+	// First guess
+	dAlpha = 0.5;
+	dBeta = 0.5;
+
+	// Map matrix
+	double dMap[2][2];
+
+	double dF[2];
+
+	// Loop until convergence
+	double dDelta = 1.0;
+
+	// Try all pairs of 
+	for (int i = 0; i < 10; i++) {
+/*
+		nodes[face[0]].Print("f0");
+		nodes[face[1]].Print("f1");
+		nodes[face[2]].Print("f2");
+		nodes[face[3]].Print("f3");
+*/
+		// Apply forward map
+		ApplyLocalMap(
+			face, nodes,
+			dAlpha, dBeta,
+			nodeG, nodeDx1G, nodeDx2G);
+
+		// Pick the two Cartesian components with greatest chance of success
+		const Node & nodeRef = nodes[face[0]];
+
+		if ((fabs(nodeRef.x) >= fabs(nodeRef.y)) &&
+			(fabs(nodeRef.x) >= fabs(nodeRef.z))
+		) {
+			dMap[0][0] = nodeDx1G.y;
+			dMap[0][1] = nodeDx2G.y;
+			dMap[1][0] = nodeDx1G.z;
+			dMap[1][1] = nodeDx2G.z;
+
+			dF[0] = (nodeG.y - node.y);
+			dF[1] = (nodeG.z - node.z);
+
+		} else if (
+			(fabs(nodeRef.y) >= fabs(nodeRef.x)) &&
+			(fabs(nodeRef.y) >= fabs(nodeRef.z))
+		) {
+			dMap[0][0] = nodeDx1G.x;
+			dMap[0][1] = nodeDx2G.x;
+			dMap[1][0] = nodeDx1G.z;
+			dMap[1][1] = nodeDx2G.z;
+
+			dF[0] = (nodeG.x - node.x);
+			dF[1] = (nodeG.z - node.z);
+
+		} else {
+			dMap[0][0] = nodeDx1G.x;
+			dMap[0][1] = nodeDx2G.x;
+			dMap[1][0] = nodeDx1G.y;
+			dMap[1][1] = nodeDx2G.y;
+
+			dF[0] = (nodeG.x - node.x);
+			dF[1] = (nodeG.y - node.y);
+		}
+
+		double dDet = dMap[0][0] * dMap[1][1] - dMap[0][1] * dMap[1][0];
+
+		if (fabs(dDet) < ReferenceTolerance) {
+			_EXCEPTIONT("Zero determinant in map inverse");
+		}
+
+		// Apply Newton's method
+		double dDeltaAlpha =
+			1.0 / dDet * (  dMap[1][1] * dF[0] - dMap[0][1] * dF[1]);
+
+		double dDeltaBeta =
+			1.0 / dDet * (- dMap[1][0] * dF[0] + dMap[0][0] * dF[1]);
+
+		dAlpha -= dDeltaAlpha;
+		dBeta  -= dDeltaBeta;
+
+		double dDeltaNorm = fabs(dDeltaAlpha) + fabs(dDeltaBeta);
+
+		if (dDeltaNorm < ReferenceTolerance) {
+			break;
+		}
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -36,8 +219,6 @@ double GenerateMetaData(
 	// Initialize data structures
 	dataGLLnodes.Initialize(nP, nP, nElements);
 	dataGLLJacobian.Initialize(nP, nP, nElements);
-
-	// Generate GLL metadata
 
 	std::map<Node, int> mapNodes;
 
@@ -72,7 +253,7 @@ double GenerateMetaData(
 
 		for (int j = 0; j < nP; j++) {
 		for (int i = 0; i < nP; i++) {
-
+/*
 			double dXc =
 				  nodevec[face[0]].x * (1.0 - dG[i]) * (1.0 - dG[j])
 				+ nodevec[face[1]].x *        dG[i]  * (1.0 - dG[j])
@@ -98,18 +279,6 @@ double GenerateMetaData(
 			nodeGLL.x = dXc / dR;
 			nodeGLL.y = dYc / dR;
 			nodeGLL.z = dZc / dR;
-
-			std::map<Node, int>::const_iterator iter = mapNodes.find(nodeGLL);
-			if (iter == mapNodes.end()) {
-
-				// Insert new unique node into map
-				int ixNode = static_cast<int>(mapNodes.size());
-				mapNodes.insert(std::pair<Node, int>(nodeGLL, ixNode));
-				dataGLLnodes[j][i][k] = ixNode + 1;
-
-			} else {
-				dataGLLnodes[j][i][k] = iter->second + 1;
-			}
 
 			// Calculate Jacobian
 
@@ -156,6 +325,33 @@ double GenerateMetaData(
 			dDx2G.x *= dDenomTerm;
 			dDx2G.y *= dDenomTerm;
 			dDx2G.z *= dDenomTerm;
+*/
+			// Get local map vectors
+			Node nodeGLL;
+			Node dDx1G;
+			Node dDx2G;
+
+			ApplyLocalMap(
+				face,
+				nodevec,
+				dG[i],
+				dG[j],
+				nodeGLL,
+				dDx1G,
+				dDx2G);
+
+			// Determine if this is a unique Node
+			std::map<Node, int>::const_iterator iter = mapNodes.find(nodeGLL);
+			if (iter == mapNodes.end()) {
+
+				// Insert new unique node into map
+				int ixNode = static_cast<int>(mapNodes.size());
+				mapNodes.insert(std::pair<Node, int>(nodeGLL, ixNode));
+				dataGLLnodes[j][i][k] = ixNode + 1;
+
+			} else {
+				dataGLLnodes[j][i][k] = iter->second + 1;
+			}
 
 			// Cross product gives local Jacobian
 			Node nodeCross = CrossProduct(dDx1G, dDx2G);
@@ -235,6 +431,115 @@ void GenerateUniqueJacobian(
 		dataUniqueJacobian[dataGLLnodes[i][j][k]-1] +=
 			dataGLLJacobian[i][j][k];
 	}
+	}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SampleGLLFiniteElement(
+	bool fMonotone,
+	int nP,
+	double dAlpha,
+	double dBeta,
+	DataMatrix<double> & dCoeff
+) {
+	// Interpolation coefficients
+	DataVector<double> dCoeffAlpha;
+	dCoeffAlpha.Initialize(nP);
+
+	DataVector<double> dCoeffBeta;
+	dCoeffBeta.Initialize(nP);
+
+	// Non-monotone interpolation
+	if (!fMonotone) {
+
+		// GLL Quadrature nodes on [0,1]
+		DataVector<double> dG;
+		DataVector<double> dW;
+		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+
+		// Get interpolation coefficients in each direction
+		PolynomialInterp::LagrangianPolynomialCoeffs(
+			nP, dG, dCoeffAlpha, dAlpha);
+
+		PolynomialInterp::LagrangianPolynomialCoeffs(
+			nP, dG, dCoeffBeta, dBeta);
+
+	// Monotone interpolation
+	} else {
+
+		// Map dAlpha and dBeta to [-1,1]
+		dAlpha = 2.0 * dAlpha - 1.0;
+		dBeta  = 2.0 * dBeta  - 1.0;
+
+		// Second order monotone interpolation
+		if (nP == 2) {
+			dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
+			dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
+
+			dCoeffBeta[0] = 0.5 * (1.0 - dBeta);
+			dCoeffBeta[1] = 0.5 * (1.0 + dBeta);
+
+		// Third order monotone interpolation
+		} else if (nP == 3) {
+			if (dAlpha < 0.0) {
+				dCoeffAlpha[0] = dAlpha * dAlpha;
+				dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
+			} else {
+				dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
+				dCoeffAlpha[2] = dAlpha * dAlpha;
+			}
+			if (dBeta < 0.0) {
+				dCoeffBeta[0] = dBeta * dBeta;
+				dCoeffBeta[1] = 1.0 - dBeta * dBeta;
+			} else {
+				dCoeffBeta[1] = 1.0 - dBeta * dBeta;
+				dCoeffBeta[2] = dBeta * dBeta;
+			}
+
+		// Fourth order monotone interpolation
+		} else if (nP == 4) {
+			const double dGLL1 = 1.0/sqrt(5.0);
+
+			const double dA = (1.0 + sqrt(5.0)) / 16.0;
+			const double dB = (5.0 + sqrt(5.0)) / 16.0;
+			const double dC = (-5.0 - 5.0 * sqrt(5.0)) / 16.0;
+			const double dD = (-25.0 - 5.0 * sqrt(5.0)) / 16.0;
+
+			if ((dAlpha >= -dGLL1) && (dAlpha <= dGLL1)) {
+				dCoeffAlpha[1] = 0.5 * (1.0 - sqrt(5.0) * dAlpha);
+				dCoeffAlpha[2] = 1.0 - dCoeffAlpha[1];
+			} else if (dAlpha < -dGLL1) {
+				dCoeffAlpha[0] = dA + dAlpha * (dB + dAlpha * (dC + dAlpha * dD));
+				dCoeffAlpha[1] = 1.0 - dCoeffAlpha[0];
+			} else {
+				dCoeffAlpha[3] = dA - dAlpha * (dB - dAlpha * (dC - dAlpha * dD));
+				dCoeffAlpha[2] = 1.0 - dCoeffAlpha[3];
+			}
+
+			if ((dBeta >= -dGLL1) && (dBeta <= dGLL1)) {
+				dCoeffBeta[1] = 0.5 * (1.0 - sqrt(5.0) * dBeta);
+				dCoeffBeta[2] = 1.0 - dCoeffBeta[1];
+			} else if (dBeta < -dGLL1) {
+				dCoeffBeta[0] = dA + dBeta * (dB + dBeta * (dC + dBeta * dD));
+				dCoeffBeta[1] = 1.0 - dCoeffBeta[0];
+			} else {
+				dCoeffBeta[3] = dA - dBeta * (dB - dBeta * (dC - dBeta * dD));
+				dCoeffBeta[2] = 1.0 - dCoeffBeta[3];
+			}
+
+		} else {
+			_EXCEPTIONT("Not implemented");
+		}
+	}
+
+	// Combine coefficients
+	dCoeff.Initialize(nP, nP);
+
+	for (int i = 0; i < nP; i++) {
+	for (int j = 0; j < nP; j++) {
+		dCoeff[j][i] = dCoeffAlpha[i] * dCoeffBeta[j];
 	}
 	}
 }

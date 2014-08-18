@@ -684,11 +684,6 @@ public:
 	void ConstructReverseNodeArray();
 
 	///	<summary>
-	///		Calculate the area of a single Face.
-	///	</summary>
-	Real CalculateFaceArea(int iFace) const;
-
-	///	<summary>
 	///		Calculate Face areas.
 	///	</summary>
 	Real CalculateFaceAreas();
@@ -925,6 +920,16 @@ int BuildCoincidentNodeVector(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,
 	std::vector<int> & vecSecondToFirstCoincident
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a single Face.
+///	</summary>
+Real CalculateFaceArea(
+	const Face & face,
+	const NodeVector & nodes
 );
 
 ///////////////////////////////////////////////////////////////////////////////

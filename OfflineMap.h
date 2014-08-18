@@ -47,7 +47,8 @@ public:
 		const DataVector<double> & vecAreaOutput,
 		const std::string & strInputDataFile,
 		const std::string & strOutputDataFile,
-		const std::vector<std::string> & vecVariables
+		const std::vector<std::string> & vecVariables,
+		const std::string & strNColName
 	);
 
 	///	<summary>

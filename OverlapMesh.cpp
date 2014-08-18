@@ -1158,9 +1158,16 @@ void GenerateOverlapMesh(
 			vecSecondNodeMap[i] = ix;
 		}
 	}
-
+/*
 	// Estimate meshOverlap size
-
+	int nMaximumFaceCount;
+	if (meshFirst.faces.size() > meshSecond.faces.size()) {
+		nMaximumFaceCount = static_cast<int>(meshFirst.faces.size());
+	} else {
+		nMaximumFaceCount = static_cast<int>(meshSecond.faces.size());
+	}
+	meshOverlap.faces.reserve(2 * nMaximumFaceCount);
+*/
 	// Loop through all Faces on the first Mesh
 	int ixCurrentFirstFace = 0;
 
