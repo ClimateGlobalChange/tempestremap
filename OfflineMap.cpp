@@ -297,20 +297,38 @@ void OfflineMap::Apply(
 
 			// Announce input mass
 			double dInputMass = 0.0;
+			double dInputMin  = dataInDouble[0];
+			double dInputMax  = dataInDouble[0];
 			for (int i = 0; i < nCol; i++) {
 				dInputMass += dataInDouble[i] * vecAreaInput[i];
+				if (dataInDouble[i] < dInputMin) {
+					dInputMin = dataInDouble[i];
+				}
+				if (dataInDouble[i] > dInputMax) {
+					dInputMax = dataInDouble[i];
+				}
 			}
-			Announce("Input Mass:  %1.15e", dInputMass);
+			Announce(" Input Mass: %1.15e Min %1.10e Max %1.10e",
+				dInputMass, dInputMin, dInputMax);
 
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
 
 			// Announce output mass
 			double dOutputMass = 0.0;
+			double dOutputMin  = dataOutDouble[0];
+			double dOutputMax  = dataOutDouble[0];
 			for (int i = 0; i < nColOut; i++) {
 				dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
+				if (dataOutDouble[i] < dOutputMin) {
+					dOutputMin = dataOutDouble[i];
+				}
+				if (dataOutDouble[i] > dOutputMax) {
+					dOutputMax = dataOutDouble[i];
+				}
 			}
-			Announce("Output Mass: %1.15e", dOutputMass);
+			Announce("Output Mass: %1.15e Min %1.10e Max %1.10e",
+				dOutputMass, dOutputMin, dOutputMax);
 
 			// Cast the data to float
 			int ix = 0;
@@ -398,7 +416,7 @@ void OfflineMap::Write(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsFirstOrder(
+bool OfflineMap::IsConsistent(
 	double dTolerance
 ) {
 
@@ -418,16 +436,16 @@ bool OfflineMap::IsFirstOrder(
 	}
 
 	// Verify all row sums are equal to 1
-	bool fFirstOrder = true;
+	bool fConsistent = true;
 	for (int i = 0; i < dRowSums.GetRows(); i++) {
 		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
-			fFirstOrder = false;
-			Announce("OfflineMap is not first order in row %i (%1.15e)",
+			fConsistent = false;
+			Announce("OfflineMap is not consistent in row %i (%1.15e)",
 				i, dRowSums[i]);
 		}
 	}
 
-	return fFirstOrder;
+	return fConsistent;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

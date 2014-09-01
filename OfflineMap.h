@@ -69,7 +69,7 @@ public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
 	///	</summary>
-	bool IsFirstOrder(
+	bool IsConsistent(
 		double dTolerance
 	);
 

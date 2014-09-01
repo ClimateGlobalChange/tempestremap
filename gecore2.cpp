@@ -102,11 +102,20 @@ try {
 	// Metadata file
 	std::string strMetaFile;
 
+	// Input data is spectral element
+	bool fInputSE;
+
+	// Output data is spectral element
+	bool fOutputSE;
+
 	// Order of polynomial in each element
 	int nP;
 
 	// Use bubble on interior of spectral element nodes
 	bool fBubble;
+
+	// Enforce monotonicity
+	bool fMonotone;
 
 	// Output mesh file
 	std::string strOutputMesh;
@@ -135,8 +144,11 @@ try {
 		CommandLineString(strInputMesh, "in_mesh", "");
 		CommandLineString(strOutputMesh, "out_mesh", "");
 		CommandLineString(strMetaFile, "in_meta", "");
+		CommandLineBool(fInputSE, "in_se");
+		CommandLineBool(fOutputSE, "out_se");
 		CommandLineInt(nP, "np", 4);
 		CommandLineBool(fBubble, "bubble");
+		CommandLineBool(fMonotone, "mono");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputWeights, "out_weights", "");
@@ -177,45 +189,11 @@ try {
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 
-	// Load metadata file
-	DataMatrix3D<int> dataGLLNodes;
-	DataMatrix3D<double> dataGLLJacobian;
-
-	if (strMetaFile != "") {
-		AnnounceStartBlock("Loading meta data file");
-		LoadMetaDataFile(strMetaFile, dataGLLNodes, dataGLLJacobian);
-		AnnounceEndBlock(NULL);
-
-	} else {
-		AnnounceStartBlock("Generating mesh meta data");
-		double dNumericalArea =
-			GenerateMetaData(
-				meshInput,
-				nP,
-				fBubble,
-				dataGLLNodes,
-				dataGLLJacobian);
-
-		Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
-		AnnounceEndBlock(NULL);
-
-		if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
-			Announce("WARNING: Significant mismatch between numerical area "
-				"and geometric area\n\t(correct with --bubble)");
-		}
-	}
-
-	if (dataGLLNodes.GetSubColumns() != meshInput.faces.size()) {
-		_EXCEPTIONT("Number of element does not match between metadata and "
-			"input mesh");
-	}
-
 	// Generate the unique Jacobian
 	DataVector<double> vecInputAreas;
-	GenerateUniqueJacobian(
-		dataGLLNodes,
-		dataGLLJacobian,
-		vecInputAreas);
+	if (!fInputSE) {
+		vecInputAreas = meshInput.vecFaceArea;
+	}
 
 	// Load output mesh
 	AnnounceStartBlock("Loading output mesh");
@@ -241,24 +219,70 @@ try {
 	Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
 	AnnounceEndBlock(NULL);
 
-	// Generate weights file
-	AnnounceStartBlock("Calculating offline map");
+	// Offline Map
 	OfflineMap mapRemap;
-	mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
-	LinearRemapSE4(
-		meshInput,
-		meshOutput,
-		meshOverlap,
-		dataGLLNodes,
-		dataGLLJacobian,
-		false,
-		mapRemap
-	);
+	// Load metadata file
+	if ((fInputSE) && (!fOutputSE)) {
+		DataMatrix3D<int> dataGLLNodes;
+		DataMatrix3D<double> dataGLLJacobian;
+
+		if (strMetaFile != "") {
+			AnnounceStartBlock("Loading meta data file");
+			LoadMetaDataFile(strMetaFile, dataGLLNodes, dataGLLJacobian);
+			AnnounceEndBlock(NULL);
+
+		} else {
+			AnnounceStartBlock("Generating mesh meta data");
+			double dNumericalArea =
+				GenerateMetaData(
+					meshInput,
+					nP,
+					fBubble,
+					dataGLLNodes,
+					dataGLLJacobian);
+
+			Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
+			AnnounceEndBlock(NULL);
+
+			if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
+				Announce("WARNING: Significant mismatch between numerical area "
+					"and geometric area");
+			}
+		}
+
+		if (dataGLLNodes.GetSubColumns() != meshInput.faces.size()) {
+			_EXCEPTIONT("Number of element does not match between metadata and "
+				"input mesh");
+		}
+
+		// Generate the unique Jacobian
+		GenerateUniqueJacobian(
+			dataGLLNodes,
+			dataGLLJacobian,
+			vecInputAreas);
+
+		// Generate weights file
+		AnnounceStartBlock("Calculating offline map");
+		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
+
+		LinearRemapSE4(
+			meshInput,
+			meshOutput,
+			meshOverlap,
+			dataGLLNodes,
+			dataGLLJacobian,
+			fMonotone,
+			mapRemap
+		);
+
+	} else {
+		_EXCEPTIONT("Not implemented");
+	}
 
 	// Determine first-order and conservative properties of map
-	//mapRemap.IsFirstOrder(1.0e-8);
-	//mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+	mapRemap.IsConsistent(1.0e-8);
+	mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
 
 	AnnounceEndBlock(NULL);
 

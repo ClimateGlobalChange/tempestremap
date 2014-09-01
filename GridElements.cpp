@@ -345,6 +345,12 @@ void Mesh::Write(const std::string & strFile) const {
 
 void Mesh::Read(const std::string & strFile) {
 
+	// Try to open the NetCDF file
+	FILE * fp = fopen(strFile.c_str(), "r");
+	if (fp == NULL) {
+		_EXCEPTION1("Mesh file not found \"%s\"", strFile.c_str());
+	}
+
 	// Input from a NetCDF Exodus file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
 

@@ -1,7 +1,11 @@
 ##############################################################################
 # Compiler and flags
 CC= g++
+F90= gfortran
 CFLAGS= -O3
+FORTFLAGS= -std=legacy
+
+USBLAS= True
 
 # NETCDF library directories
 NETCDF_INCLUDEDIR=/usr/local/include
@@ -12,7 +16,7 @@ NETCDF_LIBDIR=/usr/local/lib
 ##############################################################################
 
 # Library files to include
-LDFILES= -lnetcdf -lnetcdf_c++
+LDFILES= -lgfortran -lnetcdf -lnetcdf_c++ -framework accelerate
 
 # Local files
 FILES= Announce.cpp \
@@ -25,8 +29,9 @@ FILES= Announce.cpp \
 	   GaussLobattoQuadrature.cpp \
        FiniteElementTools.cpp \
 	   NetCDFUtilities.cpp \
-       OfflineMap.cpp \
-	   LinearRemapSE0.cpp
+       OfflineMap.cpp
+
+#FORTRAN_FILES= dqed.f90
 
 GENERATERLLMESH_FILES= GenerateRLLMesh.cpp $(FILES)
 
@@ -38,9 +43,9 @@ GENERATEGLLMETADATA_FILES= GenerateGLLMetaData.cpp $(FILES)
 
 MESHTOTXT_FILES= MeshToTxt.cpp $(FILES)
 
-UNITTEST_FILES= UnitTest.cpp $(FILES)
+GENERATETESTDATA_FILES= GenerateTestData.cpp $(FILES)
 
-GECORE2_FILES= gecore2.cpp $(FILES)
+GECORE2_FILES= gecore2.cpp LinearRemapSE0.cpp $(FILES)
 
 # Load system-specific defaults
 CFLAGS+= -I$(NETCDF_INCLUDEDIR)
@@ -51,7 +56,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt gecore2
+all: GenerateRLLMesh GenerateCSMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData gecore2
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -68,18 +73,18 @@ GenerateGLLMetaData: $(GENERATEGLLMETADATA_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt: $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(MESHTOTXT_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-#UnitTest: $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o)
-#	$(CC) $(LDFLAGS) -o $@ $(UNITTEST_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+GenerateTestData: $(GENERATETESTDATA_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATETESTDATA_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o) $(LDFILES)
 
 
 ##
 ## Clean
 ##
 clean:
-	rm -f GenerateRLLMesh GenerateCSMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt UnitTest gecore2 *.o
+	rm -f GenerateRLLMesh GenerateCSMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData gecore2 *.o
 	rm -rf $(DEPDIR)
 	rm -rf $(BUILDDIR)
 
@@ -87,6 +92,8 @@ clean:
 ## Include dependencies
 ##
 include $(FILES:%.cpp=$(DEPDIR)/%.d)
+
+include $(FORTRAN_FILES:%.f90=$(DEPDIR)/%.d)
 
 # DO NOT DELETE
 

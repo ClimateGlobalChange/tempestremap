@@ -57,5 +57,17 @@ void LinearRemapSE4(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Enforce conservation.
+///	</summary>
+void EnforceConservation(
+	const DataVector<double> & dataInputJacobian,
+	const DataVector<double> & dataOutputJacobian,
+	OfflineMap & mapRemap,
+	bool fEnforceMonotonicity
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
 #endif
 

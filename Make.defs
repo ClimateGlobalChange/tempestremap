@@ -26,11 +26,17 @@ $(BUILDDIR)/%.o : %.f90
 	@mkdir -p $(BUILDDIR)
 	$(F90) $(FORTFLAGS) -c -o $@ $<
 
+$(BUILDDIR)/%.o : %.f
+	@mkdir -p $(BUILDDIR)
+	$(F90) $(FORTFLAGS) -c -o $@ $<
+
 ##
 ## Dependency generation
 ##
 $(DEPDIR)/%.d : %.cpp
 	@$(MAKEDEPEND)
 $(DEPDIR)/%.d : %.f90
+	@$(MAKEDEPEND)
+$(DEPDIR)/%.d : %.f
 	@$(MAKEDEPEND)
 
