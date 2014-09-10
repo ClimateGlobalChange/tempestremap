@@ -37,10 +37,14 @@ if(size(faces,1) == 1)
 end
 
 hold on;
+axis off;
 for i = 1:size(xfaces,1)
-    patch(xfaces(i,:), yfaces(i,:), zfaces(i,:),'w');
+    patch(xfaces(i,:), yfaces(i,:), zfaces(i,:),'w','EdgeColor','k','LineWidth',2);
 end
 %patch(xfaces(11816,:), yfaces(11816,:), zfaces(11816,:),'r');
 hold off;
+
+view([-45 45]);
+camzoom(2.0);
 
 set(gca, 'FontSize', 14);

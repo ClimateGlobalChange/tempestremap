@@ -36,7 +36,7 @@ void OfflineMap::InitializeOutputDimensionsFromFile(
 	// Check for rectilinear attribute
 	bool fRectilinear = false;
 	for (int a = 0; a < ncOutputMesh.num_atts(); a++) {
-		if (strcmp(ncOutputMesh.get_att(a)->name(), "rectilinear")) {
+		if (strcmp(ncOutputMesh.get_att(a)->name(), "rectilinear") == 0) {
 			fRectilinear = true;
 			break;
 		}
@@ -109,14 +109,24 @@ void OfflineMap::Apply(
 	// Output columns
 	int nColOut = m_mapRemap.GetRows();
 
-	if (nColOut != m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]) {
-		_EXCEPTIONT("Mismatch between map size and output size");
+	// Data
+	bool fRectilinear;
+	if (m_vecOutputDimSizes.size() == 1) {
+		fRectilinear = false;
+	} else if (m_vecOutputDimSizes.size() == 2) {
+		fRectilinear = true;
+	} else {
+		_EXCEPTIONT("m_vecOutputDimSizes undefined");
 	}
 
-	// Data
-	bool fRectilinear = false;
-	if (m_vecOutputDimSizes.size() != 1) {
-		fRectilinear = true;
+	if (fRectilinear) {
+		if (nColOut != m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]) {
+			_EXCEPTIONT("Mismatch between map size and output size");
+		}
+	} else {
+		if (nColOut != m_vecOutputDimSizes[0]) {
+			_EXCEPTIONT("Mismatch between map size and output size");
+		}
 	}
 
 	DataVector<float> dataIn;
@@ -191,7 +201,7 @@ void OfflineMap::Apply(
 			vecDimsOut[vecDimsOut.GetRows()-1] = dim1;
 		} else {
 			vecDimsOut.Initialize(var->num_dims());
-			vecDimsOut[vecDimsOut.GetRows()-1] = dim1;
+			vecDimsOut[vecDimsOut.GetRows()-1] = dim0;
 		}
 
 		DataVector<long> vecDimSizes;
@@ -456,10 +466,10 @@ bool OfflineMap::IsConservative(
 	double dTolerance
 ) {
 	if (vecInputAreas.GetRows() != m_mapRemap.GetColumns()) {
-		_EXCEPTIONT("vecInputAreas has not been computed");
+		_EXCEPTIONT("vecInputAreas / mapRemap dimension mismatch");
 	}
 	if (vecOutputAreas.GetRows() != m_mapRemap.GetRows()) {
-		_EXCEPTIONT("vecOutputAreas has not been computed");
+		_EXCEPTIONT("vecOutputAreas / mapRemap dimension mismatch");
 	}
 
 	// Get map entries
@@ -490,6 +500,35 @@ bool OfflineMap::IsConservative(
 	}
 
 	return fConservative;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::IsMonotone(
+	double dTolerance
+) {
+
+	// Get map entries
+	DataVector<int> dataRows;
+	DataVector<int> dataCols;
+	DataVector<double> dataEntries;
+
+	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+
+	// Verify all entries are in the range [0,1]
+	bool fMonotone = true;
+	for (int i = 0; i < dataRows.GetRows(); i++) {
+		if ((dataEntries[i] < -dTolerance) ||
+			(dataEntries[i] > 1.0 + dTolerance)
+		) {
+			fMonotone = false;
+
+			Announce("OfflineMap is not monotone in entry (%i): %1.15e",
+				i, dataEntries[i]);
+		}
+	}
+
+	return fMonotone;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

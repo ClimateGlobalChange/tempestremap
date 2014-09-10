@@ -24,3 +24,7 @@ GenerateGLLMetaData
 GenerateOverlapMesh
 
 GenerateTestData
+
+CalculateDiffNorms
+
+GenerateICOMesh

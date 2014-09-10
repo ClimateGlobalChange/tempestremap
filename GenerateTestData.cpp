@@ -169,6 +169,9 @@ try {
 	// Degree of polynomial
 	int nP;
 
+	// Include a level dimension in output
+	bool fHOMMEFormat;
+
 	// Output variable name
 	std::string strVariableName;
 
@@ -181,6 +184,7 @@ try {
 		CommandLineInt(iTestData, "test", 1);
 		CommandLineBool(fGLL, "gll");
 		CommandLineInt(nP, "np", 4);
+		CommandLineBool(fHOMMEFormat, "homme");
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineString(strTestData, "out", "testdata.nc");
 
@@ -240,13 +244,16 @@ try {
 	std::vector<long> vecOutputDimSizes;
 	std::vector<std::string> vecOutputDimNames;
 
+	// Output level dimension
+	if (fHOMMEFormat) {
+		vecOutputDimSizes.push_back(1);
+		vecOutputDimNames.push_back("lev");
+	}
+
 	// Non-rectilinear output
 	if (!fRectilinear) {
-		vecOutputDimSizes.resize(1);
-		vecOutputDimSizes[0] = mesh.faces.size();
-
-		vecOutputDimNames.resize(1);
-		vecOutputDimNames[0] = "ncol";
+		vecOutputDimSizes.push_back(mesh.faces.size());
+		vecOutputDimNames.push_back("ncol");
 
 		Announce("Non-rectilinear mesh detected");
 
@@ -260,13 +267,11 @@ try {
 		std::string strDim1Name =
 			ncMesh.get_att("rectilinear_dim1_name")->as_string(0);
 
-		vecOutputDimSizes.resize(2);
-		vecOutputDimSizes[0] = nDim0Size;
-		vecOutputDimSizes[1] = nDim1Size;
+		vecOutputDimSizes.push_back(nDim0Size);
+		vecOutputDimSizes.push_back(nDim1Size);
 
-		vecOutputDimNames.resize(2);
-		vecOutputDimNames[0] = strDim0Name;
-		vecOutputDimNames[1] = strDim1Name;
+		vecOutputDimNames.push_back(strDim0Name);
+		vecOutputDimNames.push_back(strDim1Name);
 
 		Announce("Rectilinear mesh detected");
 	}
@@ -275,6 +280,11 @@ try {
 
 	// Generate test data
 	AnnounceStartBlock("Generating test data");
+
+	// Latitude and Longitude arrays (used for HOMME format output)
+	DataVector<double> dLat;
+	DataVector<double> dLon;
+	DataVector<double> dArea;
 
 	// Output data
 	DataVector<double> dVar;
@@ -379,7 +389,16 @@ try {
 		}
 
 		// Resize output array
-		vecOutputDimSizes[0] = iMaxNode;
+		if (fHOMMEFormat) {
+			vecOutputDimSizes[1] = iMaxNode;
+
+			dLat.Initialize(iMaxNode);
+			dLon.Initialize(iMaxNode);
+			dArea.Initialize(iMaxNode);
+
+		} else {
+			vecOutputDimSizes[0] = iMaxNode;
+		}
 
 		// Get Gauss-Lobatto quadrature nodes
 		DataVector<double> dG;
@@ -413,15 +432,21 @@ try {
 					dDx2G);
 
 				// Sample data at this point
-				double dLon = atan2(node.y, node.x);
-				if (dLon < 0.0) {
-					dLon += 2.0 * M_PI;
+				double dNodeLon = atan2(node.y, node.x);
+				if (dNodeLon < 0.0) {
+					dNodeLon += 2.0 * M_PI;
 				}
-				double dLat = asin(node.z);
+				double dNodeLat = asin(node.z);
 
-				double dSample = (*pTest)(dLon, dLat);
+				double dSample = (*pTest)(dNodeLon, dNodeLat);
 
 				dVar[dataGLLNodes[j][i][k]-1] = dSample;
+
+				if (fHOMMEFormat) {
+					dLat[dataGLLNodes[j][i][k]-1] = dNodeLat * 180.0 / M_PI;
+					dLon[dataGLLNodes[j][i][k]-1] = dNodeLon * 180.0 / M_PI;
+					dArea[dataGLLNodes[j][i][k]-1] += dataGLLJacobian[j][i][k];
+				}
 			}
 			}
 		}
@@ -441,6 +466,17 @@ try {
 			ncOut.add_dim(
 				vecOutputDimNames[d].c_str(),
 				vecOutputDimSizes[d]));
+	}
+
+	// Add latitude and longitude variable
+	if (fHOMMEFormat) {
+		NcVar * varLat = ncOut.add_var("lat", ncDouble, vecDimOut[1]);
+		NcVar * varLon = ncOut.add_var("lon", ncDouble, vecDimOut[1]);
+		NcVar * varArea = ncOut.add_var("area", ncDouble, vecDimOut[1]);
+
+		varLat->put(&(dLat[0]), vecOutputDimSizes[1]);
+		varLon->put(&(dLon[0]), vecOutputDimSizes[1]);
+		varArea->put(&(dArea[0]), vecOutputDimSizes[1]);
 	}
 
 	// Add variable

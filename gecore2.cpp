@@ -25,6 +25,7 @@
 
 #include "OfflineMap.h"
 #include "LinearRemapSE0.h"
+#include "LinearRemapFV.h"
 
 #include "netcdfcpp.h"
 #include <cmath>
@@ -117,6 +118,9 @@ try {
 	// Enforce monotonicity
 	bool fMonotone;
 
+	// Turn off checking for conservation / consistency
+	bool fNoCheck;
+
 	// Output mesh file
 	std::string strOutputMesh;
 
@@ -149,6 +153,7 @@ try {
 		CommandLineInt(nP, "np", 4);
 		CommandLineBool(fBubble, "bubble");
 		CommandLineBool(fMonotone, "mono");
+		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputWeights, "out_weights", "");
@@ -222,8 +227,21 @@ try {
 	// Offline Map
 	OfflineMap mapRemap;
 
-	// Load metadata file
-	if ((fInputSE) && (!fOutputSE)) {
+	// Finite volume input / Finite volume output
+	if ((!fInputSE) && (!fOutputSE)) {
+
+		// Generate reverse node array
+		meshInput.ConstructReverseNodeArray();
+
+		// Construct OfflineMap
+		AnnounceStartBlock("Calculating offline map");
+		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
+
+		LinearRemapFVtoFV(
+			meshInput, meshOutput, meshOverlap, nP, mapRemap);
+
+	// Finite volume input / Spectral element output
+	} else if ((!fInputSE) && (fOutputSE)) {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
@@ -233,7 +251,56 @@ try {
 			AnnounceEndBlock(NULL);
 
 		} else {
-			AnnounceStartBlock("Generating mesh meta data");
+			AnnounceStartBlock("Generating output mesh meta data");
+			double dNumericalArea =
+				GenerateMetaData(
+					meshOutput,
+					nP,
+					fBubble,
+					dataGLLNodes,
+					dataGLLJacobian);
+
+			Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
+			AnnounceEndBlock(NULL);
+/*
+			if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
+				Announce("WARNING: Significant mismatch between numerical area "
+					"and geometric area");
+			}
+*/
+		}
+
+		// Generate the unique Jacobian
+		GenerateUniqueJacobian(
+			dataGLLNodes,
+			dataGLLJacobian,
+			vecInputAreas);
+
+		// Generate reverse node array
+		meshInput.ConstructReverseNodeArray();
+
+		// Generate remap weights
+		LinearRemapFVtoGLL(
+			meshInput,
+			meshOutput,
+			meshOverlap,
+			dataGLLNodes,
+			dataGLLJacobian,
+			nP,
+			mapRemap);
+
+	// Spectral element input / Finite volume output
+	} else if ((fInputSE) && (!fOutputSE)) {
+		DataMatrix3D<int> dataGLLNodes;
+		DataMatrix3D<double> dataGLLJacobian;
+
+		if (strMetaFile != "") {
+			AnnounceStartBlock("Loading meta data file");
+			LoadMetaDataFile(strMetaFile, dataGLLNodes, dataGLLJacobian);
+			AnnounceEndBlock(NULL);
+
+		} else {
+			AnnounceStartBlock("Generating input mesh meta data");
 			double dNumericalArea =
 				GenerateMetaData(
 					meshInput,
@@ -280,9 +347,17 @@ try {
 		_EXCEPTIONT("Not implemented");
 	}
 
-	// Determine first-order and conservative properties of map
-	mapRemap.IsConsistent(1.0e-8);
-	mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+	// Verify consistency, conservation and monotonicity
+	if (!fNoCheck) {
+		AnnounceStartBlock("Verifying map");
+		mapRemap.IsConsistent(1.0e-8);
+		mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+
+		if (fMonotone) {
+			mapRemap.IsMonotone(1.0e-12);
+		}
+		AnnounceEndBlock(NULL);
+	}
 
 	AnnounceEndBlock(NULL);
 

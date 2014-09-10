@@ -70,12 +70,16 @@ void Mesh::ConstructEdgeMap() {
 	// Construct the edge map
 	edgemap.clear();
 	for (int i = 0; i < faces.size(); i++) {
-		for (int k = 0; k < 4; k++) {
-			if (faces[i][k] == faces[i][(k+1)%4]) {
+		const Face & face = faces[i];
+
+		int nEdges = face.edges.size();
+
+		for (int k = 0; k < nEdges; k++) {
+			if (faces[i][k] == face[(k+1)%nEdges]) {
 				continue;
 			}
 
-			Edge edge(faces[i][k], faces[i][(k+1)%4]);
+			Edge edge(face[k], face[(k+1)%nEdges]);
 			FacePair facepair;
 
 			EdgeMapIterator iter =
@@ -427,7 +431,6 @@ void Mesh::Read(const std::string & strFile) {
 		}
 	}
 
-
 	// Load in edge type array
 	if (fHasEdgeType) {
 		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
@@ -436,10 +439,9 @@ void Mesh::Read(const std::string & strFile) {
 		for (int i = 0; i < nElementCount; i++) {
 			varEdgeTypes->set_cur(i, 0);
 			varEdgeTypes->get(nEdgeTypes, 1, nNodesPerElement);
-			faces[i].edges[0].type = static_cast<Edge::Type>(nEdgeTypes[0]);
-			faces[i].edges[1].type = static_cast<Edge::Type>(nEdgeTypes[1]);
-			faces[i].edges[2].type = static_cast<Edge::Type>(nEdgeTypes[2]);
-			faces[i].edges[3].type = static_cast<Edge::Type>(nEdgeTypes[3]);
+			for (int j = 0; j < nNodesPerElement; j++) {
+				faces[i].edges[j].type = static_cast<Edge::Type>(nEdgeTypes[j]);
+			}
 		}
 		delete[] nEdgeTypes;
 	}
@@ -474,6 +476,18 @@ void Mesh::RemoveZeroEdges() {
 ///////////////////////////////////////////////////////////////////////////////
 
 void Mesh::Validate() const {
+
+	// Valid that Nodes have magnitude 1
+	for (int i = 0; i < nodes.size(); i++) {
+		double dMag = nodes[i].Magnitude();
+
+		if (fabs(dMag - 1.0) > ReferenceTolerance) {
+			_EXCEPTION2("Mesh validation failed: "
+				"Node of non-unit magnitude detected (%i, %1.10e)",
+				i, dMag);
+
+		}
+	}
 
 	// Validate that edges are oriented counter-clockwise
 	for (int i = 0; i < faces.size(); i++) {

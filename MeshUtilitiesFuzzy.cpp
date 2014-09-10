@@ -88,7 +88,7 @@ void MeshUtilitiesFuzzy::ContainsNode(
 			}
 
 		} else {
-			_EXCEPTIONT("Invalid EdgeType");
+			_EXCEPTION1("Invalid EdgeType (%i)", (int)(face.edges[i].type));
 		}
 	}
 
@@ -185,7 +185,6 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 	if ((typeFirst  == Edge::Type_GreatCircleArc) &&
 		(typeSecond == Edge::Type_GreatCircleArc)
 	) {
-
 		// Cross products
 		Node nodeN11xN12(CrossProduct(node11, node12));
 		Node nodeN21xN22(CrossProduct(node21, node22));
@@ -941,6 +940,8 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 		const Node & node1 = mesh.nodes[edgePrev[1]];
 		const Node & node2 = mesh.nodes[edgeThis[1]];
 
+		printf("%i %i %i\n", edgePrev[0], edgePrev[1], edgeThis[1]);
+
 		if (!AreNodesEqual(node1, nodeBegin)) {
 			_EXCEPTIONT("Logic error");
 		}
@@ -1033,6 +1034,11 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 		Real dAngleLR = 1.0 - dNormDotLR;
 		Real dAngleLA = 1.0 - dNormDotLA;
 		Real dAngleRA = 1.0 - dNormDotRA;
+
+		// Check that this branch does not lie exterior to the corner
+		if (dAngleLA + dAngleRA > 1.1 * dAngleLR) {
+			continue;
+		}
 
 #ifdef VERBOSE
 		printf("Face: %i\n", (*iter));

@@ -82,6 +82,13 @@ public:
 		double dTolerance
 	);
 
+	///	<summary>
+	///		Determine if the map is monotone.
+	///	</summary>
+	bool IsMonotone(
+		double dTolerance
+	);
+
 public:
 	///	<summary>
 	///		Get the SparseMatrix representation of the OfflineMap.

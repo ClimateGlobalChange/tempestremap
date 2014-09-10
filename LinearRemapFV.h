@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    LinearRemapSE0.h
+///	\file    LinearRemapFV.h
 ///	\author  Paul Ullrich
-///	\version August 14, 2014
+///	\version September 1, 2014
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -14,44 +14,43 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#ifndef _LINEARREMAPSE0_H_
-#define _LINEARREMAPSE0_H_
+#ifndef _LINEARREMAPFV_H_
+#define _LINEARREMAPFV_H_
+
+#include "DataMatrix3D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "GridElements.h"
-#include "DataMatrix3D.h"
-
+class Mesh;
 class OfflineMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Generate the OfflineMap for linear conserative element-average
-///		spectral element to element average remapping.
+///		Generate the OfflineMap for remapping from finite volumes to finite
+///		volumes.
 ///	</summary>
-void LinearRemapSE0(
+void LinearRemapFVtoFV(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
+	int nOrder,
 	OfflineMap & mapRemap
 );
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Generate the OfflineMap for cubic conserative element-average
-///		spectral element to element average remapping.
+///		Generate the OfflineMap for remapping from finite volumes to finite
+///		elements.
 ///	</summary>
-void LinearRemapSE4(
+void LinearRemapFVtoGLL(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
-	bool fMonotone,
+	int nOrder,
 	OfflineMap & mapRemap
 );
 

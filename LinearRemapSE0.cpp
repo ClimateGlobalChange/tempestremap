@@ -18,6 +18,7 @@
 #include "OfflineMap.h"
 #include "FiniteElementTools.h"
 #include "GaussLobattoQuadrature.h"
+#include "TriangularQuadrature.h"
 
 #include "Announce.h"
 
@@ -715,16 +716,14 @@ void ForceConsistencyConservation3(
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 		for (int j = 0; j < dCoeff.GetColumns(); j++) {
 			if (dCoeff[i][j] < 0.0) {
-				double dNewA = - dCoeff[i][j] / dMonoCoeff[i][j];
+				double dNewA =
+					- dCoeff[i][j] / fabs(dMonoCoeff[i][j] - dCoeff[i][j]);
+
 				if (dNewA > dA) {
 					dA = dNewA;
 				}
 			}
 		}
-		}
-
-		if (dA > 1.0) {
-			_EXCEPTIONT("Monotone scale factor out of range");
 		}
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
@@ -746,64 +745,17 @@ void LinearRemapSE4(
 	bool fMonotone,
 	OfflineMap & mapRemap
 ) {
-	// Triangular quadrature to use for integration
-	// Dunavant, D.A. "High Degree Efficient Symmetrical Gaussian Quadrature
-	// Rules for the Triangle."  J. Numer. Meth. Eng., 21, pp 1129-1148.
-/*
-	const int TriQuadraturePoints = 16;
-
-	const double TriQuadratureG[16][3] = {
-		{0.333333333333333, 0.333333333333333, 0.333333333333333},
-		{0.081414823414554, 0.459292588292723, 0.459292588292723},
-		{0.459292588292723, 0.081414823414554, 0.459292588292723},
-		{0.459292588292723, 0.459292588292723, 0.081414823414554},
-		{0.658861384496480, 0.170569307751760, 0.170569307751760},
-		{0.170569307751760, 0.658861384496480, 0.170569307751760},
-		{0.170569307751760, 0.170569307751760, 0.658861384496480},
-		{0.898905543365938, 0.050547228317031, 0.050547228317031},
-		{0.050547228317031, 0.898905543365938, 0.050547228317031},
-		{0.050547228317031, 0.050547228317031, 0.898905543365938},
-		{0.008394777409958, 0.263112829634638, 0.728492392955404},
-		{0.008394777409958, 0.728492392955404, 0.263112829634638},
-		{0.263112829634638, 0.008394777409958, 0.728492392955404},
-		{0.263112829634638, 0.728492392955404, 0.008394777409958},
-		{0.728492392955404, 0.263112829634638, 0.008394777409958},
-		{0.728492392955404, 0.008394777409958, 0.263112829634638}};
-
-	const double TriQuadratureW[16] =
-		{0.144315607677787,
-		 0.095091634267285, 0.095091634267285, 0.095091634267285,
-		 0.103217370534718, 0.103217370534718, 0.103217370534718,
-		 0.032458497623198, 0.032458497623198, 0.032458497623198,
-		 0.027230314174435, 0.027230314174435, 0.027230314174435,
-		 0.027230314174435, 0.027230314174435, 0.027230314174435};
-*/
-
-	const int TriQuadraturePoints = 6;
-
-	const double TriQuadratureG[6][3] = {
-		{0.108103018168070, 0.445948490915965, 0.445948490915965},
-		{0.445948490915965, 0.108103018168070, 0.445948490915965},
-		{0.445948490915965, 0.445948490915965, 0.108103018168070},
-		{0.816847572980458, 0.091576213509771, 0.091576213509771},
-		{0.091576213509771, 0.816847572980458, 0.091576213509771},
-		{0.091576213509771, 0.091576213509771, 0.816847572980458}};
-
-	const double TriQuadratureW[6] =
-		{0.223381589678011, 0.223381589678011, 0.223381589678011,
-		 0.109951743655322, 0.109951743655322, 0.109951743655322};
-
-/*
-	const double TriQuadraturePoints = 1;
-
-	const double TriQuadratureG[1][3] = {
-		{0.333333333333333, 0.333333333333333, 0.333333333333333}};
-
-	const double TriQuadratureW[1] =
-		{1.000000000000000};
-*/
 	// Order of the polynomial interpolant
 	int nP = dataGLLNodes.GetRows();
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(4);
+
+	int TriQuadraturePoints = triquadrule.GetPoints();
+
+	const DataMatrix<double> & TriQuadratureG = triquadrule.GetG();
+
+	const DataVector<double> & TriQuadratureW = triquadrule.GetW();
 
 	// Sample coefficients
 	DataMatrix<double> dSampleCoeff;
@@ -1079,7 +1031,7 @@ void LinearRemapSE4(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
+/*
 void EnforceConservation(
 	const DataVector<double> & dataInputJacobian,
 	const DataVector<double> & dataOutputJacobian,
@@ -1110,7 +1062,7 @@ void EnforceConservation(
 		dCoeff[i] *= dataInputJacobian[iCols[i]] / dColumnSums[iCols[i]];
 	}
 
-/*
+
 	if (fEnforceMonotonicity) {
 		DataVector<double> dCoeffExcess;
 		dCoeffExcess.Initialize(smatMap.GetColumns());
@@ -1137,15 +1089,15 @@ void EnforceConservation(
 
 	} else {
 	}
-*/
+
 	smatMap.SetEntries(iRows, iCols, dCoeff);
 
-/*
+
 	for (int i = 0; i < dColumnSums.GetRows(); i++) {
 		printf("%1.15e %1.15e\n", dColumnSums[i], dataInputJacobian[i]);
 	}
-*/
-}
 
+}
+*/
 ///////////////////////////////////////////////////////////////////////////////
 
