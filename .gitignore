@@ -30,3 +30,5 @@ CalculateDiffNorms
 GenerateICOMesh
 
 ApplyOfflineMap
+
+gecore_test.pref

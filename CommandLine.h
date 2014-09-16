@@ -23,6 +23,7 @@
 #include <string>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -366,6 +367,105 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Parse command line parameters.
+///	</summary>
+void _ParseCommandLine(
+	int argc,
+	char ** argv,
+	std::vector<CommandLineParameter*> & vecParameters,
+	bool & errorCommandLine
+) {
+	for (int command = 1; command < argc; command++) {
+		bool found = false;
+
+		// Include command line arguments from file
+		if ((command == 1) &&
+			(strlen(argv[command]) > 0) &&
+			(argv[command][0] != '-')
+		) {
+			std::vector<std::string> strFileCommands;
+			
+			std::ifstream filein(argv[command]);
+			if (filein.fail()) {
+				printf("Error: No command line file \"%s\" found\n",
+					argv[command]);
+			}
+
+			for (;;) {
+				std::string strInput;
+				filein >> strInput;
+				if (filein.eof()) {
+					break;
+				}
+				strFileCommands.push_back(strInput);
+			}
+
+			// Build command
+			if (strFileCommands.size() != 0) {
+				if (strFileCommands[0][0] != '-') {
+					printf("Error: Command line file must only contain "
+						"commands\n");
+				}
+				int argcin = (int)strFileCommands.size()+1;
+				std::vector<char*> argvin;
+				argvin.reserve(argcin);
+				argvin.push_back(argv[0]);
+				for (int d = 0; d < argcin; d++) {
+					argvin.push_back(&(strFileCommands[d][0]));
+				}
+
+				// Recursively call this routine
+				_ParseCommandLine(
+					argcin, &(argvin[0]), vecParameters, errorCommandLine);
+
+				continue;
+			}
+		}
+
+		// Parse parameters
+		for (int p = 0; p < vecParameters.size(); p++) {
+			if (vecParameters[p]->m_strName == argv[command]) {
+				found = true;
+				vecParameters[p]->Activate();
+				int z;
+				if (vecParameters[p]->GetValueCount() >= argc - command) {
+					printf("Error: Insufficient values for option %s\n",
+						argv[command]);
+					errorCommandLine = true;
+					command = argc;
+					break;
+				}
+				for (z = 0; z < vecParameters[p]->GetValueCount(); z++) {
+					if ((command + z + 1 < argc) &&
+						(strlen(argv[command + z + 1]) > 2) &&
+						(argv[command + z + 1][0] == '-') &&
+						(argv[command + z + 1][1] == '-')
+					) break;
+					command++;
+					vecParameters[p]->SetValue(z, argv[command]);
+				}
+				if ((vecParameters[p]->GetValueCount() >= 0) &&
+					(z != vecParameters[p]->GetValueCount())
+				) {
+					printf("Error: Insufficient values for option %s\n",
+						argv[command]);
+					errorCommandLine = true;
+					command = argc;
+					break;
+				}
+			}
+		}
+		if (!found) {
+			printf("Error: Invalid parameter \"%s\"\n", argv[command]);
+			errorCommandLine = true;
+			break;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Begin the definition of command line parameters.
 ///	</summary>
 #define BeginCommandLine() \
@@ -432,6 +532,8 @@ public:
 ///		Begin the loop for command line parameters.
 ///	</summary>
 #define ParseCommandLine(argc, argv) \
+	_ParseCommandLine(argc, argv, _vecParameters, _errorCommandLine);
+/*
     for(int _command = 1; _command < argc; _command++) { \
 		bool _found = false; \
 		for(int _p = 0; _p < _vecParameters.size(); _p++) { \
@@ -472,7 +574,7 @@ public:
 			break; \
 		} \
 	}
-
+*/
 ///	<summary>
 ///		Print usage information.
 ///	</summary>
