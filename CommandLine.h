@@ -387,7 +387,7 @@ void _ParseCommandLine(
 			
 			std::ifstream filein(argv[command]);
 			if (filein.fail()) {
-				printf("Error: No command line file \"%s\" found\n",
+				_EXCEPTION1("No command line file \"%s\" found",
 					argv[command]);
 			}
 
@@ -403,8 +403,7 @@ void _ParseCommandLine(
 			// Build command
 			if (strFileCommands.size() != 0) {
 				if (strFileCommands[0][0] != '-') {
-					printf("Error: Command line file must only contain "
-						"commands\n");
+					_EXCEPTIONT("Command line file must only contain commands");
 				}
 				int argcin = (int)strFileCommands.size()+1;
 				std::vector<char*> argvin;

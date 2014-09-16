@@ -38,6 +38,18 @@ try {
 	// Number of latitudes in mesh
 	int nLatitudes;
 
+	// First longitude line on mesh
+	double dLonBegin;
+
+	// Last longitude line on mesh
+	double dLonEnd;
+
+	// First latitude line on mesh
+	double dLatBegin;
+
+	// Last latitude line on mesh
+	double dLatEnd;
+
 	// Output filename
 	std::string strOutputFile;
 
@@ -45,17 +57,39 @@ try {
 	BeginCommandLine()
 		CommandLineInt(nLongitudes, "lon", 128);
 		CommandLineInt(nLatitudes, "lat", 64);
+		CommandLineDouble(dLonBegin, "lon_begin", 0.0);
+		CommandLineDouble(dLonEnd, "lon_end", 360.0);
+		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
+		CommandLineDouble(dLatEnd, "lat_end", 90.0);
 		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
+	// Verify latitude box is increasing
+	if (dLatBegin >= dLatEnd) {
+		_EXCEPTIONT("--lat_begin and --lat_end must specify a positive interval");
+	}
+	if (dLonBegin >= dLonEnd) {
+		_EXCEPTIONT("--lon_begin and --lon_end must specify a positive interval");
+	}
+
 	// Announce
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 	std::cout << "..Generating mesh with resolution [";
-	std::cout << nLongitudes << "," << nLatitudes << "]";
+	std::cout << nLongitudes << ", " << nLatitudes << "]" << std::endl;
+	std::cout << "..Longitudes in range [";
+	std::cout << dLonBegin << ", " << dLonEnd << "]" << std::endl;
+	std::cout << "..Latitudes in range [";
+	std::cout << dLatBegin << ", " << dLatEnd << "]" << std::endl;
 	std::cout << std::endl;
+
+	// Convert latitude and longitude interval to radians
+	dLonBegin *= M_PI / 180.0;
+	dLonEnd   *= M_PI / 180.0;
+	dLatBegin *= M_PI / 180.0;
+	dLatEnd   *= M_PI / 180.0;
 
 	// Check parameters
 	if (nLatitudes < 2) {
@@ -73,10 +107,40 @@ try {
 	NodeVector & nodes = mesh.nodes;
 	FaceVector & faces = mesh.faces;
 
+	// Change in longitude
+	double dDeltaLon = dLonEnd - dLonBegin;
+	double dDeltaLat = dLatEnd - dLatBegin;
+
+	// Check if longitudes wrap
+	bool fWrapLongitudes = false;
+	if (fmod(dDeltaLon, 2.0 * M_PI) < 1.0e-12) {
+		fWrapLongitudes = true;
+	}
+	bool fIncludeSouthPole = (fabs(dLatBegin + 0.5 * M_PI) < 1.0e-12);
+	bool fIncludeNorthPole = (fabs(dLatEnd   - 0.5 * M_PI) < 1.0e-12);
+
+	int iSouthPoleOffset = (fIncludeSouthPole)?(1):(0);
+
+	// Increase number of latitudes if south pole is not included
+	if (!fIncludeSouthPole) {
+		nLatitudes++;
+	}
+
+	int iInteriorLatBegin = (fIncludeSouthPole)?(1):(1);
+	int iInteriorLatEnd   = (fIncludeNorthPole)?(nLatitudes-1):(nLatitudes);
+
+	// Number of longitude nodes
+	int nLongitudeNodes = nLongitudes;
+	if (!fWrapLongitudes) {
+		nLongitudeNodes++;
+	}
+
 	// Generate nodes
-	nodes.push_back(Node(0.0, 0.0, -1.0));
-	for (int j = 1; j < nLatitudes; j++) {
-		for (int i = 0; i < nLongitudes; i++) {
+	if (fIncludeSouthPole) {
+		nodes.push_back(Node(0.0, 0.0, -1.0));
+	}
+	for (int j = iInteriorLatBegin; j < iInteriorLatEnd+1; j++) {
+		for (int i = 0; i < nLongitudeNodes; i++) {
 			Real dPhiFrac =
 				  static_cast<Real>(j)
 				/ static_cast<Real>(nLatitudes);
@@ -85,8 +149,8 @@ try {
 				  static_cast<Real>(i)
 				/ static_cast<Real>(nLongitudes);
 
-			Real dPhi = M_PI * (dPhiFrac - 0.5);
-			Real dLambda = 2.0 * M_PI * dLambdaFrac;
+			Real dPhi = dDeltaLat * dPhiFrac + dLatBegin;
+			Real dLambda = dDeltaLon * dLambdaFrac + dLonBegin;
 
 			Real dX = cos(dPhi) * cos(dLambda);
 			Real dY = cos(dPhi) * sin(dLambda);
@@ -95,33 +159,37 @@ try {
 			nodes.push_back(Node(dX, dY, dZ));
 		}
 	}
-	nodes.push_back(Node(0.0, 0.0, +1.0));
+	if (fIncludeNorthPole) {
+		nodes.push_back(Node(0.0, 0.0, +1.0));
+	}
 
 	// Generate south polar faces
-	for (int i = 0; i < nLongitudes; i++) {
-		Face face(4);
-		face.SetNode(0, 0);
-		face.SetNode(1, (i+1) % nLongitudes + 1);
-		face.SetNode(2, i + 1);
-		face.SetNode(3, 0);
+	if (fIncludeSouthPole) {
+		for (int i = 0; i < nLongitudes; i++) {
+			Face face(4);
+			face.SetNode(0, 0);
+			face.SetNode(1, (i+1) % nLongitudeNodes + 1);
+			face.SetNode(2, i + 1);
+			face.SetNode(3, 0);
 
 #ifndef ONLY_GREAT_CIRCLES
-		face.edges[1].type = Edge::Type_ConstantLatitude;
-		face.edges[3].type = Edge::Type_ConstantLatitude;
+			face.edges[1].type = Edge::Type_ConstantLatitude;
+			face.edges[3].type = Edge::Type_ConstantLatitude;
 #endif
 
-		faces.push_back(face);
+			faces.push_back(face);
+		}
 	}
 
 	// Generate interior faces
-	for (int j = 1; j < nLatitudes-1; j++) {
-		int iThisLatNodeIx = (j-1) * nLongitudes + 1;
-		int iNextLatNodeIx =  j    * nLongitudes + 1;
+	for (int j = 1; j < iInteriorLatEnd; j++) {
+		int iThisLatNodeIx = (j-1) * nLongitudeNodes + iSouthPoleOffset;
+		int iNextLatNodeIx =  j    * nLongitudeNodes + iSouthPoleOffset;
 
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
-			face.SetNode(0, iThisLatNodeIx + (i + 1) % nLongitudes);
-			face.SetNode(1, iNextLatNodeIx + (i + 1) % nLongitudes);
+			face.SetNode(0, iThisLatNodeIx + (i + 1) % nLongitudeNodes);
+			face.SetNode(1, iNextLatNodeIx + (i + 1) % nLongitudeNodes);
 			face.SetNode(2, iNextLatNodeIx + i);
 			face.SetNode(3, iThisLatNodeIx + i);
 
@@ -135,14 +203,14 @@ try {
 	}
 
 	// Generate north polar faces
-	{
-		int iThisLatNodeIx = (nLatitudes - 2) * nLongitudes + 1;
+	if (fIncludeNorthPole) {
+		int iThisLatNodeIx = (nLatitudes - 2) * nLongitudeNodes + iSouthPoleOffset;
 		int iNorthPolarNodeIx = static_cast<int>(nodes.size()-1);
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
 			face.SetNode(0, iNorthPolarNodeIx);
 			face.SetNode(1, iThisLatNodeIx + i);
-			face.SetNode(2, iThisLatNodeIx + (i + 1) % nLongitudes);
+			face.SetNode(2, iThisLatNodeIx + (i + 1) % nLongitudeNodes);
 			face.SetNode(3, iNorthPolarNodeIx);
 
 #ifndef ONLY_GREAT_CIRCLES
@@ -162,6 +230,10 @@ try {
 	mesh.Write(strOutputFile);
 
 	// Add rectilinear properties
+	if (!fIncludeSouthPole) {
+		nLatitudes--;
+	}
+
 	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
 	ncOutput.add_att("rectilinear", "true");
 	ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
