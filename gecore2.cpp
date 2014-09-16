@@ -378,6 +378,7 @@ try {
 			strOutputData,
 			vecVariableStrings,
 			strNColName,
+			false,
 			false);
 		AnnounceEndBlock(NULL);
 	}

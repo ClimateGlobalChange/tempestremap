@@ -70,6 +70,26 @@ void OfflineMap::InitializeOutputDimensionsFromFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+NcDim * NcFile_GetDimIfExists(
+	NcFile & ncInput,
+	const std::string & strDimName,
+	int nSize
+) {
+	for (int d = 0; d < ncInput.num_dims(); d++) {
+		NcDim * dim = ncInput.get_dim(d);
+		if (strcmp(dim->name(), strDimName.c_str()) == 0) {
+			if (dim->size() != nSize) {
+				_EXCEPTION3("NetCDF file has dimension \"%s\" with mismatched"
+					" size %i != %i", strDimName.c_str(), dim->size(), nSize);
+			}
+			return ncInput.get_dim(d);
+		}
+	}
+	return ncInput.add_dim(strDimName.c_str(), nSize);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::Apply(
 	const DataVector<double> & vecAreaInput,
 	const DataVector<double> & vecAreaOutput,
@@ -77,27 +97,18 @@ void OfflineMap::Apply(
 	const std::string & strOutputDataFile,
 	const std::vector<std::string> & vecVariables,
 	const std::string & strNColName,
-	bool fOutputDouble
+	bool fOutputDouble,
+	bool fAppend
 ) {
 	NcFile ncInput(strInputDataFile.c_str(), NcFile::ReadOnly);
-	NcFile ncOutput(strOutputDataFile.c_str(), NcFile::Replace);
-/*
-	// Check for time dimension
-	NcDim * dimTime = NULL;
-	for (int d = 0; d < ncInput.num_dims(); d++) {
-		if (strcmp(ncInput.get_dim(d)->name(), "time") == 0) {
-			dimTime = ncInput.get_dim(d);
-			break;
-		}
-	}
 
-	bool fHasTime = false;
-	int nTime = 1;
-	if (dimTime != NULL) {
-		nTime = dimTime->size();
-		fHasTime = true;
+	NcFile::FileMode eOpenMode = NcFile::Replace;
+	if (fAppend) {
+		eOpenMode = NcFile::Write;
 	}
-*/
+		
+	NcFile ncOutput(strOutputDataFile.c_str(), eOpenMode);
+
 	// Check for ncol dimension
 	NcDim * dimNCol = ncInput.get_dim(strNColName.c_str());
 	int nCol = dimNCol->size();
@@ -147,36 +158,28 @@ void OfflineMap::Apply(
 	dataOutDouble.Initialize(nColOut);
 
 	// Output
-	CopyNcFileAttributes(&ncInput, &ncOutput);
-/*
-	NcDim * dimTimeOut = NULL;
-	if (fHasTime) {
-		dimTimeOut = ncOutput.add_dim("time", dimTime->size());
+	if (!fAppend) {
+		CopyNcFileAttributes(&ncInput, &ncOutput);
 	}
-*/
+
 	NcDim * dim0;
 	NcDim * dim1;
 
-	dim0 = ncOutput.add_dim(
+	dim0 = NcFile_GetDimIfExists(
+		ncOutput,
 		m_vecOutputDimNames[0].c_str(),
 		m_vecOutputDimSizes[0]);
 
 	if (fRectilinear) {
-		dim1 = ncOutput.add_dim(
+		dim1 = NcFile_GetDimIfExists(
+			ncOutput,
 			m_vecOutputDimNames[1].c_str(),
 			m_vecOutputDimSizes[1]);
 	}
 /*
-	std::vector<NcDim *> vecDim;
-	for (int d = 0; d < m_vecOutputDimSizes.size(); d++) {
-		vecDim.push_back(ncOutput.add_dim(
-			m_vecOutputDimNames[d].c_str(),
-			m_vecOutputDimSizes[d]));
-	}
-*/
 	// A map of other dimension variables
 	std::map<std::string, NcDim *> mapDim;
-
+*/
 	// Loop through all variables
 	for (int v = 0; v < vecVariables.size(); v++) {
 		NcVar * var = ncInput.get_var(vecVariables[v].c_str());
@@ -217,6 +220,12 @@ void OfflineMap::Apply(
 			vecDimSizes[d] = nDimSize;
 			nVarTotalEntries *= nDimSize;
 
+			vecDimsOut[d] =
+				NcFile_GetDimIfExists(
+					ncOutput,
+					strDimName.c_str(),
+					nDimSize);
+/*
 			std::map<std::string, NcDim *>::const_iterator iter =
 				mapDim.find(strDimName);
 
@@ -231,6 +240,7 @@ void OfflineMap::Apply(
 			} else {
 				vecDimsOut[d] = iter->second;
 			}
+*/
 		}
 
 		// Create new output variable
@@ -277,14 +287,7 @@ void OfflineMap::Apply(
 		} else {
 			nPut[nPut.GetRows()-1] = m_vecOutputDimSizes[0];
 		}
-/*
-		for (int j = 0; j < nGet.GetRows(); j++) {
-			printf("nGet %li\n", nGet[j]);
-		}
-		for (int j = 0; j < nPut.GetRows(); j++) {
-			printf("nPut %li\n", nPut[j]);
-		}
-*/
+
 		// Loop through all entries
 		for (int t = 0; t < nVarTotalEntries; t++) {
 
@@ -293,11 +296,7 @@ void OfflineMap::Apply(
 				nCounts[d] = tt % vecDimSizes[d];
 				tt -= nCounts[d] * vecDimSizes[d];
 			}
-/*
-			for (int j = 0; j < nCounts.GetRows(); j++) {
-				printf("nCount %li\n", nCounts[j]);
-			}
-*/
+
 			// Get the data
 			var->set_cur(&(nCounts[0]));
 

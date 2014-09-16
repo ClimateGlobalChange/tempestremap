@@ -61,24 +61,36 @@ try {
 	// Input map file
 	std::string strInputMap;
 
-	// List of variables
-	std::string strVariables;
+	// Output data file
+	std::string strOutputData;
 
 	// Input data file
 	std::string strInputData;
 
-	// Output data file
-	std::string strOutputData;
+	// List of variables
+	std::string strVariables;
+
+	// Input map file (second instance)
+	std::string strInputMap2;
+
+	// Input data file (second instance)
+	std::string strInputData2;
+
+	// List of variables (second instance)
+	std::string strVariables2;
 
 	// Name of the ncol variable
 	std::string strNColName;
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineString(strInputMap, "map", "");
-		CommandLineString(strVariables, "var", "");
-		CommandLineString(strInputData, "in_data", "");
 		CommandLineString(strOutputData, "out_data", "");
+		CommandLineString(strInputMap, "map", "");
+		CommandLineString(strInputData, "in_data", "");
+		CommandLineString(strVariables, "var", "");
+		CommandLineString(strInputMap2, "map2", "");
+		CommandLineString(strInputData2, "in_data2", "");
+		CommandLineString(strVariables2, "var2", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 
 		ParseCommandLine(argc, argv);
@@ -105,14 +117,34 @@ try {
 		_EXCEPTIONT("No variables specified");
 	}
 
-	// OfflineMap
-	OfflineMap mapRemap;
-	mapRemap.Read(strInputMap);
+	// Second input data file
+	std::vector< std::string > vecVariableStrings2;
+	if (strInputData2 != "") {
+		ParseVariableList(strVariables2, vecVariableStrings2);
+		if (vecVariableStrings2.size() == 0) {
+			_EXCEPTIONT("No variables specified for --in_data2");
+		}
+		if (strInputMap2 == "") {
+			_EXCEPTIONT("No map specified for --in_data2");
+		}
+	}
+	if ((strInputMap2 != "") && (strInputData2 == "")) {
+		_EXCEPTIONT("No input data specified for --map2");
+	}
 
 	// Apply OfflineMap to data
 	DataVector<double> vecDummyAreas;
 
-	AnnounceStartBlock("Applying offline map to data");
+	if (strInputMap2 == "") {
+		AnnounceStartBlock("Applying offline map to data");
+	} else {
+		AnnounceStartBlock("Applying first offline map to data");
+	}
+
+	// OfflineMap
+	OfflineMap mapRemap;
+	mapRemap.Read(strInputMap);
+
 	mapRemap.Apply(
 		vecDummyAreas,
 		vecDummyAreas,
@@ -120,8 +152,39 @@ try {
 		strOutputData,
 		vecVariableStrings,
 		strNColName,
+		false,
 		false);
 	AnnounceEndBlock(NULL);
+
+	if (strInputMap2 != "") {
+		AnnounceStartBlock("Applying second offline map to data");
+
+		// OfflineMap
+		OfflineMap mapRemap2;
+		mapRemap2.Read(strInputMap2);
+
+		// Verify consistency of maps
+		SparseMatrix<double> & smatRemap  = mapRemap .GetSparseMatrix();
+		SparseMatrix<double> & smatRemap2 = mapRemap2.GetSparseMatrix();
+		if ((smatRemap.GetRows() != smatRemap2.GetRows()) ||
+			(smatRemap.GetColumns() != smatRemap2.GetColumns())
+		) {
+			_EXCEPTIONT("Mismatch in dimensions of input maps "
+				"--map and --map2");
+		}
+
+		mapRemap2.Apply(
+			vecDummyAreas,
+			vecDummyAreas,
+			strInputData2,
+			strOutputData,
+			vecVariableStrings2,
+			strNColName,
+			false,
+			true);
+
+		AnnounceEndBlock(NULL);
+	}
 
 	AnnounceBanner();
 

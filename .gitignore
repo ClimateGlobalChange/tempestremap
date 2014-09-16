@@ -32,3 +32,5 @@ GenerateICOMesh
 ApplyOfflineMap
 
 gecore_test.pref
+
+*.pref

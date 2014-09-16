@@ -49,7 +49,8 @@ public:
 		const std::string & strOutputDataFile,
 		const std::vector<std::string> & vecVariables,
 		const std::string & strNColName,
-		bool fOutputDouble = false
+		bool fOutputDouble = false,
+		bool fAppend = false
 	);
 
 	///	<summary>
