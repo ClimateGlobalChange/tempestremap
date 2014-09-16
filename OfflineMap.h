@@ -48,7 +48,8 @@ public:
 		const std::string & strInputDataFile,
 		const std::string & strOutputDataFile,
 		const std::vector<std::string> & vecVariables,
-		const std::string & strNColName
+		const std::string & strNColName,
+		bool fOutputDouble = false
 	);
 
 	///	<summary>

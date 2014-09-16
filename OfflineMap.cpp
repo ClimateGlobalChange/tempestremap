@@ -76,7 +76,8 @@ void OfflineMap::Apply(
 	const std::string & strInputDataFile,
 	const std::string & strOutputDataFile,
 	const std::vector<std::string> & vecVariables,
-	const std::string & strNColName
+	const std::string & strNColName,
+	bool fOutputDouble
 ) {
 	NcFile ncInput(strInputDataFile.c_str(), NcFile::ReadOnly);
 	NcFile ncOutput(strOutputDataFile.c_str(), NcFile::Replace);
@@ -236,12 +237,23 @@ void OfflineMap::Apply(
 		DataVector<long> nCounts;
 		nCounts.Initialize(vecDimsOut.GetRows());
 
-		NcVar * varOut =
-			ncOutput.add_var(
-				vecVariables[v].c_str(),
-				ncFloat,
-				vecDimsOut.GetRows(),
-				(const NcDim**)&(vecDimsOut[0]));
+		NcVar * varOut;
+		if (fOutputDouble) {
+			varOut =
+				ncOutput.add_var(
+					vecVariables[v].c_str(),
+					ncDouble,
+					vecDimsOut.GetRows(),
+					(const NcDim**)&(vecDimsOut[0]));
+
+		} else {
+			varOut =
+				ncOutput.add_var(
+					vecVariables[v].c_str(),
+					ncFloat,
+					vecDimsOut.GetRows(),
+					(const NcDim**)&(vecDimsOut[0]));
+		}
 
 		CopyNcVarAttributes(var, varOut);
 
@@ -306,52 +318,63 @@ void OfflineMap::Apply(
 			}
 
 			// Announce input mass
-			double dInputMass = 0.0;
-			double dInputMin  = dataInDouble[0];
-			double dInputMax  = dataInDouble[0];
-			for (int i = 0; i < nCol; i++) {
-				dInputMass += dataInDouble[i] * vecAreaInput[i];
-				if (dataInDouble[i] < dInputMin) {
-					dInputMin = dataInDouble[i];
+			if (vecAreaInput.GetRows() != 0) {
+				double dInputMass = 0.0;
+				double dInputMin  = dataInDouble[0];
+				double dInputMax  = dataInDouble[0];
+				for (int i = 0; i < nCol; i++) {
+					dInputMass += dataInDouble[i] * vecAreaInput[i];
+					if (dataInDouble[i] < dInputMin) {
+						dInputMin = dataInDouble[i];
+					}
+					if (dataInDouble[i] > dInputMax) {
+						dInputMax = dataInDouble[i];
+					}
 				}
-				if (dataInDouble[i] > dInputMax) {
-					dInputMax = dataInDouble[i];
-				}
+				Announce(" Input Mass: %1.15e Min %1.10e Max %1.10e",
+					dInputMass, dInputMin, dInputMax);
 			}
-			Announce(" Input Mass: %1.15e Min %1.10e Max %1.10e",
-				dInputMass, dInputMin, dInputMax);
 
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
 
 			// Announce output mass
-			double dOutputMass = 0.0;
-			double dOutputMin  = dataOutDouble[0];
-			double dOutputMax  = dataOutDouble[0];
-			for (int i = 0; i < nColOut; i++) {
-				dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
-				if (dataOutDouble[i] < dOutputMin) {
-					dOutputMin = dataOutDouble[i];
+			if (vecAreaOutput.GetRows() != 0) {
+				double dOutputMass = 0.0;
+				double dOutputMin  = dataOutDouble[0];
+				double dOutputMax  = dataOutDouble[0];
+				for (int i = 0; i < nColOut; i++) {
+					dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
+					if (dataOutDouble[i] < dOutputMin) {
+						dOutputMin = dataOutDouble[i];
+					}
+					if (dataOutDouble[i] > dOutputMax) {
+						dOutputMax = dataOutDouble[i];
+					}
 				}
-				if (dataOutDouble[i] > dOutputMax) {
-					dOutputMax = dataOutDouble[i];
-				}
-			}
-			Announce("Output Mass: %1.15e Min %1.10e Max %1.10e",
-				dOutputMass, dOutputMin, dOutputMax);
-
-			// Cast the data to float
-			int ix = 0;
-			for (int i = 0; i < dataOut.GetRows(); i++) {
-			for (int j = 0; j < dataOut.GetColumns(); j++) {
-				dataOut[i][j] = static_cast<float>(dataOutDouble[ix]);
-				ix++;
-			}
+				Announce("Output Mass: %1.15e Min %1.10e Max %1.10e",
+					dOutputMass, dOutputMin, dOutputMax);
 			}
 
 			// Write the data
-			varOut->set_cur(&(nCounts[0]));
-			varOut->put(&(dataOut[0][0]), &(nPut[0]));
+			if (fOutputDouble) {
+				varOut->set_cur(&(nCounts[0]));
+				varOut->put(&(dataOutDouble[0]), &(nPut[0]));
+
+			} else {
+				// Cast the data to float
+				int ix = 0;
+				for (int i = 0; i < dataOut.GetRows(); i++) {
+				for (int j = 0; j < dataOut.GetColumns(); j++) {
+					dataOut[i][j] = static_cast<float>(dataOutDouble[ix]);
+					ix++;
+				}
+				}
+
+				// Write the data as float
+				varOut->set_cur(&(nCounts[0]));
+				varOut->put(&(dataOut[0][0]), &(nPut[0]));
+			}
 		}
 		AnnounceEndBlock(NULL);
 	}
@@ -364,6 +387,7 @@ void OfflineMap::Read(
 ) {
 	NcFile ncMap(strInput.c_str(), NcFile::ReadOnly);
 
+	// Read SparseMatrix entries
 	NcDim * dimNA = ncMap.get_dim("n_s");
 
 	NcVar * varRow = ncMap.get_var("row");
@@ -391,6 +415,21 @@ void OfflineMap::Read(
 	varS->get(&(vecS[0]), nS);
 
 	m_mapRemap.SetEntries(vecRow, vecCol, vecS);
+
+	// Read input dimensions entries
+	int nDims = ncMap.get_att("dims")->as_int(0);
+	for (int i = 0; i < nDims; i++) {
+		char szAtt[64];
+
+		sprintf(szAtt, "dim%i_size", i);
+		m_vecOutputDimSizes.push_back(
+			ncMap.get_att(szAtt)->as_int(0));
+
+		sprintf(szAtt, "dim%i_name", i);
+		m_vecOutputDimNames.push_back(
+			ncMap.get_att(szAtt)->as_string(0));
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -400,6 +439,7 @@ void OfflineMap::Write(
 ) {
 	NcFile ncMap(strOutput.c_str(), NcFile::Replace);
 
+	// Write SparseMatrix entries
 	DataVector<int> vecRow;
 	DataVector<int> vecCol;
 	DataVector<double> vecS;
@@ -422,6 +462,18 @@ void OfflineMap::Write(
 
 	varS->set_cur((long)0);
 	varS->put(&(vecS[0]), nS);
+
+	// Write output dimensions entries
+	ncMap.add_att("dims", (int)m_vecOutputDimSizes.size());
+	for (int i = 0; i < m_vecOutputDimSizes.size(); i++) {
+		char szAtt[64];
+
+		sprintf(szAtt, "dim%i_size", i);
+		ncMap.add_att(szAtt, m_vecOutputDimSizes[i]);
+
+		sprintf(szAtt, "dim%i_name", i);
+		ncMap.add_att(szAtt, m_vecOutputDimNames[i].c_str());
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

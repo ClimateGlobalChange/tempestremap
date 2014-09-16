@@ -17,6 +17,7 @@
 #include "CommandLine.h"
 #include "GridElements.h"
 #include "FiniteElementTools.h"
+#include "TriangularQuadrature.h"
 #include "GaussLobattoQuadrature.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -191,20 +192,20 @@ try {
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
-	// Triangular quadrature nodes (4th order accuracy)
-	const int TriQuadraturePoints = 6;
+	// Announce
+	Announce("=========================================================");
 
-	const double TriQuadratureG[6][3] = {
-		{0.108103018168070, 0.445948490915965, 0.445948490915965},
-		{0.445948490915965, 0.108103018168070, 0.445948490915965},
-		{0.445948490915965, 0.445948490915965, 0.108103018168070},
-		{0.816847572980458, 0.091576213509771, 0.091576213509771},
-		{0.091576213509771, 0.816847572980458, 0.091576213509771},
-		{0.091576213509771, 0.091576213509771, 0.816847572980458}};
+	// Triangular quadrature rule
+	const int TriQuadratureOrder = 8;
 
-	const double TriQuadratureW[6] =
-		{0.223381589678011, 0.223381589678011, 0.223381589678011,
-		 0.109951743655322, 0.109951743655322, 0.109951743655322};
+	Announce("Using triangular quadrature of order %i", TriQuadratureOrder);
+
+	TriangularQuadratureRule triquadrule(TriQuadratureOrder);
+
+	const int TriQuadraturePoints = triquadrule.GetPoints();
+
+	const DataMatrix<double> & TriQuadratureG = triquadrule.GetG();
+	const DataVector<double> & TriQuadratureW = triquadrule.GetW();
 
 	// Test data
 	TestFunction * pTest;
@@ -217,9 +218,6 @@ try {
 	} else {
 		_EXCEPTIONT("Test index out of range; expected [1,2,3]");
 	}
-
-	// Announce
-	Announce("=========================================================");
 
 	// Input mesh
 	AnnounceStartBlock("Loading Mesh");

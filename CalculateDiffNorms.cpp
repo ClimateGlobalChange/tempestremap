@@ -44,7 +44,7 @@ try {
 	std::string strMeshFile;
 
 	// Output filename
-	std::string strTestData;
+	std::string strOutputFile;
 
 	// Input data is on GLL nodes
 	bool fGLL;
@@ -56,6 +56,7 @@ try {
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineBool(fGLL, "gll");
 		CommandLineString(strMeshFile, "mesh", "");
+		CommandLineString(strOutputFile, "outfile", "");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -237,6 +238,14 @@ try {
 	Announce("Lmin: %1.15e | %1.5e %1.5e", dNormLmin, dMinA, dMinB);
 	Announce("Lmax: %1.15e | %1.5e %1.5e", dNormLmax, dMaxA, dMaxB);
 	AnnounceEndBlock(NULL);
+
+	// Print results to file
+	if (strOutputFile != "") {
+		FILE * fp = fopen(strOutputFile.c_str(), "a");
+		fprintf(fp, "%1.15e %1.15e %1.15e %1.15e %1.15e\n",
+			dNormL1, dNormL2, dNormLi, dNormLmin, dNormLmax);
+		fclose(fp);
+	}
 
 } catch(Exception & e) {
 	std::cout << e.ToString() << std::endl;

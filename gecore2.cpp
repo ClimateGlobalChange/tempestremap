@@ -130,8 +130,8 @@ try {
 	// Variable list
 	std::string strVariables;
 
-	// Output weights file
-	std::string strOutputWeights;
+	// Output map file
+	std::string strOutputMap;
 
 	// Input data file
 	std::string strInputData;
@@ -156,7 +156,7 @@ try {
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strVariables, "var", "");
-		CommandLineString(strOutputWeights, "out_weights", "");
+		CommandLineString(strOutputMap, "out_map", "");
 		CommandLineString(strInputData, "in_data", "");
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
@@ -178,7 +178,7 @@ try {
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
 
-	if (vecVariableStrings.size() == 0) {
+	if ((strInputData != "") && (vecVariableStrings.size() == 0)) {
 		_EXCEPTIONT("No variables specified");
 	}
 
@@ -329,7 +329,7 @@ try {
 			dataGLLJacobian,
 			vecInputAreas);
 
-		// Generate weights file
+		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
 		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
@@ -361,6 +361,14 @@ try {
 
 	AnnounceEndBlock(NULL);
 
+	// Output the Offline Map
+	if (strOutputMap != "") {
+		AnnounceStartBlock("Writing offline map");
+		mapRemap.Write(strOutputMap);
+		AnnounceEndBlock(NULL);
+	}
+
+	// Apply Offline Map to data
 	if (strInputData != "") {
 		AnnounceStartBlock("Applying offline map to data");
 		mapRemap.Apply(
@@ -369,26 +377,10 @@ try {
 			strInputData,
 			strOutputData,
 			vecVariableStrings,
-			strNColName);
+			strNColName,
+			false);
 		AnnounceEndBlock(NULL);
 	}
-/*
-		DataVector<double> dInput;
-		dInput.Initialize(meshInput.faces.size());
-
-		for (int i = 0; i < dInput.GetRows(); i++) {
-			dInput[i] = 1.0;
-		}
-
-		DataVector<double> dOutput;
-		dOutput.Initialize(meshOutput.faces.size());
-
-		mapRemap.Apply(dInput, dOutput);
-
-		for (int i = 0; i < 10; i++) {
-			printf("%1.10e\n", dOutput[i]);
-		}
-*/
 
 	AnnounceBanner();
 

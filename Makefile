@@ -48,6 +48,8 @@ GENERATETESTDATA_FILES= GenerateTestData.cpp $(FILES)
 
 CALCULATEDIFFNORMS_FILES= CalculateDiffNorms.cpp $(FILES)
 
+APPLYOFFLINEMAP_FILES= ApplyOfflineMap.cpp $(FILES)
+
 GECORE2_FILES= gecore2.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
 
 # Load system-specific defaults
@@ -59,7 +61,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms gecore2
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap gecore2
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -85,6 +87,9 @@ GenerateTestData: $(GENERATETESTDATA_FILES:%.cpp=$(BUILDDIR)/%.o)
 CalculateDiffNorms: $(CALCULATEDIFFNORMS_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(CALCULATEDIFFNORMS_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
+ApplyOfflineMap: $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+
 gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o) $(LDFILES)
 
@@ -93,7 +98,7 @@ gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR
 ## Clean
 ##
 clean:
-	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms gecore2 *.o
+	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap gecore2 *.o
 	rm -rf $(DEPDIR)
 	rm -rf $(BUILDDIR)
 
