@@ -691,11 +691,7 @@ public:
 	///	<summary>
 	///		Sort Faces by the specified Face index.
 	///	</summary>
-	void SortBySourceFaceIx(
-		bool fSortByFirstIndex
-	) {
-		_EXCEPTIONT("Not implemented");
-	}
+	void ExchangeFirstAndSecondMesh();
 
 	///	<summary>
 	///		Write the mesh to a NetCDF file.

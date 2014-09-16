@@ -153,13 +153,14 @@ public:
 		const DataVector<DataType> & dataVectorIn,
 		DataVector<DataType> & dataVectorOut
 	) const {
+/*
 		if (dataVectorIn.GetRows() != m_nCols) {
 			_EXCEPTION1("dataVectorIn has incorrect row count (%i)", m_nCols);
 		}
 		if (dataVectorOut.GetRows() != m_nRows) {
 			_EXCEPTION1("dataVectorOut has incorrect row count (%i)", m_nRows);
 		}
-
+*/
 		dataVectorOut.Zero();
 
 		SparseMapConstIterator iter = m_mapEntries.begin();

@@ -165,7 +165,8 @@ void GeneratePath(
 
 	// No faces found
 	if (aFindFaceStruct.vecFaceIndices.size() == 0) {
-		_EXCEPTIONT("No initial face found!");
+		_EXCEPTIONT("No initial face found:\n"
+			"    Mesh B must be a submesh of mesh A");
 	}
 
 	// Current face on second mesh

@@ -41,7 +41,7 @@ try {
 	// Overlap grid generation method
 	std::string strMethod;
 
-	// No validation of the mesh
+	// No validation of the meshes
 	bool fNoValidate;
 
 	// Parse the command line

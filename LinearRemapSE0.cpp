@@ -811,6 +811,11 @@ void LinearRemapSE4(
 			nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
 		}
 
+		// No overlaps
+		if (nOverlapFaces == 0) {
+			continue;
+		}
+
 		// Allocate remap coefficients array for meshFirst Face
 		DataMatrix3D<double> dRemapCoeff;
 		dRemapCoeff.Initialize(nP, nP, nOverlapFaces);

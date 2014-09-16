@@ -112,12 +112,12 @@ void OfflineMap::Apply(
 	// Check for ncol dimension
 	NcDim * dimNCol = ncInput.get_dim(strNColName.c_str());
 	int nCol = dimNCol->size();
-
+/*
 	if (nCol != m_mapRemap.GetColumns()) {
 		_EXCEPTION2("\nMismatch between offline map size (%i) and "
 			"data.ncol (%i)", m_mapRemap.GetColumns(), nCol);
 	}
-
+*/
 	// Output columns
 	int nColOut = m_mapRemap.GetRows();
 

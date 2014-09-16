@@ -150,6 +150,43 @@ Real Mesh::CalculateFaceAreas() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::ExchangeFirstAndSecondMesh() {
+
+	// Verify all vectors are the same size
+	if ((faces.size() != vecFirstFaceIx.size()) ||
+		(faces.size() != vecSecondFaceIx.size())
+	) {
+		_EXCEPTIONT("");
+	}
+
+	// Reorder vectors
+	FaceVector facesOld = faces;
+
+	std::vector<int> vecFirstFaceIxOld = vecFirstFaceIx;
+
+	// Reordering map
+	std::multimap<int,int> multimapReorder;
+	for (int i = 0; i < vecSecondFaceIx.size(); i++) {
+		multimapReorder.insert(std::pair<int,int>(vecSecondFaceIx[i], i));
+	}
+
+	// Apply reordering
+	faces.clear();
+	vecFirstFaceIx.clear();
+	vecSecondFaceIx.clear();
+
+	std::multimap<int,int>::const_iterator iterReorder
+		= multimapReorder.begin();
+
+	for (; iterReorder != multimapReorder.end(); iterReorder++) {
+		faces.push_back(facesOld[iterReorder->second]);
+		vecFirstFaceIx.push_back(iterReorder->first);
+		vecSecondFaceIx.push_back(vecFirstFaceIxOld[iterReorder->second]);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::Write(const std::string & strFile) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;

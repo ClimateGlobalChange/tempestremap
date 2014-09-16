@@ -216,6 +216,29 @@ try {
 	AnnounceStartBlock("Loading overlap mesh");
 	Mesh meshOverlap(strOverlapMesh);
 	meshOverlap.RemoveZeroEdges();
+
+	// Verify that overlap mesh is in the correct order
+	int ixFirstFaceMax = (-1);
+	for (int i = 0; i < meshOverlap.vecFirstFaceIx.size(); i++) {
+		if (meshOverlap.vecFirstFaceIx[i] + 1 > ixFirstFaceMax) {
+			ixFirstFaceMax = meshOverlap.vecFirstFaceIx[i] + 1;
+		}
+	}
+
+	if (ixFirstFaceMax  == meshInput.faces.size()) {
+		Announce("Overlap mesh primary correspondence found");
+
+	} else if (ixFirstFaceMax == meshOutput.faces.size()) {
+		Announce("Overlap mesh reverse correspondence found (reversing)");
+
+		// Reorder overlap mesh
+		meshOverlap.ExchangeFirstAndSecondMesh();
+
+	} else {
+		_EXCEPTIONT("Invalid overlap mesh:\n"
+			"    No correspondence found with input and output meshes");
+	}
+
 	AnnounceEndBlock(NULL);
 
 	// Calculate Face areas
