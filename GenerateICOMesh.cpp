@@ -474,7 +474,7 @@ try {
 	BeginCommandLine()
 		CommandLineInt(nResolution, "res", 10);
 		CommandLineBool(fDual, "dual");
-		CommandLineString(strOutputFile, "out", "outICOMesh.g");
+		CommandLineString(strOutputFile, "file", "outICOMesh.g");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
