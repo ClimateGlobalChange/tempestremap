@@ -276,25 +276,38 @@ void GeneratePath(
 
 				printf(" - - - \n");
 */
-				fCoincidentEdge =
-					utils.CalculateEdgeIntersections(
-				 		//meshOverlap.nodes[ixOverlapNodeCurrent],
-						meshOverlap.nodes[edgeFirstCurrent[0]],
-						meshOverlap.nodes[edgeFirstCurrent[1]],
-						edgeFirstCurrent.type,
-						nodevecSecond[edgeSecondCurrent[0]],
-						nodevecSecond[edgeSecondCurrent[1]],
-						edgeSecondCurrent.type,
-						nodeIntersections);
-
-				//printf("(Coincident) %i (#) %lu\n", fCoincidentEdge, nodeIntersections.size());
+				if (edgeSecondCurrent[0] < edgeSecondCurrent[1]) {
+					fCoincidentEdge =
+						utils.CalculateEdgeIntersections(
+							meshOverlap.nodes[edgeFirstCurrent[0]],
+							meshOverlap.nodes[edgeFirstCurrent[1]],
+							edgeFirstCurrent.type,
+							nodevecSecond[edgeSecondCurrent[0]],
+							nodevecSecond[edgeSecondCurrent[1]],
+							edgeSecondCurrent.type,
+							nodeIntersections);
+				} else {
+					fCoincidentEdge =
+						utils.CalculateEdgeIntersections(
+							meshOverlap.nodes[edgeFirstCurrent[0]],
+							meshOverlap.nodes[edgeFirstCurrent[1]],
+							edgeFirstCurrent.type,
+							nodevecSecond[edgeSecondCurrent[1]],
+							nodevecSecond[edgeSecondCurrent[0]],
+							edgeSecondCurrent.type,
+							nodeIntersections);
+				}
 
 				for (int i = 0; i < nodeIntersections.size(); i++) {
 					bool fEqualNodes =
 						utils.AreNodesEqual(
 							nodeIntersections[i],
 							nodeLastIntersection);
-
+/*
+					meshOverlap.nodes[edgeFirstCurrent[1]].Print("f1");
+					nodeIntersections[i].Print("n0");
+					nodeLastIntersection.Print("l0");
+*/
 					if (fEqualNodes) {
 							nodeIntersections.erase(nodeIntersections.begin()+i);
 							i--;
@@ -377,8 +390,9 @@ void GeneratePath(
 			}
 
 			// Set last intersection
-			utils.ToRealCoords(nodeIntersections[0]);
-			nodeLastIntersection = nodeIntersections[0];
+			
+			nodeLastIntersection =
+				utils.ToRealCoords(nodeIntersections[0]);
 
 			// Find next face on meshSecond
 			const Edge & edgeSecondCurrent =
@@ -468,11 +482,11 @@ void GeneratePath(
 							edgeSecondCurrent[0],
 							nodevecFirst[edgeFirstNext[1]],
 							edgeFirstNext.type);
-
+#ifdef VERBOSE
 					if (ixNextSecondFace == ixCurrentSecondFace) {
 						printf("WARNING: Face does not change across Edge (1)\n");
 					}
-
+#endif
 					// If face changes insert a Node bifurcation
 					if (ixNextSecondFace != ixCurrentSecondFace) {
 						vecTracedPath.push_back(PathSegment(
@@ -495,11 +509,11 @@ void GeneratePath(
 							edgeSecondCurrent[1],
 							nodevecFirst[edgeFirstNext[1]],
 							edgeFirstNext.type);
-
+#ifdef VERBOSE
 					if (ixNextSecondFace == ixCurrentSecondFace) {
 						printf("WARNING: Face does not change across Edge (2)\n");
 					}
-
+#endif
 					// If face changes insert a Node bifuraction
 					if (ixNextSecondFace != ixCurrentSecondFace) {
 						vecTracedPath.push_back(PathSegment(
@@ -548,10 +562,11 @@ void GeneratePath(
 							edgeFirstNext.type,
 							aNextFindFaceStruct);
 
+#ifdef VERBOSE
 					if (ixNextSecondFace == ixCurrentSecondFace) {
 						printf("WARNING: Face does not change across Edge (3)\n");
 					}
-
+#endif
 					// If face changes insert an Edge bifurcation
 					if (ixNextSecondFace != ixCurrentSecondFace) {
 						vecTracedPath.push_back(PathSegment(
@@ -608,11 +623,11 @@ void GeneratePath(
 						edgeSecondCurrent[0],
 						nodeFirstEnd,
 						edgeFirstCurrent.type);
-
+#ifdef VERBOSE
 				if (ixPrevSecondFace == ixCurrentSecondFace) {
 					printf("WARNING: Face does not change across Edge (4)\n");
 				}
-
+#endif
 				ixOverlapNodeCurrent = ixOverlapNodeNext;
 
 				if (ixOverlapNodeNext == edgeFirstCurrent[1]) {
@@ -620,7 +635,7 @@ void GeneratePath(
 				}
 
 				continue;
-			
+
 			// FirstEdge hits nodeSecondEdge1
 			} else if (
 				utils.AreNodesEqual(nodeIntersections[0], nodeSecondEdge1)
@@ -647,10 +662,11 @@ void GeneratePath(
 						nodeFirstEnd,
 						edgeFirstCurrent.type);
 
+#ifdef VERBOSE
 				if (ixPrevSecondFace == ixCurrentSecondFace) {
 					printf("WARNING: Face does not change across Edge (5)\n");
 				}
-
+#endif
 				ixOverlapNodeCurrent = ixOverlapNodeNext;
 
 				if (ixOverlapNodeNext == edgeFirstCurrent[1]) {
@@ -763,9 +779,11 @@ void GeneratePath(
 						edgeFirstCurrent.type,
 						aNextFindFaceStruct);
 */
+#ifdef VERBOSE
 				if (ixPrevSecondFace == ixCurrentSecondFace) {
 					printf("WARNING: Face does not change across Edge (3)\n");
 				}
+#endif
 			}
 		}
 	}
@@ -839,10 +857,10 @@ bool GenerateOverlapFaces(
 				}
 
 				vecTracedPathUsed[j] = true;
-
+#ifdef VERBOSE
 				printf("P%i: %i %i\n",
 					j, vecTracedPath[j][0], vecTracedPath[j][1]);
-
+#endif
 				// Found a branch into the interior
 				if (vecTracedPath[j].inttype != IntersectType_None) {
 					break;
@@ -956,10 +974,10 @@ bool GenerateOverlapFaces(
 					if (vecTracedPath[jNext].ixSecondFace ==
 						ixCurrentSecondFace
 					) {
-
+#ifdef VERBOSE
 						printf("S: %i %i\n",
 							ixCurrentOverlapNode, ixExitNode);
-
+#endif
 						faceOverlap.edges.push_back(Edge(
 							ixCurrentOverlapNode,
 							ixExitNode,
@@ -974,13 +992,14 @@ bool GenerateOverlapFaces(
 					}
 				}
 
+#ifdef VERBOSE
 				printf("T: %i (%i) %i\n",
 					ixCurrentOverlapNode,
 					//edgeSecondCurrent[0],
 					//edgeSecondCurrent[1]);
 					vecSecondNodeMap[edgeSecondCurrent[0]],
 					vecSecondNodeMap[edgeSecondCurrent[1]]);
-
+#endif
 				// Push this edge into the overlap mesh
 				faceOverlap.edges.push_back(Edge(
 					ixCurrentOverlapNode,
@@ -1009,7 +1028,10 @@ ContinueToNextFace:
 			return false;
 		}
 
+#ifdef VERBOSE
 		printf("PUSH %lu\n", faceOverlap.edges.size());
+#endif
+
 		// Push this Face into the overlap Mesh
 		meshOverlap.faces.push_back(faceOverlap);
 		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
@@ -1174,7 +1196,7 @@ void GenerateOverlapMesh(
 
 #pragma message "OpenMP here"
 	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	//for (int ixCurrentFirstFace = 4075; ixCurrentFirstFace < 4076; ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 12533; ixCurrentFirstFace < 12534; ixCurrentFirstFace++) {
 
 #ifdef CHECK_AREAS
 		Real dFirstFaceArea = meshFirst.CalculateFaceArea(ixCurrentFirstFace);

@@ -33,6 +33,15 @@ bool MeshUtilitiesFuzzy::AreNodesEqual(
 		return true;
 	}
 
+/*
+	double dDiffX = (node0.x - node1.x) * (node0.x - node1.x);
+	double dDiffY = (node0.y - node1.y) * (node0.y - node1.y);
+	double dDiffZ = (node0.z - node1.z) * (node0.z - node1.z);
+
+	if (dDiffX + dDiffY + dDiffZ < Tolerance) {
+		return true;
+	}
+*/
 	return false;
 }
 
@@ -133,6 +142,111 @@ void MeshUtilitiesFuzzy::ContainsNode(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void MeshUtilitiesFuzzy::FindFaceFromNode(
+	const Mesh & mesh,
+	const Node & node,
+	FindFaceStruct & aFindFaceStruct
+) {
+	// Reset the FaceStruct
+	aFindFaceStruct.vecFaceIndices.clear();
+	aFindFaceStruct.vecFaceLocations.clear();
+	aFindFaceStruct.loc = Face::NodeLocation_Undefined;
+
+	// Loop through all faces to find overlaps
+	// Note: This algorithm can likely be dramatically improved
+	for (int l = 0; l < mesh.faces.size(); l++) {
+		Face::NodeLocation loc;
+		int ixLocation;
+
+		ContainsNode(
+			mesh.faces[l],
+			mesh.nodes,
+			node,
+			loc,
+			ixLocation);
+
+		if (loc == Face::NodeLocation_Exterior) {
+			continue;
+		}
+
+#ifdef VERBOSE
+		printf("%i\n", l);
+		printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+		printf("n0: %1.5e %1.5e %1.5e\n",
+			mesh.nodes[mesh.faces[l][0]].x,
+			mesh.nodes[mesh.faces[l][0]].y,
+			mesh.nodes[mesh.faces[l][0]].z);
+		printf("n1: %1.5e %1.5e %1.5e\n",
+			mesh.nodes[mesh.faces[l][1]].x,
+			mesh.nodes[mesh.faces[l][1]].y,
+			mesh.nodes[mesh.faces[l][1]].z);
+		printf("n2: %1.5e %1.5e %1.5e\n",
+			mesh.nodes[mesh.faces[l][2]].x,
+			mesh.nodes[mesh.faces[l][2]].y,
+			mesh.nodes[mesh.faces[l][2]].z);
+		printf("n3: %1.5e %1.5e %1.5e\n",
+			mesh.nodes[mesh.faces[l][3]].x,
+			mesh.nodes[mesh.faces[l][3]].y,
+			mesh.nodes[mesh.faces[l][3]].z);
+#endif
+
+		if (aFindFaceStruct.loc == Face::NodeLocation_Undefined) {
+			aFindFaceStruct.loc = loc;
+		}
+
+		// Node is in the interior of this face
+		if (loc == Face::NodeLocation_Interior) {
+			if (loc != aFindFaceStruct.loc) {
+				_EXCEPTIONT("No consensus on location of Node");
+			}
+
+			aFindFaceStruct.vecFaceIndices.push_back(l);
+			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
+			break;
+		}
+
+		// Node is on the edge of this face
+		if (loc == Face::NodeLocation_Edge) {
+			if (loc != aFindFaceStruct.loc) {
+				_EXCEPTIONT("No consensus on location of Node");
+			}
+
+			aFindFaceStruct.vecFaceIndices.push_back(l);
+			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
+		}
+
+		// Node is at the corner of this face
+		if (loc == Face::NodeLocation_Corner) {
+			if (loc != aFindFaceStruct.loc) {
+				_EXCEPTIONT("No consensus on location of Node");
+			}
+
+			aFindFaceStruct.vecFaceIndices.push_back(l);
+			aFindFaceStruct.vecFaceLocations.push_back(ixLocation);
+		}
+	}
+
+	// Edges can only have two adjacent Faces
+	if (aFindFaceStruct.loc == Face::NodeLocation_Edge) {
+		if (aFindFaceStruct.vecFaceIndices.size() != 2) {
+			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+			_EXCEPTION1("Multiple co-located edges detected (%i)",
+				(int)(aFindFaceStruct.vecFaceIndices.size()));
+		}
+	}
+
+	// Corners must have at least three adjacent Faces
+	if (aFindFaceStruct.loc == Face::NodeLocation_Corner) {
+		if (aFindFaceStruct.vecFaceIndices.size() < 3) {
+			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
+			_EXCEPTION1("Two Faced corner detected (%i)",
+				(int)(aFindFaceStruct.vecFaceIndices.size()));
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 	const Node & nodeFirstBegin,
 	const Node & nodeFirstEnd,
@@ -143,7 +257,7 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 	std::vector<Node> & nodeIntersections,
 	bool fIncludeFirstBeginNode
 ) {
-	static const Real Tolerance = HighTolerance;
+	static const Real Tolerance = ReferenceTolerance;
 
 	// Make a locally modifyable version of the Nodes
 	Node node11;
@@ -190,25 +304,44 @@ bool MeshUtilitiesFuzzy::CalculateEdgeIntersections(
 		Node nodeN21xN22(CrossProduct(node21, node22));
 
 		// Check for coincident lines
-		Real dDot1 = DotProduct(nodeN11xN12, node21);
-		Real dDot2 = DotProduct(nodeN21xN22, node11);
+		Real dDot11 = DotProduct(nodeN21xN22, node11);
+		Real dDot12 = DotProduct(nodeN21xN22, node12);
+		Real dDot21 = DotProduct(nodeN11xN12, node21);
+		Real dDot22 = DotProduct(nodeN11xN12, node22);
+/*
+		printf("%1.15e %1.15e %1.15e %1.15e\n",
+			dDot11, dDot12, dDot21, dDot22);
 
+		printf("\n");
+		node11.Print("n11");
+		node12.Print("n12");
+		node21.Print("n21");
+		node22.Print("n22");
+*/
 		// A line which is coincident with both planes
 		Node nodeLine;
 
 		// Coincident planes
-		if ((fabs(dDot1) < Tolerance) &&
-			(fabs(dDot2) < Tolerance)
+		if ((fabs(dDot11) < Tolerance) &&
+			(fabs(dDot21) < Tolerance)
 		) {
 			return true;
 
+		// node11 is coplanar with the second arc
+		} else if (fabs(dDot11) < Tolerance) {
+			nodeLine = node11;
+
+		// node12 is coplanar with the second arc
+		} else if (fabs(dDot12) < Tolerance) {
+			nodeLine = node12;
+
 		// node21 is coplanar with the first arc
-		} else if (fabs(dDot1) < Tolerance) {
+		} else if (fabs(dDot21) < Tolerance) {
 			nodeLine = node21;
 
-		// node11 is coplanar with the second arc
-		} else if (fabs(dDot2) < Tolerance) {
-			nodeLine = node11;
+		// node22 is coplanar with the first arc
+		} else if (fabs(dDot22) < Tolerance) {
+			nodeLine = node22;
 
 		// Line of intersection is the cross product of cross products
 		} else {
@@ -1206,17 +1339,20 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 				node0, node1, edge0.type,
 				nodeBegin, nodeEnd, edgetype,
 				nodeIntersections);
+/*
+		node0.Print("n0");
+		node1.Print("n1");
+		nodeBegin.Print("nB");
+		nodeEnd.Print("nE");
 
+		std::cout << fCoincident << std::endl;
+*/
 		// If edges are coincident check orientation to determine face 
 		if (fCoincident) {
 
 			// Calculate orientation
 			Real dOrientation =
 				DotProduct((node1 - node0), (nodeEnd - nodeBegin));
-
-			//if (edge0.type != edgetype) {
-			//	_EXCEPTIONT("Logic error");
-			//}
 
 			if (dOrientation == 0.0) {
 				_EXCEPTIONT("Logic error");
@@ -1268,11 +1404,12 @@ int MeshUtilitiesFuzzy::FindFaceNearNode(
 			// Dot product to determine direction of motion
 			Real dDot = DotProduct(nodeNormal, nodeDir);
 
+/*
 			printf("Faces: %i %i\n", aFindFaceStruct.vecFaceIndices[0], aFindFaceStruct.vecFaceIndices[1]);
 			printf("Norm: %1.5e %1.5e %1.5e\n", nodeNormal.x, nodeNormal.y, nodeNormal.z);
 			printf("Dir: %1.5e %1.5e %1.5e\n", nodeDir.x, nodeDir.y, nodeDir.z);
 			printf("%1.5e\n", dDot);
-
+*/
 			if (dDot > Tolerance) {
 				return aFindFaceStruct.vecFaceIndices[0];
 

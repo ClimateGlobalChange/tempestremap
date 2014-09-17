@@ -584,18 +584,13 @@ void Mesh::Validate() const {
 			// Vectors along edges
 			Node nodeD1 = node0 - node1;
 			Node nodeD2 = node2 - node1;
-/*
-			node0.fx.Print(); printf("\n");
-			node1.fx.Print(); printf("\n");
-			nodeD1.fx.Print(); printf("\n");
-			_EXCEPTION();
-*/
+
 			// Compute cross-product
-			Node nodeCross(CrossProductIX(nodeD1, nodeD2));
+			Node nodeCross(CrossProduct(nodeD1, nodeD2));
 
 			// Dot cross product with radial vector
 			Real dDot = DotProduct(node1, nodeCross);
-
+/*
 #ifdef USE_EXACT_ARITHMETIC
 			FixedPoint dDotX = DotProductX(node1, nodeCross);
 
@@ -628,7 +623,7 @@ void Mesh::Validate() const {
 			}
 
 #endif
-
+*/
 			if (dDot > 0.0) {
 				printf("\nError detected (orientation):\n");
 				printf("  Face %i, Edge %i, Orientation %1.5e\n",

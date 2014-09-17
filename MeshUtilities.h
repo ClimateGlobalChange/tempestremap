@@ -25,18 +25,6 @@ class MeshUtilities {
 
 public:
 	///	<summary>
-	///		Determine if this face contains the specified Node, and whether
-	///		the Node is along an edge or at a corner.
-	///	</summary>
-	virtual void ContainsNode(
-		const Face & face,
-		const NodeVector & nodevec,
-		const Node & node,
-		Face::NodeLocation & loc,
-		int & ixLocation
-	) const = 0;
-
-	///	<summary>
 	///		Find all Face indices that contain this Node.
 	///	</summary>
 	void FindFaceFromNode(

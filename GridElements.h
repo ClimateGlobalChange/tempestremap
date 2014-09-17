@@ -21,8 +21,6 @@
 
 #include "Defines.h"
 
-#include "FixedPoint.h"
-
 #include <vector>
 #include <set>
 #include <map>
@@ -47,15 +45,6 @@ public:
 	Real y;
 	Real z;
 
-#ifdef USE_EXACT_ARITHMETIC
-	///	<summary>
-	///		Fixed point Cartesian coordinates (x,y,z) of this Node.
-	///	</summary>
-	FixedPoint fx;
-	FixedPoint fy;
-	FixedPoint fz;
-#endif
-
 public:
 	///	<summary>
 	///		Default constructor.
@@ -64,13 +53,7 @@ public:
 		x(0.0),
 		y(0.0),
 		z(0.0)
-	{
-#ifdef USE_EXACT_ARITHMETIC
-		fx.Set(0.0);
-		fy.Set(0.0);
-		fz.Set(0.0);
-#endif
-	}
+	{ }
 
 	///	<summary>
 	///		Constructor.
@@ -83,13 +66,7 @@ public:
 		x(_x),
 		y(_y),
 		z(_z)
-	{
-#ifdef USE_EXACT_ARITHMETIC
-		fx.Set(_x);
-		fy.Set(_y);
-		fz.Set(_z);
-#endif
-	}
+	{ }
 
 	///	<summary>
 	///		Copy constructor.
@@ -98,12 +75,6 @@ public:
 		x = node.x;
 		y = node.y;
 		z = node.z;
-
-#ifdef USE_EXACT_ARITHMETIC
-		fx = node.fx;
-		fy = node.fy;
-		fz = node.fz;
-#endif
 	}
 
 	///	<summary>
@@ -113,12 +84,6 @@ public:
 		x = node.x;
 		y = node.y;
 		z = node.z;
-
-#ifdef USE_EXACT_ARITHMETIC
-		fx = node.fx;
-		fy = node.fy;
-		fz = node.fz;
-#endif
 
 		return (*this);
 	}
@@ -159,11 +124,6 @@ public:
 		nodeDiff.y = y - node.y;
 		nodeDiff.z = z - node.z;
 
-#ifdef USE_EXACT_ARITHMETIC
-		nodeDiff.fx = fx - node.fx;
-		nodeDiff.fy = fy - node.fy;
-		nodeDiff.fz = fz - node.fz;
-#endif
 		return nodeDiff;
 	}
 
@@ -180,42 +140,6 @@ public:
 	void Print(const char * szName) const {
 		printf("%s: %1.15e %1.15e %1.15e\n", szName, x, y, z);
 	}
-
-#ifdef USE_EXACT_ARITHMETIC
-	///	<summary>
-	///		Output node to stdout.
-	///	</summary>
-	void PrintX(const char * szName) const {
-		printf("%s:\n", szName);
-		printf("  X: "); fx.Print(); printf("\n");
-		printf("  Y: "); fy.Print(); printf("\n");
-		printf("  Z: "); fz.Print(); printf("\n");
-	}
-
-	///	<summary>
-	///		Output node to stdout.
-	///	</summary>
-	void PrintMX() const {
-		printf("[");
-		fx.Print(); printf(", ");
-		fy.Print(); printf(", ");
-		fz.Print(); printf("]\n");
-	}
-
-	///	<summary>
-	///		Output node to stdout.
-	///	</summary>
-	void PrintNorm() const {
-		Real dx = fx.ToReal();
-		Real dy = fy.ToReal();
-		Real dz = fz.ToReal();
-
-		Real mag = sqrt(dx * dx + dy * dy + dz * dz);
-
-		printf("%1.15e %1.15e %1.15e\n", dx / mag, dy / mag, dz / mag);
-	}
-
-#endif
 };
 
 ///	<summary>
@@ -562,30 +486,7 @@ public:
 		NodeLocation_Edge = 2,
 		NodeLocation_Corner = 3
 	};
-/*
-	///	<summary>
-	///		Determine if this face contains the specified Node, and whether
-	///		the Node is along an edge or at a corner.
-	///	</summary>
-	void ContainsNode(
-		const NodeVector & nodevec,
-		const Node & node,
-		NodeLocation & loc,
-		int & ixLocation
-	) const;
 
-#ifdef USE_EXACT_ARITHMETIC
-	///	<summary>
-	///		As ContainsNode(), but with exact arithmetic.
-	///	</summary>
-	void ContainsNodeX(
-		const NodeVector & nodevec,
-		const Node & node,
-		NodeLocation & loc,
-		int & ixLocation
-	) const;
-#endif
-*/
 	///	<summary>
 	///		Determine the Edge index corresponding to the given Edge.  If the
 	///		Edge is not found an Exception is thrown.
@@ -771,27 +672,6 @@ inline Node CrossProduct(
 }
 
 ///	<summary>
-///		Calculate the exact and inexact cross product between two Nodes.
-///	</summary>
-inline Node CrossProductIX(
-	const Node & node1,
-	const Node & node2
-) {
-	Node nodeCross;
-	nodeCross.x = node1.y * node2.z - node1.z * node2.y;
-	nodeCross.y = node1.z * node2.x - node1.x * node2.z;
-	nodeCross.z = node1.x * node2.y - node1.y * node2.x;
-
-#ifdef USE_EXACT_ARITHMETIC
-	nodeCross.fx = node1.fy * node2.fz - node1.fz * node2.fy;
-	nodeCross.fy = node1.fz * node2.fx - node1.fx * node2.fz;
-	nodeCross.fz = node1.fx * node2.fy - node1.fy * node2.fx;
-#endif
-
-	return nodeCross;
-}
-
-///	<summary>
 ///		Calculate the product of a Node with a scalar.
 ///	</summary>
 inline Node ScalarProduct(
@@ -804,46 +684,6 @@ inline Node ScalarProduct(
 	nodeProduct.z *= d;
 	return nodeProduct;
 }
-
-#ifdef USE_EXACT_ARITHMETIC
-///	<summary>
-///		Calculate the exact dot product between two Nodes.
-///	</summary>
-inline FixedPoint DotProductX(
-	const Node & node1,
-	const Node & node2
-) {
-	return (node1.fx * node2.fx + node1.fy * node2.fy + node1.fz * node2.fz); 
-}
-
-///	<summary>
-///		Calculate the exact cross product between two Nodes.
-///	</summary>
-inline Node CrossProductX(
-	const Node & node1,
-	const Node & node2
-) {
-	Node nodeCross;
-	nodeCross.fx = node1.fy * node2.fz - node1.fz * node2.fy;
-	nodeCross.fy = node1.fz * node2.fx - node1.fx * node2.fz;
-	nodeCross.fz = node1.fx * node2.fy - node1.fy * node2.fx;
-	return nodeCross;
-}
-
-///	<summary>
-///		Calculate the product of a Node with a scalar.
-///	</summary>
-inline Node ScalarProductX(
-	const FixedPoint & fp,
-	const Node & node
-) {
-	Node nodeProduct(node);
-	nodeProduct.fx *= fp;
-	nodeProduct.fy *= fp;
-	nodeProduct.fz *= fp;
-	return nodeProduct;
-}
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -23,10 +23,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MeshUtilitiesExact::AreNodesEqual(
-	const Node & node0,
-	const Node & node1
+	const NodeExact & node0,
+	const NodeExact & node1
 ) {
-	Node nodeCross = CrossProductX(node0, node1);
+	NodeExact nodeCross = CrossProductX(node0, node1);
 
 	if (nodeCross.fx.IsZero() &&
 		nodeCross.fy.IsZero() &&
@@ -42,8 +42,8 @@ bool MeshUtilitiesExact::AreNodesEqual(
 
 void MeshUtilitiesExact::ContainsNode(
 	const Face & face,
-	const NodeVector & nodevec,
-	const Node & node,
+	const NodeExactVector & nodevec,
+	const NodeExact & node,
 	Face::NodeLocation & loc,
 	int & ixLocation
 ) const {
@@ -60,8 +60,8 @@ void MeshUtilitiesExact::ContainsNode(
 		}
 
 		// Check which side of the Face this Edge is on
-		const Node & na = nodevec[face.edges[i][0]];
-		const Node & nb = nodevec[face.edges[i][1]];
+		const NodeExact & na = nodevec[face.edges[i][0]];
+		const NodeExact & nb = nodevec[face.edges[i][1]];
 
 		if (face.edges[i].type == Edge::Type_GreatCircleArc) {
 
@@ -164,21 +164,21 @@ void MeshUtilitiesExact::ContainsNode(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MeshUtilitiesExact::CalculateEdgeIntersections(
-	const Node & nodeFirstBegin,
-	const Node & nodeFirstEnd,
+	const NodeExact & nodeFirstBegin,
+	const NodeExact & nodeFirstEnd,
 	Edge::Type typeFirst,
-	const Node & nodeSecondBegin,
-	const Node & nodeSecondEnd,
+	const NodeExact & nodeSecondBegin,
+	const NodeExact & nodeSecondEnd,
 	Edge::Type typeSecond,
 	std::vector<Node> & nodeIntersections,
 	bool fIncludeFirstBeginNode
 ) {
 	
 	// Make a locally modifyable version of the Nodes
-	Node node11;
-	Node node12;
-	Node node21;
-	Node node22;
+	NodeExact node11;
+	NodeExact node12;
+	NodeExact node21;
+	NodeExact node22;
 
 	// Second edge is a line of constant latitude; first is a great circle arc
 	if ((typeFirst  == Edge::Type_ConstantLatitude) &&
@@ -216,8 +216,8 @@ bool MeshUtilitiesExact::CalculateEdgeIntersections(
 	) {
 
 		// Cross products
-		Node nodeN11xN12(CrossProductX(node11, node12));
-		Node nodeN21xN22(CrossProductX(node21, node22));
+		NodeExact nodeN11xN12(CrossProductX(node11, node12));
+		NodeExact nodeN21xN22(CrossProductX(node21, node22));
 /*
 		FixedPoint fp1 = node21.fy * node22.fz;
 		FixedPoint fp2 = node21.fz * node22.fy;
@@ -240,7 +240,7 @@ bool MeshUtilitiesExact::CalculateEdgeIntersections(
 		FixedPoint fpDot22 = DotProductX(nodeN11xN12, node22);
 
 		// A line which is coincident with both planes
-		Node nodeLine;
+		NodeExact nodeLine;
 
 		// Determine if either fpDot1 or fpDot2 are zero
 		bool fp11_isZero = fpDot11.IsZero();
@@ -454,12 +454,12 @@ bool MeshUtilitiesExact::CalculateEdgeIntersections(
 int MeshUtilitiesExact::FindFaceNearNode(
 	const Mesh & mesh,
 	int ixNode,
-	const Node & nodeEnd,
+	const NodeExact & nodeEnd,
 	const Edge::Type edgetype
 ) {
 
 	// Get the reference point
-	const Node & nodeBegin = mesh.nodes[ixNode];
+	NodeExact nodeBegin = mesh.nodes[ixNode];
 
 	// Get the set of faces adjacent this node
 	const std::set<int> & setNearbyFaces = mesh.revnodearray[ixNode];
@@ -473,7 +473,7 @@ int MeshUtilitiesExact::FindFaceNearNode(
 	FixedPoint fpDotNbNb = DotProductX(nodeBegin, nodeBegin);
 	FixedPoint fpDotNeNb = DotProductX(nodeEnd, nodeBegin);
 
-	Node nodeLocalE =
+	NodeExact nodeLocalE =
 		ScalarProductX(fpDotNbNb, nodeEnd)
 		- ScalarProductX(fpDotNeNb, nodeBegin);
 /*
@@ -530,9 +530,9 @@ int MeshUtilitiesExact::FindFaceNearNode(
 			_EXCEPTIONT("Invalid Node indices on Edges");
 		}
 
-		const Node & node0 = mesh.nodes[edgePrev[0]];
-		const Node & node1 = mesh.nodes[edgePrev[1]];
-		const Node & node2 = mesh.nodes[edgeThis[1]];
+		NodeExact node0 = mesh.nodes[edgePrev[0]];
+		NodeExact node1 = mesh.nodes[edgePrev[1]];
+		NodeExact node2 = mesh.nodes[edgeThis[1]];
 
 		if (!AreNodesEqual(node1, nodeBegin)) {
 			_EXCEPTIONT("Logic error");
@@ -549,15 +549,15 @@ int MeshUtilitiesExact::FindFaceNearNode(
 		printf("N0Nb: "); fpDotN0Nb.Print(); printf("\n");
 		printf("N2Nb: "); fpDotN2Nb.Print(); printf("\n");
 */
-		Node nodeLocal0 =
+		NodeExact nodeLocal0 =
 			ScalarProductX(fpDotNbNb, node0)
 			- ScalarProductX(fpDotN0Nb, nodeBegin);
 
-		Node nodeLocal2 =
+		NodeExact nodeLocal2 =
 			ScalarProductX(fpDotNbNb, node2)
 			- ScalarProductX(fpDotN2Nb, nodeBegin);
 
-		Node nodeLocalCross = CrossProductX(nodeLocal0, nodeLocal2);
+		NodeExact nodeLocalCross = CrossProductX(nodeLocal0, nodeLocal2);
 
 /*
 		printf("l0 := Vector("); nodeLocal0.PrintMX(); printf(");\n");
@@ -618,8 +618,8 @@ int MeshUtilitiesExact::FindFaceNearNode(
 
 int MeshUtilitiesExact::FindFaceNearNode(
 	const Mesh & mesh,
-	const Node & nodeBegin,
-	const Node & nodeEnd,
+	const NodeExact & nodeBegin,
+	const NodeExact & nodeEnd,
 	const Edge::Type edgetype,
 	const FindFaceStruct & aFindFaceStruct
 ) {
@@ -645,15 +645,15 @@ int MeshUtilitiesExact::FindFaceNearNode(
 		const Edge & edge0 = face0.edges[aFindFaceStruct.vecFaceLocations[0]];
 		const Edge & edge1 = face1.edges[aFindFaceStruct.vecFaceLocations[1]];
 
-		const Node & node0 = mesh.nodes[edge0[0]];
-		const Node & node1 = mesh.nodes[edge0[1]];
+		NodeExact node0 = mesh.nodes[edge0[0]];
+		NodeExact node1 = mesh.nodes[edge0[1]];
 
 		if (edge0 != edge1) {
 			_EXCEPTIONT("Logic failure");
 		}
 
 		// Calculate all intersections between edges
-		std::vector<Node> nodeIntersections;
+		std::vector<NodeExact> nodeIntersections;
 
 		bool fCoincident =
 			CalculateEdgeIntersections(
@@ -697,7 +697,7 @@ int MeshUtilitiesExact::FindFaceNearNode(
 			(edgetype == Edge::Type_GreatCircleArc)
 		) {
 			// Outward-pointing normal to first great circle arc
-			Node nodeNormal(CrossProductX(node0, node1));
+			NodeExact nodeNormal(CrossProductX(node0, node1));
 
 			// Calculate alignment of outward normal and direction vector
 			// at nodeBegin.

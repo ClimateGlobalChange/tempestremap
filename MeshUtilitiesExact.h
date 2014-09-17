@@ -19,31 +19,31 @@
 
 #include "Defines.h"
 #include "GridElements.h"
-#include "MeshUtilities.h"
+#include "GridElementsExact.h"
 
 #include <vector>
-
-#ifdef USE_EXACT_ARITHMETIC
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
 ///		Various implementations of methods for determining Faces from Nodes.
 ///	</summary>
-class MeshUtilitiesExact : public MeshUtilities {
+class MeshUtilitiesExact {
 
 public:
-///	<summary>
+	///	<summary>
 	///		Overwrite the fuzzy coordinate values with exact values.
 	///	</summary>
-	inline void ToRealCoords(
-		Node & node
+	inline Node ToRealCoords(
+		NodeExact & node
 	) {
-		node.x = node.fx.ToReal();
-		node.y = node.fy.ToReal();
-		node.z = node.fz.ToReal();
+		Node nodeReal;
 
-		Real dMag = sqrt(node.x * node.x + node.y * node.y + node.z * node.z);
+		nodeReal.x = node.fx.ToReal();
+		nodeReal.y = node.fy.ToReal();
+		nodeReal.z = node.fz.ToReal();
+
+		Real dMag = nodeReal.Magnitude();
 
 		if (dMag == 0.0) {
 			node.fx.Print(); printf("\n");
@@ -52,17 +52,19 @@ public:
 			_EXCEPTIONT("Zero magnitude Node detected");
 		}
 
-		node.x /= dMag;
-		node.y /= dMag;
-		node.z /= dMag;
+		nodeReal.x /= dMag;
+		nodeReal.y /= dMag;
+		nodeReal.z /= dMag;
+
+		return nodeReal;
 	}
 
 	///	<summary>
 	///		Determine if two Nodes are equal.
 	///	</summary>
 	bool AreNodesEqual(
-		const Node & node0,
-		const Node & node1
+		const NodeExact & node0,
+		const NodeExact & node1
 	);
 
 	///	<summary>
@@ -71,8 +73,8 @@ public:
 	///	</summary>
 	virtual void ContainsNode(
 		const Face & face,
-		const NodeVector & nodevec,
-		const Node & node,
+		const NodeExactVector & nodevec,
+		const NodeExact & node,
 		Face::NodeLocation & loc,
 		int & ixLocation
 	) const;
@@ -90,11 +92,11 @@ public:
 	///		that are contained in First, ordered from FirstBegin to FirstEnd.
 	///	</returns>
 	bool CalculateEdgeIntersections(
-		const Node & nodeFirstBegin,
-		const Node & nodeFirstEnd,
+		const NodeExact & nodeFirstBegin,
+		const NodeExact & nodeFirstEnd,
 		Edge::Type typeFirst,
-		const Node & nodeSecondBegin,
-		const Node & nodeSecondEnd,
+		const NodeExact & nodeSecondBegin,
+		const NodeExact & nodeSecondEnd,
 		Edge::Type typeSecond,
 		std::vector<Node> & nodeIntersections,
 		bool fIncludeFirstBeginNode = false
@@ -106,7 +108,7 @@ public:
 	int FindFaceNearNode(
 		const Mesh & mesh,
 		int ixNode,
-		const Node & nodeEnd,
+		const NodeExact & nodeEnd,
 		const Edge::Type edgetype
 	);
 
@@ -115,16 +117,14 @@ public:
 	///	</summary>
 	int FindFaceNearNode(
 		const Mesh & mesh,
-		const Node & nodeBegin,
-		const Node & nodeEnd,
+		const NodeExact & nodeBegin,
+		const NodeExact & nodeEnd,
 		const Edge::Type edgetype,
 		const FindFaceStruct & aFindFaceStruct
 	);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-
-#endif
 
 #endif
 
