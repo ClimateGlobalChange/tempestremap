@@ -17,6 +17,7 @@
 #include "Defines.h"
 #include "GridElements.h"
 
+#include "DataMatrix.h"
 #include "Announce.h"
 
 #include <cmath>
@@ -415,41 +416,39 @@ void Mesh::Read(const std::string & strFile) {
 
 	NcVar * varNodes = ncFile.get_var("coord");
 
-	double dCoord[3];
-	for (int i = 0; i < nNodeCount; i++) {
-		varNodes->set_cur(0, i);
-		varNodes->get(dCoord, 3, 1);
-		nodes[i].x = static_cast<Real>(dCoord[0]);
-		nodes[i].y = static_cast<Real>(dCoord[1]);
-		nodes[i].z = static_cast<Real>(dCoord[2]);
+	DataMatrix<double> dNodeCoords;
+	dNodeCoords.Initialize(3, nNodeCount);
 
-#ifdef USE_EXACT_ARITHMETIC
-		nodes[i].fx.Set(nodes[i].x);
-		nodes[i].fy.Set(nodes[i].y);
-		nodes[i].fz.Set(nodes[i].z);
-/*
-		printf("%1.15e : ", nodes[i].x); nodes[i].fx.Print(); printf("\n");
-		printf("%1.15e : ", nodes[i].y); nodes[i].fy.Print(); printf("\n");
-		printf("%1.15e : ", nodes[i].z); nodes[i].fz.Print(); printf("\n");
-*/
-#endif
+	// Load in node array
+	varNodes->set_cur(0, 0);
+	varNodes->get(&(dNodeCoords[0][0]), 3, nNodeCount);
+
+	for (int i = 0; i < nNodeCount; i++) {
+		nodes[i].x = static_cast<Real>(dNodeCoords[0][i]);
+		nodes[i].y = static_cast<Real>(dNodeCoords[1][i]);
+		nodes[i].z = static_cast<Real>(dNodeCoords[2][i]);
 	}
+
+	dNodeCoords.Deinitialize();
 
 	// Load in face array
 	faces.resize(nElementCount, Face(nNodesPerElement));
 
 	NcVar * varFaces = ncFile.get_var("connect1");
 
-	int * nNodes = new int[nNodesPerElement];
-	for (int i = 0; i < nElementCount; i++) {
-		varFaces->set_cur(i, 0);
-		varFaces->get(nNodes, 1, nNodesPerElement);
+	DataMatrix<int> iFaceIndices;
+	iFaceIndices.Initialize(nElementCount, nNodesPerElement);
 
-		for (int j = 0; j < nNodesPerElement; j++) {
-			faces[i].SetNode(j, nNodes[j]-1);
-		}
+	varFaces->set_cur(0, 0);
+	varFaces->get(&(iFaceIndices[0][0]), nElementCount, nNodesPerElement);
+
+	for (int i = 0; i < nElementCount; i++) {
+	for (int j = 0; j < nNodesPerElement; j++) {
+		faces[i].SetNode(j, iFaceIndices[i][j]-1);
 	}
-	delete[] nNodes;
+	}
+
+	iFaceIndices.Deinitialize();
 
 	// Check for variables
 	bool fHasEdgeType = false;
@@ -472,15 +471,17 @@ void Mesh::Read(const std::string & strFile) {
 	if (fHasEdgeType) {
 		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
 
-		int * nEdgeTypes = new int[nNodesPerElement];
+		DataMatrix<int> iEdgeTypes;
+		iEdgeTypes.Initialize(nElementCount, nNodesPerElement);
+
+		varEdgeTypes->set_cur(0, 0);
+		varEdgeTypes->get(&(iEdgeTypes[0][0]), nElementCount, nNodesPerElement);
+
 		for (int i = 0; i < nElementCount; i++) {
-			varEdgeTypes->set_cur(i, 0);
-			varEdgeTypes->get(nEdgeTypes, 1, nNodesPerElement);
-			for (int j = 0; j < nNodesPerElement; j++) {
-				faces[i].edges[j].type = static_cast<Edge::Type>(nEdgeTypes[j]);
-			}
+		for (int j = 0; j < nNodesPerElement; j++) {
+			faces[i].edges[j].type = static_cast<Edge::Type>(iEdgeTypes[i][j]);
 		}
-		delete[] nEdgeTypes;
+		}
 	}
 
 	// Load in first mesh source face ix
