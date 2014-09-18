@@ -18,6 +18,7 @@
 #define _OFFLINEMAP_H_
 
 #include "SparseMatrix.h"
+#include "DataVector.h"
 #include <string>
 #include <vector>
 
@@ -31,6 +32,13 @@ class Mesh;
 class OfflineMap {
 
 public:
+	///	<summary>
+	///		Initialize the array of input dimensions from a file.
+	///	</summary>
+	void InitializeInputDimensionsFromFile(
+		const std::string & strInputMesh
+	);
+
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
 	///	</summary>
@@ -64,7 +72,9 @@ public:
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
 	void Write(
-		const std::string & strOutput
+		const std::string & strOutput,
+		const DataVector<double> & vecInputArea,
+		const DataVector<double> & vecOutputArea
 	);
 
 public:
@@ -111,6 +121,16 @@ protected:
 	///		The SparseMatrix representing this operator.
 	///	</summary>
 	SparseMatrix<double> m_mapRemap;
+
+	///	<summary>
+	///		Vector of dimension sizes for Input.
+	///	</summary>
+	std::vector<int> m_vecInputDimSizes;
+
+	///	<summary>
+	///		Vector of dimension names for Input.
+	///	</summary>
+	std::vector<std::string> m_vecInputDimNames;
 
 	///	<summary>
 	///		Vector of dimension sizes for Output.

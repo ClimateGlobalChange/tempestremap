@@ -28,6 +28,48 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void OfflineMap::InitializeInputDimensionsFromFile(
+	const std::string & strInputMesh
+) {
+	NcFile ncInputMesh(strInputMesh.c_str(), NcFile::ReadOnly);
+
+	// Check for rectilinear attribute
+	bool fRectilinear = false;
+	for (int a = 0; a < ncInputMesh.num_atts(); a++) {
+		if (strcmp(ncInputMesh.get_att(a)->name(), "rectilinear") == 0) {
+			fRectilinear = true;
+			break;
+		}
+	}
+
+	// Non-rectilinear
+	if (!fRectilinear) {
+		int nCol = ncInputMesh.get_dim("num_elem")->size();
+		m_vecInputDimSizes.push_back(nCol);
+		m_vecInputDimNames.push_back("ncol");
+		return;
+	}
+
+	// Obtain rectilinear attributes
+	int nDim0Size = ncInputMesh.get_att("rectilinear_dim0_size")->as_int(0);
+	int nDim1Size = ncInputMesh.get_att("rectilinear_dim1_size")->as_int(0);
+
+	std::string strDim0Name =
+		ncInputMesh.get_att("rectilinear_dim0_name")->as_string(0);
+	std::string strDim1Name =
+		ncInputMesh.get_att("rectilinear_dim1_name")->as_string(0);
+
+	m_vecInputDimSizes.resize(2);
+	m_vecInputDimSizes[0] = nDim0Size;
+	m_vecInputDimSizes[1] = nDim1Size;
+
+	m_vecInputDimNames.resize(2);
+	m_vecInputDimNames[0] = strDim0Name;
+	m_vecInputDimNames[1] = strDim1Name;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::InitializeOutputDimensionsFromFile(
 	const std::string & strOutputMesh
 ) {
@@ -386,14 +428,45 @@ void OfflineMap::Read(
 ) {
 	NcFile ncMap(strInput.c_str(), NcFile::ReadOnly);
 
+	// Read input dimensions entries
+	NcDim * dimSrcGridRank = ncMap.get_dim("src_grid_rank");
+	NcDim * dimDstGridRank = ncMap.get_dim("dst_grid_rank");
+
+	int nSrcGridDims = (int)(dimSrcGridRank->size());
+	int nDstGridDims = (int)(dimDstGridRank->size());
+
+	NcVar * varSrcGridDims = ncMap.get_var("src_grid_dims");
+	NcVar * varDstGridDims = ncMap.get_var("dst_grid_dims");
+
+	m_vecInputDimSizes.resize(nSrcGridDims);
+	m_vecInputDimNames.resize(nSrcGridDims);
+
+	m_vecOutputDimSizes.resize(nDstGridDims);
+	m_vecOutputDimNames.resize(nDstGridDims);
+
+	varSrcGridDims->get(&(m_vecInputDimSizes[0]), nSrcGridDims);
+	varDstGridDims->get(&(m_vecOutputDimSizes[0]), nDstGridDims);
+
+	for (int i = 0; i < nSrcGridDims; i++) {
+		char szDim[64];
+		sprintf(szDim, "name%i", i);
+		m_vecInputDimNames[i] = varSrcGridDims->get_att(szDim)->as_string(0);
+	}
+
+	for (int i = 0; i < nDstGridDims; i++) {
+		char szDim[64];
+		sprintf(szDim, "name%i", i);
+		m_vecOutputDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
+	}
+
 	// Read SparseMatrix entries
-	NcDim * dimNA = ncMap.get_dim("n_s");
+	NcDim * dimNS = ncMap.get_dim("n_s");
 
 	NcVar * varRow = ncMap.get_var("row");
 	NcVar * varCol = ncMap.get_var("col");
 	NcVar * varS   = ncMap.get_var("S");
 
-	int nS = dimNA->size();
+	int nS = dimNS->size();
 
 	DataVector<int> vecRow;
 	vecRow.Initialize(nS);
@@ -414,29 +487,95 @@ void OfflineMap::Read(
 	varS->get(&(vecS[0]), nS);
 
 	m_mapRemap.SetEntries(vecRow, vecCol, vecS);
-
-	// Read input dimensions entries
-	int nDims = ncMap.get_att("dims")->as_int(0);
-	for (int i = 0; i < nDims; i++) {
-		char szAtt[64];
-
-		sprintf(szAtt, "dim%i_size", i);
-		m_vecOutputDimSizes.push_back(
-			ncMap.get_att(szAtt)->as_int(0));
-
-		sprintf(szAtt, "dim%i_name", i);
-		m_vecOutputDimNames.push_back(
-			ncMap.get_att(szAtt)->as_string(0));
-	}
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Write(
-	const std::string & strOutput
+	const std::string & strOutput,
+	const DataVector<double> & vecInputArea,
+	const DataVector<double> & vecOutputArea
 ) {
 	NcFile ncMap(strOutput.c_str(), NcFile::Replace);
+
+	// Attributes
+	ncMap.add_att("Title", "TempestRemap Offline Regridding Weight Generator");
+
+	// Write output dimensions entries
+	int nSrcGridDims = (int)(m_vecInputDimSizes.size());
+	int nDstGridDims = (int)(m_vecOutputDimSizes.size());
+
+	NcDim * dimSrcGridRank = ncMap.add_dim("src_grid_rank", nSrcGridDims);
+	NcDim * dimDstGridRank = ncMap.add_dim("dst_grid_rank", nDstGridDims);
+
+	NcVar * varSrcGridDims =
+		ncMap.add_var("src_grid_dims", ncInt, dimSrcGridRank);
+	NcVar * varDstGridDims =
+		ncMap.add_var("dst_grid_dims", ncInt, dimDstGridRank);
+
+	varSrcGridDims->put(&(m_vecInputDimSizes[0]), nSrcGridDims);
+	varDstGridDims->put(&(m_vecOutputDimSizes[0]), nDstGridDims);
+
+	int nA = 1;
+	int nB = 1;
+
+	for (int i = 0; i < m_vecInputDimSizes.size(); i++) {
+		char szDim[64];
+		sprintf(szDim, "name%i", i);
+		varSrcGridDims->add_att(szDim, m_vecInputDimNames[i].c_str());
+
+		nA *= m_vecInputDimSizes[i];
+	}
+
+	for (int i = 0; i < m_vecOutputDimSizes.size(); i++) {
+		char szDim[64];
+		sprintf(szDim, "name%i", i);
+		varDstGridDims->add_att(szDim, m_vecOutputDimNames[i].c_str());
+
+		nB *= m_vecOutputDimSizes[i];
+	}
+
+	// Input and Output mesh resolutions
+	NcDim * dimNA = ncMap.add_dim("n_a", nA);
+	NcDim * dimNB = ncMap.add_dim("n_b", nB);
+
+	// Write areas
+	if (vecInputArea.GetRows() != 0) {
+		if (vecInputArea.GetRows() != nA) {
+			_EXCEPTION2("OfflineMap dimension mismatch with input Mesh (%i, %i)",
+				vecInputArea.GetRows(), nA);
+		}
+
+		NcVar * varAreaA = ncMap.add_var("area_a", ncDouble, dimNA);
+		varAreaA->put(&(vecInputArea[0]), nA);
+	}
+
+	if (vecOutputArea.GetRows() != 0) {
+		if (vecOutputArea.GetRows() != nB) {
+			_EXCEPTION2("OfflineMap dimension mismatch with output Mesh (%i, %i)",
+				vecOutputArea.GetRows(), nB);
+		}
+
+		NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
+		varAreaB->put(&(vecInputArea[0]), nB);
+	}
+
+	// Write frac
+	DataVector<double> dFrac;
+
+	dFrac.Initialize(nA);
+	for (int i = 0; i < nA; i++) {
+		dFrac[i] = 1.0;
+	}
+	NcVar * varFracA = ncMap.add_var("frac_a", ncDouble, dimNA);
+	varFracA->put(&(dFrac[0]), nA);
+
+	dFrac.Initialize(nB);
+	for (int i = 0; i < nB; i++) {
+		dFrac[i] = 1.0;
+	}
+	NcVar * varFracB = ncMap.add_var("frac_b", ncDouble, dimNB);
+	varFracB->put(&(dFrac[0]), nB);
 
 	// Write SparseMatrix entries
 	DataVector<int> vecRow;
@@ -446,12 +585,11 @@ void OfflineMap::Write(
 	m_mapRemap.GetEntries(vecRow, vecCol, vecS);
 
 	int nS = vecRow.GetRows();
+	NcDim * dimNS = ncMap.add_dim("n_s", nS);
 
-	NcDim * dimNA = ncMap.add_dim("n_s", nS);
-
-	NcVar * varRow = ncMap.add_var("row", ncInt, dimNA);
-	NcVar * varCol = ncMap.add_var("col", ncInt, dimNA);
-	NcVar * varS = ncMap.add_var("S", ncDouble, dimNA);
+	NcVar * varRow = ncMap.add_var("row", ncInt, dimNS);
+	NcVar * varCol = ncMap.add_var("col", ncInt, dimNS);
+	NcVar * varS = ncMap.add_var("S", ncDouble, dimNS);
 
 	varRow->set_cur((long)0);
 	varRow->put(&(vecRow[0]), nS);
@@ -461,18 +599,6 @@ void OfflineMap::Write(
 
 	varS->set_cur((long)0);
 	varS->put(&(vecS[0]), nS);
-
-	// Write output dimensions entries
-	ncMap.add_att("dims", (int)m_vecOutputDimSizes.size());
-	for (int i = 0; i < m_vecOutputDimSizes.size(); i++) {
-		char szAtt[64];
-
-		sprintf(szAtt, "dim%i_size", i);
-		ncMap.add_att(szAtt, m_vecOutputDimSizes[i]);
-
-		sprintf(szAtt, "dim%i_name", i);
-		ncMap.add_att(szAtt, m_vecOutputDimNames[i].c_str());
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

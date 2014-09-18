@@ -11,12 +11,12 @@ USBLAS= True
 NETCDF_INCLUDEDIR=/usr/local/include
 NETCDF_LIBDIR=/usr/local/lib
 
+# Library files to include
+LDFILES= -lgfortran -lnetcdf -lnetcdf_c++ -framework accelerate
+
 ##############################################################################
 # DO NOT MODIFY BELOW THIS LINE
 ##############################################################################
-
-# Library files to include
-LDFILES= -lgfortran -lnetcdf -lnetcdf_c++ -framework accelerate
 
 # Local files
 FILES= Announce.cpp \

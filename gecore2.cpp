@@ -373,6 +373,7 @@ try {
 
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
+		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
 		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
 		LinearRemapSE4(
@@ -406,7 +407,10 @@ try {
 	// Output the Offline Map
 	if (strOutputMap != "") {
 		AnnounceStartBlock("Writing offline map");
-		mapRemap.Write(strOutputMap);
+		mapRemap.Write(
+			strOutputMap,
+			meshInput.vecFaceArea,
+			meshOutput.vecFaceArea);
 		AnnounceEndBlock(NULL);
 	}
 
