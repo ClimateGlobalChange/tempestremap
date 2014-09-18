@@ -451,7 +451,7 @@ public:
 	///		Constructor.
 	///	</summary>
 	Face(
-		int edge_count
+		int edge_count = 0
 	) {
 		edges.resize(edge_count);
 	}

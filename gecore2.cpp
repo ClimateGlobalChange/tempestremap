@@ -235,8 +235,9 @@ try {
 		meshOverlap.ExchangeFirstAndSecondMesh();
 
 	} else {
-		_EXCEPTIONT("Invalid overlap mesh:\n"
-			"    No correspondence found with input and output meshes");
+		_EXCEPTION1("Invalid overlap mesh:\n"
+			"    No correspondence found with input and output meshes (%i)",
+			ixFirstFaceMax);
 	}
 
 	AnnounceEndBlock(NULL);

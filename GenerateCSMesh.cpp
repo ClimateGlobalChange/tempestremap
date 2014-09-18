@@ -227,17 +227,6 @@ try {
 		nodes,
 		faces);
 
-	// Generate north polar face
-	GenerateFacesFromQuad(
-		nResolution,
-		4,
-		vecMultiEdges[8],
-		vecMultiEdges[11].Flip(),
-		vecMultiEdges[9],
-		vecMultiEdges[10].Flip(),
-		nodes,
-		faces);
-
 	// Generate south polar face
 	GenerateFacesFromQuad(
 		nResolution,
@@ -246,6 +235,17 @@ try {
 		vecMultiEdges[3],
 		vecMultiEdges[1].Flip(),
 		vecMultiEdges[0],
+		nodes,
+		faces);
+
+	// Generate north polar face
+	GenerateFacesFromQuad(
+		nResolution,
+		4,
+		vecMultiEdges[8],
+		vecMultiEdges[11].Flip(),
+		vecMultiEdges[9],
+		vecMultiEdges[10].Flip(),
 		nodes,
 		faces);
 

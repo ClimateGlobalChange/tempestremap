@@ -54,8 +54,8 @@ nodeset = unique(faces2(facelist2,:));
 
 plot3(nodes2(nodeset,1), nodes2(nodeset,2), nodes2(nodeset,3), 'bo');
 
-nodeix = 54272+1; %132478 + 1 - size(nodes1,1);
-%plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'go','MarkerSize',12);
+nodeix = 94965-40335+1; %132478 + 1 - size(nodes1,1);
+plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'go','MarkerSize',12);
 nodeix = 54271+1;
 %plot3(nodes2(nodeix,1), nodes2(nodeix,2), nodes2(nodeix,3), 'bo','MarkerSize',12);
 

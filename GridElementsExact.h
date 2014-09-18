@@ -132,6 +132,13 @@ public:
 		node.x = fx.ToReal();
 		node.y = fy.ToReal();
 		node.z = fz.ToReal();
+
+		double dMag = node.Magnitude();
+
+		node.x /= dMag;
+		node.y /= dMag;
+		node.z /= dMag;
+
 		return node;
 	}
 
