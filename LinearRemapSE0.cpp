@@ -793,6 +793,11 @@ void LinearRemapSE4(
 			_EXCEPTIONT("Only quadrilateral elements allowed for SE remapping");
 		}
 
+		// Output every 100 elements
+		if (ixFirst % 100 == 0) {
+			Announce("Element %i", ixFirst);
+		}
+
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = 0;
 		int nTotalOverlapTriangles = 0;
@@ -911,65 +916,6 @@ void LinearRemapSE4(
 				}
 			}
 		}
-/*
-		// Check local remap coefficient array
-		DataVector<double> dRowSums;
-		dRowSums.Initialize(dRemapCoeff.GetSubColumns());
-
-		for (int j = 0; j < dRemapCoeff.GetSubColumns(); j++) {
-			for (int p = 0; p < nP; p++) {
-			for (int q = 0; q < nP; q++) {
-				dRowSums[j] += dRemapCoeff[p][q][j];
-			}
-			}
-		}
-
-		for (int j = 0; j < dRemapCoeff.GetSubColumns(); j++) {
-			printf("%1.15e\n", dRowSums[j]);
-		}
-
-		DataMatrix<double> dColumnSums;
-		dColumnSums.Initialize(nP, nP);
-
-		printf("[");
-		for (int j = 0; j < dRemapCoeff.GetSubColumns(); j++) {
-			for (int p = 0; p < nP; p++) {
-			for (int q = 0; q < nP; q++) {
-				printf("%1.15e ", dRemapCoeff[p][q][j]);
-				dColumnSums[p][q] +=
-					dRemapCoeff[p][q][j] * meshOverlap.vecFaceArea[ixOverlap + j];
-			}
-			}
-			if (j != dRemapCoeff.GetSubColumns()-1) {
-				printf(";");
-			} else {
-			}
-		}
-		printf("]\n");
-
-		printf("[");
-		for (int p = 0; p < nP; p++) {
-		for (int q = 0; q < nP; q++) {
-			printf("%1.15e ", dataGLLJacobian[p][q][ixFirst]);
-		}
-		}
-		printf("]\n");
-
-		printf("[");
-		for (int j = 0; j < dRemapCoeff.GetSubColumns(); j++) {
-			printf("%1.15e ", meshOverlap.vecFaceArea[ixOverlap + j]);
-		}
-		printf("]\n");
-
-		for (int p = 0; p < nP; p++) {
-		for (int q = 0; q < nP; q++) {
-			printf("%1.15e %1.15e\n",
-				dColumnSums[p][q], dataGLLJacobian[p][q][ixFirst]);
-		}
-		}
-
-		_EXCEPTION();
-*/
 
 		// Force consistency and conservation
 		double dSourceArea = 0.0;
@@ -987,32 +933,33 @@ void LinearRemapSE4(
 			dTargetArea += meshOverlap.vecFaceArea[ixOverlap + j];
 		}
 
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
-		}
+		if (fabs(dTargetArea - meshInput.vecFaceArea[ixFirst]) > 1.0e-10) {
+			Announce("Partial element: %i", ixFirst);
 
-		dCoeff.Initialize(nOverlapFaces, nP * nP);
+		} else {
+			dCoeff.Initialize(nOverlapFaces, nP * nP);
 
-		for (int j = 0; j < nOverlapFaces; j++) {
-		for (int p = 0; p < nP; p++) {
-		for (int q = 0; q < nP; q++) {
-			dCoeff[j][p * nP + q] = dRemapCoeff[p][q][j];
-		}
-		}
-		}
+			for (int j = 0; j < nOverlapFaces; j++) {
+			for (int p = 0; p < nP; p++) {
+			for (int q = 0; q < nP; q++) {
+				dCoeff[j][p * nP + q] = dRemapCoeff[p][q][j];
+			}
+			}
+			}
 
-		ForceConsistencyConservation3(
-			vecSourceArea,
-			vecTargetArea,
-			dCoeff,
-			fMonotone);
+			ForceConsistencyConservation3(
+				vecSourceArea,
+				vecTargetArea,
+				dCoeff,
+				fMonotone);
 
-		for (int j = 0; j < nOverlapFaces; j++) {
-		for (int p = 0; p < nP; p++) {
-		for (int q = 0; q < nP; q++) {
-			dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
-		}
-		}
+			for (int j = 0; j < nOverlapFaces; j++) {
+			for (int p = 0; p < nP; p++) {
+			for (int q = 0; q < nP; q++) {
+				dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
+			}
+			}
+			}
 		}
 
 		// Put these remap coefficients into the SparseMatrix map

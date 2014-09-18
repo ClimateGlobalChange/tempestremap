@@ -516,13 +516,14 @@ bool OfflineMap::IsConservative(
 	const DataVector<double> & vecOutputAreas,
 	double dTolerance
 ) {
+/*
 	if (vecInputAreas.GetRows() != m_mapRemap.GetColumns()) {
 		_EXCEPTIONT("vecInputAreas / mapRemap dimension mismatch");
 	}
 	if (vecOutputAreas.GetRows() != m_mapRemap.GetRows()) {
 		_EXCEPTIONT("vecOutputAreas / mapRemap dimension mismatch");
 	}
-
+*/
 	// Get map entries
 	DataVector<int> dataRows;
 	DataVector<int> dataCols;

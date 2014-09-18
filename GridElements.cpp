@@ -151,6 +151,36 @@ Real Mesh::CalculateFaceAreas() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real Mesh::CalculateFaceAreasFromOverlap(
+	const Mesh & meshOverlap
+) {
+	if (meshOverlap.vecFaceArea.GetRows() == 0) {
+		_EXCEPTIONT("MeshOverlap Face Areas have not been calculated");
+	}
+
+	// Set all Face areas to zero
+	vecFaceArea.Initialize(faces.size());
+	vecFaceArea.Zero();
+
+	// Loop over all Faces in meshOverlap
+	double dTotalArea = 0.0;
+
+	for (int i = 0; i < meshOverlap.faces.size(); i++) {
+		int ixFirstFace = meshOverlap.vecFirstFaceIx[i];
+
+		if (ixFirstFace >= vecFaceArea.GetRows()) {
+			_EXCEPTIONT("Overlap Mesh FirstFaceIx contains invalid "
+				"Face index");
+		}
+
+		vecFaceArea[ixFirstFace] += meshOverlap.vecFaceArea[i];
+		dTotalArea += meshOverlap.vecFaceArea[i];
+	}
+	return dTotalArea;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::ExchangeFirstAndSecondMesh() {
 
 	// Verify all vectors are the same size

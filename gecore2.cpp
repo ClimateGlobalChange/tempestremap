@@ -248,6 +248,24 @@ try {
 	Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
 	AnnounceEndBlock(NULL);
 
+	// Partial cover
+	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
+		if (!fNoCheck) {
+			Announce("WARNING: Significant mismatch between overlap mesh area "
+				"and input mesh area.\n  Automatically enabling --nocheck");
+			fNoCheck = true;
+		}
+	}
+/*
+	// Recalculate input mesh area from overlap mesh
+	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
+		AnnounceStartBlock("Overlap mesh only covers a sub-area of the sphere");
+		Announce("Recalculating source mesh areas");
+		dTotalAreaInput = meshInput.CalculateFaceAreasFromOverlap(meshOverlap);
+		Announce("New Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
+		AnnounceEndBlock(NULL);
+	}
+*/
 	// Offline Map
 	OfflineMap mapRemap;
 
@@ -337,8 +355,8 @@ try {
 			AnnounceEndBlock(NULL);
 
 			if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
-				Announce("WARNING: Significant mismatch between numerical area "
-					"and geometric area");
+				Announce("WARNING: Significant mismatch between input mesh "
+					"numerical area and geometric area");
 			}
 		}
 

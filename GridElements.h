@@ -590,6 +590,13 @@ public:
 	Real CalculateFaceAreas();
 
 	///	<summary>
+	///		Calculate Face areas from an Overlap mesh.
+	///	</summary>
+	Real CalculateFaceAreasFromOverlap(
+		const Mesh & meshOverlap
+	);
+
+	///	<summary>
 	///		Sort Faces by the specified Face index.
 	///	</summary>
 	void ExchangeFirstAndSecondMesh();
