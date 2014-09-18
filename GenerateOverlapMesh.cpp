@@ -65,7 +65,7 @@ try {
 	} else if (strMethod == "exact") {
 		method = OverlapMeshMethod_Exact;
 	} else if (strMethod == "mixed") {
-		method = OverlapMeshMethod_Exact;
+		method = OverlapMeshMethod_Mixed;
 	} else {
 		_EXCEPTIONT("Invalid \"method\" value");
 	}

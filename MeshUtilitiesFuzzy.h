@@ -18,6 +18,7 @@
 #define _MESHUTILITIESFUZZY_H_
 
 #include "GridElements.h"
+#include "MeshUtilities.h"
 
 #include <vector>
 
@@ -26,7 +27,7 @@
 ///	<summary>
 ///		Various implementations of methods for determining Faces from Nodes.
 ///	</summary>
-class MeshUtilitiesFuzzy {
+class MeshUtilitiesFuzzy : public MeshUtilities {
 
 public:
 	///	<summary>
@@ -57,15 +58,6 @@ public:
 		Face::NodeLocation & loc,
 		int & ixLocation
 	) const;
-
-	///	<summary>
-	///		Find all Face indices that contain this Node.
-	///	</summary>
-	void FindFaceFromNode(
-		const Mesh & mesh,
-		const Node & node,
-		FindFaceStruct & aFindFaceStruct
-	);
 
 	///	<summary>
 	///		Calculate all intersections between the Edge connecting

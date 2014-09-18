@@ -42,8 +42,8 @@ bool MeshUtilitiesExact::AreNodesEqual(
 
 void MeshUtilitiesExact::ContainsNode(
 	const Face & face,
-	const NodeExactVector & nodevec,
-	const NodeExact & node,
+	const NodeVector & nodevec,
+	const Node & node,
 	Face::NodeLocation & loc,
 	int & ixLocation
 ) const {
@@ -60,8 +60,8 @@ void MeshUtilitiesExact::ContainsNode(
 		}
 
 		// Check which side of the Face this Edge is on
-		const NodeExact & na = nodevec[face.edges[i][0]];
-		const NodeExact & nb = nodevec[face.edges[i][1]];
+		NodeExact na(nodevec[face.edges[i][0]]);
+		NodeExact nb(nodevec[face.edges[i][1]]);
 
 		if (face.edges[i].type == Edge::Type_GreatCircleArc) {
 
@@ -164,13 +164,13 @@ void MeshUtilitiesExact::ContainsNode(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MeshUtilitiesExact::CalculateEdgeIntersections(
-	const NodeExact & nodeFirstBegin,
-	const NodeExact & nodeFirstEnd,
+	const Node & nodeFirstBegin,
+	const Node & nodeFirstEnd,
 	Edge::Type typeFirst,
-	const NodeExact & nodeSecondBegin,
-	const NodeExact & nodeSecondEnd,
+	const Node & nodeSecondBegin,
+	const Node & nodeSecondEnd,
 	Edge::Type typeSecond,
-	std::vector<Node> & nodeIntersections,
+	std::vector<NodeExact> & nodeIntersections,
 	bool fIncludeFirstBeginNode
 ) {
 	

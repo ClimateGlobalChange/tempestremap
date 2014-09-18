@@ -20,6 +20,7 @@
 #include "Defines.h"
 #include "GridElements.h"
 #include "GridElementsExact.h"
+#include "MeshUtilities.h"
 
 #include <vector>
 
@@ -28,7 +29,7 @@
 ///	<summary>
 ///		Various implementations of methods for determining Faces from Nodes.
 ///	</summary>
-class MeshUtilitiesExact {
+class MeshUtilitiesExact : public MeshUtilities {
 
 public:
 	///	<summary>
@@ -73,8 +74,8 @@ public:
 	///	</summary>
 	virtual void ContainsNode(
 		const Face & face,
-		const NodeExactVector & nodevec,
-		const NodeExact & node,
+		const NodeVector & nodevec,
+		const Node & node,
 		Face::NodeLocation & loc,
 		int & ixLocation
 	) const;
@@ -92,13 +93,13 @@ public:
 	///		that are contained in First, ordered from FirstBegin to FirstEnd.
 	///	</returns>
 	bool CalculateEdgeIntersections(
-		const NodeExact & nodeFirstBegin,
-		const NodeExact & nodeFirstEnd,
+		const Node & nodeFirstBegin,
+		const Node & nodeFirstEnd,
 		Edge::Type typeFirst,
-		const NodeExact & nodeSecondBegin,
-		const NodeExact & nodeSecondEnd,
+		const Node & nodeSecondBegin,
+		const Node & nodeSecondEnd,
 		Edge::Type typeSecond,
-		std::vector<Node> & nodeIntersections,
+		std::vector<NodeExact> & nodeIntersections,
 		bool fIncludeFirstBeginNode = false
 	);
 

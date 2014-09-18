@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <cstring>
 
 #include "Defines.h"
 #include "Exception.h"

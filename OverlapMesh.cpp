@@ -129,7 +129,10 @@ typedef std::vector<PathSegment> PathSegmentVector;
 ///		Generate a PathSegmentVector describing the path around the face
 ///		ixCurrentFirstFace.
 ///	</summary>
-template <class MeshUtilities>
+template <
+	class MeshUtilities,
+	class NodeIntersectType
+>
 void GeneratePath(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,
@@ -142,7 +145,6 @@ void GeneratePath(
 
 	// MeshUtilities object
 	MeshUtilities utils;
-	//MeshUtilitiesFuzzy utilsFuzzy;
 
 	// Get the NodeVectors
 	const NodeVector & nodevecFirst = meshFirst.nodes;
@@ -199,7 +201,6 @@ void GeneratePath(
 				faceFirstCurrent.edges[0].type,
 				aFindFaceStruct);
 
-
 		const Face & face0 = meshSecond.faces[ixCurrentSecondFace];
 
 	}
@@ -228,7 +229,7 @@ void GeneratePath(
 		int ixOverlapNodeCurrent = edgeFirstCurrent[0];
 		Node nodeCurrent = nodevecFirst[ixOverlapNodeCurrent];
 
-		Node nodeLastIntersection = nodeFirstBegin;
+		NodeIntersectType nodeLastIntersection = nodeFirstBegin;
 
 		// Repeat until we hit the end of this edge
 		for (;;) {
@@ -252,7 +253,7 @@ void GeneratePath(
 			// Node or Edge.
 			int ixIntersectionSecondEdge;
 
-			std::vector<Node> nodeIntersections;
+			std::vector<NodeIntersectType> nodeIntersections;
 
 			for (int j = 0; j < faceSecondCurrent.edges.size(); j++) {
 				const Edge & edgeSecondCurrent =
@@ -303,6 +304,10 @@ void GeneratePath(
 						utils.AreNodesEqual(
 							nodeIntersections[i],
 							nodeLastIntersection);
+/*
+					nodeIntersections[i].Print("n0");
+					nodeLastIntersection.Print("l0");
+*/
 /*
 					meshOverlap.nodes[edgeFirstCurrent[1]].Print("f1");
 					nodeIntersections[i].Print("n0");
@@ -390,9 +395,7 @@ void GeneratePath(
 			}
 
 			// Set last intersection
-			
-			nodeLastIntersection =
-				utils.ToRealCoords(nodeIntersections[0]);
+			nodeLastIntersection = nodeIntersections[0];
 
 			// Find next face on meshSecond
 			const Edge & edgeSecondCurrent =
@@ -683,10 +686,10 @@ void GeneratePath(
 					static_cast<int>(meshOverlap.nodes.size());
 
 				NodeMap::const_iterator iterNodeMap =
-					mapOverlapNodes.find(nodeIntersections[0]);
+					mapOverlapNodes.find((Node)(nodeIntersections[0]));
 
 				if (iterNodeMap == mapOverlapNodes.end()) {
-					meshOverlap.nodes.push_back(nodeIntersections[0]);
+					meshOverlap.nodes.push_back((Node)(nodeIntersections[0]));
 					mapOverlapNodes.insert(
 						NodeMap::value_type(
 							nodeIntersections[0], ixOverlapNodeNext));
@@ -1196,7 +1199,7 @@ void GenerateOverlapMesh(
 
 #pragma message "OpenMP here"
 	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	//for (int ixCurrentFirstFace = 12533; ixCurrentFirstFace < 12534; ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 320; ixCurrentFirstFace < 321; ixCurrentFirstFace++) {
 
 #ifdef CHECK_AREAS
 		Real dFirstFaceArea = meshFirst.CalculateFaceArea(ixCurrentFirstFace);
@@ -1205,8 +1208,9 @@ void GenerateOverlapMesh(
 		// Generate the path
 		PathSegmentVector vecTracedPath;
 
+		// Fuzzy arithmetic (standard floating point operations)
 		if (method == OverlapMeshMethod_Fuzzy) {
-			GeneratePath<MeshUtilitiesFuzzy>(
+			GeneratePath<MeshUtilitiesFuzzy, Node>(
 				meshFirst,
 				meshSecond,
 				vecSecondNodeMap,
@@ -1215,33 +1219,7 @@ void GenerateOverlapMesh(
 				vecTracedPath,
 				meshOverlap
 			);
-		}
 
-		if (method == OverlapMeshMethod_Exact) {
-#ifdef USE_EXACT_ARITHMETIC
-			GeneratePath<MeshUtilitiesExact>(
-				meshFirst,
-				meshSecond,
-				vecSecondNodeMap,
-				ixCurrentFirstFace,
-				mapOverlapNodes,
-				vecTracedPath,
-				meshOverlap
-			);
-#else
-			_EXCEPTIONT("Exact option unavailable");
-#endif
-		}
-
-		if (method == OverlapMeshMethod_Mixed) {
-			_EXCEPTIONT("Not implemented yet!");
-		}
-
-#ifdef CHECK_AREAS
-		int nMeshOverlapPrevFaces = meshOverlap.faces.size();
-#endif
-		// Find Faces associated with the TracedPath
-		bool fSuccess =
 			GenerateOverlapFaces(
 				meshSecond,
 				vecSecondNodeMap,
@@ -1250,6 +1228,85 @@ void GenerateOverlapMesh(
 				mapOverlapNodes,
 				meshOverlap
 			);
+		}
+
+		// Exact arithmetic
+		if (method == OverlapMeshMethod_Exact) {
+			GeneratePath<MeshUtilitiesExact, NodeExact>(
+				meshFirst,
+				meshSecond,
+				vecSecondNodeMap,
+				ixCurrentFirstFace,
+				mapOverlapNodes,
+				vecTracedPath,
+				meshOverlap
+			);
+
+			GenerateOverlapFaces(
+				meshSecond,
+				vecSecondNodeMap,
+				vecTracedPath,
+				ixCurrentFirstFace,
+				mapOverlapNodes,
+				meshOverlap
+			);
+
+		}
+
+		// Mixed method; try Fuzzy arithmetic first
+		if (method == OverlapMeshMethod_Mixed) {
+			try {
+				GeneratePath<MeshUtilitiesFuzzy, Node>(
+					meshFirst,
+					meshSecond,
+					vecSecondNodeMap,
+					ixCurrentFirstFace,
+					mapOverlapNodes,
+					vecTracedPath,
+					meshOverlap
+				);
+
+				GenerateOverlapFaces(
+					meshSecond,
+					vecSecondNodeMap,
+					vecTracedPath,
+					ixCurrentFirstFace,
+					mapOverlapNodes,
+					meshOverlap
+				);
+
+			} catch(Exception & e) {
+				printf("WARNING: Fuzzy arithmetic operations failed "
+					"with message:\n  \"%s\"\n  Trying exact arithmetic",
+					e.ToString().c_str());
+
+				vecTracedPath.clear();
+
+				GeneratePath<MeshUtilitiesExact, NodeExact>(
+					meshFirst,
+					meshSecond,
+					vecSecondNodeMap,
+					ixCurrentFirstFace,
+					mapOverlapNodes,
+					vecTracedPath,
+					meshOverlap
+				);
+
+				GenerateOverlapFaces(
+					meshSecond,
+					vecSecondNodeMap,
+					vecTracedPath,
+					ixCurrentFirstFace,
+					mapOverlapNodes,
+					meshOverlap
+				);
+
+			}
+		}
+
+#ifdef CHECK_AREAS
+		int nMeshOverlapPrevFaces = meshOverlap.faces.size();
+#endif
 
 #ifdef CHECK_AREAS
 		int nMeshOverlapCurrentFaces = meshOverlap.faces.size();

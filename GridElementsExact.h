@@ -92,6 +92,26 @@ public:
 	}
 
 	///	<summary>
+	///		Copy constructor from Node.
+	///	</summary>
+	NodeExact(const Node & node) {
+		fx.Set(node.x);
+		fy.Set(node.y);
+		fz.Set(node.z);
+	}
+
+	///	<summary>
+	///		Assignment operator.
+	///	</summary>
+	const NodeExact & operator=(const Node & node) {
+		fx.Set(node.x);
+		fy.Set(node.y);
+		fz.Set(node.z);
+
+		return (*this);
+	}
+
+	///	<summary>
 	///		Difference between two nodes.
 	///	</summary>
 	NodeExact operator-(const NodeExact & node) const {
@@ -104,11 +124,22 @@ public:
 		return nodeDiff;
 	}
 
+	///	<summary>
+	///		Casting operator to a Node.
+	///	</summary>
+	operator Node() const {
+		Node node;
+		node.x = fx.ToReal();
+		node.y = fy.ToReal();
+		node.z = fz.ToReal();
+		return node;
+	}
+
 public:
 	///	<summary>
 	///		Output node to stdout.
 	///	</summary>
-	void PrintX(const char * szName) const {
+	void Print(const char * szName) const {
 		printf("%s:\n", szName);
 		printf("  X: "); fx.Print(); printf("\n");
 		printf("  Y: "); fy.Print(); printf("\n");
