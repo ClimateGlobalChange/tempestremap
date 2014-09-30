@@ -43,11 +43,17 @@ try {
 	// Mesh file to use
 	std::string strMeshFile;
 
-	// Output filename
-	std::string strOutputFile;
-
 	// Input data is on GLL nodes
 	bool fGLL;
+
+	// Degree of polynomial
+	int nP;
+
+	// Use bubble function
+	bool fBubble;
+
+	// Output filename
+	std::string strOutputFile;
 
 	// Parse the command line
 	BeginCommandLine()
@@ -55,6 +61,8 @@ try {
 		CommandLineString(strFileB, "b", "");
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineBool(fGLL, "gll");
+		CommandLineInt(nP, "np", 4);
+		CommandLineBool(fBubble, "bubble");
 		CommandLineString(strMeshFile, "mesh", "");
 		CommandLineString(strOutputFile, "outfile", "");
 
@@ -117,10 +125,40 @@ try {
 
 	AnnounceEndBlock("Done");
 
-	// Total data size
+	// Get Mesh information
 	int nTotalDataSize = 1;
-	for (int d = 0; d < vecOutputDimSizes.size(); d++) {
-		nTotalDataSize *= vecOutputDimSizes[d];
+
+	DataVector<double> dataUniqueJacobian;
+	
+	// Finite volumes
+	if (!fGLL) {
+		// Total data size
+		for (int d = 0; d < vecOutputDimSizes.size(); d++) {
+			nTotalDataSize *= vecOutputDimSizes[d];
+		}
+
+	// Finite elements
+	} else {
+		// Calculate pointwise areas
+		DataMatrix3D<int> dataGLLnodes;
+		DataMatrix3D<double> dataGLLJacobian;
+
+		GenerateMetaData(mesh, nP, fBubble, dataGLLnodes, dataGLLJacobian);
+
+		GenerateUniqueJacobian(
+			dataGLLnodes, dataGLLJacobian, dataUniqueJacobian);
+
+		for (int s = 0; s < nP; s++) {
+		for (int t = 0; t < nP; t++) {
+		for (int i = 0; i < dataGLLnodes.GetSubColumns(); i++) {
+			if (dataGLLnodes[s][t][i] > vecOutputDimSizes[0]) {
+				vecOutputDimSizes[0] = dataGLLnodes[s][t][i];
+			}
+		}
+		}
+		}
+
+		nTotalDataSize = vecOutputDimSizes[0];
 	}
 
 	// Load data from file A
@@ -168,6 +206,10 @@ try {
 		}
 		if (dDataA[i] < dMinA) {
 			dMinA = dDataA[i];
+		}
+
+		if (dMinA == 0.0) {
+			_EXCEPTION();
 		}
 
 		if (dDataB[i] > dMaxB) {
@@ -227,7 +269,27 @@ try {
 		dNormLi = dNormLi / dSumLi;
 
 	} else {
-		_EXCEPTIONT("Not implemented");
+
+		// Calculate differences
+		for (int i = 0; i < nTotalDataSize; i++) {
+			dNormL1 += dDataA[i] * dataUniqueJacobian[i];
+			dNormL2 += dDataA[i] * dDataA[i] * dataUniqueJacobian[i];
+
+			if (dDataA[i] > dNormLi) {
+				dNormLi = dDataA[i];
+			}
+
+			dSumL1 += dDataB[i] * dataUniqueJacobian[i];
+			dSumL2 += dDataB[i] * dDataB[i] * dataUniqueJacobian[i];
+
+			if (dDataB[i] > dSumLi) {
+				dSumLi = dDataB[i];
+			}
+		}
+
+		dNormL1 = dNormL1 / dSumL1;
+		dNormL2 = sqrt(dNormL2 / dSumL2);
+		dNormLi = dNormLi / dSumLi;
 	}
 
 	// Announce results

@@ -51,7 +51,8 @@ void LinearRemapFVtoGLL(
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
 	int nOrder,
-	OfflineMap & mapRemap
+	OfflineMap & mapRemap,
+	bool fMonotone = false
 );
 
 ///////////////////////////////////////////////////////////////////////////////

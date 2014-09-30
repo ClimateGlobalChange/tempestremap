@@ -437,6 +437,32 @@ void GenerateUniqueJacobian(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void GenerateDiscontinuousJacobian(
+	const DataMatrix3D<double> & dataGLLJacobian,
+	DataVector<double> & dataDiscontinuousJacobian
+) {
+
+	// Resize unique Jacobian array
+	dataDiscontinuousJacobian.Initialize(
+		  dataGLLJacobian.GetRows()
+		* dataGLLJacobian.GetColumns()
+		* dataGLLJacobian.GetSubColumns());
+
+	int nP = dataGLLJacobian.GetRows();
+
+	for (int i = 0; i < dataGLLJacobian.GetRows(); i++) {
+	for (int j = 0; j < dataGLLJacobian.GetColumns(); j++) {
+	for (int k = 0; k < dataGLLJacobian.GetSubColumns(); k++) {
+		dataDiscontinuousJacobian[k * nP * nP + i * nP + j] =
+			dataGLLJacobian[i][j][k];
+	}
+	}
+	}
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SampleGLLFiniteElement(
 	bool fMonotone,
 	int nP,

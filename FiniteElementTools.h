@@ -79,6 +79,16 @@ void GenerateUniqueJacobian(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Generate Jacobian vector from Jacobians on GLL nodes.
+///	</summary>
+void GenerateDiscontinuousJacobian(
+	const DataMatrix3D<double> & dataGLLJacobian,
+	DataVector<double> & dataUniqueJacobian
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Get the coefficients for sampling a 2D finite element at the
 ///		specified point.
 ///	</summary>

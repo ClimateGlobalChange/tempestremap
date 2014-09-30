@@ -154,6 +154,7 @@ void OfflineMap::Apply(
 	// Check for ncol dimension
 	NcDim * dimNCol = ncInput.get_dim(strNColName.c_str());
 	int nCol = dimNCol->size();
+
 /*
 	if (nCol != m_mapRemap.GetColumns()) {
 		_EXCEPTION2("\nMismatch between offline map size (%i) and "
@@ -178,8 +179,10 @@ void OfflineMap::Apply(
 			_EXCEPTIONT("Mismatch between map size and output size");
 		}
 	} else {
+		m_vecOutputDimSizes[0] = nColOut;
 		if (nColOut != m_vecOutputDimSizes[0]) {
-			_EXCEPTIONT("Mismatch between map size and output size");
+			_EXCEPTION2("Mismatch between map size and output size (%i, %i)",
+				nColOut, m_vecOutputDimSizes[0]);
 		}
 	}
 
@@ -218,6 +221,7 @@ void OfflineMap::Apply(
 			m_vecOutputDimNames[1].c_str(),
 			m_vecOutputDimSizes[1]);
 	}
+
 /*
 	// A map of other dimension variables
 	std::map<std::string, NcDim *> mapDim;
@@ -227,12 +231,23 @@ void OfflineMap::Apply(
 		NcVar * var = ncInput.get_var(vecVariables[v].c_str());
 
 		AnnounceStartBlock(vecVariables[v].c_str());
-
+/*
 		// Verify last dimension of variable is ncol
+		NcDim * dimLast = var->get_dim(var->num_dims()-1);
+		if (dimLast->size() < m_mapRemap.GetColumns()) {
+			if (var->num_dims() == 1) {
+				_EXCEPTIONT("Variable dimension / map size mismatch");
+			}
+
+			NcDim * dimSecondLast = var->get_dim(var->num_dims()-2);
+		}
+*/
+		/*
 		if (var->get_dim(var->num_dims()-1)->name() != strNColName) {
 			_EXCEPTION2("Last dimension of variable \"%s\" must be \"%s\"",
 				vecVariables[v].c_str(), strNColName.c_str());
 		}
+		*/
 
 		// Loop through all dimensions and add missing dimensions to output
 		int nVarTotalEntries = 1;
@@ -557,7 +572,7 @@ void OfflineMap::Write(
 		}
 
 		NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
-		varAreaB->put(&(vecInputArea[0]), nB);
+		varAreaB->put(&(vecOutputArea[0]), nB);
 	}
 
 	// Write frac

@@ -112,6 +112,9 @@ try {
 	// Order of polynomial in each element
 	int nP;
 
+	// Order of polynomial in each output element
+	int nPout;
+
 	// Use bubble on interior of spectral element nodes
 	bool fBubble;
 
@@ -151,6 +154,7 @@ try {
 		CommandLineBool(fInputSE, "in_se");
 		CommandLineBool(fOutputSE, "out_se");
 		CommandLineInt(nP, "np", 4);
+		CommandLineInt(nPout, "out_np", 4);
 		CommandLineBool(fBubble, "bubble");
 		CommandLineBool(fMonotone, "mono");
 		CommandLineBool(fNoCheck, "nocheck");
@@ -194,7 +198,7 @@ try {
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 
-	// Generate the unique Jacobian
+	// Input mesh areas
 	DataVector<double> vecInputAreas;
 	if (!fInputSE) {
 		vecInputAreas = meshInput.vecFaceArea;
@@ -211,6 +215,12 @@ try {
 	Real dTotalAreaOutput = meshOutput.CalculateFaceAreas();
 	Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
 	AnnounceEndBlock(NULL);
+
+	// Output mesh areas
+	DataVector<double> vecOutputAreas;
+	if (!fOutputSE) {
+		vecOutputAreas = meshOutput.vecFaceArea;
+	}
 
 	// Load overlap mesh
 	AnnounceStartBlock("Loading overlap mesh");
@@ -277,6 +287,7 @@ try {
 
 		// Construct OfflineMap
 		AnnounceStartBlock("Calculating offline map");
+		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
 		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
 		LinearRemapFVtoFV(
@@ -297,7 +308,7 @@ try {
 			double dNumericalArea =
 				GenerateMetaData(
 					meshOutput,
-					nP,
+					nPout,
 					fBubble,
 					dataGLLNodes,
 					dataGLLJacobian);
@@ -311,17 +322,25 @@ try {
 			}
 */
 		}
-
+/*
 		// Generate the unique Jacobian
 		GenerateUniqueJacobian(
 			dataGLLNodes,
 			dataGLLJacobian,
-			vecInputAreas);
+			vecOutputAreas);
+*/
+		GenerateDiscontinuousJacobian(
+			dataGLLJacobian,
+			vecOutputAreas);
 
 		// Generate reverse node array
 		meshInput.ConstructReverseNodeArray();
 
 		// Generate remap weights
+		AnnounceStartBlock("Calculating offline map");
+		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
+		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
+
 		LinearRemapFVtoGLL(
 			meshInput,
 			meshOutput,
@@ -329,7 +348,8 @@ try {
 			dataGLLNodes,
 			dataGLLJacobian,
 			nP,
-			mapRemap);
+			mapRemap,
+			fMonotone);
 
 	// Spectral element input / Finite volume output
 	} else if ((fInputSE) && (!fOutputSE)) {
@@ -394,7 +414,7 @@ try {
 	if (!fNoCheck) {
 		AnnounceStartBlock("Verifying map");
 		mapRemap.IsConsistent(1.0e-8);
-		mapRemap.IsConservative(vecInputAreas, meshOutput.vecFaceArea, 1.0e-8);
+		mapRemap.IsConservative(vecInputAreas, vecOutputAreas, 1.0e-8);
 
 		if (fMonotone) {
 			mapRemap.IsMonotone(1.0e-12);
