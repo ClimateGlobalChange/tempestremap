@@ -34,3 +34,5 @@ ApplyOfflineMap
 gecore_test.pref
 
 *.pref
+
+GenerateOfflineMap

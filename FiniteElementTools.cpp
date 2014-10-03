@@ -463,6 +463,12 @@ void GenerateDiscontinuousJacobian(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Global coefficient arrays (kept global to minimize reallocation)
+///	</summary>
+DataVector<double> g_dCoeffAlpha;
+DataVector<double> g_dCoeffBeta;
+
 void SampleGLLFiniteElement(
 	bool fMonotone,
 	int nP,
@@ -471,26 +477,72 @@ void SampleGLLFiniteElement(
 	DataMatrix<double> & dCoeff
 ) {
 	// Interpolation coefficients
-	DataVector<double> dCoeffAlpha;
-	dCoeffAlpha.Initialize(nP);
-
-	DataVector<double> dCoeffBeta;
-	dCoeffBeta.Initialize(nP);
+	g_dCoeffAlpha.Initialize(nP);
+	g_dCoeffBeta.Initialize(nP);
 
 	// Non-monotone interpolation
 	if (!fMonotone) {
 
-		// GLL Quadrature nodes on [0,1]
-		DataVector<double> dG;
-		DataVector<double> dW;
-		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+		if (nP > 4) {
+			// GLL Quadrature nodes on [0,1]
+			DataVector<double> dG;
+			DataVector<double> dW;
+			GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
-		// Get interpolation coefficients in each direction
-		PolynomialInterp::LagrangianPolynomialCoeffs(
-			nP, dG, dCoeffAlpha, dAlpha);
+			// Get interpolation coefficients in each direction
+			PolynomialInterp::LagrangianPolynomialCoeffs(
+				nP, dG, g_dCoeffAlpha, dAlpha);
 
-		PolynomialInterp::LagrangianPolynomialCoeffs(
-			nP, dG, dCoeffBeta, dBeta);
+			PolynomialInterp::LagrangianPolynomialCoeffs(
+				nP, dG, g_dCoeffBeta, dBeta);
+		}
+
+		// Map dAlpha and dBeta to [-1,1]
+		dAlpha = 2.0 * dAlpha - 1.0;
+		dBeta  = 2.0 * dBeta  - 1.0;
+
+		// Second order monotone interpolation
+		if (nP == 2) {
+			g_dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
+			g_dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
+
+			g_dCoeffBeta[0] = 0.5 * (1.0 - dBeta);
+			g_dCoeffBeta[1] = 0.5 * (1.0 + dBeta);
+
+		// Third order interpolation
+		} else if (nP == 3) {
+			g_dCoeffAlpha[0] = 0.5 * (dAlpha * dAlpha - dAlpha);
+			g_dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
+			g_dCoeffAlpha[2] = 0.5 * (dAlpha * dAlpha + dAlpha);
+
+			g_dCoeffBeta[0] = 0.5 * (dBeta * dBeta - dBeta);
+			g_dCoeffBeta[1] = 1.0 - dBeta * dBeta;
+			g_dCoeffBeta[2] = 0.5 * (dBeta * dBeta + dBeta);
+
+		// Fourth order interpolation
+		} else if (nP == 4) {
+			g_dCoeffAlpha[0] = -1.0/8.0
+				* (dAlpha - 1.0) * (5.0 * dAlpha * dAlpha - 1.0);
+			g_dCoeffAlpha[1] = - sqrt(5.0)/8.0
+				* (sqrt(5.0) - 5.0 * dAlpha)
+				* (dAlpha * dAlpha - 1.0);
+			g_dCoeffAlpha[2] = - sqrt(5.0)/8.0
+				* (sqrt(5.0) + 5.0 * dAlpha)
+				* (dAlpha * dAlpha - 1.0);
+			g_dCoeffAlpha[3] =  1.0/8.0
+				* (dAlpha + 1.0) * (5.0 * dAlpha * dAlpha - 1.0);
+
+			g_dCoeffBeta[0] = -1.0/8.0
+				* (dBeta - 1.0) * (5.0 * dBeta * dBeta - 1.0);
+			g_dCoeffBeta[1] = - sqrt(5.0)/8.0
+				* (sqrt(5.0) - 5.0 * dBeta)
+				* (dBeta * dBeta - 1.0);
+			g_dCoeffBeta[2] = - sqrt(5.0)/8.0
+				* (sqrt(5.0) + 5.0 * dBeta)
+				* (dBeta * dBeta - 1.0);
+			g_dCoeffBeta[3] =  1.0/8.0
+				* (dBeta + 1.0) * (5.0 * dBeta * dBeta - 1.0);
+		}
 
 	// Monotone interpolation
 	} else {
@@ -501,43 +553,43 @@ void SampleGLLFiniteElement(
 
 		// Second order monotone interpolation
 		if (nP == 2) {
-			dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
-			dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
+			g_dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
+			g_dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
 
-			dCoeffBeta[0] = 0.5 * (1.0 - dBeta);
-			dCoeffBeta[1] = 0.5 * (1.0 + dBeta);
+			g_dCoeffBeta[0] = 0.5 * (1.0 - dBeta);
+			g_dCoeffBeta[1] = 0.5 * (1.0 + dBeta);
 
 		// Third order monotone interpolation
 		} else if (nP == 3) {
 
 			if (dAlpha < 0.0) {
-				dCoeffAlpha[0] = dAlpha * dAlpha;
-				dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
+				g_dCoeffAlpha[0] = dAlpha * dAlpha;
+				g_dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
 			} else {
-				dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
-				dCoeffAlpha[2] = dAlpha * dAlpha;
+				g_dCoeffAlpha[1] = 1.0 - dAlpha * dAlpha;
+				g_dCoeffAlpha[2] = dAlpha * dAlpha;
 			}
 			if (dBeta < 0.0) {
-				dCoeffBeta[0] = dBeta * dBeta;
-				dCoeffBeta[1] = 1.0 - dBeta * dBeta;
+				g_dCoeffBeta[0] = dBeta * dBeta;
+				g_dCoeffBeta[1] = 1.0 - dBeta * dBeta;
 			} else {
-				dCoeffBeta[1] = 1.0 - dBeta * dBeta;
-				dCoeffBeta[2] = dBeta * dBeta;
+				g_dCoeffBeta[1] = 1.0 - dBeta * dBeta;
+				g_dCoeffBeta[2] = dBeta * dBeta;
 			}
 /*
 			if (dAlpha < 0.0) {
-				dCoeffAlpha[0] = - dAlpha;
-				dCoeffAlpha[1] = 1.0 + dAlpha;
+				g_dCoeffAlpha[0] = - dAlpha;
+				g_dCoeffAlpha[1] = 1.0 + dAlpha;
 			} else {
-				dCoeffAlpha[1] = 1.0 - dAlpha;
-				dCoeffAlpha[2] = dAlpha;
+				g_dCoeffAlpha[1] = 1.0 - dAlpha;
+				g_dCoeffAlpha[2] = dAlpha;
 			}
 			if (dBeta < 0.0) {
-				dCoeffBeta[0] = - dBeta;
-				dCoeffBeta[1] = 1.0 + dBeta;
+				g_dCoeffBeta[0] = - dBeta;
+				g_dCoeffBeta[1] = 1.0 + dBeta;
 			} else {
-				dCoeffBeta[1] = 1.0 - dBeta;
-				dCoeffBeta[2] = dBeta;
+				g_dCoeffBeta[1] = 1.0 - dBeta;
+				g_dCoeffBeta[2] = dBeta;
 			}
 */
 		// Fourth order monotone interpolation
@@ -556,37 +608,37 @@ void SampleGLLFiniteElement(
 			const double dD1 = (5.0 / 4.0) * sqrt(5.0);
 
 			if ((dAlpha >= -dGLL1) && (dAlpha <= dGLL1)) {
-				dCoeffAlpha[1] =
+				g_dCoeffAlpha[1] =
 					dA1 + dAlpha * (dB1 + dAlpha * (dC1 + dAlpha * dD1));
-				dCoeffAlpha[2] =
-					1.0 - dCoeffAlpha[1];
+				g_dCoeffAlpha[2] =
+					1.0 - g_dCoeffAlpha[1];
 			} else if (dAlpha < -dGLL1) {
-				dCoeffAlpha[0] =
+				g_dCoeffAlpha[0] =
 					dA0 + dAlpha * (dB0 + dAlpha * (dC0 + dAlpha * dD0));
-				dCoeffAlpha[1] =
-					1.0 - dCoeffAlpha[0];
+				g_dCoeffAlpha[1] =
+					1.0 - g_dCoeffAlpha[0];
 			} else {
-				dCoeffAlpha[3] =
+				g_dCoeffAlpha[3] =
 					dA0 - dAlpha * (dB0 - dAlpha * (dC0 - dAlpha * dD0));
-				dCoeffAlpha[2] =
-					1.0 - dCoeffAlpha[3];
+				g_dCoeffAlpha[2] =
+					1.0 - g_dCoeffAlpha[3];
 			}
 
 			if ((dBeta >= -dGLL1) && (dBeta <= dGLL1)) {
-				dCoeffBeta[1] =
+				g_dCoeffBeta[1] =
 					dA1 + dBeta * (dB1 + dBeta * (dC1 + dBeta * dD1));
-				dCoeffBeta[2] =
-					1.0 - dCoeffBeta[1];
+				g_dCoeffBeta[2] =
+					1.0 - g_dCoeffBeta[1];
 			} else if (dBeta < -dGLL1) {
-				dCoeffBeta[0] =
+				g_dCoeffBeta[0] =
 					dA0 + dBeta * (dB0 + dBeta * (dC0 + dBeta * dD0));
-				dCoeffBeta[1] =
-					1.0 - dCoeffBeta[0];
+				g_dCoeffBeta[1] =
+					1.0 - g_dCoeffBeta[0];
 			} else {
-				dCoeffBeta[3] =
+				g_dCoeffBeta[3] =
 					dA0 - dBeta * (dB0 - dBeta * (dC0 - dBeta * dD0));
-				dCoeffBeta[2] =
-					1.0 - dCoeffBeta[3];
+				g_dCoeffBeta[2] =
+					1.0 - g_dCoeffBeta[3];
 			}
 
 		} else {
@@ -599,7 +651,7 @@ void SampleGLLFiniteElement(
 
 	for (int i = 0; i < nP; i++) {
 	for (int j = 0; j < nP; j++) {
-		dCoeff[j][i] = dCoeffAlpha[i] * dCoeffBeta[j];
+		dCoeff[j][i] = g_dCoeffAlpha[i] * g_dCoeffBeta[j];
 	}
 	}
 /*

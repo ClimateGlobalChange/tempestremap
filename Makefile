@@ -1,18 +1,16 @@
 ##############################################################################
 # Compiler and flags
 CC= g++
-F90= gfortran
 CFLAGS= -O3
-FORTFLAGS= -std=legacy
 
-USBLAS= True
+USEBLAS= True
 
 # NETCDF library directories
 NETCDF_INCLUDEDIR=/usr/local/include
 NETCDF_LIBDIR=/usr/local/lib
 
 # Library files to include
-LDFILES= -lgfortran -lnetcdf -lnetcdf_c++ -framework accelerate
+LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
 
 ##############################################################################
 # DO NOT MODIFY BELOW THIS LINE
@@ -50,7 +48,7 @@ CALCULATEDIFFNORMS_FILES= CalculateDiffNorms.cpp $(FILES)
 
 APPLYOFFLINEMAP_FILES= ApplyOfflineMap.cpp $(FILES)
 
-GECORE2_FILES= gecore2.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
+GENERATEOFFLINEMAP_FILES= GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
 
 # Load system-specific defaults
 CFLAGS+= -I$(NETCDF_INCLUDEDIR)
@@ -61,7 +59,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap gecore2
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -90,15 +88,15 @@ CalculateDiffNorms: $(CALCULATEDIFFNORMS_FILES:%.cpp=$(BUILDDIR)/%.o)
 ApplyOfflineMap: $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-gecore2: $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GECORE2_FILES:%.cpp=$(BUILDDIR)/%.o) $(FORTRAN_FILES:%.f90=$(BUILDDIR)/%.o) $(LDFILES)
+GenerateOfflineMap: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 
 ##
 ## Clean
 ##
 clean:
-	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap gecore2 *.o
+	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap *.o
 	rm -rf $(DEPDIR)
 	rm -rf $(BUILDDIR)
 
@@ -106,8 +104,6 @@ clean:
 ## Include dependencies
 ##
 include $(FILES:%.cpp=$(DEPDIR)/%.d)
-
-include $(FORTRAN_FILES:%.f90=$(DEPDIR)/%.d)
 
 # DO NOT DELETE
 

@@ -1195,15 +1195,11 @@ void LinearRemapFVtoGLL(
 
 	// Current overlap face
 	int ixOverlap = 0;
-
-	// Face areas
-	DataVector<double> dNumericalSecondArea;
-	dNumericalSecondArea.Initialize(meshOutput.faces.size() * nP * nP);
-
+/*
 	// Generate the unique Jacobian for each point
 	DataVector<double> dataUniqueJacobian;
 	GenerateUniqueJacobian(dataGLLNodes, dataGLLJacobian, dataUniqueJacobian);
-
+*/
 	// Build the integration array for each element on meshOutput
 	DataMatrix3D<double> dGlobalIntArray;
 	dGlobalIntArray.Initialize(
@@ -1272,17 +1268,6 @@ void LinearRemapFVtoGLL(
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
 		int nTotalOverlapTriangles = nAllTotalOverlapTriangles[ixFirst];
-
-		// Basis integral over all Overlap Faces
-		DataVector<double> dBasisIntArray;
-		dBasisIntArray.Initialize(nP * nP);
-
-		// Build integration array
-		DataMatrix<double> dIntArray;
-		dIntArray.Initialize(nCoefficients, nOverlapFaces * nP * nP);
-
-		DataMatrix3D<double> dLocalSecondArea;
-		dLocalSecondArea.Initialize(nOverlapFaces, nP, nP);
 
 		// Loop through all Overlap Faces
 		for (int i = 0; i < nOverlapFaces; i++) {
@@ -1382,16 +1367,6 @@ void LinearRemapFVtoGLL(
 							dBeta,
 							dSampleCoeff);
 
-						double dPointwiseArea =
-							  dW[k]
-							* dSampleCoeff[s][t]
-							* dTriArea;
-
-						dLocalSecondArea[i][s][t] += dPointwiseArea;
-
-						dNumericalSecondArea[ixSecond * nP * nP + ixs]
-							+= dPointwiseArea;
-
 						int ixp = 0;
 						for (int p = 0; p < nOrder; p++) {
 						for (int q = 0; q < nOrder - p; q++) {
@@ -1402,9 +1377,6 @@ void LinearRemapFVtoGLL(
 								* dW[k]
 								* dSampleCoeff[s][t]
 								* dTriArea;
-
-							dIntArray[ixp][i * nP * nP + ixs] +=
-								dIntUpdate;
 
 							dGlobalIntArray[ixp][ixOverlap + i][ixs] +=
 								dIntUpdate / dataGLLJacobian[s][t][ixSecond];
@@ -1484,7 +1456,7 @@ void LinearRemapFVtoGLL(
 			vecSourceArea,
 			vecTargetArea,
 			dCoeff,
-			false);
+			fMonotone);
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;
@@ -1748,7 +1720,6 @@ void LinearRemapFVtoGLL(
 
 				smatMap(ixSecondNode, ixFirstFace) +=
 					dComposedArray[i][jx];
-					// dataUniqueJacobian[ixSecondNode];
 			}
 			}
 		}
