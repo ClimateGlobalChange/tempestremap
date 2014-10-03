@@ -82,6 +82,9 @@ try {
 	// Name of the ncol variable
 	std::string strNColName;
 
+	// Fill value override
+	double dFillValueOverride;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strOutputData, "out_data", "");
@@ -92,6 +95,7 @@ try {
 		CommandLineString(strInputData2, "in_data2", "");
 		CommandLineString(strVariables2, "var2", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -144,6 +148,7 @@ try {
 	// OfflineMap
 	OfflineMap mapRemap;
 	mapRemap.Read(strInputMap);
+	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 
 	mapRemap.Apply(
 		vecDummyAreas,

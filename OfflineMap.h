@@ -116,6 +116,14 @@ public:
 		return m_mapRemap;
 	}
 
+public:
+	///	<summary>
+	///		Set the fill value override.
+	///	</summary>
+	void SetFillValueOverride(float flFillValueOverride) {
+		m_flFillValueOverride = flFillValueOverride;
+	}
+
 protected:
 	///	<summary>
 	///		The SparseMatrix representing this operator.
@@ -141,6 +149,11 @@ protected:
 	///		Vector of dimension names for Output.
 	///	</summary>
 	std::vector<std::string> m_vecOutputDimNames;
+
+	///	<summary>
+	///		The fill value override.
+	///	</summary>
+	float m_flFillValueOverride;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

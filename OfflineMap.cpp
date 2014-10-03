@@ -361,6 +361,14 @@ void OfflineMap::Apply(
 			if (var->type() == ncFloat) {
 				var->get(&(dataIn[0]), &(nGet[0]));
 
+				if (m_flFillValueOverride != NC_FILL_FLOAT) {
+					for (int i = 0; i < nCol; i++) {
+						if (dataIn[i] == NC_FILL_FLOAT) {
+							dataIn[i] = m_flFillValueOverride;
+						}
+					}
+				}
+
 				for (int i = 0; i < nCol; i++) {
 					dataInDouble[i] = static_cast<double>(dataIn[i]);
 				}

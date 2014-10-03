@@ -145,6 +145,9 @@ try {
 	// Name of the ncol variable
 	std::string strNColName;
 
+	// Fill value override
+	double dFillValueOverride;
+
 	// Parse the command line
 	BeginCommandLine()
 		//CommandLineStringD(strMethod, "method", "", "[se]");
@@ -164,6 +167,7 @@ try {
 		CommandLineString(strInputData, "in_data", "");
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -437,6 +441,7 @@ try {
 	// Apply Offline Map to data
 	if (strInputData != "") {
 		AnnounceStartBlock("Applying offline map to data");
+		mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 		mapRemap.Apply(
 			vecInputAreas,
 			meshOutput.vecFaceArea,
