@@ -22,6 +22,7 @@
 #include "DataMatrix3D.h"
 #include "FiniteElementTools.h"
 #include "SparseMatrix.h"
+#include "STLStringHelper.h"
 
 #include "OfflineMap.h"
 #include "LinearRemapSE0.h"
@@ -94,23 +95,30 @@ int main(int argc, char** argv) {
 
 try {
 
-	// Method
-	std::string strMethod;
+	// Input / Output types
+	enum DiscretizationType {
+		DiscretizationType_FV,
+		DiscretizationType_CGLL,
+		DiscretizationType_DGLL
+	};
 
 	// Input mesh file
 	std::string strInputMesh;
 
+	// Overlap mesh file
+	std::string strOverlapMesh;
+
 	// Metadata file
 	std::string strMetaFile;
 
-	// Input data is spectral element
-	bool fInputSE;
+	// Input data type
+	std::string strInputType;
 
-	// Output data is spectral element
-	bool fOutputSE;
+	// Output data type
+	std::string strOutputType;
 
 	// Order of polynomial in each element
-	int nP;
+	int nPin;
 
 	// Order of polynomial in each output element
 	int nPout;
@@ -127,9 +135,6 @@ try {
 	// Output mesh file
 	std::string strOutputMesh;
 
-	// Overlap mesh file
-	std::string strOverlapMesh;
-
 	// Variable list
 	std::string strVariables;
 
@@ -145,6 +150,9 @@ try {
 	// Name of the ncol variable
 	std::string strNColName;
 
+	// Output as double
+	bool fOutputDouble;
+
 	// Fill value override
 	double dFillValueOverride;
 
@@ -153,20 +161,21 @@ try {
 		//CommandLineStringD(strMethod, "method", "", "[se]");
 		CommandLineString(strInputMesh, "in_mesh", "");
 		CommandLineString(strOutputMesh, "out_mesh", "");
+		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strMetaFile, "in_meta", "");
-		CommandLineBool(fInputSE, "in_se");
-		CommandLineBool(fOutputSE, "out_se");
-		CommandLineInt(nP, "np", 4);
+		CommandLineStringD(strInputType, "in_type", "fv", "[fv|cgll|dgll]");
+		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
+		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
 		CommandLineBool(fBubble, "bubble");
 		CommandLineBool(fMonotone, "mono");
 		CommandLineBool(fNoCheck, "nocheck");
-		CommandLineString(strOverlapMesh, "ov_mesh", "");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputMap, "out_map", "");
 		CommandLineString(strInputData, "in_data", "");
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineBool(fOutputDouble, "out_double");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
@@ -174,12 +183,52 @@ try {
 
 	AnnounceBanner();
 
-	// Check command line parameters
+	// Check command line parameters (mesh arguments)
+	if (strInputMesh == "") {
+		_EXCEPTIONT("No input mesh specified");
+	}
+	if (strOutputMesh == "") {
+		_EXCEPTIONT("No output mesh specified");
+	}
+	if (strOverlapMesh == "") {
+		_EXCEPTIONT("No overlap mesh specified");
+	}
+
+	// Check command line parameters (data arguments)
 	if ((strInputData != "") && (strOutputData == "")) {
 		_EXCEPTIONT("in_data specified without out_data");
 	}
 	if ((strInputData == "") && (strOutputData != "")) {
 		_EXCEPTIONT("out_data specified without in_data");
+	}
+
+	// Check command line parameters (data type arguments)
+	STLStringHelper::ToLower(strInputType);
+	STLStringHelper::ToLower(strOutputType);
+
+	DiscretizationType eInputType;
+	DiscretizationType eOutputType;
+
+	if (strInputType == "fv") {
+		eInputType = DiscretizationType_FV;
+	} else if (strInputType == "cgll") {
+		eInputType = DiscretizationType_CGLL;
+	} else if (strInputType == "dgll") {
+		eInputType = DiscretizationType_DGLL;
+	} else {
+		_EXCEPTION1("Invalid \"in_type\" value (%s), expected [fv|cgll|dgll]",
+			strInputType.c_str());
+	}
+
+	if (strOutputType == "fv") {
+		eOutputType = DiscretizationType_FV;
+	} else if (strOutputType == "cgll") {
+		eOutputType = DiscretizationType_CGLL;
+	} else if (strOutputType == "dgll") {
+		eOutputType = DiscretizationType_DGLL;
+	} else {
+		_EXCEPTION1("Invalid \"out_type\" value (%s), expected [fv|cgll|dgll]",
+			strOutputType.c_str());
 	}
 
 	// Parse variable list
@@ -204,7 +253,7 @@ try {
 
 	// Input mesh areas
 	DataVector<double> vecInputAreas;
-	if (!fInputSE) {
+	if (eInputType == DiscretizationType_FV) {
 		vecInputAreas = meshInput.vecFaceArea;
 	}
 
@@ -222,7 +271,7 @@ try {
 
 	// Output mesh areas
 	DataVector<double> vecOutputAreas;
-	if (!fOutputSE) {
+	if (eOutputType == DiscretizationType_FV) {
 		vecOutputAreas = meshOutput.vecFaceArea;
 	}
 
@@ -233,25 +282,45 @@ try {
 
 	// Verify that overlap mesh is in the correct order
 	int ixFirstFaceMax = (-1);
+	int ixSecondFaceMax = (-1);
+
+	if (meshOverlap.vecFirstFaceIx.size() !=
+		meshOverlap.vecSecondFaceIx.size()
+	) {
+		_EXCEPTIONT("Invalid overlap mesh:\n"
+			"    Possible mesh file corruption?");
+	}
+
 	for (int i = 0; i < meshOverlap.vecFirstFaceIx.size(); i++) {
 		if (meshOverlap.vecFirstFaceIx[i] + 1 > ixFirstFaceMax) {
 			ixFirstFaceMax = meshOverlap.vecFirstFaceIx[i] + 1;
 		}
+		if (meshOverlap.vecSecondFaceIx[i] + 1 > ixSecondFaceMax) {
+			ixSecondFaceMax = meshOverlap.vecSecondFaceIx[i] + 1;
+		}
 	}
 
-	if (ixFirstFaceMax  == meshInput.faces.size()) {
-		Announce("Overlap mesh primary correspondence found");
+	// Check for forward correspondence in overlap mesh
+	if ((ixFirstFaceMax == meshInput.faces.size()) &&
+		(ixSecondFaceMax == meshOutput.faces.size())
+	) {
+		Announce("Overlap mesh forward correspondence found");
 
-	} else if (ixFirstFaceMax == meshOutput.faces.size()) {
+	// Check for reverse correspondence in overlap mesh
+	} else if (
+		(ixFirstFaceMax == meshOutput.faces.size()) &&
+		(ixSecondFaceMax == meshInput.faces.size())
+	) {
 		Announce("Overlap mesh reverse correspondence found (reversing)");
 
 		// Reorder overlap mesh
 		meshOverlap.ExchangeFirstAndSecondMesh();
 
+	// No correspondence found
 	} else {
-		_EXCEPTION1("Invalid overlap mesh:\n"
-			"    No correspondence found with input and output meshes (%i)",
-			ixFirstFaceMax);
+		_EXCEPTION2("Invalid overlap mesh:\n"
+			"    No correspondence found with input and output meshes (%i,%i)",
+			ixFirstFaceMax, ixSecondFaceMax);
 	}
 
 	AnnounceEndBlock(NULL);
@@ -284,21 +353,21 @@ try {
 	OfflineMap mapRemap;
 
 	// Finite volume input / Finite volume output
-	if ((!fInputSE) && (!fOutputSE)) {
+	if ((eInputType  == DiscretizationType_FV) &&
+		(eOutputType == DiscretizationType_FV)
+	) {
 
-		// Generate reverse node array
+		// Generate reverse node array and edge map
 		meshInput.ConstructReverseNodeArray();
+		meshInput.ConstructEdgeMap();
 
 		// Construct OfflineMap
 		AnnounceStartBlock("Calculating offline map");
-		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
-		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
-
 		LinearRemapFVtoFV(
-			meshInput, meshOutput, meshOverlap, nP, mapRemap);
+			meshInput, meshOutput, meshOverlap, nPin, mapRemap);
 
-	// Finite volume input / Spectral element output
-	} else if ((!fInputSE) && (fOutputSE)) {
+	// Finite volume input / Finite element output
+	} else if (eInputType == DiscretizationType_FV) {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
@@ -319,44 +388,45 @@ try {
 
 			Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
 			AnnounceEndBlock(NULL);
-/*
-			if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
-				Announce("WARNING: Significant mismatch between numerical area "
-					"and geometric area");
-			}
-*/
 		}
-/*
-		// Generate the unique Jacobian
-		GenerateUniqueJacobian(
-			dataGLLNodes,
-			dataGLLJacobian,
-			vecOutputAreas);
-*/
-		GenerateDiscontinuousJacobian(
-			dataGLLJacobian,
-			vecOutputAreas);
 
-		// Generate reverse node array
+		// Generate the continuous Jacobian
+		bool fContinuous = (eOutputType == DiscretizationType_CGLL);
+
+		if (eOutputType == DiscretizationType_CGLL) {
+			GenerateUniqueJacobian(
+				dataGLLNodes,
+				dataGLLJacobian,
+				vecOutputAreas);
+
+		} else {
+			GenerateDiscontinuousJacobian(
+				dataGLLJacobian,
+				vecOutputAreas);
+		}
+
+		// Generate reverse node array and edge map
 		meshInput.ConstructReverseNodeArray();
+		meshInput.ConstructEdgeMap();
 
 		// Generate remap weights
 		AnnounceStartBlock("Calculating offline map");
-		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
-		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
+		//LinearRemapFVtoGLL_Simple(
 		LinearRemapFVtoGLL(
 			meshInput,
 			meshOutput,
 			meshOverlap,
 			dataGLLNodes,
 			dataGLLJacobian,
-			nP,
+			vecOutputAreas,
+			nPin,
 			mapRemap,
-			fMonotone);
+			fMonotone,
+			fContinuous);
 
-	// Spectral element input / Finite volume output
-	} else if ((fInputSE) && (!fOutputSE)) {
+	// Finite element input / Finite volume output
+	} else if (eInputType == DiscretizationType_CGLL) {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
@@ -370,7 +440,7 @@ try {
 			double dNumericalArea =
 				GenerateMetaData(
 					meshInput,
-					nP,
+					nPin,
 					fBubble,
 					dataGLLNodes,
 					dataGLLJacobian);
@@ -397,8 +467,6 @@ try {
 
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
-		mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
-		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
 
 		LinearRemapSE4(
 			meshInput,
@@ -410,10 +478,97 @@ try {
 			mapRemap
 		);
 
+	// Finite element input / Finite element output
+	} else if (
+		(eInputType  != DiscretizationType_FV) &&
+		(eOutputType != DiscretizationType_FV)
+	) {
+		DataMatrix3D<int> dataGLLNodesIn;
+		DataMatrix3D<double> dataGLLJacobianIn;
+
+		DataMatrix3D<int> dataGLLNodesOut;
+		DataMatrix3D<double> dataGLLJacobianOut;
+
+		AnnounceStartBlock("Generating input mesh meta data");
+		double dNumericalAreaIn =
+			GenerateMetaData(
+				meshInput,
+				nPin,
+				fBubble,
+				dataGLLNodesIn,
+				dataGLLJacobianIn);
+
+		Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
+		AnnounceEndBlock(NULL);
+
+		AnnounceStartBlock("Generating output mesh meta data");
+		double dNumericalAreaOut =
+			GenerateMetaData(
+				meshOutput,
+				nPout,
+				fBubble,
+				dataGLLNodesOut,
+				dataGLLJacobianOut);
+
+		Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
+		AnnounceEndBlock(NULL);
+
+		// Generate the continuous Jacobian for input mesh
+		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
+
+		if (eInputType == DiscretizationType_CGLL) {
+			GenerateUniqueJacobian(
+				dataGLLNodesIn,
+				dataGLLJacobianIn,
+				vecInputAreas);
+
+		} else {
+			GenerateDiscontinuousJacobian(
+				dataGLLJacobianIn,
+				vecInputAreas);
+		}
+
+		// Generate the continuous Jacobian for output mesh
+		bool fContinuousOut = (eOutputType == DiscretizationType_CGLL);
+
+		if (eOutputType == DiscretizationType_CGLL) {
+			GenerateUniqueJacobian(
+				dataGLLNodesOut,
+				dataGLLJacobianOut,
+				vecOutputAreas);
+
+		} else {
+			GenerateDiscontinuousJacobian(
+				dataGLLJacobianOut,
+				vecOutputAreas);
+		}
+
+		// Generate offline map
+		AnnounceStartBlock("Calculating offline map");
+
+		LinearRemapGLLtoGLL(
+			meshInput,
+			meshOutput,
+			meshOverlap,
+			dataGLLNodesIn,
+			dataGLLJacobianIn,
+			dataGLLNodesOut,
+			dataGLLJacobianOut,
+			vecOutputAreas,
+			nPin,
+			nPout,
+			mapRemap,
+			fMonotone,
+			fContinuousIn,
+			fContinuousOut
+		);
+
 	} else {
 		_EXCEPTIONT("Not implemented");
 	}
 
+#pragma warning "NOTE: VERIFICATION DISABLED"
+/*
 	// Verify consistency, conservation and monotonicity
 	if (!fNoCheck) {
 		AnnounceStartBlock("Verifying map");
@@ -425,7 +580,7 @@ try {
 		}
 		AnnounceEndBlock(NULL);
 	}
-
+*/
 	AnnounceEndBlock(NULL);
 
 	// Output the Offline Map
@@ -441,15 +596,19 @@ try {
 	// Apply Offline Map to data
 	if (strInputData != "") {
 		AnnounceStartBlock("Applying offline map to data");
+
+		mapRemap.InitializeInputDimensionsFromFile(strInputMesh, strNColName);
+		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh, strNColName);
+
 		mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 		mapRemap.Apply(
 			vecInputAreas,
-			meshOutput.vecFaceArea,
+			vecOutputAreas,
 			strInputData,
 			strOutputData,
 			vecVariableStrings,
 			strNColName,
-			false,
+			fOutputDouble,
 			false);
 		AnnounceEndBlock(NULL);
 	}

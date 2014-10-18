@@ -36,14 +36,16 @@ public:
 	///		Initialize the array of input dimensions from a file.
 	///	</summary>
 	void InitializeInputDimensionsFromFile(
-		const std::string & strInputMesh
+		const std::string & strInputMesh,
+		const std::string & strNColName
 	);
 
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
 	///	</summary>
 	void InitializeOutputDimensionsFromFile(
-		const std::string & strOutputMesh
+		const std::string & strOutputMesh,
+		const std::string & strNColName
 	);
 
 public:

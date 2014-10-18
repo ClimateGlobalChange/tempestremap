@@ -42,6 +42,25 @@ void LinearRemapFVtoFV(
 
 ///	<summary>
 ///		Generate the OfflineMap for remapping from finite volumes to finite
+///		elements using simple sampling of the FV reconstruction.
+///	</summary>
+void LinearRemapFVtoGLL_Simple(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataVector<double> & dataGLLNodalArea,
+	int nOrder,
+	OfflineMap & mapRemap,
+	bool fMonotone,
+	bool fContinuous
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite volumes to finite
 ///		elements.
 ///	</summary>
 void LinearRemapFVtoGLL(
@@ -50,9 +69,34 @@ void LinearRemapFVtoGLL(
 	const Mesh & meshOverlap,
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataVector<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
-	bool fMonotone = false
+	bool fMonotone,
+	bool fContinuous
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite elements to finite
+///		elements.
+///	</summary>
+void LinearRemapGLLtoGLL(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodesIn,
+	const DataMatrix3D<double> & dataGLLJacobianIn,
+	const DataMatrix3D<int> & dataGLLNodesOut,
+	const DataMatrix3D<double> & dataGLLJacobianOut,
+	const DataVector<double> & dataNodalAreaOut,
+	int nPin,
+	int nPout,
+	OfflineMap & mapRemap,
+	bool fMonotone,
+	bool fContinuousIn,
+	bool fContinuousOut
 );
 
 ///////////////////////////////////////////////////////////////////////////////

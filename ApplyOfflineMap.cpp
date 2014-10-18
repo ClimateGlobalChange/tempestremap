@@ -82,6 +82,9 @@ try {
 	// Name of the ncol variable
 	std::string strNColName;
 
+	// Output as double
+	bool fOutputDouble;
+
 	// Fill value override
 	double dFillValueOverride;
 
@@ -95,6 +98,7 @@ try {
 		CommandLineString(strInputData2, "in_data2", "");
 		CommandLineString(strVariables2, "var2", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineBool(fOutputDouble, "out_double");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
@@ -121,7 +125,7 @@ try {
 		_EXCEPTIONT("No variables specified");
 	}
 
-	// Second input data file
+	// Second input data fil
 	std::vector< std::string > vecVariableStrings2;
 	if (strInputData2 != "") {
 		ParseVariableList(strVariables2, vecVariableStrings2);
@@ -157,7 +161,7 @@ try {
 		strOutputData,
 		vecVariableStrings,
 		strNColName,
-		false,
+		fOutputDouble,
 		false);
 	AnnounceEndBlock(NULL);
 

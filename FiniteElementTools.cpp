@@ -246,7 +246,7 @@ double GenerateMetaData(
 		const NodeVector & nodevec = mesh.nodes;
 
 		if (face.edges.size() != 4) {
-			_EXCEPTIONT("Input mesh must only contain quadrilateral elements");
+			_EXCEPTIONT("Mesh must only contain quadrilateral elements");
 		}
 
 		double dFaceNumericalArea = 0.0;

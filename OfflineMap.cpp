@@ -29,7 +29,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeInputDimensionsFromFile(
-	const std::string & strInputMesh
+	const std::string & strInputMesh,
+	const std::string & strNColName
 ) {
 	NcFile ncInputMesh(strInputMesh.c_str(), NcFile::ReadOnly);
 
@@ -46,7 +47,7 @@ void OfflineMap::InitializeInputDimensionsFromFile(
 	if (!fRectilinear) {
 		int nCol = ncInputMesh.get_dim("num_elem")->size();
 		m_vecInputDimSizes.push_back(nCol);
-		m_vecInputDimNames.push_back("ncol");
+		m_vecInputDimNames.push_back(strNColName.c_str());
 		return;
 	}
 
@@ -71,7 +72,8 @@ void OfflineMap::InitializeInputDimensionsFromFile(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeOutputDimensionsFromFile(
-	const std::string & strOutputMesh
+	const std::string & strOutputMesh,
+	const std::string & strNColName
 ) {
 	NcFile ncOutputMesh(strOutputMesh.c_str(), NcFile::ReadOnly);
 
@@ -88,7 +90,7 @@ void OfflineMap::InitializeOutputDimensionsFromFile(
 	if (!fRectilinear) {
 		int nCol = ncOutputMesh.get_dim("num_elem")->size();
 		m_vecOutputDimSizes.push_back(nCol);
-		m_vecOutputDimNames.push_back("ncol");
+		m_vecOutputDimNames.push_back(strNColName.c_str());
 		return;
 	}
 
@@ -142,65 +144,71 @@ void OfflineMap::Apply(
 	bool fOutputDouble,
 	bool fAppend
 ) {
+	// Open input file
 	NcFile ncInput(strInputDataFile.c_str(), NcFile::ReadOnly);
 
+	// Open output file
 	NcFile::FileMode eOpenMode = NcFile::Replace;
 	if (fAppend) {
 		eOpenMode = NcFile::Write;
 	}
-		
+
 	NcFile ncOutput(strOutputDataFile.c_str(), eOpenMode);
 
-	// Check for ncol dimension
-	NcDim * dimNCol = ncInput.get_dim(strNColName.c_str());
-	int nCol = dimNCol->size();
+	// Number of source and target regions
+	int nSourceCount = m_mapRemap.GetColumns();
+	int nTargetCount = m_mapRemap.GetRows();
 
-/*
-	if (nCol != m_mapRemap.GetColumns()) {
-		_EXCEPTION2("\nMismatch between offline map size (%i) and "
-			"data.ncol (%i)", m_mapRemap.GetColumns(), nCol);
+	// Check for rectilinear data
+	bool fInputRectilinear;
+	if (m_vecInputDimSizes.size() == 1) {
+		fInputRectilinear = false;
+	} else if (m_vecInputDimSizes.size() == 2) {
+		fInputRectilinear = true;
+	} else {
+		_EXCEPTIONT("m_vecInputDimSizes undefined");
 	}
-*/
-	// Output columns
-	int nColOut = m_mapRemap.GetRows();
 
-	// Data
-	bool fRectilinear;
+	bool fOutputRectilinear;
 	if (m_vecOutputDimSizes.size() == 1) {
-		fRectilinear = false;
+		fOutputRectilinear = false;
 	} else if (m_vecOutputDimSizes.size() == 2) {
-		fRectilinear = true;
+		fOutputRectilinear = true;
 	} else {
 		_EXCEPTIONT("m_vecOutputDimSizes undefined");
 	}
 
-	if (fRectilinear) {
-		if (nColOut != m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]) {
+	if (fOutputRectilinear) {
+		if (nTargetCount != m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]) {
 			_EXCEPTIONT("Mismatch between map size and output size");
 		}
 	} else {
-		m_vecOutputDimSizes[0] = nColOut;
-		if (nColOut != m_vecOutputDimSizes[0]) {
+		m_vecOutputDimSizes[0] = nTargetCount;
+		if (nTargetCount != m_vecOutputDimSizes[0]) {
 			_EXCEPTION2("Mismatch between map size and output size (%i, %i)",
-				nColOut, m_vecOutputDimSizes[0]);
+				nTargetCount, m_vecOutputDimSizes[0]);
 		}
 	}
 
 	DataVector<float> dataIn;
-	dataIn.Initialize(nCol);
-
-	DataMatrix<float> dataOut;
-	if (m_vecOutputDimSizes.size() == 1) {
-		dataOut.Initialize(m_vecOutputDimSizes[0], 1);
+	if (m_vecInputDimSizes.size() == 1) {
+		dataIn.Initialize(m_vecInputDimSizes[0]);
 	} else {
-		dataOut.Initialize(m_vecOutputDimSizes[0], m_vecOutputDimSizes[1]);
+		dataIn.Initialize(m_vecInputDimSizes[0] * m_vecInputDimSizes[1]);
+	}
+
+	DataVector<float> dataOut;
+	if (m_vecOutputDimSizes.size() == 1) {
+		dataOut.Initialize(m_vecOutputDimSizes[0]);
+	} else {
+		dataOut.Initialize(m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]);
 	}
 
 	DataVector<double> dataInDouble;
-	dataInDouble.Initialize(nCol);
+	dataInDouble.Initialize(nSourceCount);
 
 	DataVector<double> dataOutDouble;
-	dataOutDouble.Initialize(nColOut);
+	dataOutDouble.Initialize(nTargetCount);
 
 	// Output
 	if (!fAppend) {
@@ -215,39 +223,18 @@ void OfflineMap::Apply(
 		m_vecOutputDimNames[0].c_str(),
 		m_vecOutputDimSizes[0]);
 
-	if (fRectilinear) {
+	if (fOutputRectilinear) {
 		dim1 = NcFile_GetDimIfExists(
 			ncOutput,
 			m_vecOutputDimNames[1].c_str(),
 			m_vecOutputDimSizes[1]);
 	}
 
-/*
-	// A map of other dimension variables
-	std::map<std::string, NcDim *> mapDim;
-*/
 	// Loop through all variables
 	for (int v = 0; v < vecVariables.size(); v++) {
 		NcVar * var = ncInput.get_var(vecVariables[v].c_str());
 
 		AnnounceStartBlock(vecVariables[v].c_str());
-/*
-		// Verify last dimension of variable is ncol
-		NcDim * dimLast = var->get_dim(var->num_dims()-1);
-		if (dimLast->size() < m_mapRemap.GetColumns()) {
-			if (var->num_dims() == 1) {
-				_EXCEPTIONT("Variable dimension / map size mismatch");
-			}
-
-			NcDim * dimSecondLast = var->get_dim(var->num_dims()-2);
-		}
-*/
-		/*
-		if (var->get_dim(var->num_dims()-1)->name() != strNColName) {
-			_EXCEPTION2("Last dimension of variable \"%s\" must be \"%s\"",
-				vecVariables[v].c_str(), strNColName.c_str());
-		}
-		*/
 
 		// Loop through all dimensions and add missing dimensions to output
 		int nVarTotalEntries = 1;
@@ -256,19 +243,31 @@ void OfflineMap::Apply(
 		vecDims.Initialize(var->num_dims());
 
 		DataVector<NcDim *> vecDimsOut;
-		if (fRectilinear) {
-			vecDimsOut.Initialize(var->num_dims()+1);
+		if (fOutputRectilinear) {
+			if (fInputRectilinear) {
+				vecDimsOut.Initialize(var->num_dims());
+			} else {
+				vecDimsOut.Initialize(var->num_dims()+1);
+			}
+
 			vecDimsOut[vecDimsOut.GetRows()-2] = dim0;
 			vecDimsOut[vecDimsOut.GetRows()-1] = dim1;
 		} else {
-			vecDimsOut.Initialize(var->num_dims());
+			if (fInputRectilinear) {
+				vecDimsOut.Initialize(var->num_dims()-1);
+			} else {
+				vecDimsOut.Initialize(var->num_dims());
+			}
+
 			vecDimsOut[vecDimsOut.GetRows()-1] = dim0;
 		}
 
-		DataVector<long> vecDimSizes;
-		vecDimSizes.Initialize(var->num_dims()-1);
+		int nFreeDims = var->num_dims() - m_vecInputDimSizes.size();
 
-		for (int d = 0; d < var->num_dims()-1; d++) {
+		DataVector<long> vecDimSizes;
+		vecDimSizes.Initialize(nFreeDims);
+
+		for (int d = 0; d < nFreeDims; d++) {
 			vecDims[d] = var->get_dim(d);
 
 			long nDimSize = vecDims[d]->size();
@@ -282,28 +281,9 @@ void OfflineMap::Apply(
 					ncOutput,
 					strDimName.c_str(),
 					nDimSize);
-/*
-			std::map<std::string, NcDim *>::const_iterator iter =
-				mapDim.find(strDimName);
-
-			if (iter == mapDim.end()) {
-				NcDim * dimNew = ncOutput.add_dim(strDimName.c_str(), nDimSize);
-
-				vecDimsOut[d] = dimNew;
-
-				mapDim.insert(
-					std::pair<std::string, NcDim *>(strDimName, dimNew));
-
-			} else {
-				vecDimsOut[d] = iter->second;
-			}
-*/
 		}
 
 		// Create new output variable
-		DataVector<long> nCounts;
-		nCounts.Initialize(vecDimsOut.GetRows());
-
 		NcVar * varOut;
 		if (fOutputDouble) {
 			varOut =
@@ -324,21 +304,33 @@ void OfflineMap::Apply(
 
 		CopyNcVarAttributes(var, varOut);
 
+		// Input and output counts
+		DataVector<long> nCountsIn;
+		nCountsIn.Initialize(vecDims.GetRows());
+
+		DataVector<long> nCountsOut;
+		nCountsOut.Initialize(vecDimsOut.GetRows());
+
 		// Get size
 		DataVector<long> nGet;
-		nGet.Initialize(vecDims.GetRows());
+		nGet.Initialize(nCountsIn.GetRows());
 		for (int d = 0; d < nGet.GetRows()-1; d++) {
 			nGet[d] = 1;
 		}
-		nGet[nGet.GetRows()-1] = nCol;
+		if (fInputRectilinear) {
+			nGet[nGet.GetRows()-2] = m_vecInputDimSizes[0];
+			nGet[nGet.GetRows()-1] = m_vecInputDimSizes[1];
+		} else {
+			nGet[nGet.GetRows()-1] = m_vecInputDimSizes[0];
+		}
 
 		// Put size
 		DataVector<long> nPut;
-		nPut.Initialize(nCounts.GetRows());
+		nPut.Initialize(nCountsOut.GetRows());
 		for (int d = 0; d < nPut.GetRows()-1; d++) {
 			nPut[d] = 1;
 		}
-		if (fRectilinear) {
+		if (fOutputRectilinear) {
 			nPut[nPut.GetRows()-2] = m_vecOutputDimSizes[0];
 			nPut[nPut.GetRows()-1] = m_vecOutputDimSizes[1];
 		} else {
@@ -350,26 +342,26 @@ void OfflineMap::Apply(
 
 			long tt = static_cast<long>(t);
 			for (int d = 0; d < vecDimSizes.GetRows(); d++) {
-				nCounts[d] = tt % vecDimSizes[d];
-				tt -= nCounts[d] * vecDimSizes[d];
+				nCountsIn[d]  = tt % vecDimSizes[d];
+				nCountsOut[d] = tt % vecDimSizes[d];
+				tt -= nCountsOut[d] * vecDimSizes[d];
+			}
+
+			for (int d = vecDimSizes.GetRows(); d < nCountsIn.GetRows(); d++) {
+				nCountsIn[d] = 0;
+			}
+			for (int d = vecDimSizes.GetRows(); d < nCountsOut.GetRows(); d++) {
+				nCountsOut[d] = 0;
 			}
 
 			// Get the data
-			var->set_cur(&(nCounts[0]));
+			var->set_cur(&(nCountsIn[0]));
 
 			// Load data as Float, cast to Double
 			if (var->type() == ncFloat) {
 				var->get(&(dataIn[0]), &(nGet[0]));
 
-				if (m_flFillValueOverride != NC_FILL_FLOAT) {
-					for (int i = 0; i < nCol; i++) {
-						if (dataIn[i] == NC_FILL_FLOAT) {
-							dataIn[i] = m_flFillValueOverride;
-						}
-					}
-				}
-
-				for (int i = 0; i < nCol; i++) {
+				for (int i = 0; i < nSourceCount; i++) {
 					dataInDouble[i] = static_cast<double>(dataIn[i]);
 				}
 
@@ -386,7 +378,7 @@ void OfflineMap::Apply(
 				double dInputMass = 0.0;
 				double dInputMin  = dataInDouble[0];
 				double dInputMax  = dataInDouble[0];
-				for (int i = 0; i < nCol; i++) {
+				for (int i = 0; i < nSourceCount; i++) {
 					dInputMass += dataInDouble[i] * vecAreaInput[i];
 					if (dataInDouble[i] < dInputMin) {
 						dInputMin = dataInDouble[i];
@@ -407,7 +399,7 @@ void OfflineMap::Apply(
 				double dOutputMass = 0.0;
 				double dOutputMin  = dataOutDouble[0];
 				double dOutputMax  = dataOutDouble[0];
-				for (int i = 0; i < nColOut; i++) {
+				for (int i = 0; i < nTargetCount; i++) {
 					dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
 					if (dataOutDouble[i] < dOutputMin) {
 						dOutputMin = dataOutDouble[i];
@@ -422,22 +414,18 @@ void OfflineMap::Apply(
 
 			// Write the data
 			if (fOutputDouble) {
-				varOut->set_cur(&(nCounts[0]));
+				varOut->set_cur(&(nCountsOut[0]));
 				varOut->put(&(dataOutDouble[0]), &(nPut[0]));
 
 			} else {
 				// Cast the data to float
-				int ix = 0;
 				for (int i = 0; i < dataOut.GetRows(); i++) {
-				for (int j = 0; j < dataOut.GetColumns(); j++) {
-					dataOut[i][j] = static_cast<float>(dataOutDouble[ix]);
-					ix++;
-				}
+					dataOut[i] = static_cast<float>(dataOutDouble[i]);
 				}
 
 				// Write the data as float
-				varOut->set_cur(&(nCounts[0]));
-				varOut->put(&(dataOut[0][0]), &(nPut[0]));
+				varOut->set_cur(&(nCountsOut[0]));
+				varOut->put(&(dataOut[0]), &(nPut[0]));
 			}
 		}
 		AnnounceEndBlock(NULL);
