@@ -272,7 +272,6 @@ try {
 	AnnounceEndBlock(NULL);
 
 	// Output mesh areas
-	DataVector<double> vecOutputAreas;
 	if (eOutputType == DiscretizationType_FV) {
 		mapRemap.SetOutputAreas(meshOutput.vecFaceArea);
 	}
@@ -396,12 +395,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodes,
 				dataGLLJacobian,
-				vecOutputAreas);
+				mapRemap.GetOutputAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobian,
-				vecOutputAreas);
+				mapRemap.GetOutputAreas());
 		}
 
 		// Generate reverse node array and edge map
@@ -418,7 +417,7 @@ try {
 			meshOverlap,
 			dataGLLNodes,
 			dataGLLJacobian,
-			vecOutputAreas,
+			mapRemap.GetOutputAreas(),
 			nPin,
 			mapRemap,
 			fMonotone,
@@ -553,7 +552,7 @@ try {
 			dataGLLJacobianIn,
 			dataGLLNodesOut,
 			dataGLLJacobianOut,
-			vecOutputAreas,
+			mapRemap.GetOutputAreas(),
 			nPin,
 			nPout,
 			mapRemap,
