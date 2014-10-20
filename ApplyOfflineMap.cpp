@@ -141,8 +141,6 @@ try {
 	}
 
 	// Apply OfflineMap to data
-	DataVector<double> vecDummyAreas;
-
 	if (strInputMap2 == "") {
 		AnnounceStartBlock("Applying offline map to data");
 	} else {
@@ -155,8 +153,6 @@ try {
 	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 
 	mapRemap.Apply(
-		vecDummyAreas,
-		vecDummyAreas,
 		strInputData,
 		strOutputData,
 		vecVariableStrings,
@@ -183,8 +179,6 @@ try {
 		}
 
 		mapRemap2.Apply(
-			vecDummyAreas,
-			vecDummyAreas,
 			strInputData2,
 			strOutputData,
 			vecVariableStrings2,

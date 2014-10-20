@@ -231,6 +231,9 @@ try {
 			strOutputType.c_str());
 	}
 
+	// Create Offline Map
+	OfflineMap mapRemap;
+
 	// Parse variable list
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
@@ -252,9 +255,8 @@ try {
 	AnnounceEndBlock(NULL);
 
 	// Input mesh areas
-	DataVector<double> vecInputAreas;
 	if (eInputType == DiscretizationType_FV) {
-		vecInputAreas = meshInput.vecFaceArea;
+		mapRemap.SetInputAreas(meshInput.vecFaceArea);
 	}
 
 	// Load output mesh
@@ -272,7 +274,7 @@ try {
 	// Output mesh areas
 	DataVector<double> vecOutputAreas;
 	if (eOutputType == DiscretizationType_FV) {
-		vecOutputAreas = meshOutput.vecFaceArea;
+		mapRemap.SetOutputAreas(meshOutput.vecFaceArea);
 	}
 
 	// Load overlap mesh
@@ -349,9 +351,6 @@ try {
 		AnnounceEndBlock(NULL);
 	}
 */
-	// Offline Map
-	OfflineMap mapRemap;
-
 	// Finite volume input / Finite volume output
 	if ((eInputType  == DiscretizationType_FV) &&
 		(eOutputType == DiscretizationType_FV)
@@ -463,7 +462,7 @@ try {
 		GenerateUniqueJacobian(
 			dataGLLNodes,
 			dataGLLJacobian,
-			vecInputAreas);
+			mapRemap.GetInputAreas());
 
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
@@ -520,12 +519,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodesIn,
 				dataGLLJacobianIn,
-				vecInputAreas);
+				mapRemap.GetInputAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobianIn,
-				vecInputAreas);
+				mapRemap.GetInputAreas());
 		}
 
 		// Generate the continuous Jacobian for output mesh
@@ -535,12 +534,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodesOut,
 				dataGLLJacobianOut,
-				vecOutputAreas);
+				mapRemap.GetOutputAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobianOut,
-				vecOutputAreas);
+				mapRemap.GetOutputAreas());
 		}
 
 		// Generate offline map
@@ -583,13 +582,14 @@ try {
 */
 	AnnounceEndBlock(NULL);
 
+	// Initialize element dimensions from input/output Mesh
+	mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
+	mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
+
 	// Output the Offline Map
 	if (strOutputMap != "") {
 		AnnounceStartBlock("Writing offline map");
-		mapRemap.Write(
-			strOutputMap,
-			meshInput.vecFaceArea,
-			meshOutput.vecFaceArea);
+		mapRemap.Write(strOutputMap);
 		AnnounceEndBlock(NULL);
 	}
 
@@ -597,13 +597,8 @@ try {
 	if (strInputData != "") {
 		AnnounceStartBlock("Applying offline map to data");
 
-		mapRemap.InitializeInputDimensionsFromFile(strInputMesh, strNColName);
-		mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh, strNColName);
-
 		mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 		mapRemap.Apply(
-			vecInputAreas,
-			vecOutputAreas,
 			strInputData,
 			strOutputData,
 			vecVariableStrings,

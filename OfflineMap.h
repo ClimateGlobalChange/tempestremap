@@ -36,16 +36,14 @@ public:
 	///		Initialize the array of input dimensions from a file.
 	///	</summary>
 	void InitializeInputDimensionsFromFile(
-		const std::string & strInputMesh,
-		const std::string & strNColName
+		const std::string & strInputMesh
 	);
 
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
 	///	</summary>
 	void InitializeOutputDimensionsFromFile(
-		const std::string & strOutputMesh,
-		const std::string & strNColName
+		const std::string & strOutputMesh
 	);
 
 public:
@@ -53,8 +51,6 @@ public:
 	///		Apply the offline map to a data file.
 	///	</summary>
 	void Apply(
-		const DataVector<double> & vecAreaInput,
-		const DataVector<double> & vecAreaOutput,
 		const std::string & strInputDataFile,
 		const std::string & strOutputDataFile,
 		const std::vector<std::string> & vecVariables,
@@ -74,9 +70,7 @@ public:
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
 	void Write(
-		const std::string & strOutput,
-		const DataVector<double> & vecInputArea,
-		const DataVector<double> & vecOutputArea
+		const std::string & strOutput
 	);
 
 public:
@@ -91,8 +85,6 @@ public:
 	///		Determine if the map is conservative.
 	///	</summary>
 	bool IsConservative(
-		const DataVector<double> & vecInputAreas,
-		const DataVector<double> & vecOutputAreas,
 		double dTolerance
 	);
 
@@ -104,6 +96,54 @@ public:
 	);
 
 public:
+	///	<summary>
+	///		Get the vector of areas associated with degrees of freedom on
+	///		the input Mesh.
+	///	</summary>
+	DataVector<double> & GetInputAreas() {
+		return m_dInputAreas;
+	}
+
+	///	<summary>
+	///		Get the vector of areas associated with degrees of freedom on
+	///		the input Mesh.
+	///	</summary>
+	const DataVector<double> & GetInputAreas() const {
+		return m_dInputAreas;
+	}
+
+	///	<summary>
+	///		Get the vector of areas associated with degrees of freedom on
+	///		the output Mesh.
+	///	</summary>
+	DataVector<double> & GetOutputAreas() {
+		return m_dOutputAreas;
+	}
+
+	///	<summary>
+	///		Get the vector of areas associated with degrees of freedom on
+	///		the output Mesh.
+	///	</summary>
+	const DataVector<double> & GetOutputAreas() const {
+		return m_dOutputAreas;
+	}
+
+	///	<summary>
+	///		Set the vector of areas associated with degrees of freedom on
+	///		the input Mesh.
+	///	</summary>
+	void SetInputAreas(const DataVector<double> & dInputAreas) {
+		m_dInputAreas = dInputAreas;
+	}
+
+	///	<summary>
+	///		Set the vector of areas associated with degrees of freedom on
+	///		the output Mesh.
+	///	</summary>
+	void SetOutputAreas(const DataVector<double> & dOutputAreas) {
+		m_dOutputAreas = dOutputAreas;
+	}
+
 	///	<summary>
 	///		Get the SparseMatrix representation of the OfflineMap.
 	///	</summary>
@@ -131,6 +171,16 @@ protected:
 	///		The SparseMatrix representing this operator.
 	///	</summary>
 	SparseMatrix<double> m_mapRemap;
+
+	///	<summary>
+	///		Vector of areas associated with input degrees of freedom.
+	///	</summary>
+	DataVector<double> m_dInputAreas;
+
+	///	<summary>
+	///		Vector of areas associated with output degrees of freedom.
+	///	</summary>
+	DataVector<double> m_dOutputAreas;
 
 	///	<summary>
 	///		Vector of dimension sizes for Input.

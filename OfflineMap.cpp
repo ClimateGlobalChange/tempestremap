@@ -29,8 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeInputDimensionsFromFile(
-	const std::string & strInputMesh,
-	const std::string & strNColName
+	const std::string & strInputMesh
 ) {
 	NcFile ncInputMesh(strInputMesh.c_str(), NcFile::ReadOnly);
 
@@ -45,9 +44,9 @@ void OfflineMap::InitializeInputDimensionsFromFile(
 
 	// Non-rectilinear
 	if (!fRectilinear) {
-		int nCol = ncInputMesh.get_dim("num_elem")->size();
-		m_vecInputDimSizes.push_back(nCol);
-		m_vecInputDimNames.push_back(strNColName.c_str());
+		int nElements = ncInputMesh.get_dim("num_elem")->size();
+		m_vecInputDimSizes.push_back(nElements);
+		m_vecInputDimNames.push_back("num_elem");
 		return;
 	}
 
@@ -72,8 +71,7 @@ void OfflineMap::InitializeInputDimensionsFromFile(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeOutputDimensionsFromFile(
-	const std::string & strOutputMesh,
-	const std::string & strNColName
+	const std::string & strOutputMesh
 ) {
 	NcFile ncOutputMesh(strOutputMesh.c_str(), NcFile::ReadOnly);
 
@@ -88,9 +86,9 @@ void OfflineMap::InitializeOutputDimensionsFromFile(
 
 	// Non-rectilinear
 	if (!fRectilinear) {
-		int nCol = ncOutputMesh.get_dim("num_elem")->size();
-		m_vecOutputDimSizes.push_back(nCol);
-		m_vecOutputDimNames.push_back(strNColName.c_str());
+		int nElements = ncOutputMesh.get_dim("num_elem")->size();
+		m_vecOutputDimSizes.push_back(nElements);
+		m_vecOutputDimNames.push_back("num_elem");
 		return;
 	}
 
@@ -135,8 +133,6 @@ NcDim * NcFile_GetDimIfExists(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Apply(
-	const DataVector<double> & vecAreaInput,
-	const DataVector<double> & vecAreaOutput,
 	const std::string & strInputDataFile,
 	const std::string & strOutputDataFile,
 	const std::vector<std::string> & vecVariables,
@@ -156,8 +152,8 @@ void OfflineMap::Apply(
 	NcFile ncOutput(strOutputDataFile.c_str(), eOpenMode);
 
 	// Number of source and target regions
-	int nSourceCount = m_mapRemap.GetColumns();
-	int nTargetCount = m_mapRemap.GetRows();
+	int nSourceCount = m_dInputAreas.GetRows();
+	int nTargetCount = m_dOutputAreas.GetRows();
 
 	// Check for rectilinear data
 	bool fInputRectilinear;
@@ -167,6 +163,12 @@ void OfflineMap::Apply(
 		fInputRectilinear = true;
 	} else {
 		_EXCEPTIONT("m_vecInputDimSizes undefined");
+	}
+
+	if (fInputRectilinear) {
+		if (nSourceCount != m_vecInputDimSizes[0] * m_vecInputDimSizes[1]) {
+			_EXCEPTIONT("Rectilinear input expected in finite volume form");
+		}
 	}
 
 	bool fOutputRectilinear;
@@ -180,26 +182,21 @@ void OfflineMap::Apply(
 
 	if (fOutputRectilinear) {
 		if (nTargetCount != m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]) {
-			_EXCEPTIONT("Mismatch between map size and output size");
-		}
-	} else {
-		m_vecOutputDimSizes[0] = nTargetCount;
-		if (nTargetCount != m_vecOutputDimSizes[0]) {
-			_EXCEPTION2("Mismatch between map size and output size (%i, %i)",
-				nTargetCount, m_vecOutputDimSizes[0]);
+			printf("%i %i\n", nTargetCount, m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]);
+			_EXCEPTIONT("Rectilinear output expected in finite volume form");
 		}
 	}
 
 	DataVector<float> dataIn;
 	if (m_vecInputDimSizes.size() == 1) {
-		dataIn.Initialize(m_vecInputDimSizes[0]);
+		dataIn.Initialize(nSourceCount);
 	} else {
 		dataIn.Initialize(m_vecInputDimSizes[0] * m_vecInputDimSizes[1]);
 	}
 
 	DataVector<float> dataOut;
 	if (m_vecOutputDimSizes.size() == 1) {
-		dataOut.Initialize(m_vecOutputDimSizes[0]);
+		dataOut.Initialize(nTargetCount);
 	} else {
 		dataOut.Initialize(m_vecOutputDimSizes[0] * m_vecOutputDimSizes[1]);
 	}
@@ -321,7 +318,7 @@ void OfflineMap::Apply(
 			nGet[nGet.GetRows()-2] = m_vecInputDimSizes[0];
 			nGet[nGet.GetRows()-1] = m_vecInputDimSizes[1];
 		} else {
-			nGet[nGet.GetRows()-1] = m_vecInputDimSizes[0];
+			nGet[nGet.GetRows()-1] = nSourceCount;
 		}
 
 		// Put size
@@ -334,7 +331,7 @@ void OfflineMap::Apply(
 			nPut[nPut.GetRows()-2] = m_vecOutputDimSizes[0];
 			nPut[nPut.GetRows()-1] = m_vecOutputDimSizes[1];
 		} else {
-			nPut[nPut.GetRows()-1] = m_vecOutputDimSizes[0];
+			nPut[nPut.GetRows()-1] = nTargetCount;
 		}
 
 		// Loop through all entries
@@ -374,43 +371,39 @@ void OfflineMap::Apply(
 			}
 
 			// Announce input mass
-			if (vecAreaInput.GetRows() != 0) {
-				double dInputMass = 0.0;
-				double dInputMin  = dataInDouble[0];
-				double dInputMax  = dataInDouble[0];
-				for (int i = 0; i < nSourceCount; i++) {
-					dInputMass += dataInDouble[i] * vecAreaInput[i];
-					if (dataInDouble[i] < dInputMin) {
-						dInputMin = dataInDouble[i];
-					}
-					if (dataInDouble[i] > dInputMax) {
-						dInputMax = dataInDouble[i];
-					}
+			double dInputMass = 0.0;
+			double dInputMin  = dataInDouble[0];
+			double dInputMax  = dataInDouble[0];
+			for (int i = 0; i < nSourceCount; i++) {
+				dInputMass += dataInDouble[i] * m_dInputAreas[i];
+				if (dataInDouble[i] < dInputMin) {
+					dInputMin = dataInDouble[i];
 				}
-				Announce(" Input Mass: %1.15e Min %1.10e Max %1.10e",
-					dInputMass, dInputMin, dInputMax);
+				if (dataInDouble[i] > dInputMax) {
+					dInputMax = dataInDouble[i];
+				}
 			}
+			Announce(" Input Mass: %1.15e Min %1.10e Max %1.10e",
+				dInputMass, dInputMin, dInputMax);
 
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
 
 			// Announce output mass
-			if (vecAreaOutput.GetRows() != 0) {
-				double dOutputMass = 0.0;
-				double dOutputMin  = dataOutDouble[0];
-				double dOutputMax  = dataOutDouble[0];
-				for (int i = 0; i < nTargetCount; i++) {
-					dOutputMass += dataOutDouble[i] * vecAreaOutput[i];
-					if (dataOutDouble[i] < dOutputMin) {
-						dOutputMin = dataOutDouble[i];
-					}
-					if (dataOutDouble[i] > dOutputMax) {
-						dOutputMax = dataOutDouble[i];
-					}
+			double dOutputMass = 0.0;
+			double dOutputMin  = dataOutDouble[0];
+			double dOutputMax  = dataOutDouble[0];
+			for (int i = 0; i < nTargetCount; i++) {
+				dOutputMass += dataOutDouble[i] * m_dOutputAreas[i];
+				if (dataOutDouble[i] < dOutputMin) {
+					dOutputMin = dataOutDouble[i];
 				}
-				Announce("Output Mass: %1.15e Min %1.10e Max %1.10e",
-					dOutputMass, dOutputMin, dOutputMax);
+				if (dataOutDouble[i] > dOutputMax) {
+					dOutputMax = dataOutDouble[i];
+				}
 			}
+			Announce("Output Mass: %1.15e Min %1.10e Max %1.10e",
+				dOutputMass, dOutputMin, dOutputMax);
 
 			// Write the data
 			if (fOutputDouble) {
@@ -470,6 +463,23 @@ void OfflineMap::Read(
 		m_vecOutputDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
 	}
 
+	// Input and Output mesh resolutions
+	NcDim * dimNA = ncMap.get_dim("n_a");
+	NcDim * dimNB = ncMap.get_dim("n_b");
+
+	int nA = dimNA->size();
+	int nB = dimNB->size();
+
+	m_dInputAreas.Initialize(nA);
+	m_dOutputAreas.Initialize(nB);
+
+	// Read areas
+	NcVar * varAreaA = ncMap.get_var("area_a");
+	varAreaA->get(&(m_dInputAreas[0]), nA);
+
+	NcVar * varAreaB = ncMap.get_var("area_b");
+	varAreaB->get(&(m_dOutputAreas[0]), nB);
+
 	// Read SparseMatrix entries
 	NcDim * dimNS = ncMap.get_dim("n_s");
 
@@ -503,9 +513,7 @@ void OfflineMap::Read(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Write(
-	const std::string & strOutput,
-	const DataVector<double> & vecInputArea,
-	const DataVector<double> & vecOutputArea
+	const std::string & strOutput
 ) {
 	NcFile ncMap(strOutput.c_str(), NcFile::Replace);
 
@@ -527,23 +535,19 @@ void OfflineMap::Write(
 	varSrcGridDims->put(&(m_vecInputDimSizes[0]), nSrcGridDims);
 	varDstGridDims->put(&(m_vecOutputDimSizes[0]), nDstGridDims);
 
-	int nA = 1;
-	int nB = 1;
+	int nA = (int)(m_dInputAreas.GetRows());
+	int nB = (int)(m_dOutputAreas.GetRows());
 
 	for (int i = 0; i < m_vecInputDimSizes.size(); i++) {
 		char szDim[64];
 		sprintf(szDim, "name%i", i);
 		varSrcGridDims->add_att(szDim, m_vecInputDimNames[i].c_str());
-
-		nA *= m_vecInputDimSizes[i];
 	}
 
 	for (int i = 0; i < m_vecOutputDimSizes.size(); i++) {
 		char szDim[64];
 		sprintf(szDim, "name%i", i);
 		varDstGridDims->add_att(szDim, m_vecOutputDimNames[i].c_str());
-
-		nB *= m_vecOutputDimSizes[i];
 	}
 
 	// Input and Output mesh resolutions
@@ -551,25 +555,11 @@ void OfflineMap::Write(
 	NcDim * dimNB = ncMap.add_dim("n_b", nB);
 
 	// Write areas
-	if (vecInputArea.GetRows() != 0) {
-		if (vecInputArea.GetRows() != nA) {
-			_EXCEPTION2("OfflineMap dimension mismatch with input Mesh (%i, %i)",
-				vecInputArea.GetRows(), nA);
-		}
+	NcVar * varAreaA = ncMap.add_var("area_a", ncDouble, dimNA);
+	varAreaA->put(&(m_dInputAreas[0]), nA);
 
-		NcVar * varAreaA = ncMap.add_var("area_a", ncDouble, dimNA);
-		varAreaA->put(&(vecInputArea[0]), nA);
-	}
-
-	if (vecOutputArea.GetRows() != 0) {
-		if (vecOutputArea.GetRows() != nB) {
-			_EXCEPTION2("OfflineMap dimension mismatch with output Mesh (%i, %i)",
-				vecOutputArea.GetRows(), nB);
-		}
-
-		NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
-		varAreaB->put(&(vecOutputArea[0]), nB);
-	}
+	NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
+	varAreaB->put(&(m_dOutputAreas[0]), nB);
 
 	// Write frac
 	DataVector<double> dFrac;
@@ -649,8 +639,6 @@ bool OfflineMap::IsConsistent(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool OfflineMap::IsConservative(
-	const DataVector<double> & vecInputAreas,
-	const DataVector<double> & vecOutputAreas,
 	double dTolerance
 ) {
 /*
@@ -674,17 +662,17 @@ bool OfflineMap::IsConservative(
 
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		dColumnSums[dataCols[i]] +=
-			dataEntries[i] * vecOutputAreas[dataRows[i]];
+			dataEntries[i] * m_dOutputAreas[dataRows[i]];
 	}
 
 	// Verify all column sums equal the input Jacobian
 	bool fConservative = true;
 	for (int i = 0; i < dColumnSums.GetRows(); i++) {
-		if (fabs(dColumnSums[i] - vecInputAreas[i]) > dTolerance) {
+		if (fabs(dColumnSums[i] - m_dInputAreas[i]) > dTolerance) {
 			fConservative = false;
 			Announce("OfflineMap is not conservative in column "
 				"%i (%1.15e / %1.15e)",
-				i, dColumnSums[i], vecInputAreas[i]);
+				i, dColumnSums[i], m_dInputAreas[i]);
 		}
 	}
 
