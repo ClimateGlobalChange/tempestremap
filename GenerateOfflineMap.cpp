@@ -424,7 +424,10 @@ try {
 			fContinuous);
 
 	// Finite element input / Finite volume output
-	} else if (eInputType == DiscretizationType_CGLL) {
+	} else if (
+		(eInputType == DiscretizationType_CGLL) &&
+		(eOutputType == DiscretizationType_FV)
+	) {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 

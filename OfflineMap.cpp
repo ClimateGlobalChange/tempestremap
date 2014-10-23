@@ -215,12 +215,18 @@ void OfflineMap::Apply(
 	NcDim * dim0;
 	NcDim * dim1;
 
-	dim0 = NcFile_GetDimIfExists(
-		ncOutput,
-		m_vecOutputDimNames[0].c_str(),
-		m_vecOutputDimSizes[0]);
+	if (!fOutputRectilinear) {
+		dim0 = NcFile_GetDimIfExists(
+			ncOutput,
+			strNColName.c_str(),
+			nTargetCount);
 
-	if (fOutputRectilinear) {
+	} else {
+		dim0 = NcFile_GetDimIfExists(
+			ncOutput,
+			m_vecOutputDimNames[0].c_str(),
+			m_vecOutputDimSizes[0]);
+
 		dim1 = NcFile_GetDimIfExists(
 			ncOutput,
 			m_vecOutputDimNames[1].c_str(),

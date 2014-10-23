@@ -2328,9 +2328,6 @@ void LinearRemapGLLtoGLL(
 	DataMatrix<double> dSampleCoeffOut;
 	dSampleCoeffOut.Initialize(nPout, nPout);
 
-	// Current overlap face
-	int ixOverlap = 0;
-
 	// Build the integration array for each element on meshOverlap
 	DataMatrix3D<double> dGlobalIntArray;
 	dGlobalIntArray.Initialize(
@@ -2338,12 +2335,14 @@ void LinearRemapGLLtoGLL(
 		meshOverlap.faces.size(),
 		nPin * nPin);
 
+	DataVector<double> dataIntAreaOut;
+	dataIntAreaOut.Initialize(dataNodalAreaOut.GetRows());
+
 	// Number of overlap Faces per source Face
 	DataVector<int> nAllOverlapFaces;
 	nAllOverlapFaces.Initialize(meshInput.faces.size());
 
-	DataVector<int> nAllTotalOverlapTriangles;
-	nAllTotalOverlapTriangles.Initialize(meshInput.faces.size());
+	int ixOverlap = 0;
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -2357,7 +2356,6 @@ void LinearRemapGLLtoGLL(
 			}
 
 			nAllOverlapFaces[ixFirst]++;
-			nAllTotalOverlapTriangles[ixFirst] += faceOverlap.edges.size() - 2;
 		}
 
 		// Increment the current overlap index
@@ -2381,7 +2379,15 @@ void LinearRemapGLLtoGLL(
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
-		int nTotalOverlapTriangles = nAllTotalOverlapTriangles[ixFirst];
+
+
+		// Calculate total element Jacobian
+		double dTotalJacobian = 0.0;
+		for (int s = 0; s < nPin; s++) {
+		for (int t = 0; t < nPin; t++) {
+			dTotalJacobian += dataGLLJacobianIn[s][t][ixFirst];
+		}
+		}
 
 		// Loop through all Overlap Faces
 		for (int i = 0; i < nOverlapFaces; i++) {
@@ -2485,7 +2491,7 @@ void LinearRemapGLLtoGLL(
 
 					// Sample the Second finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPin,
+						fMonotone, nPout,
 						dAlphaOut,
 						dBetaOut,
 						dSampleCoeffOut);
@@ -2499,12 +2505,29 @@ void LinearRemapGLLtoGLL(
 						for (int p = 0; p < nPout; p++) {
 						for (int q = 0; q < nPout; q++) {
 
+							if ((s == 0) && (t == 0)) {
+								int ixSecondNode;
+								if (fContinuousOut) {
+									ixSecondNode =
+										dataGLLNodesOut[p][q][ixSecond] - 1;
+								} else {
+									ixSecondNode = ixSecond * nPout * nPout
+										+ p * nPout + q;
+								}
+								dataIntAreaOut[ixSecondNode] +=
+									dSampleCoeffOut[p][q]
+									* dW[k]
+									* dTriArea;
+							}
+
 							dGlobalIntArray[ixp][ixOverlap + i][ixs] +=
+								//dataGLLJacobianIn[s][t][ixFirst]
+								// dTotalJacobian
 								  dSampleCoeffIn[s][t]
 								* dSampleCoeffOut[p][q]
 								* dW[k]
 								* dTriArea
-								/ dataGLLJacobianOut[s][t][ixSecond];
+								/ dataGLLJacobianOut[p][q][ixSecond];
 
 							ixp++;
 						}
@@ -2533,9 +2556,6 @@ void LinearRemapGLLtoGLL(
 		// This Face
 		const Face & faceFirst = meshInput.faces[ixFirst];
 
-		// Area of the First Face
-		double dFirstArea = meshInput.vecFaceArea[ixFirst];
-
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
 
@@ -2560,18 +2580,25 @@ void LinearRemapGLLtoGLL(
 
 					int ixSecondNode;
 					if (fContinuousOut) {
-						ixSecondNode = dataGLLNodesOut[s][t][ixSecond] - 1;
+						ixSecondNode = dataGLLNodesOut[p][q][ixSecond] - 1;
 
 						smatMap(ixSecondNode, ixFirstNode) +=
 							dGlobalIntArray[ixp][ixOverlap + i][ixs]
 							* dataGLLJacobianOut[p][q][ixSecond]
 							/ dataNodalAreaOut[ixSecondNode];
+							// dataIntAreaOut[ixSecondNode];
 
 					} else {
 						ixSecondNode = ixSecond * nPout * nPout + p * nPout + q;
 
 						smatMap(ixSecondNode, ixFirstNode) +=
-							dGlobalIntArray[ixp][ixOverlap + i][ixs];
+							dGlobalIntArray[ixp][ixOverlap + i][ixs]
+							/ dataIntAreaOut[ixSecondNode];
+/*
+						if (ixSecondNode == 3) {
+							printf("%i %i/%i %1.15e\n", ixSecondNode, ixFirst, meshOverlap.vecFirstFaceIx[ixOverlap + i], dGlobalIntArray[ixp][ixOverlap + i][ixs]);
+						}
+*/
 					}
 
 					ixp++;
@@ -2586,7 +2613,19 @@ void LinearRemapGLLtoGLL(
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
 	}
+/*
+	DataVector<int> dRows;
+	DataVector<int> dColumns;
+	DataVector<double> dEntries;
 
+	smatMap.GetEntries(dRows, dColumns, dEntries);
+
+	for (int i = 0; i < dRows.GetRows(); i++) {
+		if (dEntries[i] > 0.35) {
+			std::cout << dRows[i] << ", " << dColumns[i] << std::endl;
+		}
+	}
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////

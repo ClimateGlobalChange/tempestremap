@@ -132,12 +132,16 @@ try {
 	// Number of elements in mesh
 	int nResolution;
 
+	// Alternate arrangement
+	bool fAlt;
+
 	// Output filename
 	std::string strOutputFile;
 
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineInt(nResolution, "res", 10);
+		CommandLineBool(fAlt, "alt");
 		CommandLineString(strOutputFile, "file", "outCSMesh.g");
 
 		ParseCommandLine(argc, argv);
@@ -248,6 +252,19 @@ try {
 		vecMultiEdges[10].Flip(),
 		nodes,
 		faces);
+
+	// Alternative arrangement of nodes on Faces
+	if (fAlt) {
+		for (int i = 0; i < faces.size(); i++) {
+			int ix[4];
+			for (int j = 0; j < 4; j++) {
+				ix[j] = faces[i][j];
+			}
+			for (int j = 0; j < 4; j++) {
+				faces[i].SetNode((j+1)%4, ix[j]);
+			}
+		}
+	}
 
 	// Announce
 	std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";

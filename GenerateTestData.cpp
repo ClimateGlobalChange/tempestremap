@@ -86,6 +86,7 @@ public:
 		double dLat
 	) {
 		return (2.0 + pow(sin(2.0 * dLat), 16.0) * cos(16.0 * dLon));
+		//return (2.0 + pow(cos(2.0 * dLat), 16.0) * cos(16.0 * dLon));
 	}
 };
 
