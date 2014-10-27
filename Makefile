@@ -6,8 +6,8 @@ CFLAGS= -O3
 USEBLAS= True
 
 # NETCDF library directories
-NETCDF_INCLUDEDIR=/usr/local/include
-NETCDF_LIBDIR=/usr/local/lib
+NETCDF_INCLUDEDIR=/opt/local/include
+NETCDF_LIBDIR=/opt/local/lib
 
 # Library files to include
 LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
@@ -24,9 +24,9 @@ FILES= Announce.cpp \
        MeshUtilities.cpp \
        MeshUtilitiesFuzzy.cpp \
        MeshUtilitiesExact.cpp \
-	   GaussLobattoQuadrature.cpp \
+       GaussLobattoQuadrature.cpp \
        FiniteElementTools.cpp \
-	   NetCDFUtilities.cpp \
+       NetCDFUtilities.cpp \
        OfflineMap.cpp \
        TriangularQuadrature.cpp
 
