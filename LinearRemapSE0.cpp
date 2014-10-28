@@ -1014,19 +1014,6 @@ void LinearRemapGLLtoGLL(
 	bool fContinuousOut
 ) {
 
-	// Construct distribution operator
-	OfflineMap mapDistribution;
-
-	LinearRemapSE4(
-		meshInput,
-		meshOutput,
-		meshOverlap,
-		dataGLLNodesIn,
-		dataGLLJacobianIn,
-		fMonotone,
-		false,
-		mapDistribution);
-
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(4);
 
@@ -1047,16 +1034,16 @@ void LinearRemapGLLtoGLL(
 		meshOverlap.faces.size(),
 		nPin * nPin);
 
+	DataMatrix<double> dConstantIntArray;
+	dConstantIntArray.Initialize(
+		meshOverlap.faces.size(),
+		nPin * nPin);
+
 	// Geometric area of each output node
 	DataMatrix<double> dGeometricOutputArea;
 	dGeometricOutputArea.Initialize(
 		meshOutput.faces.size(), nPout * nPout);
 
-	// Area of each overlap element in the output basis
-	DataMatrix<double> dOverlapOutputArea;
-	dOverlapOutputArea.Initialize(
-		meshOverlap.faces.size(), nPout * nPout);
-	
 	// Number of overlap Faces per source Face
 	DataVector<int> nAllOverlapFaces;
 	nAllOverlapFaces.Initialize(meshInput.faces.size());
@@ -1214,9 +1201,6 @@ void LinearRemapGLLtoGLL(
 							* dW[k]
 							* dTriArea;
 
-						dOverlapOutputArea[ixOverlap + i][p * nPout + q] +=
-							dNodeArea;
-
 						dGeometricOutputArea[ixSecond][p * nPout + q] +=
 							dNodeArea;
 					}
@@ -1226,6 +1210,12 @@ void LinearRemapGLLtoGLL(
 					int ixs = 0;
 					for (int s = 0; s < nPin; s++) {
 					for (int t = 0; t < nPin; t++) {
+
+						dConstantIntArray[ixOverlap + i][ixs] +=
+							  dSampleCoeffIn[s][t]
+							* dW[k]
+							* dTriArea
+							/ meshOverlap.vecFaceArea[ixOverlap + i];
 
 						int ixp = 0;
 						for (int p = 0; p < nPout; p++) {
@@ -1248,6 +1238,54 @@ void LinearRemapGLLtoGLL(
 				}
 			}
 		}
+		
+		// Force consistency and conservation of ConstantIntArray
+		DataVector<double> dSourceArea;
+		dSourceArea.Initialize(nPin * nPin);
+
+		for (int s = 0; s < nPin; s++) {
+		for (int t = 0; t < nPin; t++) {
+			dSourceArea[s * nPin + t] = dataGLLJacobianIn[s][t][ixFirst];
+		}
+		}
+
+		DataVector<double> dTargetArea;
+		dTargetArea.Initialize(nOverlapFaces);
+		for (int i = 0; i < nOverlapFaces; i++) {
+			dTargetArea[i] = meshOverlap.vecFaceArea[ixOverlap + i];
+		}
+
+		DataMatrix<double> dCoeff;
+		dCoeff.Initialize(nOverlapFaces, nPin * nPin);
+
+		for (int i = 0; i < nOverlapFaces; i++) {
+		for (int s = 0; s < nPin; s++) {
+		for (int t = 0; t < nPin; t++) {
+			dCoeff[i][s * nPin + t] =
+				dConstantIntArray[ixOverlap + i][s * nPin + t];
+		}
+		}
+		}
+
+		ForceConsistencyConservation3(
+			dSourceArea,
+			dTargetArea,
+			dCoeff,
+			fMonotone);
+
+		for (int i = 0; i < nOverlapFaces; i++) {
+			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+
+			for (int s = 0; s < nPin; s++) {
+			for (int t = 0; t < nPin; t++) {
+				dConstantIntArray[ixOverlap + i][s * nPin + t] =
+					dCoeff[i][s * nPin + t]
+					* meshOverlap.vecFaceArea[ixOverlap + i]
+					/ meshOutput.vecFaceArea[ixSecondFace];
+
+			}
+			}
+		}
 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
@@ -1262,18 +1300,8 @@ void LinearRemapGLLtoGLL(
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
 
-	// Get entries from mapDistribution
-	DataVector<int> iDistRows;
-	DataVector<int> iDistCols;
-	DataVector<double> dDistEntries;
-
-	mapDistribution.GetSparseMatrix().GetEntries(
-		iDistRows, iDistCols, dDistEntries);
-
 	// Force consistency and conservation on linear sub-map
 	int ixDistBegin = 0;
-
-	ixOverlap = 0;
 
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
 
@@ -1311,40 +1339,20 @@ void LinearRemapGLLtoGLL(
 		DataVector<double> dSourceArea;
 		dSourceArea.Initialize(vecReverseFaceIx[ixSecond].size() * nPin * nPin);
 
-		for (int i = ixDistBegin; i < iDistRows.GetRows(); i++) {
-			if (iDistRows[i] != ixSecond) {
-				ixDistBegin = i;
-				break;
+		for (int i = 0; i < vecReverseFaceIx[ixSecond].size(); i++) {
+
+			int ixOverlap = vecReverseFaceIx[ixSecond][i];
+
+			int ixs = 0;
+			for (int s = 0; s < nPin; s++) {
+			for (int t = 0; t < nPin; t++) {
+				dSourceArea[i * nPin * nPin + ixs] =
+					dConstantIntArray[ixOverlap][ixs];
+
+				ixs++;
 			}
-
-			int ixFirst = iDistCols[i] / (nPin * nPin);
-
-			int j = 0;
-			for (; j < vecReverseFaceIx[ixSecond].size(); j++) {
-				int ixOverlap = vecReverseFaceIx[ixSecond][j];
-
-				if (meshOverlap.vecFirstFaceIx[ixOverlap] == ixFirst) {
-					break;
-				}
 			}
-
-			if (j == vecReverseFaceIx[ixSecond].size()) {
-				_EXCEPTIONT("Logic error");
-			}
-
-			int ixs = iDistCols[i] % (nPin * nPin);
-
-			dSourceArea[j * nPin * nPin + ixs] =
-				dDistEntries[i];
 		}
-/*
-		for (int s = 0; s < nPin; s++) {
-		for (int t = 0; t < nPin; t++) {
-			dSourceArea[s * nPin + t] = 0;
-			// From mapDistribution
-		}
-		}
-*/
 
 		// Target areas
 		double dTotalTargetArea = 0.0;
@@ -1471,11 +1479,6 @@ void LinearRemapGLLtoGLL(
 						smatMap(ixSecondNode, ixFirstNode) +=
 							dGlobalIntArray[ixp][ixOverlap + i][ixs];
 							// dataIntAreaOut[ixSecondNode];
-/*
-						if (ixSecondNode == 3) {
-							printf("%i %i/%i %1.15e\n", ixSecondNode, ixFirst, meshOverlap.vecFirstFaceIx[ixOverlap + i], dGlobalIntArray[ixp][ixOverlap + i][ixs]);
-						}
-*/
 					}
 
 					ixp++;
@@ -1492,74 +1495,5 @@ void LinearRemapGLLtoGLL(
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-void EnforceConservation(
-	const DataVector<double> & dataInputJacobian,
-	const DataVector<double> & dataOutputJacobian,
-	OfflineMap & mapRemap,
-	bool fEnforceMonotonicity
-) {
-
-	// Get SparseMatrix represntation of the OfflineMap
-	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-
-	// Get entries of the SparseMatrix
-	DataVector<int> iRows;
-	DataVector<int> iCols;
-	DataVector<double> dCoeff;
-
-	smatMap.GetEntries(iRows, iCols, dCoeff);
-
-	// Compute column sums
-	DataVector<double> dColumnSums;
-	dColumnSums.Initialize(smatMap.GetColumns());
-
-	for (int i = 0; i < iRows.GetRows(); i++) {
-		dColumnSums[iCols[i]] +=
-			dCoeff[i] * dataOutputJacobian[iRows[i]];
-	}
-
-	for (int i = 0; i < iRows.GetRows(); i++) {
-		dCoeff[i] *= dataInputJacobian[iCols[i]] / dColumnSums[iCols[i]];
-	}
-
-
-	if (fEnforceMonotonicity) {
-		DataVector<double> dCoeffExcess;
-		dCoeffExcess.Initialize(smatMap.GetColumns());
-
-		for (int i = 0; i < dColumnSums.GetRows(); i++) {
-			dColumnSums[i] = dataInputJacobian[i] - dColumnSums[i];
-		}
-		for (int i = 0; i < iRows.GetRows(); i++) {
-			if (dCoeff[i] > 1.0) {
-				_EXCEPTIONT("Monotonic initial coefficients expected");
-			}
-			dCoeffExcess[iCols[i]] += 1.0 - dCoeff[i];
-		}
-		for (int i = 0; i < iRows.GetRows(); i++) {
-			dCoeff[i] += (1.0 - dCoeff[i])
-				/ dCoeffExcess[iCols[i]]
-				* dColumnSums[iCols[i]]
-				/ dataOutputJacobian[iRows[i]];
-
-			if (dCoeff[i] > 1.0) {
-				_EXCEPTION();
-			}
-		}
-
-	} else {
-	}
-
-	smatMap.SetEntries(iRows, iCols, dCoeff);
-
-
-	for (int i = 0; i < dColumnSums.GetRows(); i++) {
-		printf("%1.15e %1.15e\n", dColumnSums[i], dataInputJacobian[i]);
-	}
-
-}
-*/
 ///////////////////////////////////////////////////////////////////////////////
 
