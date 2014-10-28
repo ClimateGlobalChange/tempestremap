@@ -1008,10 +1008,10 @@ void LinearRemapGLLtoGLL(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	OfflineMap & mapRemap,
 	bool fMonotone,
 	bool fContinuousIn,
-	bool fContinuousOut
+	bool fContinuousOut,
+	OfflineMap & mapRemap
 ) {
 
 	// Triangular quadrature rule
@@ -1038,11 +1038,6 @@ void LinearRemapGLLtoGLL(
 	dConstantIntArray.Initialize(
 		meshOverlap.faces.size(),
 		nPin * nPin);
-
-	// Geometric area of each output node
-	DataMatrix<double> dGeometricOutputArea;
-	dGeometricOutputArea.Initialize(
-		meshOutput.faces.size(), nPout * nPout);
 
 	// Number of overlap Faces per source Face
 	DataVector<int> nAllOverlapFaces;
@@ -1193,19 +1188,6 @@ void LinearRemapGLLtoGLL(
 						dBetaOut,
 						dSampleCoeffOut);
 
-					// Overlap output area
-					for (int p = 0; p < nPout; p++) {
-					for (int q = 0; q < nPout; q++) {
-						double dNodeArea =
-							dSampleCoeffOut[p][q]
-							* dW[k]
-							* dTriArea;
-
-						dGeometricOutputArea[ixSecond][p * nPout + q] +=
-							dNodeArea;
-					}
-					}
-
 					// Compute overlap integral
 					int ixs = 0;
 					for (int s = 0; s < nPin; s++) {
@@ -1227,7 +1209,8 @@ void LinearRemapGLLtoGLL(
 								  dSampleCoeffIn[s][t]
 								* dSampleCoeffOut[p][q]
 								* dW[k]
-								* dTriArea;
+								* dTriArea
+								/ dataGLLJacobianOut[p][q][ixSecond];
 
 							ixp++;
 						}
@@ -1238,7 +1221,7 @@ void LinearRemapGLLtoGLL(
 				}
 			}
 		}
-		
+
 		// Force consistency and conservation of ConstantIntArray
 		DataVector<double> dSourceArea;
 		dSourceArea.Initialize(nPin * nPin);
@@ -1322,9 +1305,8 @@ void LinearRemapGLLtoGLL(
 				int ixp = 0;
 				for (int p = 0; p < nPout; p++) {
 				for (int q = 0; q < nPout; q++) {
-					dCoeff[ixp][i * nPout * nPout + ixs] =
-						dGlobalIntArray[ixp][ixOverlap][ixs]
-						/ dGeometricOutputArea[ixSecond][p * nPout + q];
+					dCoeff[ixp][i * nPin * nPin + ixs] =
+						dGlobalIntArray[ixp][ixOverlap][ixs];
 
 					ixp++;
 				}
@@ -1334,7 +1316,7 @@ void LinearRemapGLLtoGLL(
 			}
 			}
 		}
-		
+
 		// Source areas
 		DataVector<double> dSourceArea;
 		dSourceArea.Initialize(vecReverseFaceIx[ixSecond].size() * nPin * nPin);
@@ -1373,6 +1355,13 @@ void LinearRemapGLLtoGLL(
 			}
 			}
 		}
+
+		// Force consistency and conservation
+		ForceConsistencyConservation3(
+			dSourceArea,
+			dTargetArea,
+			dCoeff,
+			fMonotone);
 /*
 		// Check column sums (conservation)
 		for (int i = 0; i < dCoeff.GetColumns(); i++) {
@@ -1393,17 +1382,15 @@ void LinearRemapGLLtoGLL(
 		}
 		_EXCEPTION();
 */
-		// Force consistency and conservation
-		ForceConsistencyConservation3(
-			dSourceArea,
-			dTargetArea,
-			dCoeff,
-			fMonotone);
 
 		// Coefficients
 		for (int i = 0; i < vecReverseFaceIx[ixSecond].size(); i++) {
 
-			int ixOverlap = vecReverseFaceIx[ixSecond][i];
+			ixOverlap = vecReverseFaceIx[ixSecond][i];
+
+			if ((ixOverlap < 0) || (ixOverlap > dGlobalIntArray.GetColumns())) {
+				_EXCEPTION();
+			}
 
 			int ixs = 0;
 			for (int s = 0; s < nPin; s++) {
@@ -1413,7 +1400,7 @@ void LinearRemapGLLtoGLL(
 				for (int p = 0; p < nPout; p++) {
 				for (int q = 0; q < nPout; q++) {
 					dGlobalIntArray[ixp][ixOverlap][ixs] =
-						dCoeff[ixp][i * nPout * nPout + ixs];
+						dCoeff[ixp][i * nPin * nPin + ixs];
 
 					ixp++;
 				}

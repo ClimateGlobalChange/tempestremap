@@ -568,10 +568,10 @@ try {
 			mapRemap.GetOutputAreas(),
 			nPin,
 			nPout,
-			mapRemap,
 			fMonotone,
 			fContinuousIn,
-			fContinuousOut
+			fContinuousOut,
+			mapRemap
 		);
 
 	} else {

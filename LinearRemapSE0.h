@@ -73,10 +73,10 @@ void LinearRemapGLLtoGLL(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	OfflineMap & mapRemap,
 	bool fMonotone,
 	bool fContinuousIn,
-	bool fContinuousOut
+	bool fContinuousOut,
+	OfflineMap & mapRemap
 );
 
 ///////////////////////////////////////////////////////////////////////////////
