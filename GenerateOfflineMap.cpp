@@ -425,7 +425,7 @@ try {
 
 	// Finite element input / Finite volume output
 	} else if (
-		(eInputType == DiscretizationType_CGLL) &&
+		(eInputType != DiscretizationType_FV) &&
 		(eOutputType == DiscretizationType_FV)
 	) {
 		DataMatrix3D<int> dataGLLNodes;
@@ -460,11 +460,20 @@ try {
 				"input mesh");
 		}
 
-		// Generate the unique Jacobian
-		GenerateUniqueJacobian(
-			dataGLLNodes,
-			dataGLLJacobian,
-			mapRemap.GetInputAreas());
+		// Generate the continuous Jacobian for input mesh
+		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
+
+		if (eInputType == DiscretizationType_CGLL) {
+			GenerateUniqueJacobian(
+				dataGLLNodes,
+				dataGLLJacobian,
+				mapRemap.GetInputAreas());
+
+		} else {
+			GenerateDiscontinuousJacobian(
+				dataGLLJacobian,
+				mapRemap.GetInputAreas());
+		}
 
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
@@ -476,6 +485,7 @@ try {
 			dataGLLNodes,
 			dataGLLJacobian,
 			fMonotone,
+			fContinuousIn,
 			mapRemap
 		);
 
@@ -568,20 +578,20 @@ try {
 		_EXCEPTIONT("Not implemented");
 	}
 
-#pragma warning "NOTE: VERIFICATION DISABLED"
-/*
+//#pragma warning "NOTE: VERIFICATION DISABLED"
+
 	// Verify consistency, conservation and monotonicity
 	if (!fNoCheck) {
 		AnnounceStartBlock("Verifying map");
 		mapRemap.IsConsistent(1.0e-8);
-		mapRemap.IsConservative(vecInputAreas, vecOutputAreas, 1.0e-8);
+		mapRemap.IsConservative(1.0e-8);
 
 		if (fMonotone) {
 			mapRemap.IsMonotone(1.0e-12);
 		}
 		AnnounceEndBlock(NULL);
 	}
-*/
+
 	AnnounceEndBlock(NULL);
 
 	// Initialize element dimensions from input/output Mesh

@@ -77,7 +77,7 @@ void LinearRemapFVtoGLL(
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-
+/*
 ///	<summary>
 ///		Generate the OfflineMap for remapping from finite elements to finite
 ///		elements.
@@ -98,7 +98,7 @@ void LinearRemapGLLtoGLL(
 	bool fContinuousIn,
 	bool fContinuousOut
 );
-
+*/
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif
