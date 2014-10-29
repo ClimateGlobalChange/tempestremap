@@ -239,6 +239,22 @@ void OfflineMap::Apply(
 
 		AnnounceStartBlock(vecVariables[v].c_str());
 
+		// Check for _FillValue
+		float flFillValue = 0.0f;
+		double dFillValue = 0.0;
+		for (int a = 0; a < var->num_atts(); a++) {
+			NcAtt * att = var->get_att(a);
+			if (strcmp(att->name(), "_FillValue") == 0) {
+				if (att->type() == ncDouble) {
+					dFillValue = att->as_double(0);
+				} else if (att->type() == ncFloat) {
+					flFillValue = att->as_float(0);
+				} else {
+					_EXCEPTIONT("Invalid type for _FillValue");
+				}
+			}
+		}
+
 		// Loop through all dimensions and add missing dimensions to output
 		int nVarTotalEntries = 1;
 
@@ -364,13 +380,32 @@ void OfflineMap::Apply(
 			if (var->type() == ncFloat) {
 				var->get(&(dataIn[0]), &(nGet[0]));
 
-				for (int i = 0; i < nSourceCount; i++) {
-					dataInDouble[i] = static_cast<double>(dataIn[i]);
+				if (flFillValue != 0.0f) {
+					for (int i = 0; i < nSourceCount; i++) {
+						if (dataIn[i] == flFillValue) {
+							dataInDouble[i] = 0.0;
+						} else {
+							dataInDouble[i] = static_cast<double>(dataIn[i]);
+						}
+					}
+
+				} else {
+					for (int i = 0; i < nSourceCount; i++) {
+						dataInDouble[i] = static_cast<double>(dataIn[i]);
+					}
 				}
 
 			// Load data as Double
 			} else if (var->type() == ncDouble) {
 				var->get(&(dataInDouble[0]), &(nGet[0]));
+
+				if (dFillValue != 0.0) {
+					for (int i = 0; i < nSourceCount; i++) {
+						if (dataInDouble[i] == dFillValue) {
+							dataInDouble[i] = 0.0;
+						}
+					}
+				}
 
 			} else {
 				_EXCEPTIONT("Invalid variable type");
