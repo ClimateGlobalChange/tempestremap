@@ -62,7 +62,30 @@ void LinearRemapSE4(
 ///		Generate the OfflineMap for remapping from finite elements to finite
 ///		elements.
 ///	</summary>
-void LinearRemapGLLtoGLL(
+void LinearRemapGLLtoGLL_Pointwise(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodesIn,
+	const DataMatrix3D<double> & dataGLLJacobianIn,
+	const DataMatrix3D<int> & dataGLLNodesOut,
+	const DataMatrix3D<double> & dataGLLJacobianOut,
+	const DataVector<double> & dataNodalAreaOut,
+	int nPin,
+	int nPout,
+	bool fMonotone,
+	bool fContinuousIn,
+	bool fContinuousOut,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite elements to finite
+///		elements.
+///	</summary>
+void LinearRemapGLLtoGLL_Integrated(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,

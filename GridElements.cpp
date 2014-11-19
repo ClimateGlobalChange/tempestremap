@@ -332,22 +332,24 @@ void Mesh::Write(const std::string & strFile) const {
 
 	varFaces->add_att("elem_type", "SHELL4");
 
-	int * nConnect = new int[nNodesPerElement];
+	DataMatrix<int> nConnect;
+	nConnect.Initialize(nElementCount, nNodesPerElement);
+
 	for (int i = 0; i < nElementCount; i++) {
 		int nEdges = faces[i].edges.size();
 		int k = 0;
 		for (; k < nEdges; k++) {
-			nConnect[k] = faces[i][k] + 1;
+			nConnect[i][k] = faces[i][k] + 1;
 		}
 		for (; k < nNodesPerElement; k++) {
-			nConnect[k] = nConnect[nEdges-1];
+			nConnect[i][k] = nConnect[i][nEdges-1];
 		}
-
-		varFaces->set_cur(i, 0);
-		varFaces->put(nConnect, 1, nNodesPerElement);
 	}
 
-	delete[] nConnect;
+	varFaces->set_cur(0, 0);
+	varFaces->put(&(nConnect[0][0]), nElementCount, nNodesPerElement);
+
+	nConnect.Deinitialize();
 
 	// Node list
 	NcVar * varNodes =
@@ -376,15 +378,19 @@ void Mesh::Write(const std::string & strFile) const {
 		ncOut.add_var("edge_type", ncInt,
 			dimElementBlock1, dimNodesPerElement);
 
-	int * nEdgeType = new int[nNodesPerElement];
+	DataMatrix<int> nEdgeType;
+	nEdgeType.Initialize(nElementCount, nNodesPerElement);
+
 	for (int i = 0; i < nElementCount; i++) {
 		for (int k = 0; k < nNodesPerElement; k++) {
-			nEdgeType[k] = static_cast<int>(faces[i].edges[k].type);
+			nEdgeType[i][k] = static_cast<int>(faces[i].edges[k].type);
 		}
-		varEdgeTypes->set_cur(i, 0);
-		varEdgeTypes->put(nEdgeType, 1, nNodesPerElement);
 	}
-	delete[] nEdgeType;
+
+	varEdgeTypes->set_cur(0, 0);
+	varEdgeTypes->put(&(nEdgeType[0][0]), nElementCount, nNodesPerElement);
+
+	nEdgeType.Deinitialize();
 
 	// Source elements from mesh 1
 	if (vecFirstFaceIx.size() != 0) {

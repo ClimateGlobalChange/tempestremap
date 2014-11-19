@@ -173,6 +173,8 @@ try {
 
 	varA->get(&(dDataA[0]), &(vecOutputDimSizes[0]));
 
+	int nVarASize = varA->get_dim(0)->size();
+
 	ncFileA.close();
 
 	AnnounceEndBlock("Done");
@@ -189,9 +191,16 @@ try {
 
 	varB->get(&(dDataB[0]), &(vecOutputDimSizes[0]));
 
+	int nVarBSize = varB->get_dim(0)->size();
+
 	ncFileB.close();
 
 	AnnounceEndBlock("Done");
+
+	// Check sizes
+	if (nVarASize != nVarBSize) {
+		_EXCEPTION2("Variable size mismatch [%i,%i]", nVarASize, nVarBSize);
+	}
 
 	// Calculate the difference and store in dDataA
 	double dMaxA = dDataA[0];

@@ -302,15 +302,15 @@ try {
 	}
 
 	// Check for forward correspondence in overlap mesh
-	if ((ixFirstFaceMax == meshInput.faces.size()) &&
-		(ixSecondFaceMax == meshOutput.faces.size())
+	if (ixFirstFaceMax == meshInput.faces.size() //&&
+		//(ixSecondFaceMax == meshOutput.faces.size())
 	) {
 		Announce("Overlap mesh forward correspondence found");
 
 	// Check for reverse correspondence in overlap mesh
 	} else if (
-		(ixFirstFaceMax == meshOutput.faces.size()) &&
-		(ixSecondFaceMax == meshInput.faces.size())
+		ixFirstFaceMax == meshOutput.faces.size() //&&
+		//(ixSecondFaceMax == meshInput.faces.size())
 	) {
 		Announce("Overlap mesh reverse correspondence found (reversing)");
 
@@ -557,7 +557,7 @@ try {
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
 
-		LinearRemapGLLtoGLL(
+		LinearRemapGLLtoGLL_Pointwise(
 			meshInput,
 			meshOutput,
 			meshOverlap,

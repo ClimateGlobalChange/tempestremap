@@ -24,6 +24,7 @@ FILES= Announce.cpp \
        MeshUtilities.cpp \
        MeshUtilitiesFuzzy.cpp \
        MeshUtilitiesExact.cpp \
+       GaussQuadrature.cpp \
        GaussLobattoQuadrature.cpp \
        FiniteElementTools.cpp \
        NetCDFUtilities.cpp \
@@ -35,6 +36,8 @@ GENERATERLLMESH_FILES= GenerateRLLMesh.cpp $(FILES)
 GENERATECSMESH_FILES= GenerateCSMesh.cpp $(FILES)
 
 GENERATEICOMESH_FILES= GenerateICOMesh.cpp $(FILES)
+
+GENERATELAMBERTCONFCONICMESH_FILES = GenerateLambertConfConicMesh.cpp $(FILES)
 
 GENERATEOVERLAPMESH_FILES= GenerateOverlapMesh.cpp $(FILES)
 
@@ -59,7 +62,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -69,6 +72,9 @@ GenerateCSMesh: $(GENERATECSMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 GenerateICOMesh: $(GENERATEICOMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEICOMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+
+GenerateLambertConfConicMesh: $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateOverlapMesh: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -96,7 +102,7 @@ GenerateOfflineMap: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
 ## Clean
 ##
 clean:
-	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap *.o
+	rm -f GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap *.o
 	rm -rf $(DEPDIR)
 	rm -rf $(BUILDDIR)
 

@@ -18,6 +18,7 @@
 #include "GridElements.h"
 #include "FiniteElementTools.h"
 #include "TriangularQuadrature.h"
+#include "GaussQuadrature.h"
 #include "GaussLobattoQuadrature.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -168,6 +169,9 @@ try {
 	// Output on GLL grid
 	bool fGLL;
 
+	// Output on an integrated GLL grid
+	bool fGLLIntegrate;
+
 	// Degree of polynomial
 	int nP;
 
@@ -185,6 +189,7 @@ try {
 		CommandLineString(strMeshFile, "mesh", "");
 		CommandLineInt(iTestData, "test", 1);
 		CommandLineBool(fGLL, "gll");
+		CommandLineBool(fGLLIntegrate, "gllint");
 		CommandLineInt(nP, "np", 4);
 		CommandLineBool(fHOMMEFormat, "homme");
 		CommandLineString(strVariableName, "var", "Psi");
@@ -192,6 +197,11 @@ try {
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
+
+	// Check arguments
+	if (fGLLIntegrate && fGLL) {
+		_EXCEPTIONT("--gll and --gllint are exclusive arguments");
+	}
 
 	// Announce
 	Announce("=========================================================");
@@ -288,11 +298,14 @@ try {
 	// Output data
 	DataVector<double> dVar;
 
-	// Sample as element averages
-	if (!fGLL) {
+	// Nodal geometric area
+	DataVector<double> dNodeArea;
 
-		// Calculate element areas
-		mesh.CalculateFaceAreas();
+	// Calculate element areas
+	mesh.CalculateFaceAreas();
+
+	// Sample as element averages
+	if ((!fGLLIntegrate) && (!fGLL)) {
 
 		// Resize the array
 		dVar.Initialize(mesh.faces.size());
@@ -353,9 +366,8 @@ try {
 			}
 		}
 
-	// Sample at GLL nodes
+	// Finite element data
 	} else {
-
 		// Generate grid metadata
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
@@ -405,48 +417,137 @@ try {
 
 		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
+		// Get Gauss quadrature nodes
+		const int nGaussP = 8;
+
+		DataVector<double> dGaussG;
+		DataVector<double> dGaussW;
+
+		GaussQuadrature::GetPoints(nGaussP, 0.0, 1.0, dGaussG, dGaussW);
+
 		// Allocate data
-		dVar.Initialize(iMaxNode+1);
+		dVar.Initialize(iMaxNode);
+		dNodeArea.Initialize(iMaxNode);
 
 		// Sample data
 		for (int k = 0; k < nElements; k++) {
 
 			const Face & face = mesh.faces[k];
 
-			for (int i = 0; i < nP; i++) {
-			for (int j = 0; j < nP; j++) {
+			// Sample data at GLL nodes
+			if (fGLL) {
+				for (int i = 0; i < nP; i++) {
+				for (int j = 0; j < nP; j++) {
 
-				// Apply local map
-				Node node;
-				Node dDx1G;
-				Node dDx2G;
+					// Apply local map
+					Node node;
+					Node dDx1G;
+					Node dDx2G;
 
-				ApplyLocalMap(
-					face,
-					mesh.nodes,
-					dG[i],
-					dG[j],
-					node,
-					dDx1G,
-					dDx2G);
+					ApplyLocalMap(
+						face,
+						mesh.nodes,
+						dG[i],
+						dG[j],
+						node,
+						dDx1G,
+						dDx2G);
 
-				// Sample data at this point
-				double dNodeLon = atan2(node.y, node.x);
-				if (dNodeLon < 0.0) {
-					dNodeLon += 2.0 * M_PI;
+					// Sample data at this point
+					double dNodeLon = atan2(node.y, node.x);
+					if (dNodeLon < 0.0) {
+						dNodeLon += 2.0 * M_PI;
+					}
+					double dNodeLat = asin(node.z);
+
+					double dSample = (*pTest)(dNodeLon, dNodeLat);
+
+					dVar[dataGLLNodes[j][i][k]-1] = dSample;
+
+					if (fHOMMEFormat) {
+						dLat[dataGLLNodes[j][i][k]-1] = dNodeLat * 180.0 / M_PI;
+						dLon[dataGLLNodes[j][i][k]-1] = dNodeLon * 180.0 / M_PI;
+						dArea[dataGLLNodes[j][i][k]-1] += dataGLLJacobian[j][i][k];
+					}
 				}
-				double dNodeLat = asin(node.z);
+				}
 
-				double dSample = (*pTest)(dNodeLon, dNodeLat);
+			// High-order Gaussian integration over basis function
+			} else {
+				DataMatrix<double> dCoeff;
+				dCoeff.Initialize(nP, nP);
 
-				dVar[dataGLLNodes[j][i][k]-1] = dSample;
+				for (int p = 0; p < nGaussP; p++) {
+				for (int q = 0; q < nGaussP; q++) {
 
-				if (fHOMMEFormat) {
-					dLat[dataGLLNodes[j][i][k]-1] = dNodeLat * 180.0 / M_PI;
-					dLon[dataGLLNodes[j][i][k]-1] = dNodeLon * 180.0 / M_PI;
-					dArea[dataGLLNodes[j][i][k]-1] += dataGLLJacobian[j][i][k];
+					// Apply local map
+					Node node;
+					Node dDx1G;
+					Node dDx2G;
+
+					ApplyLocalMap(
+						face,
+						mesh.nodes,
+						dGaussG[p],
+						dGaussG[q],
+						node,
+						dDx1G,
+						dDx2G);
+
+					// Cross product gives local Jacobian
+					Node nodeCross = CrossProduct(dDx1G, dDx2G);
+
+					double dJacobian = sqrt(
+						  nodeCross.x * nodeCross.x
+						+ nodeCross.y * nodeCross.y
+						+ nodeCross.z * nodeCross.z);
+
+					// Find components of quadrature point in basis
+					// of the first Face
+					SampleGLLFiniteElement(
+						false,
+						nP,
+						dGaussG[p],
+						dGaussG[q],
+						dCoeff);
+
+					// Sample data at this point
+					double dNodeLon = atan2(node.y, node.x);
+					if (dNodeLon < 0.0) {
+						dNodeLon += 2.0 * M_PI;
+					}
+					double dNodeLat = asin(node.z);
+
+					double dSample = (*pTest)(dNodeLon, dNodeLat);
+
+					// Integrate
+					for (int i = 0; i < nP; i++) {
+					for (int j = 0; j < nP; j++) {
+						
+						dVar[dataGLLNodes[j][i][k]-1] +=
+							dSample
+							* dCoeff[j][i]
+							* dGaussW[p]
+							* dGaussW[q]
+							* dJacobian;
+
+						dNodeArea[dataGLLNodes[j][i][k]-1] +=
+							dCoeff[j][i]
+							* dGaussW[p]
+							* dGaussW[q]
+							* dJacobian;
+
+					}
+					}
+				}
 				}
 			}
+		}
+	
+		// Divide by area
+		if (fGLLIntegrate) {
+			for (int i = 0; i < dVar.GetRows(); i++) {
+				dVar[i] /= dNodeArea[i];
 			}
 		}
 	}
