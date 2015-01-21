@@ -256,7 +256,7 @@ try {
 
 	// Input mesh areas
 	if (eInputType == DiscretizationType_FV) {
-		mapRemap.SetInputAreas(meshInput.vecFaceArea);
+		mapRemap.SetSourceAreas(meshInput.vecFaceArea);
 	}
 
 	// Load output mesh
@@ -273,7 +273,7 @@ try {
 
 	// Output mesh areas
 	if (eOutputType == DiscretizationType_FV) {
-		mapRemap.SetOutputAreas(meshOutput.vecFaceArea);
+		mapRemap.SetTargetAreas(meshOutput.vecFaceArea);
 	}
 
 	// Load overlap mesh
@@ -359,6 +359,10 @@ try {
 		meshInput.ConstructReverseNodeArray();
 		meshInput.ConstructEdgeMap();
 
+		// Initialize coordinates for map
+		mapRemap.InitializeSourceCoordinatesFromMeshFV(meshInput);
+		mapRemap.InitializeTargetCoordinatesFromMeshFV(meshOutput);
+
 		// Construct OfflineMap
 		AnnounceStartBlock("Calculating offline map");
 		LinearRemapFVtoFV(
@@ -388,6 +392,11 @@ try {
 			AnnounceEndBlock(NULL);
 		}
 
+		// Initialize coordinates for map
+		mapRemap.InitializeSourceCoordinatesFromMeshFV(meshInput);
+		mapRemap.InitializeTargetCoordinatesFromMeshFE(
+			meshOutput, nPout, dataGLLNodes);
+
 		// Generate the continuous Jacobian
 		bool fContinuous = (eOutputType == DiscretizationType_CGLL);
 
@@ -395,12 +404,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodes,
 				dataGLLJacobian,
-				mapRemap.GetOutputAreas());
+				mapRemap.GetTargetAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobian,
-				mapRemap.GetOutputAreas());
+				mapRemap.GetTargetAreas());
 		}
 
 		// Generate reverse node array and edge map
@@ -417,7 +426,7 @@ try {
 			meshOverlap,
 			dataGLLNodes,
 			dataGLLJacobian,
-			mapRemap.GetOutputAreas(),
+			mapRemap.GetTargetAreas(),
 			nPin,
 			mapRemap,
 			fMonotone,
@@ -460,6 +469,11 @@ try {
 				"input mesh");
 		}
 
+		// Initialize coordinates for map
+		mapRemap.InitializeSourceCoordinatesFromMeshFE(
+			meshInput, nPin, dataGLLNodes);
+		mapRemap.InitializeTargetCoordinatesFromMeshFV(meshOutput);
+
 		// Generate the continuous Jacobian for input mesh
 		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
 
@@ -467,12 +481,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodes,
 				dataGLLJacobian,
-				mapRemap.GetInputAreas());
+				mapRemap.GetSourceAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobian,
-				mapRemap.GetInputAreas());
+				mapRemap.GetSourceAreas());
 		}
 
 		// Generate offline map
@@ -524,6 +538,12 @@ try {
 		Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
 		AnnounceEndBlock(NULL);
 
+		// Initialize coordinates for map
+		mapRemap.InitializeSourceCoordinatesFromMeshFE(
+			meshInput, nPin, dataGLLNodesIn);
+		mapRemap.InitializeTargetCoordinatesFromMeshFE(
+			meshOutput, nPout, dataGLLNodesOut);
+
 		// Generate the continuous Jacobian for input mesh
 		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
 
@@ -531,12 +551,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodesIn,
 				dataGLLJacobianIn,
-				mapRemap.GetInputAreas());
+				mapRemap.GetSourceAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobianIn,
-				mapRemap.GetInputAreas());
+				mapRemap.GetSourceAreas());
 		}
 
 		// Generate the continuous Jacobian for output mesh
@@ -546,12 +566,12 @@ try {
 			GenerateUniqueJacobian(
 				dataGLLNodesOut,
 				dataGLLJacobianOut,
-				mapRemap.GetOutputAreas());
+				mapRemap.GetTargetAreas());
 
 		} else {
 			GenerateDiscontinuousJacobian(
 				dataGLLJacobianOut,
-				mapRemap.GetOutputAreas());
+				mapRemap.GetTargetAreas());
 		}
 
 		// Generate offline map
@@ -565,7 +585,7 @@ try {
 			dataGLLJacobianIn,
 			dataGLLNodesOut,
 			dataGLLJacobianOut,
-			mapRemap.GetOutputAreas(),
+			mapRemap.GetTargetAreas(),
 			nPin,
 			nPout,
 			fMonotone,
@@ -595,8 +615,8 @@ try {
 	AnnounceEndBlock(NULL);
 
 	// Initialize element dimensions from input/output Mesh
-	mapRemap.InitializeInputDimensionsFromFile(strInputMesh);
-	mapRemap.InitializeOutputDimensionsFromFile(strOutputMesh);
+	mapRemap.InitializeSourceDimensionsFromFile(strInputMesh);
+	mapRemap.InitializeTargetDimensionsFromFile(strOutputMesh);
 
 	// Output the Offline Map
 	if (strOutputMap != "") {

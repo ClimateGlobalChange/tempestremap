@@ -23,6 +23,53 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void GetDefaultNodalLocations(
+	int nP,
+	DataVector<double> & dG
+) {
+	// GLL Quadrature nodes on [0,1]
+	DataVector<double> dW;
+	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ApplyLocalMap(
+	const Face & face,
+	const NodeVector & nodes,
+	double dAlpha,
+	double dBeta,
+	Node & node
+) {
+	// Calculate nodal locations on the plane
+	double dXc =
+		  nodes[face[0]].x * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].x *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].x *        dAlpha  *        dBeta
+		+ nodes[face[3]].x * (1.0 - dAlpha) *        dBeta;
+
+	double dYc =
+		  nodes[face[0]].y * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].y *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].y *        dAlpha  *        dBeta
+		+ nodes[face[3]].y * (1.0 - dAlpha) *        dBeta;
+
+	double dZc =
+		  nodes[face[0]].z * (1.0 - dAlpha) * (1.0 - dBeta)
+		+ nodes[face[1]].z *        dAlpha  * (1.0 - dBeta)
+		+ nodes[face[2]].z *        dAlpha  *        dBeta
+		+ nodes[face[3]].z * (1.0 - dAlpha) *        dBeta;
+
+	double dR = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
+
+	// Mapped node location
+	node.x = dXc / dR;
+	node.y = dYc / dR;
+	node.z = dZc / dR;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void ApplyLocalMap(
 	const Face & face,
 	const NodeVector & nodes,
@@ -53,7 +100,7 @@ void ApplyLocalMap(
 
 	double dR = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
 
-	// Check if this Node exists in the NodeMap
+	// Mapped node location
 	nodeG.x = dXc / dR;
 	nodeG.y = dYc / dR;
 	nodeG.z = dZc / dR;
@@ -486,8 +533,9 @@ void SampleGLLFiniteElement(
 		if (nP > 4) {
 			// GLL Quadrature nodes on [0,1]
 			DataVector<double> dG;
-			DataVector<double> dW;
-			GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+			GetDefaultNodalLocations(nP, dG);
+			//DataVector<double> dW;
+			//GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 			// Get interpolation coefficients in each direction
 			PolynomialInterp::LagrangianPolynomialCoeffs(

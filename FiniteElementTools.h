@@ -27,6 +27,29 @@ class Mesh;
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Get the array of GLL nodal locations within an element.
+///	</summary>
+void GetDefaultNodalLocations(
+	int nP,
+	DataVector<double> & dG
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Apply the local map.
+///	</summary>
+void ApplyLocalMap(
+	const Face & face,
+	const NodeVector & nodes,
+	double dAlpha,
+	double dBeta,
+	Node & node
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Apply the local map.
 ///	</summary>
 void ApplyLocalMap(
