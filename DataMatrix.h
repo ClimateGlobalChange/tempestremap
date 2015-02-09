@@ -159,7 +159,7 @@ class DataMatrix {
 
 			// Allocate memory
 			char *rawdata = reinterpret_cast<char*>(
-				malloc(sRowPtrFootprint + sPadding + sRows * sRowFootprint));
+				malloc((size_t) sRowPtrFootprint + (size_t) sPadding + (size_t) sRows * (size_t) sRowFootprint));
 
 			if (rawdata == NULL) {
 				_EXCEPTIONT("Out of memory.");
@@ -232,7 +232,7 @@ class DataMatrix {
 			memset(
 				&(m_data[0][0]),
 				0,
-				m_sRows * m_sColumns * sizeof(DataType)
+				(long) m_sRows * (long) m_sColumns * (long) sizeof(DataType)
 			);
 		}
 

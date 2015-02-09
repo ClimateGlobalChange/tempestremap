@@ -890,8 +890,8 @@ void LinearRemapSE4(
 						dBeta);
 
 					// Check inverse map value
-					if ((dAlpha < 0.0) || (dAlpha > 1.0) ||
-						(dBeta  < 0.0) || (dBeta  > 1.0)
+					if ((dAlpha < -1.0e-12) || (dAlpha > 1.0 + 1.0e-12) ||
+                                               (dBeta  < -1.0e-12) || (dBeta  > 1.0 + 1.0e-12)
 					) {
 						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
 							dAlpha, dBeta);

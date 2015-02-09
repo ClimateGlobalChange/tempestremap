@@ -31,6 +31,8 @@
 #include "netcdfcpp.h"
 #include <cmath>
 
+using namespace std;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void ParseVariableList(
@@ -81,12 +83,27 @@ void LoadMetaDataFile(
 
 	int nP = dimNp->size();
 	int nElem = dimNelem->size();
+        DataMatrix3D<int> dataGLLNodes_tmp;
+        DataMatrix3D<double> dataGLLJacobian_tmp;
+        cout << "\n..Initialized temporary arrays." << endl;
 
 	dataGLLNodes.Initialize(nP, nP, nElem);
 	dataGLLJacobian.Initialize(nP, nP, nElem);
+	dataGLLNodes_tmp.Initialize(nP, nP, nElem);
+	dataGLLJacobian_tmp.Initialize(nP, nP, nElem);
+        cout << "..Initialized permanent arrays.\n";
 
-	varGLLNodes->get(&(dataGLLNodes[0][0][0]), nP, nP, nElem);
+	varGLLNodes->get(&(dataGLLNodes_tmp[0][0][0]), nP, nP, nElem);
 	varGLLJacobian->get(&(dataGLLJacobian[0][0][0]), nP, nP, nElem);
+        cout << "..Filled temporary arrays.\n";
+
+        for (int i = 0; i < nP; i++) {
+	  for (int j = 0; j < nP; j++) {
+	    for (int k = 0; k < nElem; k++) {
+              dataGLLNodes[i][j][k] = dataGLLNodes_tmp[j][i][k];
+            }
+         }
+        }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

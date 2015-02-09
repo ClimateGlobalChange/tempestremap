@@ -104,12 +104,12 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		ncTargetMesh.get_att("rectilinear_dim1_name")->as_string(0);
 
 	m_vecTargetDimSizes.resize(2);
-	m_vecTargetDimSizes[0] = nDim0Size;
-	m_vecTargetDimSizes[1] = nDim1Size;
+	m_vecTargetDimSizes[0] = nDim1Size;
+	m_vecTargetDimSizes[1] = nDim0Size;
 
 	m_vecTargetDimNames.resize(2);
-	m_vecTargetDimNames[0] = strDim0Name;
-	m_vecTargetDimNames[1] = strDim1Name;
+	m_vecTargetDimNames[0] = strDim1Name;
+	m_vecTargetDimNames[1] = strDim0Name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -236,7 +236,7 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 			dG[j],
 			node);
 
-		int iNode = dataGLLnodes[i][j][k] - 1;
+		int iNode = dataGLLnodes[j][i][k] - 1;
 
 		double dLon = atan2(node.y, node.x);
 		double dLat = asin(node.z);
