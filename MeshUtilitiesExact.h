@@ -93,11 +93,11 @@ public:
 	///		that are contained in First, ordered from FirstBegin to FirstEnd.
 	///	</returns>
 	bool CalculateEdgeIntersections(
-		const Node & nodeFirstBegin,
-		const Node & nodeFirstEnd,
+		const NodeExact & nodeFirstBegin,
+		const NodeExact & nodeFirstEnd,
 		Edge::Type typeFirst,
-		const Node & nodeSecondBegin,
-		const Node & nodeSecondEnd,
+		const NodeExact & nodeSecondBegin,
+		const NodeExact & nodeSecondEnd,
 		Edge::Type typeSecond,
 		std::vector<NodeExact> & nodeIntersections,
 		bool fIncludeFirstBeginNode = false

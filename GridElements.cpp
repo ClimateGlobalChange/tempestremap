@@ -126,7 +126,9 @@ Real Mesh::CalculateFaceAreas() {
 			nCount++;
 		}
 	}
-	Announce("WARNING: %i small elements found", nCount);
+	if (nCount != 0) {
+		Announce("WARNING: %i small elements found", nCount);
+	}
 
 	// Calculate accumulated area carefully
 	static const int Jump = 10;
