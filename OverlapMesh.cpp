@@ -304,19 +304,17 @@ void GeneratePath(
 						utils.AreNodesEqual(
 							nodeIntersections[i],
 							nodeLastIntersection);
-/*
-					nodeIntersections[i].Print("n0");
-					nodeLastIntersection.Print("l0");
-*/
+
 /*
 					meshOverlap.nodes[edgeFirstCurrent[1]].Print("f1");
 					nodeIntersections[i].Print("n0");
 					nodeLastIntersection.Print("l0");
 */
 					if (fEqualNodes) {
-							nodeIntersections.erase(nodeIntersections.begin()+i);
-							i--;
+						nodeIntersections.erase(nodeIntersections.begin()+i);
+						i--;
 					}
+
 /*
 						bool fBeginPoint =
 							utils.AreNodesEqual(
@@ -476,6 +474,13 @@ void GeneratePath(
 				}
 
 				int ixNextSecondFace;
+
+/*
+				nodeIntersections[0].Print("i0");
+				nodeFirstEnd.Print("i0");
+				nodeSecondEdge0.Print("n0");
+				nodeSecondEdge1.Print("n1");
+*/
 
 				// Path hits the beginpoint of the Edge
 				if (utils.AreNodesEqual(nodeIntersections[0], nodeSecondEdge0)) {
@@ -1208,7 +1213,7 @@ void GenerateOverlapMesh(
 
 #pragma message "OpenMP here"
 	for (; ixCurrentFirstFace < meshFirst.faces.size(); ixCurrentFirstFace++) {
-	//for (int ixCurrentFirstFace = 320; ixCurrentFirstFace < 321; ixCurrentFirstFace++) {
+	//for (int ixCurrentFirstFace = 853; ixCurrentFirstFace < 854; ixCurrentFirstFace++) {
 
 #ifdef CHECK_AREAS
 		Real dFirstFaceArea = meshFirst.CalculateFaceArea(ixCurrentFirstFace);

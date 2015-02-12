@@ -164,16 +164,16 @@ void MeshUtilitiesExact::ContainsNode(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MeshUtilitiesExact::CalculateEdgeIntersections(
-	const Node & nodeFirstBegin,
-	const Node & nodeFirstEnd,
+	const NodeExact & nodeFirstBegin,
+	const NodeExact & nodeFirstEnd,
 	Edge::Type typeFirst,
-	const Node & nodeSecondBegin,
-	const Node & nodeSecondEnd,
+	const NodeExact & nodeSecondBegin,
+	const NodeExact & nodeSecondEnd,
 	Edge::Type typeSecond,
 	std::vector<NodeExact> & nodeIntersections,
 	bool fIncludeFirstBeginNode
 ) {
-	
+
 	// Make a locally modifyable version of the Nodes
 	NodeExact node11;
 	NodeExact node12;
@@ -247,6 +247,7 @@ bool MeshUtilitiesExact::CalculateEdgeIntersections(
 		bool fp12_isZero = fpDot12.IsZero();
 		bool fp21_isZero = fpDot21.IsZero();
 		bool fp22_isZero = fpDot22.IsZero();
+
 /*
 		printf("B: %i %i %i %i\n",
 			fp11_isZero,
@@ -457,7 +458,6 @@ int MeshUtilitiesExact::FindFaceNearNode(
 	const NodeExact & nodeEnd,
 	const Edge::Type edgetype
 ) {
-
 	// Get the reference point
 	NodeExact nodeBegin = mesh.nodes[ixNode];
 
@@ -623,7 +623,6 @@ int MeshUtilitiesExact::FindFaceNearNode(
 	const Edge::Type edgetype,
 	const FindFaceStruct & aFindFaceStruct
 ) {
-
 	const std::vector<int> & vecPossibleFaces =
 		aFindFaceStruct.vecFaceIndices;
 
@@ -663,7 +662,6 @@ int MeshUtilitiesExact::FindFaceNearNode(
 
 		// If edges are coincident check orientation to determine face 
 		if (fCoincident) {
-
 			FixedPoint fpOrientation =
 				DotProductX(node1 - node0, nodeEnd - nodeBegin);
 
