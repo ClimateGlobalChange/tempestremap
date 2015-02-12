@@ -1044,9 +1044,11 @@ ContinueToNextFace:
 #endif
 
 		// Push this Face into the overlap Mesh
-		meshOverlap.faces.push_back(faceOverlap);
-		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
-		meshOverlap.vecSecondFaceIx.push_back(ixCurrentSecondFace);
+		if (CalculateFaceArea(faceOverlap, meshOverlap.nodes) >= 1.0e-13) {
+			meshOverlap.faces.push_back(faceOverlap);
+			meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
+			meshOverlap.vecSecondFaceIx.push_back(ixCurrentSecondFace);
+		}
 
 		// Reset the search counter
 		j = 0;
@@ -1107,9 +1109,11 @@ ContinueToNextFace:
 				faceSecondCurrent.edges[i].type;
 		}
 
-		meshOverlap.faces.push_back(faceOverlapCurrent);
-		meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
-		meshOverlap.vecSecondFaceIx.push_back(ixFaceToAdd);
+		if (CalculateFaceArea(faceOverlapCurrent, meshOverlap.nodes) >= 1.0e-13) {
+			meshOverlap.faces.push_back(faceOverlapCurrent);
+			meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
+			meshOverlap.vecSecondFaceIx.push_back(ixFaceToAdd);
+		}
 
 		// Add further interior faces that are Edge-neighbors of this Face
 		bool fMoreFacesToAdd = false;
@@ -1251,7 +1255,6 @@ void GenerateOverlapMesh(
 				ixCurrentFirstFace,
 				meshOverlap
 			);
-
 		}
 
 		// Mixed method; try Fuzzy arithmetic first

@@ -36,3 +36,9 @@ gecore_test.pref
 *.pref
 
 GenerateOfflineMap
+
+GenerateLambertConfConicMesh
+
+run_glltofv_rll_np5_diffnorms.sh
+
+run_glltofv_rll_np5.sh
