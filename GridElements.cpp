@@ -118,9 +118,15 @@ Real Mesh::CalculateFaceAreas() {
 
 	// Calculate the area of each Face
 	vecFaceArea.Initialize(faces.size());
+
+	int nCount = 0;
 	for (int i = 0; i < faces.size(); i++) {
 		vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
+		if (vecFaceArea[i] < 1.0e-13) {
+			nCount++;
+		}
 	}
+	Announce("WARNING: %i small elements found", nCount);
 
 	// Calculate accumulated area carefully
 	static const int Jump = 10;
@@ -963,6 +969,7 @@ Real CalculateFaceArea(
 			* tanh(0.5 * (dLamLat1 + dLamLat2));
 
 		dFaceArea -= 2.0 * atan(dS);
+
 /*
 		// Calculate angle between Nodes
 		Real dDotN0N1 = DotProduct(node0, node1);
@@ -999,9 +1006,9 @@ Real CalculateFaceArea(
 
 	}
 
-	//double dPlanarSum = static_cast<double>(nEdges-2) * M_PI;
+	//return (dAccumulatedExcess - static_cast<double>(nEdges-2) * M_PI);
 
-	if (dFaceArea < 0.0) {
+	if (dFaceArea < -1.0e-14) {
 		dFaceArea += 2.0 * M_PI;
 		//printf("%1.15e %1.15e\n", dFaceArea, dAccumulatedExcess - dPlanarSum);
 		//_EXCEPTIONT("Negative area element detected");
