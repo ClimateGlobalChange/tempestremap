@@ -597,9 +597,14 @@ public:
 	);
 
 	///	<summary>
-	///		Sort Faces by the specified Face index.
+	///		Sort Faces by the opposite source mesh.
 	///	</summary>
 	void ExchangeFirstAndSecondMesh();
+
+	///	<summary>
+	///		Remove coincident nodes from the Mesh and adjust indices in faces.
+	///	</summary>
+	void RemoveCoincidentNodes();
 
 	///	<summary>
 	///		Write the mesh to a NetCDF file.
