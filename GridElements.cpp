@@ -226,6 +226,56 @@ void Mesh::ExchangeFirstAndSecondMesh() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::RemoveCoincidentNodes() {
+
+	// Put nodes into a map, tagging uniques
+	std::map<Node, int> mapNodes;
+
+	std::vector<int> vecNodeIndex;
+	std::vector<int> vecUniques;
+
+	vecNodeIndex.reserve(nodes.size());
+	vecUniques.reserve(nodes.size());
+
+	for (int i = 0; i < nodes.size(); i++) {
+		std::map<Node, int>::const_iterator iter = mapNodes.find(nodes[i]);
+
+		if (iter != mapNodes.end()) {
+			vecNodeIndex[i] = vecNodeIndex[iter->second];
+		} else {
+			mapNodes.insert(std::pair<Node, int>(nodes[i], i));
+			vecNodeIndex[i] = vecUniques.size();
+			vecUniques.push_back(i);
+		}
+	}
+
+	if (vecUniques.size() == nodes.size()) {
+		return;
+	}
+
+	Announce("%i duplicate nodes detected", nodes.size() - vecUniques.size());
+
+	// Remove duplicates
+	NodeVector nodesOld = nodes;
+
+	nodes.resize(vecUniques.size());
+	for (int i = 0; i < vecUniques.size(); i++) {
+		nodes[i] = nodesOld[vecUniques[i]];
+	}
+
+	// Adjust node indices in Faces
+	for (int i = 0; i < faces.size(); i++) {
+	for (int j = 0; j < faces[i].edges.size(); j++) {
+		faces[i].edges[j].node[0] =
+			vecNodeIndex[faces[i].edges[j].node[0]];
+		faces[i].edges[j].node[1] =
+			vecNodeIndex[faces[i].edges[j].node[1]];
+	}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::Write(const std::string & strFile) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
@@ -436,112 +486,206 @@ void Mesh::Read(const std::string & strFile) {
 	if (fp == NULL) {
 		_EXCEPTION1("Mesh file not found \"%s\"", strFile.c_str());
 	}
-
-	// Input from a NetCDF Exodus file
+	fclose(fp);
+	
+	// Open the NetCDF file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
 
-	// Determine number of nodes per element
-	NcDim * dimNodesPerElement = ncFile.get_dim("num_nod_per_el1");
-	int nNodesPerElement = dimNodesPerElement->size();
-
-	// Number of nodes
-	NcDim * dimNodes = ncFile.get_dim("num_nodes");
-	int nNodeCount = dimNodes->size();
-
-	// Number of elements
-	NcDim * dimElements = ncFile.get_dim("num_elem");
-	int nElementCount = dimElements->size();
-
-	// Output size
-	Announce("Mesh size: Nodes [%i] Elements [%i]", nNodeCount, nElementCount);
-
-	// Load in node array
-	nodes.resize(nNodeCount);
-
-	NcVar * varNodes = ncFile.get_var("coord");
-
-	DataMatrix<double> dNodeCoords;
-	dNodeCoords.Initialize(3, nNodeCount);
-
-	// Load in node array
-	varNodes->set_cur(0, 0);
-	varNodes->get(&(dNodeCoords[0][0]), 3, nNodeCount);
-
-	for (int i = 0; i < nNodeCount; i++) {
-		nodes[i].x = static_cast<Real>(dNodeCoords[0][i]);
-		nodes[i].y = static_cast<Real>(dNodeCoords[1][i]);
-		nodes[i].z = static_cast<Real>(dNodeCoords[2][i]);
-	}
-
-	dNodeCoords.Deinitialize();
-
-	// Load in face array
-	faces.resize(nElementCount, Face(nNodesPerElement));
-
-	NcVar * varFaces = ncFile.get_var("connect1");
-
-	DataMatrix<int> iFaceIndices;
-	iFaceIndices.Initialize(nElementCount, nNodesPerElement);
-
-	varFaces->set_cur(0, 0);
-	varFaces->get(&(iFaceIndices[0][0]), nElementCount, nNodesPerElement);
-
-	for (int i = 0; i < nElementCount; i++) {
-	for (int j = 0; j < nNodesPerElement; j++) {
-		faces[i].SetNode(j, iFaceIndices[i][j]-1);
-	}
-	}
-
-	iFaceIndices.Deinitialize();
-
-	// Check for variables
-	bool fHasEdgeType = false;
-	bool fHasFirstMeshSourceFace = false;
-	bool fHasSecondMeshSourceFace = false;
-
-	for (int v = 0; v < ncFile.num_vars(); v++) {
-		if (strcmp(ncFile.get_var(v)->name(), "edge_type") == 0) {
-			fHasEdgeType = true;
-		}
-		if (strcmp(ncFile.get_var(v)->name(), "face_source_1") == 0) {
-			fHasFirstMeshSourceFace = true;
-		}
-		if (strcmp(ncFile.get_var(v)->name(), "face_source_2") == 0) {
-			fHasSecondMeshSourceFace = true;
+	// Get the conventions attribute (if it exists)
+	bool fSCRIPFormat = false;
+	for (int i = 0; i < ncFile.num_atts(); i++) {
+		NcAtt * att = ncFile.get_att(i);
+		std::string strAttName = att->name();
+		if (strAttName == "Conventions") {
+			std::string strConventions = att->as_string(0);
+			if (strConventions == "SCRIP") {
+				fSCRIPFormat = true;
+			}
 		}
 	}
 
-	// Load in edge type array
-	if (fHasEdgeType) {
-		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
+	// Input from a NetCDF SCRIP file
+	if (fSCRIPFormat) {
+		Announce("SCRIP Format File detected");
 
-		DataMatrix<int> iEdgeTypes;
-		iEdgeTypes.Initialize(nElementCount, nNodesPerElement);
+		NcDim * dimGridSize = ncFile.get_dim("grid_size");
+		NcDim * dimGridCorners = ncFile.get_dim("grid_corners");
 
-		varEdgeTypes->set_cur(0, 0);
-		varEdgeTypes->get(&(iEdgeTypes[0][0]), nElementCount, nNodesPerElement);
+		// Check rank
+		NcDim * dimGridRank = ncFile.get_dim("grid_rank");
+		if (dimGridRank->size() != 2) {
+			_EXCEPTION1("Mesh has unexpected grid_rank: Found %i, expected 2",
+				dimGridRank->size());
+		}
+
+		// Get the grid corners
+		NcVar * varGridCornerLat = ncFile.get_var("grid_corner_lat");
+		NcVar * varGridCornerLon = ncFile.get_var("grid_corner_lon");
+
+		int nGridSize = static_cast<int>(dimGridSize->size());
+		int nGridCorners = static_cast<int>(dimGridCorners->size());
+
+		DataMatrix<double> dCornerLat(nGridSize, nGridCorners);
+		DataMatrix<double> dCornerLon(nGridSize, nGridCorners);
+
+		varGridCornerLat->set_cur(0, 0);
+		varGridCornerLat->get(&(dCornerLat[0][0]), nGridSize, nGridCorners);
+
+		varGridCornerLon->set_cur(0, 0);
+		varGridCornerLon->get(&(dCornerLon[0][0]), nGridSize, nGridCorners);
+
+		faces.resize(nGridSize);
+		nodes.resize(nGridSize * nGridCorners);
+
+		// Current global node index
+		int ixNode = 0;
+
+		for (int i = 0; i < nGridSize; i++) {
+
+			// Create a new Face
+			Face faceNew(nGridCorners);
+			for (int j = 0; j < nGridCorners; j++) {
+				faceNew.SetNode(j, ixNode + j);
+			}
+			faces[i] = faceNew;
+
+			// Insert Face corners into node table
+			for (int j = 0; j < nGridCorners; j++) {
+				double dLon = dCornerLon[i][j] / 180.0 * M_PI;
+				double dLat = dCornerLat[i][j] / 180.0 * M_PI;
+
+				//printf("%1.5e %1.5e\n", dLon, dLat);
+
+				if (dLat > 0.5 * M_PI) {
+					dLat = 0.5 * M_PI;
+				}
+				if (dLat < -0.5 * M_PI) {
+					dLat = -0.5 * M_PI;
+				}
+
+				nodes[ixNode].x = cos(dLon) * cos(dLat);
+				nodes[ixNode].y = sin(dLon) * cos(dLat);
+				nodes[ixNode].z = sin(dLat);
+
+				ixNode++;
+			}
+			//_EXCEPTION();
+		}
+
+		// SCRIP does not reference a node table, so we must remove
+		// coincident nodes.
+		RemoveCoincidentNodes();
+
+		// Output size
+		Announce("Mesh size: Nodes [%i] Elements [%i]",
+			nodes.size(), faces.size());
+
+	// Input from a NetCDF Exodus file
+	} else {
+
+		// Determine number of nodes per element
+		NcDim * dimNodesPerElement = ncFile.get_dim("num_nod_per_el1");
+		int nNodesPerElement = dimNodesPerElement->size();
+
+		// Number of nodes
+		NcDim * dimNodes = ncFile.get_dim("num_nodes");
+		int nNodeCount = dimNodes->size();
+
+		// Number of elements
+		NcDim * dimElements = ncFile.get_dim("num_elem");
+		int nElementCount = dimElements->size();
+
+		// Output size
+		Announce("Mesh size: Nodes [%i] Elements [%i]", nNodeCount, nElementCount);
+
+		// Load in node array
+		nodes.resize(nNodeCount);
+
+		NcVar * varNodes = ncFile.get_var("coord");
+
+		DataMatrix<double> dNodeCoords;
+		dNodeCoords.Initialize(3, nNodeCount);
+
+		// Load in node array
+		varNodes->set_cur(0, 0);
+		varNodes->get(&(dNodeCoords[0][0]), 3, nNodeCount);
+
+		for (int i = 0; i < nNodeCount; i++) {
+			nodes[i].x = static_cast<Real>(dNodeCoords[0][i]);
+			nodes[i].y = static_cast<Real>(dNodeCoords[1][i]);
+			nodes[i].z = static_cast<Real>(dNodeCoords[2][i]);
+		}
+
+		dNodeCoords.Deinitialize();
+
+		// Load in face array
+		faces.resize(nElementCount, Face(nNodesPerElement));
+
+		NcVar * varFaces = ncFile.get_var("connect1");
+
+		DataMatrix<int> iFaceIndices;
+		iFaceIndices.Initialize(nElementCount, nNodesPerElement);
+
+		varFaces->set_cur(0, 0);
+		varFaces->get(&(iFaceIndices[0][0]), nElementCount, nNodesPerElement);
 
 		for (int i = 0; i < nElementCount; i++) {
 		for (int j = 0; j < nNodesPerElement; j++) {
-			faces[i].edges[j].type = static_cast<Edge::Type>(iEdgeTypes[i][j]);
+			faces[i].SetNode(j, iFaceIndices[i][j]-1);
 		}
 		}
-	}
 
-	// Load in first mesh source face ix
-	if (fHasFirstMeshSourceFace) {
-		NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
-		vecFirstFaceIx.resize(nElementCount);
-		varFaceSource1->set_cur((long)0);
-		varFaceSource1->get(&(vecFirstFaceIx[0]), nElementCount);
-	}
+		iFaceIndices.Deinitialize();
 
-	// Load in second mesh source face ix
-	if (fHasSecondMeshSourceFace) {
-		NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
-		vecSecondFaceIx.resize(nElementCount);
-		varFaceSource2->set_cur((long)0);
-		varFaceSource2->get(&(vecSecondFaceIx[0]), nElementCount);
+		// Check for variables
+		bool fHasEdgeType = false;
+		bool fHasFirstMeshSourceFace = false;
+		bool fHasSecondMeshSourceFace = false;
+
+		for (int v = 0; v < ncFile.num_vars(); v++) {
+			if (strcmp(ncFile.get_var(v)->name(), "edge_type") == 0) {
+				fHasEdgeType = true;
+			}
+			if (strcmp(ncFile.get_var(v)->name(), "face_source_1") == 0) {
+				fHasFirstMeshSourceFace = true;
+			}
+			if (strcmp(ncFile.get_var(v)->name(), "face_source_2") == 0) {
+				fHasSecondMeshSourceFace = true;
+			}
+		}
+
+		// Load in edge type array
+		if (fHasEdgeType) {
+			NcVar * varEdgeTypes = ncFile.get_var("edge_type");
+
+			DataMatrix<int> iEdgeTypes;
+			iEdgeTypes.Initialize(nElementCount, nNodesPerElement);
+
+			varEdgeTypes->set_cur(0, 0);
+			varEdgeTypes->get(&(iEdgeTypes[0][0]), nElementCount, nNodesPerElement);
+
+			for (int i = 0; i < nElementCount; i++) {
+			for (int j = 0; j < nNodesPerElement; j++) {
+				faces[i].edges[j].type = static_cast<Edge::Type>(iEdgeTypes[i][j]);
+			}
+			}
+		}
+
+		// Load in first mesh source face ix
+		if (fHasFirstMeshSourceFace) {
+			NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
+			vecFirstFaceIx.resize(nElementCount);
+			varFaceSource1->set_cur((long)0);
+			varFaceSource1->get(&(vecFirstFaceIx[0]), nElementCount);
+		}
+
+		// Load in second mesh source face ix
+		if (fHasSecondMeshSourceFace) {
+			NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
+			vecSecondFaceIx.resize(nElementCount);
+			varFaceSource2->set_cur((long)0);
+			varFaceSource2->get(&(vecSecondFaceIx[0]), nElementCount);
+		}
 	}
 }
 
