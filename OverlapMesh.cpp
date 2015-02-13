@@ -1049,7 +1049,7 @@ ContinueToNextFace:
 #endif
 
 		// Push this Face into the overlap Mesh
-		if (CalculateFaceArea(faceOverlap, meshOverlap.nodes) >= 1.0e-13) {
+		if (CalculateFaceArea(faceOverlap, meshOverlap.nodes) >= 1.0e-12) {
 			meshOverlap.faces.push_back(faceOverlap);
 			meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
 			meshOverlap.vecSecondFaceIx.push_back(ixCurrentSecondFace);
@@ -1114,7 +1114,7 @@ ContinueToNextFace:
 				faceSecondCurrent.edges[i].type;
 		}
 
-		if (CalculateFaceArea(faceOverlapCurrent, meshOverlap.nodes) >= 1.0e-13) {
+		if (CalculateFaceArea(faceOverlapCurrent, meshOverlap.nodes) >= 1.0e-12) {
 			meshOverlap.faces.push_back(faceOverlapCurrent);
 			meshOverlap.vecFirstFaceIx.push_back(ixCurrentFirstFace);
 			meshOverlap.vecSecondFaceIx.push_back(ixFaceToAdd);
@@ -1198,6 +1198,7 @@ void GenerateOverlapMesh(
 			vecSecondNodeMap[i] = ix;
 		}
 	}
+
 /*
 	// Estimate meshOverlap size
 	int nMaximumFaceCount;
