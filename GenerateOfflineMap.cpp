@@ -254,10 +254,6 @@ try {
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
 
-	if ((strInputData != "") && (vecVariableStrings.size() == 0)) {
-		_EXCEPTIONT("No variables specified");
-	}
-
 	// Load input mesh
 	AnnounceStartBlock("Loading input mesh");
 	Mesh meshInput(strInputMesh);

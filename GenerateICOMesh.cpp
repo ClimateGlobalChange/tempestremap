@@ -19,6 +19,8 @@
 #include "Exception.h"
 #include "Announce.h"
 
+#include "netcdfcpp.h"
+
 #include <cmath>
 #include <iostream>
 
@@ -458,6 +460,8 @@ void Dual(
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 

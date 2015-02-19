@@ -18,6 +18,8 @@
 #include "GridElements.h"
 #include "Exception.h"
 
+#include "netcdfcpp.h"
+
 #include <cmath>
 #include <iostream>
 
@@ -127,6 +129,8 @@ void GenerateFacesFromQuad(
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 	// Number of elements in mesh

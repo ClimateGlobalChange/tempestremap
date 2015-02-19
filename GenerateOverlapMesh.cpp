@@ -21,11 +21,15 @@
 #include "GridElements.h"
 #include "OverlapMesh.h"
 
+#include "netcdfcpp.h"
+
 #include <cmath>
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 

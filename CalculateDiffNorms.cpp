@@ -30,6 +30,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
+
 try {
 	// First data file
 	std::string strFileA;
@@ -168,8 +171,15 @@ try {
 	dDataA.Initialize(nTotalDataSize);
 
 	NcFile ncFileA(strFileA.c_str(), NcFile::ReadOnly);
+	if (!ncFileA.is_valid()) {
+		_EXCEPTION1("Unable to open file \"%s\"", strFileA.c_str());
+	}
 
 	NcVar * varA = ncFileA.get_var(strVariableName.c_str());
+	if (varA == NULL) {
+		_EXCEPTION2("File \"%s\" does not contain variable \"%s\"",
+			strFileA.c_str(), strVariableName.c_str());
+	}
 
 	varA->get(&(dDataA[0]), &(vecOutputDimSizes[0]));
 
@@ -186,8 +196,15 @@ try {
 	dDataB.Initialize(nTotalDataSize);
 
 	NcFile ncFileB(strFileB.c_str(), NcFile::ReadOnly);
+	if (!ncFileB.is_valid()) {
+		_EXCEPTION1("Unable to open file \"%s\"", strFileB.c_str());
+	}
 
 	NcVar * varB = ncFileB.get_var(strVariableName.c_str());
+	if (varB == NULL) {
+		_EXCEPTION2("File \"%s\" does not contain variable \"%s\"",
+			strFileB.c_str(), strVariableName.c_str());
+	}
 
 	varB->get(&(dDataB[0]), &(vecOutputDimSizes[0]));
 

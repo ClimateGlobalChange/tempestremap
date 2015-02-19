@@ -18,10 +18,13 @@
 #include "CommandLine.h"
 #include "Exception.h"
 #include "GridElements.h"
+#include "netcdfcpp.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 

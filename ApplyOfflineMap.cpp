@@ -18,6 +18,7 @@
 #include "CommandLine.h"
 #include "Exception.h"
 #include "OfflineMap.h"
+#include "netcdfcpp.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -55,6 +56,8 @@ void ParseVariableList(
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 
@@ -121,11 +124,7 @@ try {
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
 
-	if ((strInputData != "") && (vecVariableStrings.size() == 0)) {
-		_EXCEPTIONT("No variables specified");
-	}
-
-	// Second input data fil
+	// Second input data file
 	std::vector< std::string > vecVariableStrings2;
 	if (strInputData2 != "") {
 		ParseVariableList(strVariables2, vecVariableStrings2);

@@ -421,6 +421,10 @@ void OfflineMap::Apply(
 ) {
 	// Open source data file
 	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
+	if (!ncSource.is_valid()) {
+		_EXCEPTION1("Cannot open source data file \"%s\"",
+			strSourceDataFile.c_str());
+	}
 
 	// Open target data file
 	NcFile::FileMode eOpenMode = NcFile::Replace;
@@ -518,15 +522,47 @@ void OfflineMap::Apply(
 			m_vecTargetDimSizes[1]);
 	}
 
+	// Generate variable list
+	std::vector<std::string> vecVariableList = vecVariables;
+	if (vecVariables.size() == 0) {
+		for (int v = 0; v < ncSource.num_vars(); v++) {
+			NcVar * var = ncSource.get_var(v);
+			if (fSourceRectilinear) {
+				if (var->num_dims() < 2) {
+					continue;
+				}
+
+				NcDim * dimA = var->get_dim(var->num_dims()-2);
+				NcDim * dimB = var->get_dim(var->num_dims()-1);
+
+				if (dimA->size() != m_vecSourceDimSizes[0]) {
+					continue;
+				}
+				if (dimB->size() != m_vecSourceDimSizes[1]) {
+					continue;
+				}
+				
+			} else {
+				NcDim * dim = var->get_dim(var->num_dims()-1);
+
+				if (dim->size() != nSourceCount) {
+					continue;
+				}
+			}
+
+			vecVariableList.push_back(var->name());
+		}
+	}
+
 	// Loop through all variables
-	for (int v = 0; v < vecVariables.size(); v++) {
-		NcVar * var = ncSource.get_var(vecVariables[v].c_str());
+	for (int v = 0; v < vecVariableList.size(); v++) {
+		NcVar * var = ncSource.get_var(vecVariableList[v].c_str());
 		if (var == NULL) {
 			_EXCEPTION1("Variable \"%s\" does not exist in source file",
-				vecVariables[v].c_str());
+				vecVariableList[v].c_str());
 		}
 
-		AnnounceStartBlock(vecVariables[v].c_str());
+		AnnounceStartBlock(vecVariableList[v].c_str());
 
 		// Check for _FillValue
 		float flFillValue = 0.0f;
@@ -596,7 +632,7 @@ void OfflineMap::Apply(
 		if (fTargetDouble) {
 			varOut =
 				ncTarget.add_var(
-					vecVariables[v].c_str(),
+					vecVariableList[v].c_str(),
 					ncDouble,
 					vecDimsOut.GetRows(),
 					(const NcDim**)&(vecDimsOut[0]));
@@ -604,7 +640,7 @@ void OfflineMap::Apply(
 		} else {
 			varOut =
 				ncTarget.add_var(
-					vecVariables[v].c_str(),
+					vecVariableList[v].c_str(),
 					ncFloat,
 					vecDimsOut.GetRows(),
 					(const NcDim**)&(vecDimsOut[0]));
