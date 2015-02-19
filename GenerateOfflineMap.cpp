@@ -74,10 +74,24 @@ void LoadMetaDataFile(
 	NcFile ncMeta(strMetaFile.c_str(), NcFile::ReadOnly);
 
 	NcDim * dimNp = ncMeta.get_dim("np");
+	if (dimNp == NULL) {
+		_EXCEPTIONT("Dimension \"np\" missing from metadata file");
+	}
+
 	NcDim * dimNelem = ncMeta.get_dim("nelem");
+	if (dimNelem == NULL) {
+		_EXCEPTIONT("Dimension \"nelem\" missing from metadata file");
+	}
 
 	NcVar * varGLLNodes = ncMeta.get_var("GLLnodes");
+	if (dimNelem == NULL) {
+		_EXCEPTIONT("Variable \"GLLnodes\" missing from metadata file");
+	}
+
 	NcVar * varGLLJacobian = ncMeta.get_var("J");
+	if (dimNelem == NULL) {
+		_EXCEPTIONT("Variable \"J\" missing from metadata file");
+	}
 
 	int nP = dimNp->size();
 	int nElem = dimNelem->size();
@@ -92,6 +106,8 @@ void LoadMetaDataFile(
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
 
 try {
 
@@ -615,8 +631,13 @@ try {
 	AnnounceEndBlock(NULL);
 
 	// Initialize element dimensions from input/output Mesh
+	AnnounceStartBlock("Writing output");
+	AnnounceStartBlock("Initializing dimensions from file");
+	Announce("Input mesh");
 	mapRemap.InitializeSourceDimensionsFromFile(strInputMesh);
+	Announce("Output mesh");
 	mapRemap.InitializeTargetDimensionsFromFile(strOutputMesh);
+	AnnounceEndBlock(NULL);
 
 	// Output the Offline Map
 	if (strOutputMap != "") {
@@ -639,6 +660,7 @@ try {
 			false);
 		AnnounceEndBlock(NULL);
 	}
+	AnnounceEndBlock(NULL);
 
 	AnnounceBanner();
 

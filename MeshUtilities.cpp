@@ -108,7 +108,8 @@ void MeshUtilities::FindFaceFromNode(
 	if (aFindFaceStruct.loc == Face::NodeLocation_Edge) {
 		if (aFindFaceStruct.vecFaceIndices.size() != 2) {
 			printf("n: %1.5e %1.5e %1.5e\n", node.x, node.y, node.z);
-			_EXCEPTION1("Multiple co-located edges detected (%i)",
+			_EXCEPTION2("Node found on edge with %i neighboring face(s) (%i)",
+				aFindFaceStruct.vecFaceIndices.size(),
 				(int)(aFindFaceStruct.vecFaceIndices.size()));
 		}
 	}
