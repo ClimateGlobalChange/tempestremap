@@ -491,21 +491,24 @@ void Mesh::Read(const std::string & strFile) {
 	// Open the NetCDF file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
 
-	// Get the conventions attribute (if it exists)
-	bool fSCRIPFormat = false;
-	for (int i = 0; i < ncFile.num_atts(); i++) {
-		NcAtt * att = ncFile.get_att(i);
-		std::string strAttName = att->name();
-		if (strAttName == "Conventions") {
-			std::string strConventions = att->as_string(0);
-			if (strConventions == "SCRIP") {
-				fSCRIPFormat = true;
-			}
+	// Check for dimension names "grid_size", "grid_rank" and "grid_corners"
+	int iSCRIPFormat = 0;
+	for (int i = 0; i < ncFile.num_dims(); i++) {
+		NcDim * dim = ncFile.get_dim(i);
+		std::string strDimName = dim->name();
+		if (strDimName == "grid_size") {
+			iSCRIPFormat++;
+		}
+		if (strDimName == "grid_corners") {
+			iSCRIPFormat++;
+		}
+		if (strDimName == "grid_rank") {
+			iSCRIPFormat++;
 		}
 	}
 
 	// Input from a NetCDF SCRIP file
-	if (fSCRIPFormat) {
+	if (iSCRIPFormat == 3) {
 		Announce("SCRIP Format File detected");
 
 		NcDim * dimGridSize = ncFile.get_dim("grid_size");
@@ -569,7 +572,6 @@ void Mesh::Read(const std::string & strFile) {
 
 				ixNode++;
 			}
-			//_EXCEPTION();
 		}
 
 		// SCRIP does not reference a node table, so we must remove

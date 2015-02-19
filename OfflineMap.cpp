@@ -33,34 +33,75 @@
 void OfflineMap::InitializeSourceDimensionsFromFile(
 	const std::string & strSourceMesh
 ) {
+	// Open the source mesh
 	NcFile ncSourceMesh(strSourceMesh.c_str(), NcFile::ReadOnly);
-
-	// Check for rectilinear attribute
-	bool fRectilinear = false;
-	for (int a = 0; a < ncSourceMesh.num_atts(); a++) {
-		if (strcmp(ncSourceMesh.get_att(a)->name(), "rectilinear") == 0) {
-			fRectilinear = true;
-			break;
-		}
+	if (!ncSourceMesh.is_valid()) {
+		_EXCEPTION1("Unable to open mesh \"%s\"", strSourceMesh.c_str());
 	}
 
-	// Non-rectilinear
-	if (!fRectilinear) {
+	// Check for grid dimensions (SCRIP format grid)
+	NcVar * varGridDims = ncSourceMesh.get_var("grid_dims");
+	if (varGridDims != NULL) {
+		NcDim * dimGridRank = varGridDims->get_dim(0);
+
+		m_vecSourceDimSizes.resize(dimGridRank->size());
+		varGridDims->get(&(m_vecSourceDimSizes[0]), dimGridRank->size());
+
+		if (dimGridRank->size() == 1) {
+			m_vecSourceDimNames.push_back("num_elem");
+		} else if (dimGridRank->size() == 2) {
+			m_vecSourceDimNames.push_back("lon");
+			m_vecSourceDimNames.push_back("lat");
+		} else {
+			_EXCEPTIONT("Source grid grid_rank must be < 3");
+		}
+		return;
+	}
+
+	// Check for rectilinear attribute
+	NcAtt * attRectilinear = ncSourceMesh.get_att("rectilinear");
+
+	// No rectilinear attribute
+	if (attRectilinear == NULL) {
 		int nElements = ncSourceMesh.get_dim("num_elem")->size();
 		m_vecSourceDimSizes.push_back(nElements);
 		m_vecSourceDimNames.push_back("num_elem");
 		return;
 	}
 
-	// Obtain rectilinear attributes
-	int nDim0Size = ncSourceMesh.get_att("rectilinear_dim0_size")->as_int(0);
-	int nDim1Size = ncSourceMesh.get_att("rectilinear_dim1_size")->as_int(0);
+	// Obtain rectilinear attributes (dimension sizes)
+	NcAtt * attRectilinearDim0Size =
+		ncSourceMesh.get_att("rectilinear_dim0_size");
+	NcAtt * attRectilinearDim1Size =
+		ncSourceMesh.get_att("rectilinear_dim1_size");
 
-	std::string strDim0Name =
-		ncSourceMesh.get_att("rectilinear_dim0_name")->as_string(0);
-	std::string strDim1Name =
-		ncSourceMesh.get_att("rectilinear_dim1_name")->as_string(0);
+	if (attRectilinearDim0Size == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_size\"");
+	}
+	if (attRectilinearDim1Size == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_size\"");
+	}
 
+	int nDim0Size = attRectilinearDim0Size->as_int(0);
+	int nDim1Size = attRectilinearDim1Size->as_int(0);
+
+	// Obtain rectilinear attributes (dimension names)
+	NcAtt * attRectilinearDim0Name =
+		ncSourceMesh.get_att("rectilinear_dim0_name");
+	NcAtt * attRectilinearDim1Name =
+		ncSourceMesh.get_att("rectilinear_dim1_name");
+
+	if (attRectilinearDim0Name == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_name\"");
+	}
+	if (attRectilinearDim1Name == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_name\"");
+	}
+
+	std::string strDim0Name = attRectilinearDim0Name->as_string(0);
+	std::string strDim1Name = attRectilinearDim1Name->as_string(0);
+
+	// Push rectilinear attributes into array
 	m_vecSourceDimSizes.resize(2);
 	m_vecSourceDimSizes[0] = nDim0Size;
 	m_vecSourceDimSizes[1] = nDim1Size;
@@ -75,34 +116,75 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 void OfflineMap::InitializeTargetDimensionsFromFile(
 	const std::string & strTargetMesh
 ) {
+	// Open the source mesh
 	NcFile ncTargetMesh(strTargetMesh.c_str(), NcFile::ReadOnly);
-
-	// Check for rectilinear attribute
-	bool fRectilinear = false;
-	for (int a = 0; a < ncTargetMesh.num_atts(); a++) {
-		if (strcmp(ncTargetMesh.get_att(a)->name(), "rectilinear") == 0) {
-			fRectilinear = true;
-			break;
-		}
+	if (!ncTargetMesh.is_valid()) {
+		_EXCEPTION1("Unable to open mesh \"%s\"", strTargetMesh.c_str());
 	}
 
-	// Non-rectilinear
-	if (!fRectilinear) {
+	// Check for grid dimensions (SCRIP format grid)
+	NcVar * varGridDims = ncTargetMesh.get_var("grid_dims");
+	if (varGridDims != NULL) {
+		NcDim * dimGridRank = varGridDims->get_dim(0);
+
+		m_vecTargetDimSizes.resize(dimGridRank->size());
+		varGridDims->get(&(m_vecTargetDimSizes[0]), dimGridRank->size());
+
+		if (dimGridRank->size() == 1) {
+			m_vecTargetDimNames.push_back("num_elem");
+		} else if (dimGridRank->size() == 2) {
+			m_vecTargetDimNames.push_back("lon");
+			m_vecTargetDimNames.push_back("lat");
+		} else {
+			_EXCEPTIONT("Target grid grid_rank must be < 3");
+		}
+		return;
+	}
+
+	// Check for rectilinear attribute
+	NcAtt * attRectilinear = ncTargetMesh.get_att("rectilinear");
+
+	// No rectilinear attribute
+	if (attRectilinear == NULL) {
 		int nElements = ncTargetMesh.get_dim("num_elem")->size();
 		m_vecTargetDimSizes.push_back(nElements);
 		m_vecTargetDimNames.push_back("num_elem");
 		return;
 	}
 
-	// Obtain rectilinear attributes
-	int nDim0Size = ncTargetMesh.get_att("rectilinear_dim0_size")->as_int(0);
-	int nDim1Size = ncTargetMesh.get_att("rectilinear_dim1_size")->as_int(0);
+	// Obtain rectilinear attributes (dimension sizes)
+	NcAtt * attRectilinearDim0Size =
+		ncTargetMesh.get_att("rectilinear_dim0_size");
+	NcAtt * attRectilinearDim1Size =
+		ncTargetMesh.get_att("rectilinear_dim1_size");
 
-	std::string strDim0Name =
-		ncTargetMesh.get_att("rectilinear_dim0_name")->as_string(0);
-	std::string strDim1Name =
-		ncTargetMesh.get_att("rectilinear_dim1_name")->as_string(0);
+	if (attRectilinearDim0Size == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_size\"");
+	}
+	if (attRectilinearDim1Size == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_size\"");
+	}
 
+	int nDim0Size = attRectilinearDim0Size->as_int(0);
+	int nDim1Size = attRectilinearDim1Size->as_int(0);
+
+	// Obtain rectilinear attributes (dimension names)
+	NcAtt * attRectilinearDim0Name =
+		ncTargetMesh.get_att("rectilinear_dim0_name");
+	NcAtt * attRectilinearDim1Name =
+		ncTargetMesh.get_att("rectilinear_dim1_name");
+
+	if (attRectilinearDim0Name == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_name\"");
+	}
+	if (attRectilinearDim1Name == NULL) {
+		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_name\"");
+	}
+
+	std::string strDim0Name = attRectilinearDim0Name->as_string(0);
+	std::string strDim1Name = attRectilinearDim1Name->as_string(0);
+
+	// Push rectilinear attributes into array
 	m_vecTargetDimSizes.resize(2);
 	m_vecTargetDimSizes[0] = nDim1Size;
 	m_vecTargetDimSizes[1] = nDim0Size;
@@ -315,17 +397,16 @@ NcDim * NcFile_GetDimIfExists(
 	const std::string & strDimName,
 	int nSize
 ) {
-	for (int d = 0; d < ncSource.num_dims(); d++) {
-		NcDim * dim = ncSource.get_dim(d);
-		if (strcmp(dim->name(), strDimName.c_str()) == 0) {
-			if (dim->size() != nSize) {
-				_EXCEPTION3("NetCDF file has dimension \"%s\" with mismatched"
-					" size %i != %i", strDimName.c_str(), dim->size(), nSize);
-			}
-			return ncSource.get_dim(d);
-		}
+	NcDim * dim = ncSource.get_dim(strDimName.c_str());
+	if (dim == NULL) {
+		return ncSource.add_dim(strDimName.c_str(), nSize);
 	}
-	return ncSource.add_dim(strDimName.c_str(), nSize);
+	
+	if (dim->size() != nSize) {
+		_EXCEPTION3("NetCDF file has dimension \"%s\" with mismatched"
+			" size %i != %i", strDimName.c_str(), dim->size(), nSize);
+	}
+	return dim;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -348,6 +429,10 @@ void OfflineMap::Apply(
 	}
 
 	NcFile ncTarget(strTargetDataFile.c_str(), eOpenMode);
+	if (!ncTarget.is_valid()) {
+		_EXCEPTION1("Cannot open target data file \"%s\"",
+			strTargetDataFile.c_str());
+	}
 
 	// Number of source and target regions
 	int nSourceCount = m_dSourceAreas.GetRows();
@@ -436,6 +521,10 @@ void OfflineMap::Apply(
 	// Loop through all variables
 	for (int v = 0; v < vecVariables.size(); v++) {
 		NcVar * var = ncSource.get_var(vecVariables[v].c_str());
+		if (var == NULL) {
+			_EXCEPTION1("Variable \"%s\" does not exist in source file",
+				vecVariables[v].c_str());
+		}
 
 		AnnounceStartBlock(vecVariables[v].c_str());
 
@@ -624,7 +713,7 @@ void OfflineMap::Apply(
 					dSourceMax = dataInDouble[i];
 				}
 			}
-			Announce(" Source Mass: %1.15e Min %1.10e Max %1.10e",
+			Announce("Source Mass: %1.15e Min %1.10e Max %1.10e",
 				dSourceMass, dSourceMin, dSourceMax);
 
 			// Apply the offline map to the data
@@ -672,16 +761,38 @@ void OfflineMap::Read(
 	const std::string & strSource
 ) {
 	NcFile ncMap(strSource.c_str(), NcFile::ReadOnly);
+	if (!ncMap.is_valid()) {
+		_EXCEPTION1("Unable to open input map file \"%s\"",
+			strSource.c_str());
+	}
 
 	// Read input dimensions entries
 	NcDim * dimSrcGridRank = ncMap.get_dim("src_grid_rank");
+	if (dimSrcGridRank == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable"
+			"\"src_grid_rank\"", strSource.c_str());
+	}
+
 	NcDim * dimDstGridRank = ncMap.get_dim("dst_grid_rank");
+	if (dimDstGridRank == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable"
+			"\"dst_grid_rank\"", strSource.c_str());
+	}
 
 	int nSrcGridDims = (int)(dimSrcGridRank->size());
 	int nDstGridDims = (int)(dimDstGridRank->size());
 
 	NcVar * varSrcGridDims = ncMap.get_var("src_grid_dims");
+	if (varSrcGridDims == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable"
+			"\"src_grid_dims\"", strSource.c_str());
+	}
+
 	NcVar * varDstGridDims = ncMap.get_var("dst_grid_dims");
+	if (varSrcGridDims == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable"
+			"\"dst_grid_dims\"", strSource.c_str());
+	}
 
 	m_vecSourceDimSizes.resize(nSrcGridDims);
 	m_vecSourceDimNames.resize(nSrcGridDims);
@@ -706,27 +817,151 @@ void OfflineMap::Read(
 
 	// Source and Target mesh resolutions
 	NcDim * dimNA = ncMap.get_dim("n_a");
+	if (dimNA == NULL) {
+		_EXCEPTIONT("Input map missing dimension \"n_a\"");
+	}
+
 	NcDim * dimNB = ncMap.get_dim("n_b");
+	if (dimNB == NULL) {
+		_EXCEPTIONT("Input map missing dimension \"n_b\"");
+	}
 
 	int nA = dimNA->size();
 	int nB = dimNB->size();
 
+	NcDim * dimNVA = ncMap.get_dim("nv_a");
+	if (dimNA == NULL) {
+		_EXCEPTIONT("Input map missing dimension \"nv_a\"");
+	}
+
+	NcDim * dimNVB = ncMap.get_dim("nv_b");
+	if (dimNB == NULL) {
+		_EXCEPTIONT("Input map missing dimension \"nv_b\"");
+	}
+
+	int nVA = dimNVA->size();
+	int nVB = dimNVB->size();
+
+	// Read coordinates
+	NcVar * varYCA = ncMap.get_var("yc_a");
+	NcVar * varYCB = ncMap.get_var("yc_b");
+
+	NcVar * varXCA = ncMap.get_var("xc_a");
+	NcVar * varXCB = ncMap.get_var("xc_b");
+
+	NcVar * varYVA = ncMap.get_var("yv_a");
+	NcVar * varYVB = ncMap.get_var("yv_b");
+
+	NcVar * varXVA = ncMap.get_var("xv_a");
+	NcVar * varXVB = ncMap.get_var("xv_b");
+
+	if (varYCA == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"yc_a\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varYCB == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"yc_b\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varXCA == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"xc_a\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varXCB == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"xc_b\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varYVA == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"yv_a\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varYVB == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"yv_b\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varXVA == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"xv_a\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+	if (varXVB == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"xv_b\":"
+			"\nPossibly an earlier version of map",
+			strSource.c_str());
+	}
+
+	m_dSourceCenterLat.Initialize(nA);
+	m_dTargetCenterLat.Initialize(nB);
+
+	m_dSourceCenterLon.Initialize(nA);
+	m_dTargetCenterLon.Initialize(nB);
+
+	m_dSourceVertexLat.Initialize(nA, nVA);
+	m_dTargetVertexLat.Initialize(nB, nVB);
+
+	m_dSourceVertexLon.Initialize(nA, nVA);
+	m_dTargetVertexLon.Initialize(nB, nVB);
+
+	varYCA->get(&(m_dSourceCenterLat[0]), nA);
+	varYCB->get(&(m_dTargetCenterLat[0]), nB);
+
+	varXCA->get(&(m_dSourceCenterLon[0]), nA);
+	varXCB->get(&(m_dTargetCenterLon[0]), nB);
+
+	varYVA->get(&(m_dSourceVertexLat[0][0]), nA, nVA);
+	varYVB->get(&(m_dTargetVertexLat[0][0]), nB, nVB);
+
+	varXVA->get(&(m_dSourceVertexLon[0][0]), nA, nVA);
+	varXVB->get(&(m_dTargetVertexLon[0][0]), nB, nVB);
+
+	// Read areas
 	m_dSourceAreas.Initialize(nA);
 	m_dTargetAreas.Initialize(nB);
 
-	// Read areas
 	NcVar * varAreaA = ncMap.get_var("area_a");
+	if (varAreaA == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"area_a\"",
+			strSource.c_str());
+	}
 	varAreaA->get(&(m_dSourceAreas[0]), nA);
 
 	NcVar * varAreaB = ncMap.get_var("area_b");
+	if (varAreaB == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"area_b\"",
+			strSource.c_str());
+	}
 	varAreaB->get(&(m_dTargetAreas[0]), nB);
 
 	// Read SparseMatrix entries
 	NcDim * dimNS = ncMap.get_dim("n_s");
+	if (dimNS == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain dimension \"n_s\"",
+			strSource.c_str());
+	}
 
 	NcVar * varRow = ncMap.get_var("row");
+	if (varRow == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"row\"",
+			strSource.c_str());
+	}
+
 	NcVar * varCol = ncMap.get_var("col");
-	NcVar * varS   = ncMap.get_var("S");
+	if (varRow == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"col\"",
+			strSource.c_str());
+	}
+
+	NcVar * varS = ncMap.get_var("S");
+	if (varRow == NULL) {
+		_EXCEPTION1("Map file \"%s\" does not contain variable \"S\"",
+			strSource.c_str());
+	}
 
 	int nS = dimNS->size();
 
@@ -764,6 +999,10 @@ void OfflineMap::Write(
 	const std::string & strTarget
 ) {
 	NcFile ncMap(strTarget.c_str(), NcFile::Replace);
+	if (!ncMap.is_valid()) {
+		_EXCEPTION1("Unable to open output map file \"%s\"",
+			strTarget.c_str());
+	}
 
 	// Attributes
 	ncMap.add_att("Title", "TempestRemap Offline Regridding Weight Generator");
