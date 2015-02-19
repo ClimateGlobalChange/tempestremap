@@ -949,11 +949,11 @@ void LinearRemapSE4(
 			}
 			}
 
-			//ForceConsistencyConservation3(
-			//	vecSourceArea,
-			//	vecTargetArea,
-			//	dCoeff,
-			//	fMonotone);
+			ForceConsistencyConservation3(
+				vecSourceArea,
+				vecTargetArea,
+				dCoeff,
+				fMonotone);
 
 			for (int j = 0; j < nOverlapFaces; j++) {
 			for (int p = 0; p < nP; p++) {
