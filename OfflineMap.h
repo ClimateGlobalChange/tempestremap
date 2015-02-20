@@ -108,6 +108,25 @@ public:
 
 public:
 	///	<summary>
+	///		Copy a list of variables from a source file to target file.
+	///	</summary>
+	void PreserveVariables(
+		const std::string & strSourceDataFile,
+		const std::string & strTargetDataFile,
+		const std::vector<std::string> & vecPreserveVariables
+	);
+
+	///	<summary>
+	///		Copy all non-remapped, non-dimensional variables from source file
+	///		to target file.
+	///	</summary>
+	void PreserveAllVariables(
+		const std::string & strSourceDataFile,
+		const std::string & strTargetDataFile
+	);
+
+public:
+	///	<summary>
 	///		Apply the offline map to a data file.
 	///	</summary>
 	void Apply(
