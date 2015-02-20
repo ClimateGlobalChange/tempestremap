@@ -16,6 +16,8 @@
 
 #include "TriangularQuadrature.h"
 
+#include <cstring>
+
 ///////////////////////////////////////////////////////////////////////////////
 
 TriangularQuadratureRule::TriangularQuadratureRule(

@@ -186,6 +186,12 @@ try {
 	// Output as double
 	bool fOutputDouble;
 
+	// List of variables to preserve
+	std::string strPreserveVariables;
+
+	// Preserve all non-remapped variables
+	bool fPreserveAll;
+
 	// Fill value override
 	double dFillValueOverride;
 
@@ -209,6 +215,8 @@ try {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 		CommandLineBool(fOutputDouble, "out_double");
+		CommandLineString(strPreserveVariables, "preserve", "");
+		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
@@ -271,8 +279,12 @@ try {
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
 
-	if ((strInputData != "") && (vecVariableStrings.size() == 0)) {
-		_EXCEPTIONT("No variables specified");
+	// Parse preserve variable list
+	std::vector< std::string > vecPreserveVariableStrings;
+	ParseVariableList(strPreserveVariables, vecPreserveVariableStrings);
+
+	if (fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
+		_EXCEPTIONT("--preserveall and --preserve cannot both be specified");
 	}
 
 	// Load input mesh
@@ -678,6 +690,23 @@ try {
 		AnnounceEndBlock(NULL);
 	}
 	AnnounceEndBlock(NULL);
+
+	// Copy variables from input file to output file
+	if ((strInputData != "") && (strOutputData != "")) {
+		if (fPreserveAll) {
+			AnnounceStartBlock("Preserving variables");
+			mapRemap.PreserveAllVariables(strInputData, strOutputData);
+			AnnounceEndBlock(NULL);
+
+		} else if (vecPreserveVariableStrings.size() != 0) {
+			AnnounceStartBlock("Preserving variables");
+			mapRemap.PreserveVariables(
+				strInputData,
+				strOutputData,
+				vecPreserveVariableStrings);
+			AnnounceEndBlock(NULL);
+		}
+	}
 
 	AnnounceBanner();
 

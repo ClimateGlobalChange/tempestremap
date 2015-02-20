@@ -393,13 +393,18 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFE(
 ///////////////////////////////////////////////////////////////////////////////
 
 NcDim * NcFile_GetDimIfExists(
-	NcFile & ncSource,
+	NcFile & ncFile,
 	const std::string & strDimName,
 	int nSize
 ) {
-	NcDim * dim = ncSource.get_dim(strDimName.c_str());
+	NcDim * dim = ncFile.get_dim(strDimName.c_str());
 	if (dim == NULL) {
-		return ncSource.add_dim(strDimName.c_str(), nSize);
+		//std::cout << strDimName.c_str() << ", " << (long)nSize << std::endl;
+		dim = ncFile.add_dim(strDimName.c_str(), (long)nSize);
+		if (dim == NULL) {
+			_EXCEPTION2("Failed to add dimension \"%s\" (%i) to file",
+				strDimName.c_str(), nSize);
+		}
 	}
 	
 	if (dim->size() != nSize) {
@@ -407,6 +412,167 @@ NcDim * NcFile_GetDimIfExists(
 			" size %i != %i", strDimName.c_str(), dim->size(), nSize);
 	}
 	return dim;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::PreserveVariables(
+	const std::string & strSourceDataFile,
+	const std::string & strTargetDataFile,
+	const std::vector<std::string> & vecPreserveVariables
+) {
+	// Open source data file
+	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
+	if (!ncSource.is_valid()) {
+		_EXCEPTION1("Cannot open source data file \"%s\" for reading",
+			strSourceDataFile.c_str());
+	}
+
+	// Open target data file
+	NcFile ncTarget(strTargetDataFile.c_str(), NcFile::Write);
+	if (!ncTarget.is_valid()) {
+		_EXCEPTION1("Cannot open target data file \"%s\" for writing",
+			strTargetDataFile.c_str());
+	}
+
+	// Copy over dimensions
+	for (int v = 0; v < vecPreserveVariables.size(); v++) {
+		Announce("%s", vecPreserveVariables[v].c_str());
+
+		CopyNcVar(ncSource, ncTarget, vecPreserveVariables[v]);
+/*
+		NcVar * var = ncSource.get_var(vecPreserveVariables[v].c_str());
+		if (var == NULL) {
+			_EXCEPTION2("Source file \"%s\" does not contain variable \"%s\"",
+				strSourceDataFile.c_str(), vecPreserveVariables[v].c_str());
+		}
+
+		std::vector<NcDim *> dimOut;
+		dimOut.resize(var->num_dims());
+
+		std::vector<long> counts;
+		counts.resize(var->num_dims());
+
+		long nDataSize = 1;
+
+		for (int d = 0; d < var->num_dims(); d++) {
+			NcDim * dimA = var->get_dim(d);
+
+			dimOut[d] =
+				NcFile_GetDimIfExists(
+					ncTarget, dimA->name(), dimA->size());
+
+			if (dimOut[d] == NULL) {
+				_EXCEPTIONT("NcFile_GetDimIfExists returned NULL");
+			}
+
+			counts[d] = dimOut[d]->size();
+			nDataSize *= counts[d];
+		}
+
+		if (var->type() == ncByte) {
+			DataVector<char> data;
+			data.Initialize(nDataSize);
+
+			NcVar * varOut =
+				ncTarget.add_var(
+					var->name(), var->type(),
+					dimOut.size(), (const NcDim**)&(dimOut[0]));
+
+			var->get(&(data[0]), &(counts[0]));
+			varOut->put(&(data[0]), &(counts[0]));
+		}
+*/
+/*
+		// Copy over variables
+		int err = nc_copy_var(ncSource.id(), var->id(), ncTarget.id());
+
+		if (err != NC_NOERR) {
+			_EXCEPTION1("nc_copy_var failed with return code %i", err);
+		}
+*/
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::PreserveAllVariables(
+	const std::string & strSourceDataFile,
+	const std::string & strTargetDataFile
+) {
+	// Open source data file
+	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
+	if (!ncSource.is_valid()) {
+		_EXCEPTION1("Cannot open source data file \"%s\"",
+			strSourceDataFile.c_str());
+	}
+
+	// Check for rectilinear data
+	bool fSourceRectilinear;
+	if (m_vecSourceDimSizes.size() == 1) {
+		fSourceRectilinear = false;
+		if (m_vecSourceDimSizes.size() < 1) {
+			_EXCEPTIONT("vecSourceDimSizes has not been initialized");
+		}
+
+	} else if (m_vecSourceDimSizes.size() == 2) {
+		fSourceRectilinear = true;
+		if (m_vecSourceDimSizes.size() < 2) {
+			_EXCEPTIONT("vecSourceDimSizes has not been initialized");
+		}
+
+	} else {
+		_EXCEPTIONT("m_vecSourceDimSizes undefined");
+	}
+
+	// Generate variable list
+	std::vector<std::string> vecPreserveVariables;
+
+	for (int v = 0; v < ncSource.num_vars(); v++) {
+		NcVar * var = ncSource.get_var(v);
+
+		if (fSourceRectilinear) {
+			if (var->num_dims() >= 2) {
+				NcDim * dimA = var->get_dim(var->num_dims()-2);
+				NcDim * dimB = var->get_dim(var->num_dims()-1);
+
+				if (dimA->size() == m_vecSourceDimSizes[0]) {
+					continue;
+				}
+				if (dimB->size() == m_vecSourceDimSizes[1]) {
+					continue;
+				}
+				if (strcmp(dimA->name(), m_vecSourceDimNames[0].c_str()) == 0) {
+					continue;
+				}
+				if (strcmp(dimB->name(), m_vecSourceDimNames[1].c_str()) == 0) {
+					continue;
+				}
+			}
+
+		} else {
+			int nSourceCount = m_dSourceAreas.GetRows();
+
+			if (var->num_dims() >= 1) {
+				NcDim * dim = var->get_dim(var->num_dims()-1);
+
+				if (dim->size() == nSourceCount) {
+					continue;
+				}
+				if (strcmp(dim->name(), m_vecSourceDimNames[0].c_str()) == 0) {
+					continue;
+				}
+			}
+		}
+
+		vecPreserveVariables.push_back(var->name());
+	}
+
+	// Preserve all variables in the list
+	PreserveVariables(
+		strSourceDataFile,
+		strTargetDataFile,
+		vecPreserveVariables);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -421,6 +587,10 @@ void OfflineMap::Apply(
 ) {
 	// Open source data file
 	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
+	if (!ncSource.is_valid()) {
+		_EXCEPTION1("Cannot open source data file \"%s\"",
+			strSourceDataFile.c_str());
+	}
 
 	// Open target data file
 	NcFile::FileMode eOpenMode = NcFile::Replace;
@@ -518,15 +688,55 @@ void OfflineMap::Apply(
 			m_vecTargetDimSizes[1]);
 	}
 
+	// Generate variable list
+	std::vector<std::string> vecVariableList = vecVariables;
+
+	if (vecVariables.size() == 0) {
+		for (int v = 0; v < ncSource.num_vars(); v++) {
+			NcVar * var = ncSource.get_var(v);
+
+			if (fSourceRectilinear) {
+				if (var->num_dims() < 2) {
+					continue;
+
+				} else {
+					NcDim * dimA = var->get_dim(var->num_dims()-2);
+					NcDim * dimB = var->get_dim(var->num_dims()-1);
+
+					if (dimA->size() != m_vecSourceDimSizes[0]) {
+						continue;
+					}
+					if (dimB->size() != m_vecSourceDimSizes[1]) {
+						continue;
+					}
+				}
+
+			} else {
+				if (var->num_dims() < 1) {
+					continue;
+
+				} else {
+					NcDim * dim = var->get_dim(var->num_dims()-1);
+
+					if (dim->size() != nSourceCount) {
+						continue;
+					}
+				}
+			}
+
+			vecVariableList.push_back(var->name());
+		}
+	}
+
 	// Loop through all variables
-	for (int v = 0; v < vecVariables.size(); v++) {
-		NcVar * var = ncSource.get_var(vecVariables[v].c_str());
+	for (int v = 0; v < vecVariableList.size(); v++) {
+		NcVar * var = ncSource.get_var(vecVariableList[v].c_str());
 		if (var == NULL) {
 			_EXCEPTION1("Variable \"%s\" does not exist in source file",
-				vecVariables[v].c_str());
+				vecVariableList[v].c_str());
 		}
 
-		AnnounceStartBlock(vecVariables[v].c_str());
+		AnnounceStartBlock(vecVariableList[v].c_str());
 
 		// Check for _FillValue
 		float flFillValue = 0.0f;
@@ -596,7 +806,7 @@ void OfflineMap::Apply(
 		if (fTargetDouble) {
 			varOut =
 				ncTarget.add_var(
-					vecVariables[v].c_str(),
+					vecVariableList[v].c_str(),
 					ncDouble,
 					vecDimsOut.GetRows(),
 					(const NcDim**)&(vecDimsOut[0]));
@@ -604,7 +814,7 @@ void OfflineMap::Apply(
 		} else {
 			varOut =
 				ncTarget.add_var(
-					vecVariables[v].c_str(),
+					vecVariableList[v].c_str(),
 					ncFloat,
 					vecDimsOut.GetRows(),
 					(const NcDim**)&(vecDimsOut[0]));

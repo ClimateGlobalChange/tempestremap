@@ -21,6 +21,7 @@
 #include "Announce.h"
 
 #include <cmath>
+#include <cstring>
 #include <netcdfcpp.h>
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -291,6 +292,10 @@ void Mesh::Write(const std::string & strFile) const {
 
 	// Output to a NetCDF Exodus file
 	NcFile ncOut(strFile.c_str(), NcFile::Replace);
+	if (!ncOut.is_valid()) {
+		_EXCEPTION1("Unable to open grid file \"%s\" for writing",
+			strFile.c_str());
+	}
 
 	// Random Exodus dimensions
 	NcDim * dimLenString = ncOut.add_dim("len_string", ParamLenString);
@@ -481,15 +486,12 @@ void Mesh::Write(const std::string & strFile) const {
 
 void Mesh::Read(const std::string & strFile) {
 
-	// Try to open the NetCDF file
-	FILE * fp = fopen(strFile.c_str(), "r");
-	if (fp == NULL) {
-		_EXCEPTION1("Mesh file not found \"%s\"", strFile.c_str());
-	}
-	fclose(fp);
-	
 	// Open the NetCDF file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
+	if (!ncFile.is_valid()) {
+		_EXCEPTION1("Unable to open grid file \"%s\" for reading",
+			strFile.c_str());
+	}
 
 	// Check for dimension names "grid_size", "grid_rank" and "grid_corners"
 	int iSCRIPFormat = 0;
@@ -524,6 +526,15 @@ void Mesh::Read(const std::string & strFile) {
 		// Get the grid corners
 		NcVar * varGridCornerLat = ncFile.get_var("grid_corner_lat");
 		NcVar * varGridCornerLon = ncFile.get_var("grid_corner_lon");
+
+		if (varGridCornerLat == NULL) {
+			_EXCEPTION1("SCRIP Grid file \"%s\" is missing variable "
+					"\"grid_corner_lat\"", strFile.c_str());
+		}
+		if (varGridCornerLon == NULL) {
+			_EXCEPTION1("SCRIP Grid file \"%s\" is missing variable "
+					"\"grid_corner_lon\"", strFile.c_str());
+		}
 
 		int nGridSize = static_cast<int>(dimGridSize->size());
 		int nGridCorners = static_cast<int>(dimGridCorners->size());
@@ -587,14 +598,26 @@ void Mesh::Read(const std::string & strFile) {
 
 		// Determine number of nodes per element
 		NcDim * dimNodesPerElement = ncFile.get_dim("num_nod_per_el1");
+		if (dimNodesPerElement == NULL) {
+			_EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
+					"\"num_nod_per_el1\"", strFile.c_str());
+		}
 		int nNodesPerElement = dimNodesPerElement->size();
 
 		// Number of nodes
 		NcDim * dimNodes = ncFile.get_dim("num_nodes");
+		if (dimNodes == NULL) {
+			_EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
+					"\"num_nodes\"", strFile.c_str());
+		}
 		int nNodeCount = dimNodes->size();
 
 		// Number of elements
 		NcDim * dimElements = ncFile.get_dim("num_elem");
+		if (dimElements == NULL) {
+			_EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
+					"\"num_elem\"", strFile.c_str());
+		}
 		int nElementCount = dimElements->size();
 
 		// Output size
@@ -604,6 +627,10 @@ void Mesh::Read(const std::string & strFile) {
 		nodes.resize(nNodeCount);
 
 		NcVar * varNodes = ncFile.get_var("coord");
+		if (varNodes == NULL) {
+			_EXCEPTION1("Exodus Grid file \"%s\" is missing variable "
+					"\"coord\"", strFile.c_str());
+		}
 
 		DataMatrix<double> dNodeCoords;
 		dNodeCoords.Initialize(3, nNodeCount);
@@ -624,6 +651,10 @@ void Mesh::Read(const std::string & strFile) {
 		faces.resize(nElementCount, Face(nNodesPerElement));
 
 		NcVar * varFaces = ncFile.get_var("connect1");
+		if (varFaces == NULL) {
+			_EXCEPTION1("Exodus Grid file \"%s\" is missing variable "
+					"\"connect1\"", strFile.c_str());
+		}
 
 		DataMatrix<int> iFaceIndices;
 		iFaceIndices.Initialize(nElementCount, nNodesPerElement);
@@ -639,27 +670,9 @@ void Mesh::Read(const std::string & strFile) {
 
 		iFaceIndices.Deinitialize();
 
-		// Check for variables
-		bool fHasEdgeType = false;
-		bool fHasFirstMeshSourceFace = false;
-		bool fHasSecondMeshSourceFace = false;
-
-		for (int v = 0; v < ncFile.num_vars(); v++) {
-			if (strcmp(ncFile.get_var(v)->name(), "edge_type") == 0) {
-				fHasEdgeType = true;
-			}
-			if (strcmp(ncFile.get_var(v)->name(), "face_source_1") == 0) {
-				fHasFirstMeshSourceFace = true;
-			}
-			if (strcmp(ncFile.get_var(v)->name(), "face_source_2") == 0) {
-				fHasSecondMeshSourceFace = true;
-			}
-		}
-
 		// Load in edge type array
-		if (fHasEdgeType) {
-			NcVar * varEdgeTypes = ncFile.get_var("edge_type");
-
+		NcVar * varEdgeTypes = ncFile.get_var("edge_type");
+		if (varEdgeTypes != NULL) {
 			DataMatrix<int> iEdgeTypes;
 			iEdgeTypes.Initialize(nElementCount, nNodesPerElement);
 
@@ -674,16 +687,16 @@ void Mesh::Read(const std::string & strFile) {
 		}
 
 		// Load in first mesh source face ix
-		if (fHasFirstMeshSourceFace) {
-			NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
+		NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
+		if (varFaceSource1 != NULL) {
 			vecFirstFaceIx.resize(nElementCount);
 			varFaceSource1->set_cur((long)0);
 			varFaceSource1->get(&(vecFirstFaceIx[0]), nElementCount);
 		}
 
 		// Load in second mesh source face ix
-		if (fHasSecondMeshSourceFace) {
-			NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
+		NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
+		if (varFaceSource2 != NULL) {
 			vecSecondFaceIx.resize(nElementCount);
 			varFaceSource2->set_cur((long)0);
 			varFaceSource2->get(&(vecSecondFaceIx[0]), nElementCount);

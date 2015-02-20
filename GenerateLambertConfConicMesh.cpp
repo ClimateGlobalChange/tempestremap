@@ -28,6 +28,8 @@
 
 int main(int argc, char** argv) {
 
+	NcError error(NcError::silent_nonfatal);
+
 try {
 	// Number of columns in mesh
 	int nNCol;

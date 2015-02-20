@@ -31,6 +31,8 @@
 
 int main(int argc, char** argv) {
 
+	NcError error(NcError::silent_nonfatal);
+
 try {
 	// Number of longitudes in mesh
 	int nLongitudes;

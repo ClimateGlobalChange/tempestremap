@@ -18,6 +18,7 @@
 #include "CommandLine.h"
 #include "Exception.h"
 #include "OfflineMap.h"
+#include "netcdfcpp.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -56,28 +57,30 @@ void ParseVariableList(
 
 int main(int argc, char** argv) {
 
+	NcError error(NcError::silent_nonfatal);
+
 try {
-
-	// Input map file
-	std::string strInputMap;
-
-	// Output data file
-	std::string strOutputData;
 
 	// Input data file
 	std::string strInputData;
 
+	// Input map file
+	std::string strInputMap;
+
 	// List of variables
 	std::string strVariables;
-
-	// Input map file (second instance)
-	std::string strInputMap2;
 
 	// Input data file (second instance)
 	std::string strInputData2;
 
+	// Input map file (second instance)
+	std::string strInputMap2;
+
 	// List of variables (second instance)
 	std::string strVariables2;
+
+	// Output data file
+	std::string strOutputData;
 
 	// Name of the ncol variable
 	std::string strNColName;
@@ -85,20 +88,28 @@ try {
 	// Output as double
 	bool fOutputDouble;
 
+	// List of variables to preserve
+	std::string strPreserveVariables;
+
+	// Preserve all non-remapped variables
+	bool fPreserveAll;
+
 	// Fill value override
 	double dFillValueOverride;
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineString(strOutputData, "out_data", "");
-		CommandLineString(strInputMap, "map", "");
 		CommandLineString(strInputData, "in_data", "");
+		CommandLineString(strInputMap, "map", "");
 		CommandLineString(strVariables, "var", "");
-		CommandLineString(strInputMap2, "map2", "");
 		CommandLineString(strInputData2, "in_data2", "");
+		CommandLineString(strInputMap2, "map2", "");
 		CommandLineString(strVariables2, "var2", "");
+		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 		CommandLineBool(fOutputDouble, "out_double");
+		CommandLineString(strPreserveVariables, "preserve", "");
+		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 
 		ParseCommandLine(argc, argv);
@@ -121,11 +132,15 @@ try {
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
 
-	if ((strInputData != "") && (vecVariableStrings.size() == 0)) {
-		_EXCEPTIONT("No variables specified");
+	// Parse preserve variable list
+	std::vector< std::string > vecPreserveVariableStrings;
+	ParseVariableList(strPreserveVariables, vecPreserveVariableStrings);
+
+	if (fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
+		_EXCEPTIONT("--preserveall and --preserve cannot both be specified");
 	}
 
-	// Second input data fil
+	// Second input data file
 	std::vector< std::string > vecVariableStrings2;
 	if (strInputData2 != "") {
 		ParseVariableList(strVariables2, vecVariableStrings2);
@@ -186,6 +201,21 @@ try {
 			false,
 			true);
 
+		AnnounceEndBlock(NULL);
+	}
+
+	// Copy variables from input file to output file
+	if (fPreserveAll) {
+		AnnounceStartBlock("Preserving variables");
+		mapRemap.PreserveAllVariables(strInputData, strOutputData);
+		AnnounceEndBlock(NULL);
+
+	} else if (vecPreserveVariableStrings.size() != 0) {
+		AnnounceStartBlock("Preserving variables");
+		mapRemap.PreserveVariables(
+			strInputData,
+			strOutputData,
+			vecPreserveVariableStrings);
 		AnnounceEndBlock(NULL);
 	}
 

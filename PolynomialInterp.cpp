@@ -17,7 +17,6 @@
 #include "PolynomialInterp.h"
 
 #include "Exception.h"
-//#include "LinearAlgebra.h"
 
 #include <cmath>
 #include <cstring>
