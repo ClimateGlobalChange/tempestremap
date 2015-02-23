@@ -159,6 +159,9 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+	NcError error(NcError::silent_nonfatal);
+
 try {
 	// Mesh file to use
 	std::string strMeshFile;
