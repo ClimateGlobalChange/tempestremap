@@ -57,7 +57,8 @@ private:
 		DataVector<double> & dCenterLon,
 		DataVector<double> & dCenterLat,
 		DataMatrix<double> & dVertexLon,
-		DataMatrix<double> & dVertexLat
+		DataMatrix<double> & dVertexLat,
+		bool fLatLon = false
 	);
 
 	///	<summary>
@@ -71,6 +72,19 @@ private:
 		DataVector<double> & dCenterLat,
 		DataMatrix<double> & dVertexLon,
 		DataMatrix<double> & dVertexLat
+	);
+
+	///	<summary>
+	///		Initialize the rectilinear coordinate vectors.
+	///	</summary>
+	void InitializeRectilinearCoordinateVector(
+		int nLon,
+		int nLat,
+		const DataVector<double> & dCenterLon,
+		const DataVector<double> & dCenterLat,
+		bool fLonFirst,
+		DataVector<double> & dVectorCenterLon,
+		DataVector<double> & dVectorCenterLat
 	);
 
 public:
@@ -301,6 +315,16 @@ protected:
 	///		Matrix of vertex latitudes on source grid.
 	///	</summary>
 	DataMatrix<double> m_dTargetVertexLat;
+
+	///	<summary>
+	///		Vector containing cell center longitude along "lon" dimension.
+	///	</sumamry>
+	DataVector<double> m_dVectorTargetCenterLon;
+
+	///	<summary>
+	///		Vector containing cell center longitude along "lat" dimension.
+	///	</sumamry>
+	DataVector<double> m_dVectorTargetCenterLat;
 
 protected:
 	///	<summary>

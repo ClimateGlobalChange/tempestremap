@@ -258,6 +258,14 @@ try {
 	// Create Offline Map
 	OfflineMap mapRemap;
 
+	// Initialize dimension information from file
+	AnnounceStartBlock("Initializing dimensions of map");
+	Announce("Input mesh");
+	mapRemap.InitializeSourceDimensionsFromFile(strInputMesh);
+	Announce("Output mesh");
+	mapRemap.InitializeTargetDimensionsFromFile(strOutputMesh);
+	AnnounceEndBlock(NULL);
+
 	// Parse variable list
 	std::vector< std::string > vecVariableStrings;
 	ParseVariableList(strVariables, vecVariableStrings);
@@ -368,6 +376,7 @@ try {
 			fNoCheck = true;
 		}
 	}
+
 /*
 	// Recalculate input mesh area from overlap mesh
 	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
@@ -644,12 +653,6 @@ try {
 
 	// Initialize element dimensions from input/output Mesh
 	AnnounceStartBlock("Writing output");
-	AnnounceStartBlock("Initializing dimensions from file");
-	Announce("Input mesh");
-	mapRemap.InitializeSourceDimensionsFromFile(strInputMesh);
-	Announce("Output mesh");
-	mapRemap.InitializeTargetDimensionsFromFile(strOutputMesh);
-	AnnounceEndBlock(NULL);
 
 	// Output the Offline Map
 	if (strOutputMap != "") {
