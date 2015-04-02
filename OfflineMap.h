@@ -82,9 +82,13 @@ private:
 		int nLat,
 		const DataVector<double> & dCenterLon,
 		const DataVector<double> & dCenterLat,
+		const DataMatrix<double> & dVertexLon,
+		const DataMatrix<double> & dVertexLat,
 		bool fLonFirst,
 		DataVector<double> & dVectorCenterLon,
-		DataVector<double> & dVectorCenterLat
+		DataVector<double> & dVectorCenterLat,
+		DataMatrix<double> & dVectorBoundsLon,
+		DataMatrix<double> & dVectorBoundsLat
 	);
 
 public:
@@ -322,9 +326,19 @@ protected:
 	DataVector<double> m_dVectorTargetCenterLon;
 
 	///	<summary>
-	///		Vector containing cell center longitude along "lat" dimension.
+	///		Vector containing cell center latitude along "lat" dimension.
 	///	</sumamry>
 	DataVector<double> m_dVectorTargetCenterLat;
+
+	///	<summary>
+	///		Vector containing bounds for longitude along "lon" dimension.
+	///	</summary>
+	DataMatrix<double> m_dVectorTargetBoundsLon;
+
+	///	<summary>
+	///		Vector containing bounds for latitude along "lat" dimension.
+	///	</summary>
+	DataMatrix<double> m_dVectorTargetBoundsLat;
 
 protected:
 	///	<summary>

@@ -257,7 +257,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 	m_vecTargetDimNames.resize(2);
 	m_vecTargetDimNames[0] = strDim0Name;
 	m_vecTargetDimNames[1] = strDim1Name;
-
+/*
 	// Special case: rectilinear lat/lon
 	if (m_vecTargetDimNames.size() == 2) {
 
@@ -291,7 +291,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			}
 		}
 	}
-
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -343,11 +343,11 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 			double dY = node.y;
 			double dZ = node.z;
 
-			double dLonV = atan2(dY, dX);
-			double dLatV = acos(dZ);
+			double dLonV = atan2(dY, dX) / M_PI * 180.0;
+			double dLatV = asin(dZ) / M_PI * 180.0;
 
 			if (dLonV < 0.0) {
-				dLonV += 2.0 * M_PI;
+				dLonV += 360.0;
 			}
 
 			if (fLatLon) {
@@ -359,13 +359,25 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 				dZc += dZ;
 			}
 
-			dVertexLon[i][j] = dLonV / M_PI * 180.0;
-			dVertexLat[i][j] = dLatV / M_PI * 180.0;
+			dVertexLon[i][j] = dLonV;
+			dVertexLat[i][j] = dLatV;
 		}
 
-		dXc /= static_cast<double>(nNodes);
-		dYc /= static_cast<double>(nNodes);
-		dZc /= static_cast<double>(nNodes);
+		if ((fLatLon) && (nNodes == 3)) {
+			dVertexLon[i][3] = dVertexLon[i][0];
+			dVertexLat[i][3] = dVertexLat[i][0];
+
+			dXc += dVertexLon[i][3];
+			dYc += dVertexLat[i][3];
+
+			dXc /= 4.0;
+			dYc /= 4.0;
+
+		} else {
+			dXc /= static_cast<double>(nNodes);
+			dYc /= static_cast<double>(nNodes);
+			dZc /= static_cast<double>(nNodes);
+		}
 
 		if (fLatLon) {
 			dCenterLon[i] = dXc;
@@ -378,15 +390,15 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 			dYc /= dMag;
 			dZc /= dMag;
 
-			double dLonC = atan2(dYc, dXc);
-			double dLatC = asin(dZc);
+			double dLonC = atan2(dYc, dXc) / M_PI * 180.0;
+			double dLatC = asin(dZc) / M_PI * 180.0;
 
 			if (dLonC < 0.0) {
-				dLonC += 2.0 * M_PI;
+				dLonC += 360.0;
 			}
 
-			dCenterLon[i] = dLonC / M_PI * 180.0;
-			dCenterLat[i] = dLatC / M_PI * 180.0;
+			dCenterLon[i] = dLonC;
+			dCenterLat[i] = dLatC;
 		}
 	}
 }
@@ -466,9 +478,13 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 	int nLat,
 	const DataVector<double> & dCenterLon,
 	const DataVector<double> & dCenterLat,
+	const DataMatrix<double> & dVertexLon,
+	const DataMatrix<double> & dVertexLat,
 	bool fLonFirst,
 	DataVector<double> & dVectorCenterLon,
-	DataVector<double> & dVectorCenterLat
+	DataVector<double> & dVectorCenterLat,
+	DataMatrix<double> & dVectorBoundsLon,
+	DataMatrix<double> & dVectorBoundsLat
 ) {
 	if (dCenterLon.GetRows() != nLon * nLat) {
 		_EXCEPTION3("CenterLon has incorrect dimension:\n"
@@ -484,19 +500,77 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 	dVectorCenterLon.Initialize(nLon);
 	dVectorCenterLat.Initialize(nLat);
 
+	dVectorBoundsLon.Initialize(nLon, 2);
+	dVectorBoundsLat.Initialize(nLat, 2);
+
 	if (fLonFirst) {
 		for (int i = 0; i < nLon; i++) {
 			dVectorCenterLon[i] = dCenterLon[i];
+			dVectorBoundsLon[i][0] = 720.0;
+			dVectorBoundsLon[i][1] = -720.0;
+			for (int k = 0; k < dVertexLon.GetColumns(); k++) {
+				if (fabs(fabs(dVertexLat[i][k]) - 90.0) < 1.0e-12) {
+					continue;
+				}
+				if (dVertexLon[i][k] < dVectorBoundsLon[i][0]) {
+					dVectorBoundsLon[i][0] = dVertexLon[i][k];
+				}
+				if (dVertexLon[i][k] > dVectorBoundsLon[i][1]) {
+					dVectorBoundsLon[i][1] = dVertexLon[i][k];
+				}
+			}
+/*
+			printf("C%1.5e %1.5e\n",
+				dVectorBoundsLon[i][0], dVectorBoundsLon[i][1]);
+			printf("A%1.5e %1.5e %1.5e %1.5e\n",
+				dVertexLon[i][0], dVertexLon[i][1], dVertexLon[i][2], dVertexLon[i][3]);
+			printf("B%1.5e %1.5e %1.5e %1.5e\n",
+				dVertexLat[i][0], dVertexLat[i][1], dVertexLat[i][2], dVertexLat[i][3]);
+*/
 		}
 		for (int j = 0; j < nLat; j++) {
 			dVectorCenterLat[j] = dCenterLat[j * nLon];
+			dVectorBoundsLat[j][0] = dVertexLat[j * nLon][0];
+			dVectorBoundsLat[j][1] = dVertexLat[j * nLon][0];
+			for (int k = 0; k < dVertexLat.GetColumns(); k++) {
+				if (dVertexLat[j * nLon][k] < dVectorBoundsLat[j][0]) {
+					dVectorBoundsLat[j][0] = dVertexLat[j * nLon][k];
+				}
+				if (dVertexLat[j * nLon][k] > dVectorBoundsLat[j][1]) {
+					dVectorBoundsLat[j][1] = dVertexLat[j * nLon][k];
+				}
+			}
 		}
+
 	} else {
 		for (int i = 0; i < nLon; i++) {
 			dVectorCenterLon[i] = dCenterLon[i * nLat];
+			dVectorBoundsLon[i][0] = 720.0;
+			dVectorBoundsLon[i][1] = -720.0;
+			for (int k = 0; k < dVertexLon.GetColumns(); k++) {
+				if (fabs(fabs(dVertexLat[i * nLat][k]) - 90.0) < 1.0e-12) {
+					continue;
+				}
+				if (dVertexLon[i * nLat][k] < dVectorBoundsLon[i][0]) {
+					dVectorBoundsLon[i][0] = dVertexLon[i * nLat][k];
+				}
+				if (dVertexLon[i * nLat][k] > dVectorBoundsLon[i][1]) {
+					dVectorBoundsLon[i][1] = dVertexLon[i * nLat][k];
+				}
+			}
 		}
 		for (int j = 0; j < nLat; j++) {
 			dVectorCenterLat[j] = dCenterLat[j];
+			dVectorBoundsLat[j][0] = dVertexLat[j][0];
+			dVectorBoundsLat[j][1] = dVertexLat[j][0];
+			for (int k = 0; k < dVertexLat.GetColumns(); k++) {
+				if (dVertexLat[j][k] < dVectorBoundsLat[j][0]) {
+					dVectorBoundsLat[j][0] = dVertexLat[j][k];
+				}
+				if (dVertexLat[j][k] > dVectorBoundsLat[j][1]) {
+					dVectorBoundsLat[j][1] = dVertexLat[j][k];
+				}
+			}
 		}
 	}
 }
@@ -575,7 +649,8 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 		m_dTargetCenterLon,
 		m_dTargetCenterLat,
 		m_dTargetVertexLon,
-		m_dTargetVertexLat);
+		m_dTargetVertexLat,
+		fLatLon);
 
 	// Initialize vector coordinate
 	if (fLatLon) {
@@ -585,21 +660,66 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 				m_vecTargetDimSizes[1],
 				m_dTargetCenterLon,
 				m_dTargetCenterLat,
+				m_dTargetVertexLon,
+				m_dTargetVertexLat,
 				true,
 				m_dVectorTargetCenterLon,
-				m_dVectorTargetCenterLat
+				m_dVectorTargetCenterLat,
+				m_dVectorTargetBoundsLon,
+				m_dVectorTargetBoundsLat
 			);
-		} else {
+
+		} else if (m_vecTargetDimNames[1] == "lon") {
 			InitializeRectilinearCoordinateVector(
 				m_vecTargetDimSizes[1],
 				m_vecTargetDimSizes[0],
 				m_dTargetCenterLon,
 				m_dTargetCenterLat,
+				m_dTargetVertexLon,
+				m_dTargetVertexLat,
 				true,
 				m_dVectorTargetCenterLon,
-				m_dVectorTargetCenterLat
+				m_dVectorTargetCenterLat,
+				m_dVectorTargetBoundsLon,
+				m_dVectorTargetBoundsLat
 			);
+
+		} else {
+			_EXCEPTIONT("LatLon specified but no dimensions have name \"lon\"");
 		}
+/*
+		// Bounds on vertex array
+		m_dVectorTargetBoundsLon.Initialize(2);
+		m_dVectorTargetBoundsLat.Initialize(2);
+		m_dVectorTargetBoundsLon[0] = m_dTargetVertexLon[0][0];
+		m_dVectorTargetBoundsLon[1] = m_dTargetVertexLon[0][0];
+		m_dVectorTargetBoundsLat[0] = m_dTargetVertexLat[0][0];
+		m_dVectorTargetBoundsLat[1] = m_dTargetVertexLat[0][0];
+
+		if ((m_dTargetVertexLon.GetRows() != m_dTargetVertexLat.GetRows()) ||
+		    (m_dTargetVertexLon.GetRows() != m_dTargetVertexLat.GetRows())
+		) {
+			_EXCEPTIONT("Catastrophic vertex array size mismatch");
+		}
+
+		for (int i = 0; i < m_dTargetVertexLon.GetRows(); i++) {
+		for (int j = 0; j < m_dTargetVertexLon.GetColumns(); j++) {
+			if (m_dTargetVertexLon[i][j] < m_dVectorTargetBoundsLon[0]) {
+				m_dVectorTargetBoundsLon[0] = m_dTargetVertexLon[i][j];
+			}
+			if (m_dTargetVertexLon[i][j] > m_dVectorTargetBoundsLon[1]) {
+				m_dVectorTargetBoundsLon[1] = m_dTargetVertexLon[i][j];
+			}
+			if (m_dTargetVertexLat[i][j] < m_dVectorTargetBoundsLat[0]) {
+				m_dVectorTargetBoundsLat[0] = m_dTargetVertexLat[i][j];
+			}
+			if (m_dTargetVertexLat[i][j] > m_dVectorTargetBoundsLat[1]) {
+				m_dVectorTargetBoundsLat[1] = m_dTargetVertexLat[i][j];
+			}
+		}
+		}
+*/
+
 	}
 }
 
@@ -975,30 +1095,65 @@ void OfflineMap::Apply(
 		}
 	}
 
-	// Add vector dimensions
+	// Add lat/lon vector dimensions
 	if ((m_dVectorTargetCenterLon.GetRows() != 0) &&
 		(m_dVectorTargetCenterLat.GetRows() != 0)
 	) {
+		NcDim * dimLon;
 		if (m_vecTargetDimNames[0] == "lon") {
-			NcVar * varLon =
-				ncTarget.add_var(m_vecTargetDimNames[0].c_str(), ncDouble, dim0);
-			varLon->put(&(m_dVectorTargetCenterLon[0]), dim0->size());
+			dimLon = dim0;
 		}
 		if (m_vecTargetDimNames[1] == "lon") {
-			NcVar * varLon =
-				ncTarget.add_var(m_vecTargetDimNames[1].c_str(), ncDouble, dim1);
-			varLon->put(&(m_dVectorTargetCenterLon[0]), dim1->size());
+			dimLon = dim1;
 		}
+		NcVar * varLon =
+			ncTarget.add_var("lon", ncDouble, dimLon);
 
+		varLon->put(
+			&(m_dVectorTargetCenterLon[0]),
+			m_dVectorTargetCenterLon.GetRows());
+
+		varLon->add_att("bounds", "lon_bnds");
+		varLon->add_att("units", "degrees_east");
+		varLon->add_att("axis", "X");
+		varLon->add_att("long_name", "longitude");
+		varLon->add_att("standard_name", "longitude");
+
+		NcDim * dimLat;
 		if (m_vecTargetDimNames[0] == "lat") {
-			NcVar * varLat =
-				ncTarget.add_var(m_vecTargetDimNames[0].c_str(), ncDouble, dim0);
-			varLat->put(&(m_dVectorTargetCenterLat[0]), dim0->size());
+			dimLat = dim0;
 		}
 		if (m_vecTargetDimNames[1] == "lat") {
-			NcVar * varLat =
-				ncTarget.add_var(m_vecTargetDimNames[1].c_str(), ncDouble, dim1);
-			varLat->put(&(m_dVectorTargetCenterLat[0]), dim1->size());
+			dimLat = dim1;
+		}
+		NcVar * varLat =
+			ncTarget.add_var("lat", ncDouble, dimLat);
+
+		varLat->put(
+			&(m_dVectorTargetCenterLat[0]),
+			m_dVectorTargetCenterLat.GetRows());
+
+		varLat->add_att("bounds", "lat_bnds");
+		varLat->add_att("units", "degrees_north");
+		varLat->add_att("axis", "Y");
+		varLat->add_att("long_name", "latitude");
+		varLat->add_att("standard_name", "latitude");
+
+		// Output bounds variables
+		if ((m_dVectorTargetBoundsLon.GetRows() != 0) &&
+		    (m_dVectorTargetBoundsLat.GetRows() != 0)
+		) {
+			NcDim * dimBounds = ncTarget.add_dim("bnds", 2);
+
+			NcVar * varLonBounds =
+				ncTarget.add_var("lon_bnds", ncDouble, dimLon, dimBounds);
+			varLonBounds->put(&(m_dVectorTargetBoundsLon[0][0]),
+				m_dVectorTargetBoundsLon.GetRows(), 2);
+
+			NcVar * varLatBounds =
+				ncTarget.add_var("lat_bnds", ncDouble, dimLat, dimBounds);
+			varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
+				m_dVectorTargetBoundsLat.GetRows(), 2);
 		}
 	}
 
@@ -1028,7 +1183,7 @@ void OfflineMap::Apply(
 			}
 		}
 
-		// Loop through all dimensions and add missing dimensions to output
+		// Construct an array of dimensions for this variable
 		int nVarTotalEntries = 1;
 
 		DataVector<NcDim *> vecDims;
@@ -1061,6 +1216,7 @@ void OfflineMap::Apply(
 
 		int nFreeDims = var->num_dims() - m_vecSourceDimSizes.size();
 
+		// Add any missing dimension variables to target file
 		DataVector<long> vecDimSizes;
 		vecDimSizes.Initialize(nFreeDims);
 
@@ -1078,6 +1234,33 @@ void OfflineMap::Apply(
 					ncTarget,
 					strDimName.c_str(),
 					nDimSize);
+
+			// Copy over associated variable, if it exists
+			NcVar * varAssocDimSource =
+				ncSource.get_var(strDimName.c_str());
+			if (varAssocDimSource != NULL) {
+				NcVar * varAssocDimTarget =
+					ncTarget.get_var(strDimName.c_str());
+				if (varAssocDimTarget == NULL) {
+					CopyNcVar(ncSource, ncTarget, strDimName);
+				}
+
+				NcAtt * attAssocDimBounds =
+					varAssocDimSource->get_att("bounds");
+				if (attAssocDimBounds != NULL) {
+					NcVar * varAssocDimBoundsSource =
+						ncSource.get_var(attAssocDimBounds->as_string(0));
+					NcVar * varAssocDimBoundsTarget =
+						ncTarget.get_var(attAssocDimBounds->as_string(0));
+					if ((varAssocDimBoundsSource != NULL) &&
+					    (varAssocDimBoundsTarget == NULL)
+					) {
+						CopyNcVar(
+							ncSource, ncTarget,
+							attAssocDimBounds->as_string(0));
+					}
+				}
+			}
 		}
 
 		// Create new output variable
@@ -1409,7 +1592,7 @@ void OfflineMap::Read(
 	varXVA->get(&(m_dSourceVertexLon[0][0]), nA, nVA);
 	varXVB->get(&(m_dTargetVertexLon[0][0]), nB, nVB);
 
-	// Read vector centers
+	// Read vector centers and bounds
 	NcDim * dimLatB = ncMap.get_dim("lat_b");
 	NcDim * dimLonB = ncMap.get_dim("lon_b");
 
@@ -1422,6 +1605,17 @@ void OfflineMap::Read(
 
 		varLatCB->get(&(m_dVectorTargetCenterLat[0]), dimLatB->size());
 		varLonCB->get(&(m_dVectorTargetCenterLon[0]), dimLonB->size());
+
+		NcVar * varLatBounds = ncMap.get_var("lat_bnds");
+		NcVar * varLonBounds = ncMap.get_var("lon_bnds");
+
+		m_dVectorTargetBoundsLat.Initialize(dimLatB->size(), 2);
+		m_dVectorTargetBoundsLon.Initialize(dimLonB->size(), 2);
+
+		varLatBounds->get(&(m_dVectorTargetBoundsLat[0][0]),
+			dimLatB->size(), 2);
+		varLonBounds->get(&(m_dVectorTargetBoundsLon[0][0]),
+			dimLonB->size(), 2);
 	}
 
 	// Read areas
@@ -1629,6 +1823,17 @@ void OfflineMap::Write(
 
 		varLatCB->put(&(m_dVectorTargetCenterLat[0]), dimLatB->size());
 		varLonCB->put(&(m_dVectorTargetCenterLon[0]), dimLonB->size());
+
+		NcDim * dimBounds = ncMap.add_dim("bnds", 2);
+		NcVar * varLatBounds =
+			ncMap.add_var("lat_bnds", ncDouble, dimLatB, dimBounds);
+		NcVar * varLonBounds =
+			ncMap.add_var("lon_bnds", ncDouble, dimLonB, dimBounds);
+
+		varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
+			m_dVectorTargetBoundsLat.GetRows(), 2);
+		varLonBounds->put(&(m_dVectorTargetBoundsLon[0][0]),
+			m_dVectorTargetBoundsLon.GetRows(), 2);
 	}
 
 	// Write areas

@@ -114,7 +114,8 @@ void CopyNcVarAttributes(
 void CopyNcVar(
 	NcFile & ncIn,
 	NcFile & ncOut,
-	const std::string & strVarName
+	const std::string & strVarName,
+	bool fCopyAttributes
 ) {
 	if (!ncIn.is_valid()) {
 		_EXCEPTIONT("Invalid input file specified");
@@ -127,6 +128,8 @@ void CopyNcVar(
 		_EXCEPTION1("NetCDF file does not contain variable \"%s\"",
 			strVarName.c_str());
 	}
+
+	NcVar * varOut;
 
 	std::vector<NcDim *> dimOut;
 	dimOut.resize(var->num_dims());
@@ -168,7 +171,7 @@ void CopyNcVar(
 		DataVector<char> data;
 		data.Initialize(nDataSize);
 
-		NcVar * varOut =
+		varOut =
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
@@ -182,7 +185,7 @@ void CopyNcVar(
 		DataVector<short> data;
 		data.Initialize(nDataSize);
 
-		NcVar * varOut =
+		varOut =
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
@@ -196,7 +199,7 @@ void CopyNcVar(
 		DataVector<int> data;
 		data.Initialize(nDataSize);
 
-		NcVar * varOut =
+		varOut =
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
@@ -211,7 +214,7 @@ void CopyNcVar(
 		DataVector<float> data;
 		data.Initialize(nDataSize);
 
-		NcVar * varOut =
+		varOut =
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
@@ -226,13 +229,24 @@ void CopyNcVar(
 		DataVector<double> data;
 		data.Initialize(nDataSize);
 
-		NcVar * varOut =
+		varOut =
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
 
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
+	}
+
+	// Check output variable exists
+	if (varOut == NULL) {
+		_EXCEPTION1("Unable to create output variable \"%s\"",
+			var->name());
+	}
+
+	// Copy attributes
+	if (fCopyAttributes) {
+		CopyNcVarAttributes(var, varOut);
 	}
 }
 
