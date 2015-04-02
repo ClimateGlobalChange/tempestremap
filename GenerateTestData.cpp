@@ -187,6 +187,9 @@ try {
 	// Output filename
 	std::string strTestData;
 
+	// Flip rectilinear ordering
+	bool fFlipRectilinear;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshFile, "mesh", "");
@@ -197,6 +200,7 @@ try {
 		CommandLineBool(fHOMMEFormat, "homme");
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineString(strTestData, "out", "testdata.nc");
+		CommandLineBool(fFlipRectilinear, "fliprectilinear");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -240,37 +244,36 @@ try {
 	// Check for rectilinear Mesh
 	NcFile ncMesh(strMeshFile.c_str(), NcFile::ReadOnly);
 
-	// Check for rectilinear attribute
+	// Rectilinear grid
 	bool fRectilinear = false;
-	for (int a = 0; a < ncMesh.num_atts(); a++) {
-		if (strcmp(ncMesh.get_att(a)->name(), "rectilinear") == 0) {
-			fRectilinear = true;
-			break;
-		}
-	}
 
-	if (fGLL && fRectilinear) {
-		_EXCEPTIONT("--gll cannot be used with rectilinear grids");
-	}
-
+	// Check for grid dimensions (SCRIP format grid)
 	std::vector<long> vecOutputDimSizes;
 	std::vector<std::string> vecOutputDimNames;
 
-	// Output level dimension
-	if (fHOMMEFormat) {
-		vecOutputDimSizes.push_back(1);
-		vecOutputDimNames.push_back("lev");
+	NcVar * varGridDims = ncMesh.get_var("grid_dims");
+	if (varGridDims != NULL) {
+		NcDim * dimGridRank = varGridDims->get_dim(0);
+
+		vecOutputDimSizes.resize(dimGridRank->size());
+		varGridDims->get(&(vecOutputDimSizes[0]), dimGridRank->size());
+
+		if (dimGridRank->size() == 1) {
+			vecOutputDimNames.push_back("num_elem");
+		} else if (dimGridRank->size() == 2) {
+			fRectilinear = true;
+
+			vecOutputDimNames.push_back("lon");
+			vecOutputDimNames.push_back("lat");
+		} else {
+			_EXCEPTIONT("Source grid grid_rank must be < 3");
+		}
 	}
 
-	// Non-rectilinear output
-	if (!fRectilinear) {
-		vecOutputDimSizes.push_back(mesh.faces.size());
-		vecOutputDimNames.push_back("ncol");
-
-		Announce("Non-rectilinear mesh detected");
-
-	// Obtain rectilinear attributes
-	} else {
+	// Check for rectilinear attribute (Exodus format grid)
+	NcAtt * attRectilinear = ncMesh.get_att("rectilinear");
+	if (attRectilinear != NULL) {
+		fRectilinear = true;
 		int nDim0Size = ncMesh.get_att("rectilinear_dim0_size")->as_int(0);
 		int nDim1Size = ncMesh.get_att("rectilinear_dim1_size")->as_int(0);
 
@@ -284,8 +287,32 @@ try {
 
 		vecOutputDimNames.push_back(strDim0Name);
 		vecOutputDimNames.push_back(strDim1Name);
+	}
 
-		Announce("Rectilinear mesh detected");
+	// Default case
+	if (vecOutputDimSizes.size() == 0) {
+		vecOutputDimSizes.push_back(mesh.faces.size());
+		vecOutputDimNames.push_back("ncol");
+	}
+
+	if (fRectilinear) {
+		Announce("Rectilinear grid detected");
+	} else {
+		Announce("Non-rectilinear grid detected");
+	}
+
+	if (fFlipRectilinear && !fRectilinear) {
+		_EXCEPTIONT("--fliprectlinear cannot be used with non-rectilinear grids");
+	}
+
+	if (fGLL && fRectilinear) {
+		_EXCEPTIONT("--gll cannot be used with rectilinear grids");
+	}
+
+	// Output level dimension
+	if (fHOMMEFormat) {
+		vecOutputDimSizes.push_back(1);
+		vecOutputDimNames.push_back("lev");
 	}
 
 	AnnounceEndBlock("Done");
@@ -365,7 +392,16 @@ try {
 					dTotalSample += dSample * TriQuadratureW[k] * dTriangleArea;
 				}
 
-				dVar[i] += dTotalSample / mesh.vecFaceArea[i];
+				// Flip the rectilinear coordinate
+				int iv = i;
+				if (fFlipRectilinear) {
+					int i0 = i % vecOutputDimSizes[0];
+					int i1 = i / vecOutputDimSizes[0];
+
+					iv = i0 * vecOutputDimSizes[1] + i1;
+				}
+				dVar[iv] += dTotalSample / mesh.vecFaceArea[i];
+				//dVar[i] += dTotalSample / mesh.vecFaceArea[i];
 			}
 		}
 
@@ -581,17 +617,29 @@ try {
 		varLon->put(&(dLon[0]), vecOutputDimSizes[1]);
 		varArea->put(&(dArea[0]), vecOutputDimSizes[1]);
 	}
-
-	// Add variable
-	NcVar * varOut =
-		ncOut.add_var(
-			strVariableName.c_str(),
-			ncDouble,
-			static_cast<int>(vecOutputDimSizes.size()),
-			(const NcDim**)&(vecDimOut[0]));
-
+/*
 	// Output data
-	varOut->put(&(dVar[0]), &(vecOutputDimSizes[0]));
+	if (fFlipRectilinear) {
+		NcVar * varOut =
+			ncOut.add_var(
+				strVariableName.c_str(),
+				ncDouble,
+				vecDimOut[1],
+				vecDimOut[0]);
+
+		varOut->put(&(dVar[0]), vecOutputDimSizes[1], vecOutputDimSizes[0]);
+
+	} else {
+*/
+		NcVar * varOut =
+			ncOut.add_var(
+				strVariableName.c_str(),
+				ncDouble,
+				static_cast<int>(vecOutputDimSizes.size()),
+				(const NcDim**)&(vecDimOut[0]));
+
+		varOut->put(&(dVar[0]), &(vecOutputDimSizes[0]));
+	//}
 
 	AnnounceEndBlock("Done");
 
