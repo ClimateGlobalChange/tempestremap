@@ -138,7 +138,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
-
+/*
 		// Number of faces
 		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
 		if (dimGridSize == NULL) {
@@ -185,7 +185,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			dimGridCorners->size());
 
 		varGridVertexLon->get(
-			&(m_dSourceVertexLon[0][0]),
+			&(m_dTargetVertexLon[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -199,10 +199,10 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			dimGridCorners->size());
 
 		varGridVertexLat->get(
-			&(m_dSourceVertexLat[0][0]),
+			&(m_dTargetVertexLat[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
-
+*/
 		return;
 	}
 
@@ -322,6 +322,10 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 	dVertexLon.Initialize(nFaces, nNodesPerFace);
 	dVertexLat.Initialize(nFaces, nNodesPerFace);
 
+	if ((fLatLon) && (nNodesPerFace != 4)) {
+		_EXCEPTIONT("Logic error");
+	}
+
 	dCenterLon.Initialize(nFaces);
 	dCenterLat.Initialize(nFaces);
 
@@ -350,15 +354,6 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 				dLonV += 360.0;
 			}
 
-			if (fLatLon) {
-				dXc += dLonV;
-				dYc += dLatV;
-			} else {
-				dXc += dX;
-				dYc += dY;
-				dZc += dZ;
-			}
-
 			dVertexLon[i][j] = dLonV;
 			dVertexLat[i][j] = dLatV;
 		}
@@ -366,40 +361,27 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 		if ((fLatLon) && (nNodes == 3)) {
 			dVertexLon[i][3] = dVertexLon[i][0];
 			dVertexLat[i][3] = dVertexLat[i][0];
-
-			dXc += dVertexLon[i][3];
-			dYc += dVertexLat[i][3];
-
-			dXc /= 4.0;
-			dYc /= 4.0;
-
-		} else {
-			dXc /= static_cast<double>(nNodes);
-			dYc /= static_cast<double>(nNodes);
-			dZc /= static_cast<double>(nNodes);
 		}
 
-		if (fLatLon) {
-			dCenterLon[i] = dXc;
-			dCenterLat[i] = dYc;
+		dXc /= static_cast<double>(nNodes);
+		dYc /= static_cast<double>(nNodes);
+		dZc /= static_cast<double>(nNodes);
 
-		} else {
-			double dMag = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
+		double dMag = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
 
-			dXc /= dMag;
-			dYc /= dMag;
-			dZc /= dMag;
+		dXc /= dMag;
+		dYc /= dMag;
+		dZc /= dMag;
 
-			double dLonC = atan2(dYc, dXc) / M_PI * 180.0;
-			double dLatC = asin(dZc) / M_PI * 180.0;
+		double dLonC = atan2(dYc, dXc) / M_PI * 180.0;
+		double dLatC = asin(dZc) / M_PI * 180.0;
 
-			if (dLonC < 0.0) {
-				dLonC += 360.0;
-			}
-
-			dCenterLon[i] = dLonC;
-			dCenterLat[i] = dLatC;
+		if (dLonC < 0.0) {
+			dLonC += 360.0;
 		}
+
+		dCenterLon[i] = dLonC;
+		dCenterLat[i] = dLatC;
 	}
 }
 
@@ -476,11 +458,11 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 void OfflineMap::InitializeRectilinearCoordinateVector(
 	int nLon,
 	int nLat,
-	const DataVector<double> & dCenterLon,
-	const DataVector<double> & dCenterLat,
 	const DataMatrix<double> & dVertexLon,
 	const DataMatrix<double> & dVertexLat,
 	bool fLonFirst,
+	DataVector<double> & dCenterLon,
+	DataVector<double> & dCenterLat,
 	DataVector<double> & dVectorCenterLon,
 	DataVector<double> & dVectorCenterLat,
 	DataMatrix<double> & dVectorBoundsLon,
@@ -497,6 +479,15 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 			nLon, nLat, dCenterLat.GetRows());
 	}
 
+	const int nFaces = dVertexLon.GetRows();
+
+	if (nFaces != nLon * nLat) {
+		_EXCEPTIONT("Number of faces must be tensor product of nLon and nLat");
+	}
+
+	dCenterLon.Initialize(nFaces);
+	dCenterLat.Initialize(nFaces);
+
 	dVectorCenterLon.Initialize(nLon);
 	dVectorCenterLat.Initialize(nLat);
 
@@ -505,7 +496,6 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 
 	if (fLonFirst) {
 		for (int i = 0; i < nLon; i++) {
-			dVectorCenterLon[i] = dCenterLon[i];
 			dVectorBoundsLon[i][0] = 720.0;
 			dVectorBoundsLon[i][1] = -720.0;
 			for (int k = 0; k < dVertexLon.GetColumns(); k++) {
@@ -519,17 +509,20 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLon[i][1] = dVertexLon[i][k];
 				}
 			}
-/*
-			printf("C%1.5e %1.5e\n",
-				dVectorBoundsLon[i][0], dVectorBoundsLon[i][1]);
-			printf("A%1.5e %1.5e %1.5e %1.5e\n",
-				dVertexLon[i][0], dVertexLon[i][1], dVertexLon[i][2], dVertexLon[i][3]);
-			printf("B%1.5e %1.5e %1.5e %1.5e\n",
-				dVertexLat[i][0], dVertexLat[i][1], dVertexLat[i][2], dVertexLat[i][3]);
-*/
+			if ((dVectorBoundsLon[i][0] < 90.0) &&
+			    (dVectorBoundsLon[i][1] > 270.0)
+			) {
+				if (i == 0) {
+					dVectorBoundsLon[i][1] -= 360.0;
+				} else {
+					dVectorBoundsLon[i][0] += 360.0;
+				}
+			}
+			dVectorCenterLon[i] = 0.5 * (
+				  dVectorBoundsLon[i][0]
+				+ dVectorBoundsLon[i][1]);
 		}
 		for (int j = 0; j < nLat; j++) {
-			dVectorCenterLat[j] = dCenterLat[j * nLon];
 			dVectorBoundsLat[j][0] = dVertexLat[j * nLon][0];
 			dVectorBoundsLat[j][1] = dVertexLat[j * nLon][0];
 			for (int k = 0; k < dVertexLat.GetColumns(); k++) {
@@ -540,11 +533,19 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLat[j][1] = dVertexLat[j * nLon][k];
 				}
 			}
+			dVectorCenterLat[j] = 0.5 * (
+				  dVectorBoundsLat[j][0]
+				+ dVectorBoundsLat[j][1]);
+		}
+
+		for (int i = 0; i < nFaces; i++) {
+			dCenterLon[i] = dVectorCenterLon[i%nLon];
+			dCenterLat[i] = dVectorCenterLat[i/nLon];
 		}
 
 	} else {
 		for (int i = 0; i < nLon; i++) {
-			dVectorCenterLon[i] = dCenterLon[i * nLat];
+			//dVectorCenterLon[i] = dCenterLon[i * nLat];
 			dVectorBoundsLon[i][0] = 720.0;
 			dVectorBoundsLon[i][1] = -720.0;
 			for (int k = 0; k < dVertexLon.GetColumns(); k++) {
@@ -558,9 +559,21 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLon[i][1] = dVertexLon[i * nLat][k];
 				}
 			}
+			if ((dVectorBoundsLon[i][0] < 90.0) &&
+			    (dVectorBoundsLon[i][1] > 270.0)
+			) {
+				if (i == 0) {
+					dVectorBoundsLon[i][1] -= 360.0;
+				} else {
+					dVectorBoundsLon[i][0] += 360.0;
+				}
+			}
+			dVectorCenterLon[i] = 0.5 * (
+				  dVectorBoundsLon[i][0]
+				+ dVectorBoundsLon[i][1]);
 		}
 		for (int j = 0; j < nLat; j++) {
-			dVectorCenterLat[j] = dCenterLat[j];
+			//dVectorCenterLat[j] = dCenterLat[j];
 			dVectorBoundsLat[j][0] = dVertexLat[j][0];
 			dVectorBoundsLat[j][1] = dVertexLat[j][0];
 			for (int k = 0; k < dVertexLat.GetColumns(); k++) {
@@ -571,6 +584,14 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLat[j][1] = dVertexLat[j][k];
 				}
 			}
+			dVectorCenterLat[j] = 0.5 * (
+				  dVectorBoundsLat[j][0]
+				+ dVectorBoundsLat[j][1]);
+		}
+
+		for (int i = 0; i < nFaces; i++) {
+			dCenterLon[i] = dVectorCenterLon[i/nLat];
+			dCenterLat[i] = dVectorCenterLat[i%nLat];
 		}
 	}
 }
@@ -580,6 +601,7 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 	const Mesh & meshSource
 ) {
+
 	bool fLatLon = false;
 	if ((m_vecSourceDimNames[0] == "lat") &&
 	    (m_vecSourceDimNames[1] == "lon")
@@ -599,6 +621,7 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 		m_dSourceVertexLon,
 		m_dSourceVertexLat,
 		fLatLon);
+
 /*
 	// Initialize vector coordinate
 	if (fLatLon) {
@@ -658,11 +681,11 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 			InitializeRectilinearCoordinateVector(
 				m_vecTargetDimSizes[0],
 				m_vecTargetDimSizes[1],
-				m_dTargetCenterLon,
-				m_dTargetCenterLat,
 				m_dTargetVertexLon,
 				m_dTargetVertexLat,
 				true,
+				m_dTargetCenterLon,
+				m_dTargetCenterLat,
 				m_dVectorTargetCenterLon,
 				m_dVectorTargetCenterLat,
 				m_dVectorTargetBoundsLon,
@@ -673,11 +696,11 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 			InitializeRectilinearCoordinateVector(
 				m_vecTargetDimSizes[1],
 				m_vecTargetDimSizes[0],
-				m_dTargetCenterLon,
-				m_dTargetCenterLat,
 				m_dTargetVertexLon,
 				m_dTargetVertexLat,
-				true,
+				false,
+				m_dTargetCenterLon,
+				m_dTargetCenterLat,
 				m_dVectorTargetCenterLon,
 				m_dVectorTargetCenterLat,
 				m_dVectorTargetBoundsLon,
@@ -897,6 +920,9 @@ void OfflineMap::PreserveAllVariables(
 
 	for (int v = 0; v < ncSource.num_vars(); v++) {
 		NcVar * var = ncSource.get_var(v);
+		if (var == NULL) {
+			_EXCEPTION1("Error reading variable %i in source file", v);
+		}
 
 		if (fSourceRectilinear) {
 			if (var->num_dims() >= 2) {
