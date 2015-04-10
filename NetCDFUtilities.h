@@ -41,7 +41,8 @@ void CopyNcVarAttributes(
 void CopyNcVar(
 	NcFile & ncIn,
 	NcFile & ncOut,
-	const std::string & strVarName
+	const std::string & strVarName,
+	bool fCopyAttributes = true
 );
 
 ////////////////////////////////////////////////////////////////////////////////
