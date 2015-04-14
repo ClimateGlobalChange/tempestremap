@@ -50,8 +50,12 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 		if (dimGridRank->size() == 1) {
 			m_vecSourceDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecSourceDimNames.push_back("lon");
 			m_vecSourceDimNames.push_back("lat");
+			m_vecSourceDimNames.push_back("lon");
+
+			int nTemp = m_vecSourceDimSizes[0];
+			m_vecSourceDimSizes[0] = m_vecSourceDimSizes[1];
+			m_vecSourceDimSizes[1] = nTemp;
 		} else {
 			_EXCEPTIONT("Source grid grid_rank must be < 3");
 		}
@@ -133,8 +137,13 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		if (dimGridRank->size() == 1) {
 			m_vecTargetDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecTargetDimNames.push_back("lon");
 			m_vecTargetDimNames.push_back("lat");
+			m_vecTargetDimNames.push_back("lon");
+
+			int nTemp = m_vecTargetDimSizes[0];
+			m_vecTargetDimSizes[0] = m_vecTargetDimSizes[1];
+			m_vecTargetDimSizes[1] = nTemp;
+
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
@@ -494,7 +503,7 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 	dVectorBoundsLon.Initialize(nLon, 2);
 	dVectorBoundsLat.Initialize(nLat, 2);
 
-	if (fLonFirst) {
+	if (!fLonFirst) {
 		for (int i = 0; i < nLon; i++) {
 			dVectorBoundsLon[i][0] = 720.0;
 			dVectorBoundsLon[i][1] = -720.0;
@@ -509,15 +518,21 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLon[i][1] = dVertexLon[i][k];
 				}
 			}
+
 			if ((dVectorBoundsLon[i][0] < 90.0) &&
 			    (dVectorBoundsLon[i][1] > 270.0)
 			) {
 				if (i == 0) {
-					dVectorBoundsLon[i][1] -= 360.0;
+					double dTemp = dVectorBoundsLon[i][0];
+					dVectorBoundsLon[i][0] = dVectorBoundsLon[i][1] - 360.0;
+					dVectorBoundsLon[i][1] = dTemp;
 				} else {
-					dVectorBoundsLon[i][0] += 360.0;
+					double dTemp = dVectorBoundsLon[i][1];
+					dVectorBoundsLon[i][1] = dVectorBoundsLon[i][0] + 360.0;
+					dVectorBoundsLon[i][0] = dTemp;
 				}
 			}
+
 			dVectorCenterLon[i] = 0.5 * (
 				  dVectorBoundsLon[i][0]
 				+ dVectorBoundsLon[i][1]);
@@ -559,13 +574,18 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 					dVectorBoundsLon[i][1] = dVertexLon[i * nLat][k];
 				}
 			}
+
 			if ((dVectorBoundsLon[i][0] < 90.0) &&
 			    (dVectorBoundsLon[i][1] > 270.0)
 			) {
 				if (i == 0) {
-					dVectorBoundsLon[i][1] -= 360.0;
+					double dTemp = dVectorBoundsLon[i][0];
+					dVectorBoundsLon[i][0] = dVectorBoundsLon[i][1] - 360.0;
+					dVectorBoundsLon[i][1] = dTemp;
 				} else {
-					dVectorBoundsLon[i][0] += 360.0;
+					double dTemp = dVectorBoundsLon[i][1];
+					dVectorBoundsLon[i][1] = dVectorBoundsLon[i][0] + 360.0;
+					dVectorBoundsLon[i][0] = dTemp;
 				}
 			}
 			dVectorCenterLon[i] = 0.5 * (
