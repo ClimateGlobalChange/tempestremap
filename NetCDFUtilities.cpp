@@ -176,6 +176,10 @@ void CopyNcVar(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
 
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -189,6 +193,10 @@ void CopyNcVar(
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
+
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
 
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
@@ -204,6 +212,9 @@ void CopyNcVar(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
 
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
 
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
@@ -219,6 +230,10 @@ void CopyNcVar(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
 
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -233,6 +248,10 @@ void CopyNcVar(
 			ncOut.add_var(
 				var->name(), var->type(),
 				dimOut.size(), (const NcDim**)&(dimOut[0]));
+
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
 
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
