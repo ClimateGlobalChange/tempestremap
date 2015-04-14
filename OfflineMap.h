@@ -58,7 +58,7 @@ private:
 		DataVector<double> & dCenterLat,
 		DataMatrix<double> & dVertexLon,
 		DataMatrix<double> & dVertexLat,
-		bool fLatLon = false
+		bool fLatLon
 	);
 
 	///	<summary>
@@ -80,11 +80,11 @@ private:
 	void InitializeRectilinearCoordinateVector(
 		int nLon,
 		int nLat,
-		const DataVector<double> & dCenterLon,
-		const DataVector<double> & dCenterLat,
 		const DataMatrix<double> & dVertexLon,
 		const DataMatrix<double> & dVertexLat,
 		bool fLonFirst,
+		DataVector<double> & dCenterLon,
+		DataVector<double> & dCenterLat,
 		DataVector<double> & dVectorCenterLon,
 		DataVector<double> & dVectorCenterLat,
 		DataMatrix<double> & dVectorBoundsLon,
