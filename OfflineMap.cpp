@@ -139,7 +139,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
 
-		// Number of faces
+/*		// Number of faces
 		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
 		if (dimGridSize == NULL) {
 			_EXCEPTIONT("Missing \"grid_size\" dimension in grid file");
@@ -185,7 +185,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			dimGridCorners->size());
 
 		varGridVertexLon->get(
-			&(m_dSourceVertexLon[0][0]),
+			&(m_dTargetVertexLon[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -202,8 +202,9 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			&(m_dSourceVertexLat[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
-
+*/
 		return;
+
 	}
 
 	// Check for rectilinear attribute
