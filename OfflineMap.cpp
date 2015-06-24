@@ -856,60 +856,16 @@ void OfflineMap::PreserveVariables(
 
 	// Copy over dimensions
 	for (int v = 0; v < vecPreserveVariables.size(); v++) {
-		Announce("%s", vecPreserveVariables[v].c_str());
 
-		CopyNcVar(ncSource, ncTarget, vecPreserveVariables[v]);
-/*
-		NcVar * var = ncSource.get_var(vecPreserveVariables[v].c_str());
-		if (var == NULL) {
-			_EXCEPTION2("Source file \"%s\" does not contain variable \"%s\"",
-				strSourceDataFile.c_str(), vecPreserveVariables[v].c_str());
+		if (ncTarget.get_var(vecPreserveVariables[v].c_str()) != NULL) {
+			Announce("%s (already exists, skipping)",
+				vecPreserveVariables[v].c_str());
+
+		} else {
+			Announce("%s", vecPreserveVariables[v].c_str());
+
+			CopyNcVar(ncSource, ncTarget, vecPreserveVariables[v]);
 		}
-
-		std::vector<NcDim *> dimOut;
-		dimOut.resize(var->num_dims());
-
-		std::vector<long> counts;
-		counts.resize(var->num_dims());
-
-		long nDataSize = 1;
-
-		for (int d = 0; d < var->num_dims(); d++) {
-			NcDim * dimA = var->get_dim(d);
-
-			dimOut[d] =
-				NcFile_GetDimIfExists(
-					ncTarget, dimA->name(), dimA->size());
-
-			if (dimOut[d] == NULL) {
-				_EXCEPTIONT("NcFile_GetDimIfExists returned NULL");
-			}
-
-			counts[d] = dimOut[d]->size();
-			nDataSize *= counts[d];
-		}
-
-		if (var->type() == ncByte) {
-			DataVector<char> data;
-			data.Initialize(nDataSize);
-
-			NcVar * varOut =
-				ncTarget.add_var(
-					var->name(), var->type(),
-					dimOut.size(), (const NcDim**)&(dimOut[0]));
-
-			var->get(&(data[0]), &(counts[0]));
-			varOut->put(&(data[0]), &(counts[0]));
-		}
-*/
-/*
-		// Copy over variables
-		int err = nc_copy_var(ncSource.id(), var->id(), ncTarget.id());
-
-		if (err != NC_NOERR) {
-			_EXCEPTION1("nc_copy_var failed with return code %i", err);
-		}
-*/
 	}
 }
 
@@ -1143,6 +1099,18 @@ void OfflineMap::Apply(
 					if (dim->size() != nSourceCount) {
 						continue;
 					}
+
+					bool fDimensionName = false;
+					for (int d = 0; d < m_vecTargetDimNames.size(); d++) {
+						const char * szDimName = m_vecTargetDimNames[d].c_str();
+						if (strcmp(var->name(), szDimName) == 0) {
+							fDimensionName = true;
+							break;
+						}
+					}
+					if (fDimensionName) {
+						continue;
+					}
 				}
 			}
 
@@ -1164,6 +1132,10 @@ void OfflineMap::Apply(
 		NcVar * varLon =
 			ncTarget.add_var("lon", ncDouble, dimLon);
 
+		if (varLon == NULL) {
+			_EXCEPTIONT("Cannot create variable \"lon\" in target file");
+		}
+
 		varLon->put(
 			&(m_dVectorTargetCenterLon[0]),
 			m_dVectorTargetCenterLon.GetRows());
@@ -1184,6 +1156,10 @@ void OfflineMap::Apply(
 		NcVar * varLat =
 			ncTarget.add_var("lat", ncDouble, dimLat);
 
+		if (varLat == NULL) {
+			_EXCEPTIONT("Cannot create variable \"lat\" in target file");
+		}
+
 		varLat->put(
 			&(m_dVectorTargetCenterLat[0]),
 			m_dVectorTargetCenterLat.GetRows());
@@ -1202,11 +1178,21 @@ void OfflineMap::Apply(
 
 			NcVar * varLonBounds =
 				ncTarget.add_var("lon_bnds", ncDouble, dimLon, dimBounds);
+
+			if (varLonBounds == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lon_bnds\" in target file");
+			}
+
 			varLonBounds->put(&(m_dVectorTargetBoundsLon[0][0]),
 				m_dVectorTargetBoundsLon.GetRows(), 2);
 
 			NcVar * varLatBounds =
 				ncTarget.add_var("lat_bnds", ncDouble, dimLat, dimBounds);
+
+			if (varLatBounds == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lat_bnds\" in target file");
+			}
+
 			varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
 				m_dVectorTargetBoundsLat.GetRows(), 2);
 		}
@@ -1335,6 +1321,11 @@ void OfflineMap::Apply(
 					ncFloat,
 					vecDimsOut.GetRows(),
 					(const NcDim**)&(vecDimsOut[0]));
+		}
+
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\" in output file",
+				vecVariableList[v].c_str());
 		}
 
 		CopyNcVarAttributes(var, varOut);
