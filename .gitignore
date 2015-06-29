@@ -7,7 +7,7 @@
 *.txt
 *.m~
 *.nc
-gecore2
+bin/*
 
 UnitTest
 

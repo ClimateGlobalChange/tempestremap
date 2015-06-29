@@ -102,6 +102,10 @@ public:
 		const Edge::Type edgetype,
 		const FindFaceStruct & aFindFaceStruct
 	);
+
+	///	<summary>
+	///		Determine if two faces overlap.
+	///	</summary>
 };
 
 ///////////////////////////////////////////////////////////////////////////////

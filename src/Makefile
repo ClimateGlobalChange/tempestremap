@@ -20,7 +20,6 @@ LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
 FILES= Announce.cpp \
        PolynomialInterp.cpp \
        GridElements.cpp \
-       OverlapMesh.cpp \
        MeshUtilities.cpp \
        MeshUtilitiesFuzzy.cpp \
        MeshUtilitiesExact.cpp \
@@ -39,7 +38,9 @@ GENERATEICOMESH_FILES= GenerateICOMesh.cpp $(FILES)
 
 GENERATELAMBERTCONFCONICMESH_FILES = GenerateLambertConfConicMesh.cpp $(FILES)
 
-GENERATEOVERLAPMESH_FILES= GenerateOverlapMesh.cpp $(FILES)
+GENERATEOVERLAPMESH_FILES= GenerateOverlapMesh.cpp OverlapMesh.cpp $(FILES)
+
+GENERATEOVERLAPMESHV1_FILES= GenerateOverlapMesh_v1.cpp OverlapMesh_v1.cpp $(FILES)
 
 GENERATEGLLMETADATA_FILES= GenerateGLLMetaData.cpp $(FILES)
 
@@ -53,6 +54,8 @@ APPLYOFFLINEMAP_FILES= ApplyOfflineMap.cpp $(FILES)
 
 GENERATEOFFLINEMAP_FILES= GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
 
+GENERATEOFFLINEMAPV1_FILES= GenerateOfflineMap_v1.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
+
 # Load system-specific defaults
 CFLAGS+= -I$(NETCDF_INCLUDEDIR)
 LDFLAGS+= -L$(NETCDF_LIBDIR)
@@ -62,7 +65,8 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap GenerateOfflineMap_v1
+	mv $^ ../bin
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
@@ -77,6 +81,9 @@ GenerateLambertConfConicMesh: $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILD
 	$(CC) $(LDFLAGS) -o $@ $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateOverlapMesh: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+
+GenerateOverlapMesh_v1: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateGLLMetaData: $(GENERATEGLLMETADATA_FILES:%.cpp=$(BUILDDIR)/%.o)
@@ -95,6 +102,9 @@ ApplyOfflineMap: $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateOfflineMap: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+
+GenerateOfflineMap_v1: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 
