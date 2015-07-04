@@ -109,6 +109,20 @@ try {
 	meshB.ConstructEdgeMap();
 	AnnounceEndBlock(NULL);
 
+	// 
+	Mesh meshOverlap;
+/*
+	GenerateOverlapMeshFromFace(
+		meshA,
+		meshB,
+		0,
+		meshOverlap,
+		method);
+*/
+	AnnounceStartBlock("Construct overlap mesh");
+	GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method);
+	AnnounceEndBlock(NULL);
+/*
 	// Construct the reverse node array on both meshes
 	AnnounceStartBlock("Constructing reverse node array on input mesh");
 	meshA.ConstructReverseNodeArray();
@@ -127,9 +141,9 @@ try {
 	Mesh meshOverlap;
 
 	AnnounceStartBlock("Construct overlap mesh");
-	GenerateOverlapMesh_v1(meshA, meshB, meshOverlap, method);
+	GenerateOverlapMesh(meshA, meshB, meshOverlap, method);
 	AnnounceEndBlock(NULL);
-
+*/
 	// Write the overlap mesh
 	AnnounceStartBlock("Writing overlap mesh");
 	meshOverlap.Write(strOverlapMesh.c_str());

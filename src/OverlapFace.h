@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    OverlapMesh.h
+///	\file    OverlapFace.h
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version June 29, 2015
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -14,8 +14,8 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#ifndef _OVERLAPMESH_H_
-#define _OVERLAPMESH_H_
+#ifndef _OVERLAPFACE_H_
+#define _OVERLAPFACE_H_
 
 #include "Defines.h"
 
@@ -24,28 +24,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Method to use to generate overlap mesh
+///		Given a Face index in the source mesh, construct the Mesh that
+///		overlaps that Face.
 ///	</summary>
-enum OverlapMeshMethod {
-	OverlapMeshMethod_Fuzzy,
-	OverlapMeshMethod_Exact,
-	OverlapMeshMethod_Mixed,
-};
-
-///////////////////////////////////////////////////////////////////////////////
-
-///	<summary>
-///		Generate the mesh obtained by overlapping meshes meshFirst and
-///		meshSecond.
-///	</summary>
-void GenerateOverlapMesh(
-	const Mesh & meshFirst,
-	const Mesh & meshSecond,
+void OverlapFace(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	int iFace,
 	Mesh & meshOverlap,
 	OverlapMeshMethod method
-);
+) {
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#endif
 

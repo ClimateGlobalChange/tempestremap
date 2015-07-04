@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    gecore2.cpp
+///	\file    GenerateOfflineMap.cpp
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version June 29, 2015
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -24,6 +24,7 @@
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
 
+#include "OverlapMesh.h"
 #include "OfflineMap.h"
 #include "LinearRemapSE0.h"
 #include "LinearRemapFV.h"
@@ -214,6 +215,13 @@ try {
 	if (strOutputMesh == "") {
 		_EXCEPTIONT("No output mesh specified");
 	}
+
+
+	return (-1);
+
+///////////////////////////////////////////////////////////////////////////////
+
+	// Overlap mesh
 	if (strOverlapMesh == "") {
 		_EXCEPTIONT("No overlap mesh specified");
 	}
@@ -318,35 +326,35 @@ try {
 	meshOverlap.RemoveZeroEdges();
 
 	// Verify that overlap mesh is in the correct order
-	int ixFirstFaceMax = (-1);
-	int ixSecondFaceMax = (-1);
+	int ixSourceFaceMax = (-1);
+	int ixTargetFaceMax = (-1);
 
-	if (meshOverlap.vecFirstFaceIx.size() !=
-		meshOverlap.vecSecondFaceIx.size()
+	if (meshOverlap.vecSourceFaceIx.size() !=
+		meshOverlap.vecTargetFaceIx.size()
 	) {
 		_EXCEPTIONT("Invalid overlap mesh:\n"
 			"    Possible mesh file corruption?");
 	}
 
-	for (int i = 0; i < meshOverlap.vecFirstFaceIx.size(); i++) {
-		if (meshOverlap.vecFirstFaceIx[i] + 1 > ixFirstFaceMax) {
-			ixFirstFaceMax = meshOverlap.vecFirstFaceIx[i] + 1;
+	for (int i = 0; i < meshOverlap.vecSourceFaceIx.size(); i++) {
+		if (meshOverlap.vecSourceFaceIx[i] + 1 > ixSourceFaceMax) {
+			ixSourceFaceMax = meshOverlap.vecSourceFaceIx[i] + 1;
 		}
-		if (meshOverlap.vecSecondFaceIx[i] + 1 > ixSecondFaceMax) {
-			ixSecondFaceMax = meshOverlap.vecSecondFaceIx[i] + 1;
+		if (meshOverlap.vecTargetFaceIx[i] + 1 > ixTargetFaceMax) {
+			ixTargetFaceMax = meshOverlap.vecTargetFaceIx[i] + 1;
 		}
 	}
 
 	// Check for forward correspondence in overlap mesh
-	if (ixFirstFaceMax == meshInput.faces.size() //&&
-		//(ixSecondFaceMax == meshOutput.faces.size())
+	if (ixSourceFaceMax == meshInput.faces.size() //&&
+		//(ixTargetFaceMax == meshOutput.faces.size())
 	) {
 		Announce("Overlap mesh forward correspondence found");
 
 	// Check for reverse correspondence in overlap mesh
 	} else if (
-		ixFirstFaceMax == meshOutput.faces.size() //&&
-		//(ixSecondFaceMax == meshInput.faces.size())
+		ixSourceFaceMax == meshOutput.faces.size() //&&
+		//(ixTargetFaceMax == meshInput.faces.size())
 	) {
 		Announce("Overlap mesh reverse correspondence found (reversing)");
 
@@ -357,7 +365,7 @@ try {
 	} else {
 		_EXCEPTION2("Invalid overlap mesh:\n"
 			"    No correspondence found with input and output meshes (%i,%i)",
-			ixFirstFaceMax, ixSecondFaceMax);
+			ixSourceFaceMax, ixTargetFaceMax);
 	}
 
 	AnnounceEndBlock(NULL);

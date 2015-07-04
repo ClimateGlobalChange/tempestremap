@@ -47,6 +47,45 @@ bool MeshUtilitiesFuzzy::AreNodesEqual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int MeshUtilitiesFuzzy::FindNodeEdgeSide(
+	const Node & nodeBegin,
+	const Node & nodeEnd,
+	const Edge::Type edgetype,
+	const Node & nodeTest
+) const {
+	static const Real Tolerance = ReferenceTolerance;
+
+	if (edgetype == Edge::Type_GreatCircleArc) {
+		Real dDotNorm = DotProduct(CrossProduct(nodeBegin, nodeEnd), nodeTest);
+
+		if (dDotNorm <= - Tolerance) {
+			return (-1);
+		}
+		if (dDotNorm < Tolerance) {
+			return (0);
+		}
+		return (+1);
+
+	} else if (edgetype == Edge::Type_ConstantLatitude) {
+		Real dAlignment = (nodeBegin.x * nodeEnd.y - nodeEnd.x * nodeBegin.y);
+		Real dDotNorm =
+			dAlignment / fabs(dAlignment) * (nodeTest.z - nodeBegin.z);
+
+		if (dDotNorm <= - Tolerance) {
+			return (-1);
+		}
+		if (dDotNorm < Tolerance) {
+			return (0);
+		}
+		return (+1);
+
+	} else {
+		_EXCEPTION1("Invalid EdgeType (%i)", (int)(edgetype));
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void MeshUtilitiesFuzzy::ContainsNode(
 	const Face & face,
 	const NodeVector & nodevec,
@@ -71,33 +110,16 @@ void MeshUtilitiesFuzzy::ContainsNode(
 		const Node & na = nodevec[face.edges[i][0]];
 		const Node & nb = nodevec[face.edges[i][1]];
 
-		if (face.edges[i].type == Edge::Type_GreatCircleArc) {
-			Real dDotNorm = DotProduct(CrossProduct(na, nb), node);
+		int iNodeEdgeSide =
+			FindNodeEdgeSide(na, nb, face.edges[i].type, node);
 
-			if (dDotNorm <= - Tolerance) {
-				loc = Face::NodeLocation_Exterior;
-				ixLocation = 0;
-				return;
-			}
-			if (dDotNorm < Tolerance) {
-				setContainedEdgeIx.insert(i);
-			}
-
-		} else if (face.edges[i].type == Edge::Type_ConstantLatitude) {
-			Real dAlignment = (na.x * nb.y - nb.x * na.y);
-			Real dDotNorm = dAlignment / fabs(dAlignment) * (node.z - na.z);
-
-			if (dDotNorm <= - Tolerance) {
-				loc = Face::NodeLocation_Exterior;
-				ixLocation = 0;
-				return;
-			}
-			if (dDotNorm < Tolerance) {
-				setContainedEdgeIx.insert(i);
-			}
-
-		} else {
-			_EXCEPTION1("Invalid EdgeType (%i)", (int)(face.edges[i].type));
+		if (iNodeEdgeSide == (-1)) {
+			loc = Face::NodeLocation_Exterior;
+			ixLocation = 0;
+			return;
+		}
+		if (iNodeEdgeSide == 0) {
+			setContainedEdgeIx.insert(i);
 		}
 	}
 
@@ -138,6 +160,168 @@ void MeshUtilitiesFuzzy::ContainsNode(
 	loc = Face::NodeLocation_Interior;
 	ixLocation = 0;
 	return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool MeshUtilitiesFuzzy::CalculateEdgeIntersectionsSemiClip(
+	const Node & nodeFirstBegin,
+	const Node & nodeFirstEnd,
+	Edge::Type typeFirst,
+	const Node & nodeSecondBegin,
+	const Node & nodeSecondEnd,
+	Edge::Type typeSecond,
+	std::vector<Node> & nodeIntersections
+) {
+	static const Real Tolerance = ReferenceTolerance;
+
+	// Make a locally modifyable version of the Nodes
+	Node node11;
+	Node node12;
+	Node node21;
+	Node node22;
+
+	// Second edge is a line of constant latitude; first is a great circle arc
+	if ((typeFirst  == Edge::Type_ConstantLatitude) &&
+		(typeSecond == Edge::Type_GreatCircleArc)
+	) {
+		node11 = nodeSecondBegin;
+		node12 = nodeSecondEnd;
+		node21 = nodeFirstBegin;
+		node22 = nodeFirstEnd;
+
+		typeFirst = Edge::Type_GreatCircleArc;
+		typeSecond = Edge::Type_ConstantLatitude;
+
+	} else {
+		node11 = nodeFirstBegin;
+		node12 = nodeFirstEnd;
+		node21 = nodeSecondBegin;
+		node22 = nodeSecondEnd;
+	}
+
+	// Check for coincident nodes
+	if (AreNodesEqual(node11, node12)) {
+		_EXCEPTIONT("Coincident nodes used to define edge");
+	}
+	if (AreNodesEqual(node21, node22)) {
+		_EXCEPTIONT("Coincident nodes used to define edge");
+	}
+
+	// Clear the intersection vector
+	nodeIntersections.clear();
+
+	// Both edges are great circle arcs
+	if ((typeFirst  == Edge::Type_GreatCircleArc) &&
+		(typeSecond == Edge::Type_GreatCircleArc)
+	) {
+		// Cross products
+		Node nodeN11xN12(CrossProduct(node11, node12));
+		Node nodeN21xN22(CrossProduct(node21, node22));
+
+		// Check for coincident lines
+		Real dDot11 = DotProduct(nodeN21xN22, node11);
+		Real dDot12 = DotProduct(nodeN21xN22, node12);
+		Real dDot21 = DotProduct(nodeN11xN12, node21);
+		Real dDot22 = DotProduct(nodeN11xN12, node22);
+/*
+		printf("%1.15e %1.15e %1.15e %1.15e\n",
+			dDot11, dDot12, dDot21, dDot22);
+
+		printf("\n");
+		node11.Print("n11");
+		node12.Print("n12");
+		node21.Print("n21");
+		node22.Print("n22");
+*/
+		// A line which is coincident with both planes
+		Node nodeLine;
+
+		// Coincident planes
+		if ((fabs(dDot11) < Tolerance) &&
+			(fabs(dDot21) < Tolerance)
+		) {
+			return true;
+
+		// node11 is coplanar with the second arc
+		} else if (fabs(dDot11) < Tolerance) {
+			nodeLine = node11;
+
+		// node12 is coplanar with the second arc
+		} else if (fabs(dDot12) < Tolerance) {
+			nodeLine = node12;
+
+		// node21 is coplanar with the first arc
+		} else if (fabs(dDot21) < Tolerance) {
+			nodeLine = node21;
+
+		// node22 is coplanar with the first arc
+		} else if (fabs(dDot22) < Tolerance) {
+			nodeLine = node22;
+
+		// Line of intersection is the cross product of cross products
+		} else {
+			nodeLine = CrossProduct(nodeN11xN12, nodeN21xN22);
+
+			// Verify coplanarity
+			Real dDotDebug1 = DotProduct(nodeLine, nodeN11xN12);
+			Real dDotDebug2 = DotProduct(nodeLine, nodeN21xN22);
+
+			if ((fabs(dDotDebug1) > Tolerance) ||
+				(fabs(dDotDebug2) > Tolerance)
+			) {
+				printf("%1.5e %1.5e\n", dDotDebug1, dDotDebug2);
+				_EXCEPTIONT("Logic error");
+			}
+		}
+
+		// Find the positive intersection node
+		Real dMagLine = nodeLine.Magnitude();
+
+		nodeLine.x /= dMagLine;
+		nodeLine.y /= dMagLine;
+		nodeLine.z /= dMagLine;
+
+		// Check whether each podal point falls within the range
+		// of the first edge
+		Real dAngle11;
+		Real dAngle12;
+
+		Real dAngle1 = 1.0 - DotProduct(node11, node12);
+		Real dAngle2 = 1.0 - DotProduct(node21, node22);
+
+		// Check positive node
+		dAngle11 = 1.0 - DotProduct(nodeLine, node11);
+		dAngle12 = 1.0 - DotProduct(nodeLine, node12);
+
+		if ((dAngle11 < dAngle1 + Tolerance) &&
+			(dAngle12 < dAngle1 + Tolerance)
+		) {
+			nodeIntersections.push_back(nodeLine);
+			return false;
+		}
+
+		// Check negative node
+		nodeLine.x *= (-1.0);
+		nodeLine.y *= (-1.0);
+		nodeLine.z *= (-1.0);
+
+		dAngle11 = 1.0 - DotProduct(nodeLine, node11);
+		dAngle12 = 1.0 - DotProduct(nodeLine, node12);
+
+		if ((dAngle11 < dAngle1 + Tolerance) &&
+			(dAngle12 < dAngle1 + Tolerance)
+		) {
+			nodeIntersections.push_back(nodeLine);
+			return false;
+		}
+
+		// No intersections
+		return false;
+
+	} else {
+		_EXCEPTIONT("Not implemented");
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

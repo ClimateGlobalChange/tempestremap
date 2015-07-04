@@ -116,6 +116,32 @@ public:
 	}
 
 	///	<summary>
+	///		Comparator operator using floating point tolerance.
+	///	</summary>
+	bool operator== (const Node & node) const {
+		static const Real Tolerance = ReferenceTolerance;
+
+		if (fabs(x - node.x) > Tolerance) {
+			return false;
+		}
+		if (fabs(y - node.y) > Tolerance) {
+			return false;
+		}
+		if (fabs(z - node.z) > Tolerance) {
+			return false;
+		}
+
+		return true;
+	}
+
+	///	<summary>
+	///		Comparator operator using floating point tolerance.
+	///	</summary>
+	bool operator!= (const Node & node) const {
+		return (!((*this) == node));
+	}
+
+	///	<summary>
 	///		Difference between two nodes.
 	///	</summary>
 	Node operator-(const Node & node) const {
@@ -151,6 +177,21 @@ typedef std::vector<Node> NodeVector;
 ///		A map between Nodes and indices.
 ///	</summary>
 typedef std::map<Node, int> NodeMap;
+
+///	<summary>
+///		Value type for NodeMap.
+///	</summary>
+typedef NodeMap::value_type NodeMapPair;
+
+///	<summary>
+///		Iterator for NodeMap.
+///	</summary>
+typedef NodeMap::iterator NodeMapIterator;
+
+///	<summary>
+///		Constant iterator for NodeMap.
+///	</summary>
+typedef NodeMap::const_iterator NodeMapConstIterator;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -532,12 +573,12 @@ public:
 	///	<summary>
 	///		Vector of first mesh Face indices.
 	///	</summary>
-	std::vector<int> vecFirstFaceIx;
+	std::vector<int> vecSourceFaceIx;
 
 	///	<summary>
 	///		Vector of second mesh Face indices.
 	///	</summary>
-	std::vector<int> vecSecondFaceIx;
+	std::vector<int> vecTargetFaceIx;
 
 	///	<summary>
 	///		Vector of Face areas.

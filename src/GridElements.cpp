@@ -175,7 +175,7 @@ Real Mesh::CalculateFaceAreasFromOverlap(
 	double dTotalArea = 0.0;
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		int ixFirstFace = meshOverlap.vecFirstFaceIx[i];
+		int ixFirstFace = meshOverlap.vecSourceFaceIx[i];
 
 		if (ixFirstFace >= vecFaceArea.GetRows()) {
 			_EXCEPTIONT("Overlap Mesh FirstFaceIx contains invalid "
@@ -193,8 +193,8 @@ Real Mesh::CalculateFaceAreasFromOverlap(
 void Mesh::ExchangeFirstAndSecondMesh() {
 
 	// Verify all vectors are the same size
-	if ((faces.size() != vecFirstFaceIx.size()) ||
-		(faces.size() != vecSecondFaceIx.size())
+	if ((faces.size() != vecSourceFaceIx.size()) ||
+		(faces.size() != vecTargetFaceIx.size())
 	) {
 		_EXCEPTIONT("");
 	}
@@ -202,26 +202,26 @@ void Mesh::ExchangeFirstAndSecondMesh() {
 	// Reorder vectors
 	FaceVector facesOld = faces;
 
-	std::vector<int> vecFirstFaceIxOld = vecFirstFaceIx;
+	std::vector<int> vecSourceFaceIxOld = vecSourceFaceIx;
 
 	// Reordering map
 	std::multimap<int,int> multimapReorder;
-	for (int i = 0; i < vecSecondFaceIx.size(); i++) {
-		multimapReorder.insert(std::pair<int,int>(vecSecondFaceIx[i], i));
+	for (int i = 0; i < vecTargetFaceIx.size(); i++) {
+		multimapReorder.insert(std::pair<int,int>(vecTargetFaceIx[i], i));
 	}
 
 	// Apply reordering
 	faces.clear();
-	vecFirstFaceIx.clear();
-	vecSecondFaceIx.clear();
+	vecSourceFaceIx.clear();
+	vecTargetFaceIx.clear();
 
 	std::multimap<int,int>::const_iterator iterReorder
 		= multimapReorder.begin();
 
 	for (; iterReorder != multimapReorder.end(); iterReorder++) {
 		faces.push_back(facesOld[iterReorder->second]);
-		vecFirstFaceIx.push_back(iterReorder->first);
-		vecSecondFaceIx.push_back(vecFirstFaceIxOld[iterReorder->second]);
+		vecSourceFaceIx.push_back(iterReorder->first);
+		vecTargetFaceIx.push_back(vecSourceFaceIxOld[iterReorder->second]);
 	}
 }
 
@@ -456,29 +456,29 @@ void Mesh::Write(const std::string & strFile) const {
 	nEdgeType.Deinitialize();
 
 	// Source elements from mesh 1
-	if (vecFirstFaceIx.size() != 0) {
-		if (vecFirstFaceIx.size() != nElementCount) {
-			_EXCEPTIONT("Incorrect size of vecFirstFaceIx");
+	if (vecSourceFaceIx.size() != 0) {
+		if (vecSourceFaceIx.size() != nElementCount) {
+			_EXCEPTIONT("Incorrect size of vecSourceFaceIx");
 		}
 
 		NcVar * varFirstMeshSourceFace =
 			ncOut.add_var("face_source_1", ncInt, dimElementBlock1);
 
 		varFirstMeshSourceFace->set_cur((long)0);
-		varFirstMeshSourceFace->put(&(vecFirstFaceIx[0]), nElementCount);
+		varFirstMeshSourceFace->put(&(vecSourceFaceIx[0]), nElementCount);
 	}
 
 	// Source elements from mesh 2
-	if (vecSecondFaceIx.size() != 0) {
-		if (vecSecondFaceIx.size() != nElementCount) {
-			_EXCEPTIONT("Incorrect size of vecSecondFaceIx");
+	if (vecTargetFaceIx.size() != 0) {
+		if (vecTargetFaceIx.size() != nElementCount) {
+			_EXCEPTIONT("Incorrect size of vecTargetFaceIx");
 		}
 
 		NcVar * varSecondMeshSourceFace =
 			ncOut.add_var("face_source_2", ncInt, dimElementBlock1);
 
 		varSecondMeshSourceFace->set_cur((long)0);
-		varSecondMeshSourceFace->put(&(vecSecondFaceIx[0]), nElementCount);
+		varSecondMeshSourceFace->put(&(vecTargetFaceIx[0]), nElementCount);
 	}
 }
 
@@ -689,17 +689,17 @@ void Mesh::Read(const std::string & strFile) {
 		// Load in first mesh source face ix
 		NcVar * varFaceSource1 = ncFile.get_var("face_source_1");
 		if (varFaceSource1 != NULL) {
-			vecFirstFaceIx.resize(nElementCount);
+			vecSourceFaceIx.resize(nElementCount);
 			varFaceSource1->set_cur((long)0);
-			varFaceSource1->get(&(vecFirstFaceIx[0]), nElementCount);
+			varFaceSource1->get(&(vecSourceFaceIx[0]), nElementCount);
 		}
 
 		// Load in second mesh source face ix
 		NcVar * varFaceSource2 = ncFile.get_var("face_source_2");
 		if (varFaceSource2 != NULL) {
-			vecSecondFaceIx.resize(nElementCount);
+			vecTargetFaceIx.resize(nElementCount);
 			varFaceSource2->set_cur((long)0);
-			varFaceSource2->get(&(vecSecondFaceIx[0]), nElementCount);
+			varFaceSource2->get(&(vecTargetFaceIx[0]), nElementCount);
 		}
 	}
 }

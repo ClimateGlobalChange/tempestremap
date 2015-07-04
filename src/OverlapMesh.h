@@ -35,12 +35,39 @@ enum OverlapMeshMethod {
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Generate the mesh obtained by overlapping meshes meshFirst and
-///		meshSecond.
+///		Generate the mesh obtained by overlapping meshes meshSource and
+///		meshTarget.
 ///	</summary>
-void GenerateOverlapMesh(
-	const Mesh & meshFirst,
-	const Mesh & meshSecond,
+void GenerateOverlapMesh_v1(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	Mesh & meshOverlap,
+	OverlapMeshMethod method
+);
+
+///////////////////////////////////////////////////////////////////////////////
+/*
+///	<summary>
+///		Generate the mesh obtained by overlapping Face iSourceFace in
+///		meshSource with meshTarget.
+///	</summary>
+void GenerateOverlapMeshFromFace(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	int iSourceFace,
+	Mesh & meshOverlap,
+	OverlapMeshMethod method
+);
+*/
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the mesh obtained by overlapping meshes meshSource and
+///		meshTarget.
+///	</summary>
+void GenerateOverlapMesh_v2(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
 	Mesh & meshOverlap,
 	OverlapMeshMethod method
 );

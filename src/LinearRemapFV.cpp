@@ -861,7 +861,7 @@ void LinearRemapFVtoFV(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -1065,7 +1065,7 @@ void LinearRemapFVtoFV(
 		for (int i = 0; i < vecAdjFaces.size(); i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixFirstFace = vecAdjFaces[i].first;
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + j];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			smatMap(ixSecondFace, ixFirstFace) +=
 				dComposedArray[i][j]
@@ -1420,7 +1420,7 @@ void LinearRemapFVtoGLL_Simple(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -1434,7 +1434,7 @@ void LinearRemapFVtoGLL_Simple(
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
 
 			// Quantities from the Second Mesh
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -1632,7 +1632,7 @@ void LinearRemapFVtoGLL(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -1691,7 +1691,7 @@ void LinearRemapFVtoGLL(
 			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -1891,7 +1891,7 @@ void LinearRemapFVtoGLL(
 		for (int i = 0; i < nOverlapFaces; i++) {
 
 			// Quantities from the Second Mesh
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 
@@ -1918,13 +1918,13 @@ void LinearRemapFVtoGLL(
 	std::vector< std::vector<int> > vecReverseFaceIx;
 	vecReverseFaceIx.resize(meshOutput.faces.size());
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
 /*
 	for (int ixOverlap = 0; ixOverlap < meshOverlap.faces.size(); ixOverlap++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap];
+		int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap];
 
 		for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 		for (int ixs = 0; ixs < dGlobalIntArray.GetSubColumns(); ixs++) {
@@ -2016,8 +2016,8 @@ void LinearRemapFVtoGLL(
 		double dConsistency = 0.0;
 		double dConservation = 0.0;
 
-		int ixFirst = meshOverlap.vecFirstFaceIx[i];
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixFirst = meshOverlap.vecSourceFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		for (int s = 0; s < nP * nP; s++) {
 			//dConsistency += dGlobalIntArray[0][i][s];
@@ -2041,7 +2041,7 @@ void LinearRemapFVtoGLL(
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 	for (int s = 0; s < nP * nP; s++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		dIntSums[ixSecond][s] += dGlobalIntArray[0][i][s];
 	}
@@ -2059,8 +2059,8 @@ void LinearRemapFVtoGLL(
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 	for (int s = 0; s < nP * nP; s++) {
-		int ixFirst = meshOverlap.vecFirstFaceIx[i];
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixFirst = meshOverlap.vecSourceFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		dMassSums[ixFirst] += dGlobalIntArray[0][i][s]
 			* dataGLLJacobian[s/nP][s%nP][ixSecond]
@@ -2108,7 +2108,7 @@ void LinearRemapFVtoGLL(
 		// Verify equal partition of mass in integration array
 		double dTotal = 0.0;
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			for (int s = 0; s < nP * nP; s++) {
 				dTotal += dGlobalIntArray[0][ixOverlap + i][s]
@@ -2128,7 +2128,7 @@ void LinearRemapFVtoGLL(
 
 		for (int p = 0; p < nCoefficients; p++) {
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			for (int s = 0; s < nP * nP; s++) {
 				dConstraint[p] += dGlobalIntArray[p][ixOverlap + i][s]
@@ -2195,7 +2195,7 @@ void LinearRemapFVtoGLL(
 		dComposedArray.Initialize(nAdjFaces, nOverlapFaces * nP * nP);
 
 		for (int j = 0; j < nOverlapFaces; j++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + j];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			for (int i = 0; i < nAdjFaces; i++) {
 			for (int s = 0; s < nP * nP; s++) {
@@ -2212,7 +2212,7 @@ void LinearRemapFVtoGLL(
 		for (int i = 0; i < vecAdjFaces.size(); i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixFirstFace = vecAdjFaces[i].first;
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + j];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			for (int s = 0; s < nP; s++) {
 			for (int t = 0; t < nP; t++) {
@@ -2345,7 +2345,7 @@ void LinearRemapGLLtoGLL2(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -2403,7 +2403,7 @@ void LinearRemapGLLtoGLL2(
 			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -2635,7 +2635,7 @@ void LinearRemapGLLtoGLL2(
 		dTargetArea.Initialize(nOverlapFaces * nPout * nPout);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			int ixp = 0;
 			for (int p = 0; p < nPout; p++) {
@@ -2725,7 +2725,7 @@ void LinearRemapGLLtoGLL2(
 	std::vector< std::vector<int> > vecReverseFaceIx;
 	vecReverseFaceIx.resize(meshOutput.faces.size());
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
@@ -2750,7 +2750,7 @@ void LinearRemapGLLtoGLL2(
 
 		// Put composed array into map
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			int ixs = 0;
 			for (int s = 0; s < nPin; s++) {
@@ -2785,7 +2785,7 @@ void LinearRemapGLLtoGLL2(
 							// dataIntAreaOut[ixSecondNode];
 /*
 						if (ixSecondNode == 3) {
-							printf("%i %i/%i %1.15e\n", ixSecondNode, ixFirst, meshOverlap.vecFirstFaceIx[ixOverlap + i], dGlobalIntArray[ixp][ixOverlap + i][ixs]);
+							printf("%i %i/%i %1.15e\n", ixSecondNode, ixFirst, meshOverlap.vecSourceFaceIx[ixOverlap + i], dGlobalIntArray[ixp][ixOverlap + i][ixs]);
 						}
 */
 					}

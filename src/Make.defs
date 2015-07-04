@@ -22,6 +22,10 @@ $(BUILDDIR)/%.o : %.cpp
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(BUILDDIR)/%.o : %.c
+	@mkdir -p $(BUILDDIR)
+	$(CCOMP) $(CFLAGS) -c -o $@ $<
+
 $(BUILDDIR)/%.o : %.f90
 	@mkdir -p $(BUILDDIR)
 	$(F90) $(FORTFLAGS) -c -o $@ $<

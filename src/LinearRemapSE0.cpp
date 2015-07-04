@@ -138,8 +138,8 @@ void LinearRemapSE0(
 	int ixCurrentSecondMeshFace;
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		ixCurrentFirstMeshFace = meshOverlap.vecFirstFaceIx[i];
-		ixCurrentSecondMeshFace = meshOverlap.vecSecondFaceIx[i];
+		ixCurrentFirstMeshFace = meshOverlap.vecSourceFaceIx[i];
+		ixCurrentSecondMeshFace = meshOverlap.vecTargetFaceIx[i];
 
 		double dSecondFaceArea =
 			meshOutput.vecFaceArea[ixCurrentSecondMeshFace];
@@ -810,7 +810,7 @@ void LinearRemapSE4(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -966,7 +966,7 @@ void LinearRemapSE4(
 
 		// Put these remap coefficients into the SparseMatrix map
 		for (int j = 0; j < nOverlapFaces; j++) {
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + j];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			for (int p = 0; p < nP; p++) {
 			for (int q = 0; q < nP; q++) {
@@ -1053,7 +1053,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -1100,7 +1100,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -1346,7 +1346,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			fMonotone);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			for (int s = 0; s < nPin; s++) {
 			for (int t = 0; t < nPin; t++) {
@@ -1367,7 +1367,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	std::vector< std::vector<int> > vecReverseFaceIx;
 	vecReverseFaceIx.resize(meshOutput.faces.size());
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
@@ -1524,7 +1524,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 
 		// Put composed array into map
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			int ixs = 0;
 			for (int s = 0; s < nPin; s++) {
@@ -1630,7 +1630,7 @@ void LinearRemapGLLtoGLL_Integrated(
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
 
-			if (meshOverlap.vecFirstFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
 
@@ -1677,7 +1677,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -1841,7 +1841,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			fMonotone);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecondFace = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			for (int s = 0; s < nPin; s++) {
 			for (int t = 0; t < nPin; t++) {
@@ -1862,7 +1862,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	std::vector< std::vector<int> > vecReverseFaceIx;
 	vecReverseFaceIx.resize(meshOutput.faces.size());
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
-		int ixSecond = meshOverlap.vecSecondFaceIx[i];
+		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
@@ -2018,7 +2018,7 @@ void LinearRemapGLLtoGLL_Integrated(
 
 		// Put composed array into map
 		for (int i = 0; i < nOverlapFaces; i++) {
-			int ixSecond = meshOverlap.vecSecondFaceIx[ixOverlap + i];
+			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			int ixs = 0;
 			for (int s = 0; s < nPin; s++) {

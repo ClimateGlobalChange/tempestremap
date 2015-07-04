@@ -1,9 +1,9 @@
 ##############################################################################
 # Compiler and flags
 CC= g++
+CCOMP= gcc
 CFLAGS= -O3
-
-USEBLAS= True
+#CFLAGS= -g
 
 # NETCDF library directories
 NETCDF_INCLUDEDIR=/opt/local/include
@@ -39,8 +39,10 @@ GENERATEICOMESH_FILES= GenerateICOMesh.cpp $(FILES)
 GENERATELAMBERTCONFCONICMESH_FILES = GenerateLambertConfConicMesh.cpp $(FILES)
 
 GENERATEOVERLAPMESH_FILES= GenerateOverlapMesh.cpp OverlapMesh.cpp $(FILES)
+GENERATEOVERLAPMESH_CFILES= kdtree.c
 
-GENERATEOVERLAPMESHV1_FILES= GenerateOverlapMesh_v1.cpp OverlapMesh_v1.cpp $(FILES)
+GENERATEOVERLAPMESHV1_FILES= GenerateOverlapMesh_v1.cpp OverlapMesh.cpp $(FILES)
+GENERATEOVERLAPMESHV1_CFILES= kdtree.c
 
 GENERATEGLLMETADATA_FILES= GenerateGLLMetaData.cpp $(FILES)
 
@@ -80,11 +82,11 @@ GenerateICOMesh: $(GENERATEICOMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateLambertConfConicMesh: $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-GenerateOverlapMesh: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+GenerateOverlapMesh: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESH_CFILES:%.c=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESH_CFILES:%.c=$(BUILDDIR)/%.o) $(LDFILES)
 
-GenerateOverlapMesh_v1: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+GenerateOverlapMesh_v1: $(GENERATEOVERLAPMESHV1_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESHV1_CFILES:%.c=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESHV1_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESHV1_CFILES:%.c=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateGLLMetaData: $(GENERATEGLLMETADATA_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEGLLMETADATA_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)

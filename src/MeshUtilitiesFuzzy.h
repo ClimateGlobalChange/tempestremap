@@ -48,6 +48,21 @@ public:
 	);
 
 	///	<summary>
+	///		Determine if a node is to the right or left of an edge.
+	///	</summary>
+	///	<returns>
+	///		+1 if the node is to the left of the edge (interior)
+	///		 0 if the node is on the edge (coincident)
+	///		-1 if the node is to the right of the edge (exterior)
+	///	</returns>
+	int FindNodeEdgeSide(
+		const Node & nodeBegin,
+		const Node & nodeEnd,
+		const Edge::Type edgetype,
+		const Node & nodeTest
+	) const;
+
+	///	<summary>
 	///		Determine if face contains node, and whether
 	///		the Node is along an edge or at a corner.
 	///	</summary>
@@ -58,6 +73,28 @@ public:
 		Face::NodeLocation & loc,
 		int & ixLocation
 	) const;
+
+	///	<summary>
+	///		Calculate all intersections between the Edge connecting
+	///		nodeFirstBegin and nodeFirstEnd with type typeFirst and the Edge
+	///		connecting nodeSecondBegin and nodeSecondEnd with type typeSecond.
+	///		Intersections are recorded in nodeIntersections.
+	///	</summary>
+	///	<returns>
+	///		Returns true if lines are coincident, false otherwise.
+	///
+	///		If lines are coincident, intersections includes any nodes of Second
+	///		that are contained in First, ordered from FirstBegin to FirstEnd.
+	///	</returns>
+	bool CalculateEdgeIntersectionsSemiClip(
+		const Node & nodeFirstBegin,
+		const Node & nodeFirstEnd,
+		Edge::Type typeFirst,
+		const Node & nodeSecondBegin,
+		const Node & nodeSecondEnd,
+		Edge::Type typeSecond,
+		std::vector<Node> & nodeIntersections
+	);
 
 	///	<summary>
 	///		Calculate all intersections between the Edge connecting
@@ -102,10 +139,6 @@ public:
 		const Edge::Type edgetype,
 		const FindFaceStruct & aFindFaceStruct
 	);
-
-	///	<summary>
-	///		Determine if two faces overlap.
-	///	</summary>
 };
 
 ///////////////////////////////////////////////////////////////////////////////
