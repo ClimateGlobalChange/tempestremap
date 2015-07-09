@@ -445,7 +445,8 @@ void Mesh::Write(const std::string & strFile) const {
 	nEdgeType.Initialize(nElementCount, nNodesPerElement);
 
 	for (int i = 0; i < nElementCount; i++) {
-		for (int k = 0; k < nNodesPerElement; k++) {
+		int nEdges = faces[i].edges.size();
+		for (int k = 0; k < nEdges; k++) {
 			nEdgeType[i][k] = static_cast<int>(faces[i].edges[k].type);
 		}
 	}

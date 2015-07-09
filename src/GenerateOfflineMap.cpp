@@ -215,12 +215,6 @@ try {
 	if (strOutputMesh == "") {
 		_EXCEPTIONT("No output mesh specified");
 	}
-
-
-	return (-1);
-
-///////////////////////////////////////////////////////////////////////////////
-
 	// Overlap mesh
 	if (strOverlapMesh == "") {
 		_EXCEPTIONT("No overlap mesh specified");

@@ -144,6 +144,21 @@ extern "C" {
 		int * lwork,
 		int * info);
 
+	// Unconstrained least squares solve (used for pseudoinverse)
+	int dgelss_(
+		int * m,
+		int * n,
+		int * nrhs,
+		double * a,
+		int * lda,
+		double * b,
+		int * ldb,
+		double * s,
+		double * rcond,
+		int * rank,
+		double * work,
+		int * lwork,
+		int * info);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -311,8 +326,191 @@ void GetAdjacentFaceVectorByNode(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void BuildIntegrationArray(
+	const Mesh & meshInput,
+	const Mesh & meshOverlap,
+	const TriangularQuadratureRule & triquadrule,
+	int ixFirstFace,
+	int ixOverlapBegin,
+	int ixOverlapEnd,
+	int nOrder,
+	DataMatrix<double> & dIntArray
+) {
+	// Number of coefficients needed at this order
+#ifdef RECTANGULAR_TRUNCATION
+	int nCoefficients = nOrder * nOrder;
+#endif
+#ifdef TRIANGULAR_TRUNCATION 
+	int nCoefficients = nOrder * (nOrder + 1) / 2;
+#endif
+
+	// Triangular quadrature rule
+	const DataMatrix<double> & dG = triquadrule.GetG();
+	const DataVector<double> & dW = triquadrule.GetW();
+
+	// This Face
+	const Face & faceFirst = meshInput.faces[ixFirstFace];
+
+	// Coordinate axes
+	//const Node & nodeRef = meshInput.nodes[faceFirst[0]];
+
+	Node nodeRef(0.0, 0.0, 0.0);
+	{
+		for (int i = 0; i < faceFirst.edges.size(); i++) {
+			nodeRef.x += meshInput.nodes[faceFirst[i]].x;
+			nodeRef.y += meshInput.nodes[faceFirst[i]].y;
+			nodeRef.z += meshInput.nodes[faceFirst[i]].z;
+		}
+		nodeRef.x /= static_cast<double>(faceFirst.edges.size());
+		nodeRef.y /= static_cast<double>(faceFirst.edges.size());
+		nodeRef.z /= static_cast<double>(faceFirst.edges.size());
+/*
+		double dMag = sqrt(
+			  nodeRef.x * nodeRef.x
+			+ nodeRef.y * nodeRef.y
+			+ nodeRef.z * nodeRef.z);
+
+		nodeRef.x /= dMag;
+		nodeRef.y /= dMag;
+		nodeRef.z /= dMag;
+*/
+	}
+
+	Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
+	Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
+
+	Node nodeC = CrossProduct(nodeA1, nodeA2);
+
+	// Fit matrix
+	DataMatrix<double> dFit;
+	dFit.Initialize(3,3);
+
+	dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
+	dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
+	dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
+/*
+	// Number of overlapping Faces and triangles
+	int nOverlapFaces = 0;
+	int nTotalOverlapTriangles = 0;
+
+	// Determine how many overlap Faces and triangles are present
+	int ixOverlapTemp = ixOverlap;
+	for (; ixOverlapTemp < meshOverlap.faces.size(); ixOverlapTemp++) {
+
+		const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
+
+		if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirstFace) {
+			break;
+		}
+
+		nOverlapFaces++;
+		nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
+	}
+*/
+	// Number of overlapping faces and triangles
+	int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+	int nTotalOverlapTriangles = 0;
+
+	for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
+
+		const Face & faceOverlap = meshOverlap.faces[ixOverlapBegin + i];
+
+		nTotalOverlapTriangles += faceOverlap.edges.size() - 2; 
+	}
+
+	// Build integration array
+	dIntArray.Initialize(nCoefficients, nOverlapFaces);
+
+	// Loop through all overlap Faces
+	for (int i = 0; i < nOverlapFaces; i++) {
+		const Face & faceOverlap = meshOverlap.faces[ixOverlapBegin + i];
+
+		const NodeVector & nodesOverlap = meshOverlap.nodes;
+
+		int nOverlapTriangles = faceOverlap.edges.size() - 2;
+
+		// Loop over all sub-triangles of this Overlap Face
+		for (int j = 0; j < nOverlapTriangles; j++) {
+
+			// Cornerpoints of triangle
+			const Node & node0 = nodesOverlap[faceOverlap[0]];
+			const Node & node1 = nodesOverlap[faceOverlap[j+1]];
+			const Node & node2 = nodesOverlap[faceOverlap[j+2]];
+
+			// Calculate the area of the modified Face
+			Face faceTri(3);
+			faceTri.SetNode(0, faceOverlap[0]);
+			faceTri.SetNode(1, faceOverlap[j+1]);
+			faceTri.SetNode(2, faceOverlap[j+2]);
+
+			double dTriArea =
+				CalculateFaceArea(faceTri, nodesOverlap);
+
+			for (int k = 0; k < triquadrule.GetPoints(); k++) {
+				double * dGL = dG[k];
+
+				// Get the nodal location of this point
+				double dX[3];
+
+				dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
+				dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
+				dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
+
+				double dMag =
+					sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
+
+				dX[0] /= dMag;
+				dX[1] /= dMag;
+				dX[2] /= dMag;
+
+				dX[0] -= nodeRef.x;
+				dX[1] -= nodeRef.y;
+				dX[2] -= nodeRef.z;
+
+				// Find the coefficients for this point
+				int n = 3;
+				int nrhs = 1;
+				int lda = 3;
+				int ipiv[3];
+				int ldb = 3;
+				int info;
+
+				DataMatrix<double> dFitTemp;
+				dFitTemp = dFit;
+				dgesv_(
+					&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
+
+				// Sample this point
+				int ixp = 0;
+
+#ifdef RECTANGULAR_TRUNCATION
+				for (int p = 0; p < nOrder; p++) {
+				for (int q = 0; q < nOrder; q++) {
+#endif
+#ifdef TRIANGULAR_TRUNCATION 
+				for (int p = 0; p < nOrder; p++) {
+				for (int q = 0; q < nOrder - p; q++) {
+#endif
+					dIntArray[ixp][i] +=
+						  IPow(dX[0], p)
+						* IPow(dX[1], q)
+						* dW[k]
+						* dTriArea;
+
+					ixp++;
+				}
+				}
+			}
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void BuildFitArray(
 	const Mesh & mesh,
+	const TriangularQuadratureRule & triquadrule,
 	int ixFirst,
 	const AdjacentFaceVector & vecAdjFaces,
 	int nOrder,
@@ -325,7 +523,7 @@ void BuildFitArray(
 	// Reference to active Face
 	const Face & faceFirst = mesh.faces[ixFirst];
 
-	// Number of coefficients
+	// Number of coefficients needed at this order
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
@@ -342,13 +540,33 @@ void BuildFitArray(
 	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
 
 	// Triangular quadrature rule
-	TriangularQuadratureRule triquadrule(4);
-
 	const DataMatrix<double> & dG = triquadrule.GetG();
 	const DataVector<double> & dW = triquadrule.GetW();
 
 	// Coordinate axes
-	const Node & nodeRef = mesh.nodes[faceFirst[0]];
+	//const Node & nodeRef = mesh.nodes[faceFirst[0]];
+
+	Node nodeRef(0.0, 0.0, 0.0);
+	{
+		for (int i = 0; i < faceFirst.edges.size(); i++) {
+			nodeRef.x += mesh.nodes[faceFirst[i]].x;
+			nodeRef.y += mesh.nodes[faceFirst[i]].y;
+			nodeRef.z += mesh.nodes[faceFirst[i]].z;
+		}
+		nodeRef.x /= static_cast<double>(faceFirst.edges.size());
+		nodeRef.y /= static_cast<double>(faceFirst.edges.size());
+		nodeRef.z /= static_cast<double>(faceFirst.edges.size());
+/*
+		double dMag = sqrt(
+			  nodeRef.x * nodeRef.x
+			+ nodeRef.y * nodeRef.y
+			+ nodeRef.z * nodeRef.z);
+
+		nodeRef.x /= dMag;
+		nodeRef.y /= dMag;
+		nodeRef.z /= dMag;
+*/
+	}
 
 	Node nodeA1 = mesh.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = mesh.nodes[faceFirst[2]] - nodeRef;
@@ -464,7 +682,6 @@ void BuildFitArray(
 				dFitArray[j][iAdjFace] *= dFitWeights[iAdjFace];
 			}
 		}
-
 	}
 /*
 	// Orthogonalize
@@ -492,8 +709,81 @@ void BuildFitArray(
 */
 	// First order
 	if ((dConstraint.GetRows() == 0) || (nOrder == 1)) {
-
+/*
 		// Invert the fit array using Moore-Penrose pseudoinverse
+		int m = nCoefficients;
+		int n = nAdjFaces;
+		int lda = nCoefficients;
+		int ldb = nAdjFaces;
+		int nrhs = nCoefficients;
+		double rcond = 0.0;
+		int rank = 0;
+		int lwork = -1;
+		int info = 0;
+
+		DataVector<double> dS(nAdjFaces);
+
+		DataVector<double> dWork(1);
+
+		DataMatrix<double> dA(nAdjFaces, nCoefficients);
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < nCoefficients; j++) {
+			dA[i][j] = dFitArray[j][i];
+		}
+		}
+
+		DataMatrix<double> dB(nCoefficients, nAdjFaces);
+		for (int i = 0; i < nCoefficients; i++) {
+			dB[i][i] = 1.0;
+		}
+
+		dgelss_(
+			&m,
+			&n,
+			&nrhs,
+			&(dA[0][0]),
+			&lda,
+			&(dB[0][0]),
+			&ldb,
+			&(dS[0]),
+			&rcond,
+			&rank,
+			&(dWork[0]),
+			&lwork,
+			&info);
+
+		if (info != 0) {
+			_EXCEPTION();
+		}
+
+		lwork = static_cast<int>(dWork[0]);
+		dWork.Initialize(lwork);
+
+		dgelss_(
+			&m,
+			&n,
+			&nrhs,
+			&(dA[0][0]),
+			&lda,
+			&(dB[0][0]),
+			&ldb,
+			&(dS[0]),
+			&rcond,
+			&rank,
+			&(dWork[0]),
+			&lwork,
+			&info);
+
+		if (info != 0) {
+			_EXCEPTION();
+		}
+
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < nCoefficients; j++) {
+			dFitArrayPlus[i][j] = dB[j][i];
+		}
+		}
+*/
 		DataMatrix<double> dFit2;
 		dFit2.Initialize(nCoefficients, nCoefficients);
 
@@ -538,6 +828,15 @@ void BuildFitArray(
 				dFitArrayPlus[j][k] *= dFitWeights[j];
 			}
 			}
+/*
+#pragma message "DEBUG: REMOVE"
+			// Reweight the fit array
+			for (int i = 0; i < nAdjFaces; i++) {
+			for (int j = 0; j < nCoefficients; j++) {
+				dFitArray[j][i] /= dFitWeights[i];
+			}
+			}
+*/
 		}
 /*
 		for (int j = 0; j < nAdjFaces; j++) {
@@ -549,6 +848,8 @@ void BuildFitArray(
 */
 		return;
 	}
+
+	_EXCEPTION();
 /*
 	for (int i = 0; i < dConstraint.GetRows(); i++) {
 		printf("%1.15e\n", dConstraint[i]);
@@ -728,7 +1029,15 @@ void BuildFitArray(
 		dFitArrayPlus[i][j] *= dFitWeights[i];
 	}
 	}
-
+/*
+#pragma message "DEBUG: REMOVE"
+	// Reweight the fit array
+	for (int i = 0; i < nAdjFaces; i++) {
+	for (int j = 0; j < nCoefficients; j++) {
+		dFitArray[j][i] /= dFitWeights[i];
+	}
+	}
+*/
 /*
 	printf("Fp:\n");
 	for (int i = 0; i < nCoefficients; i++) {
@@ -803,7 +1112,7 @@ void LinearRemapFVtoFV(
 	}
 
 	// Triangular quadrature rule
-	TriangularQuadratureRule triquadrule(8);
+	TriangularQuadratureRule triquadrule(4);
 
 	const DataMatrix<double> & dG = triquadrule.GetG();
 	const DataVector<double> & dW = triquadrule.GetW();
@@ -819,6 +1128,7 @@ void LinearRemapFVtoFV(
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
+#pragma message "This should be a command-line parameter"
 	int nRequiredFaceSetSize = nCoefficients;
 
 	// Current overlap face
@@ -835,138 +1145,31 @@ void LinearRemapFVtoFV(
 		// This Face
 		const Face & faceFirst = meshInput.faces[ixFirst];
 
-		// Coordinate axes
-		const Node & nodeRef = meshInput.nodes[faceFirst[0]];
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 
-		Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
-		Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
-
-		Node nodeC = CrossProduct(nodeA1, nodeA2);
-
-		// Fit matrix
-		DataMatrix<double> dFit;
-		dFit.Initialize(3,3);
-
-		dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
-		dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
-		dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
-
-		// Number of overlapping Faces and triangles
-		int nOverlapFaces = 0;
-		int nTotalOverlapTriangles = 0;
-
-		// Determine how many overlap Faces and triangles are present
-		int ixOverlapTemp = ixOverlap;
-		for (; ixOverlapTemp < meshOverlap.faces.size(); ixOverlapTemp++) {
-
-			const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
-
-			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
 			}
-
-			nOverlapFaces++;
-			nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
 		}
+
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
 		// Build integration array
 		DataMatrix<double> dIntArray;
-		dIntArray.Initialize(nCoefficients, nOverlapFaces);
 
-		// Loop through all overlap Faces
-		for (int i = 0; i < nOverlapFaces; i++) {
-			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
-
-			const NodeVector & nodesOverlap = meshOverlap.nodes;
-
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
-			// Loop over all sub-triangles of this Overlap Face
-			for (int j = 0; j < nOverlapTriangles; j++) {
-
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
-
-				for (int k = 0; k < triquadrule.GetPoints(); k++) {
-					double * dGL = dG[k];
-
-					// Get the nodal location of this point
-					double dX[3];
-
-					dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
-					dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
-					dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
-
-					double dMag =
-						sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
-
-					dX[0] /= dMag;
-					dX[1] /= dMag;
-					dX[2] /= dMag;
-
-					dX[0] -= nodeRef.x;
-					dX[1] -= nodeRef.y;
-					dX[2] -= nodeRef.z;
-
-					// Find the coefficients for this point
-					int n = 3;
-					int nrhs = 1;
-					int lda = 3;
-					int ipiv[3];
-					int ldb = 3;
-					int info;
-
-					DataMatrix<double> dFitTemp;
-					dFitTemp = dFit;
-					dgesv_(
-						&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
-
-					// Sample this point
-					int ixp = 0;
-
-#ifdef RECTANGULAR_TRUNCATION
-					for (int p = 0; p < nOrder; p++) {
-					for (int q = 0; q < nOrder; q++) {
-#endif
-#ifdef TRIANGULAR_TRUNCATION 
-					for (int p = 0; p < nOrder; p++) {
-					for (int q = 0; q < nOrder - p; q++) {
-#endif
-						dIntArray[ixp][i] +=
-							  IPow(dX[0], p)
-							* IPow(dX[1], q)
-							* dW[k]
-							* dTriArea;
-
-						ixp++;
-					}
-					}
-				}
-			}
-		}
-
-		// Determine the conservative constraint equation
-		DataVector<double> dConstraint;
-		dConstraint.Initialize(nCoefficients);
-
-		double dFirstArea = meshInput.vecFaceArea[ixFirst];
-
-		for (int p = 0; p < nCoefficients; p++) {
-		for (int j = 0; j < nOverlapFaces; j++) {
-			dConstraint[p] += dIntArray[p][j] / dFirstArea;
-		}
-		}
+		BuildIntegrationArray(
+			meshInput,
+			meshOverlap,
+			triquadrule,
+			ixFirst,
+			ixOverlapBegin,
+			ixOverlapEnd,
+			nOrder,
+			dIntArray);
 
 		// Set of Faces to use in building the reconstruction and associated
 		// distance metric.
@@ -981,6 +1184,23 @@ void LinearRemapFVtoFV(
 		// Number of adjacent Faces
 		int nAdjFaces = vecAdjFaces.size();
 
+		// Determine the conservative constraint equation
+		DataVector<double> dNoConstraint;
+
+		DataVector<double> dConstraint;
+
+		dConstraint.Initialize(nCoefficients);
+
+		double dFirstArea = meshInput.vecFaceArea[ixFirst];
+
+		for (int p = 0; p < nCoefficients; p++) {
+			for (int j = 0; j < nOverlapFaces; j++) {
+				dConstraint[p] += dIntArray[p][j];
+			}
+			dConstraint[p] /= dFirstArea;
+		}
+
+
 		// Least squares arrays
 		DataMatrix<double> dFitArray;
 		DataVector<double> dFitWeights;
@@ -988,14 +1208,66 @@ void LinearRemapFVtoFV(
 
 		BuildFitArray(
 			meshInput,
+			triquadrule,
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
-			dConstraint,
+			dNoConstraint,
 			dFitArray,
 			dFitWeights,
 			dFitArrayPlus
 		);
+/*
+		for (int i = 0; i < nAdjFaces; i++) {
+			double dSum = 0.0;
+			for (int p = 0; p < nCoefficients-1; p++) {
+				dSum += dConstraint[p] * dFitArrayPlus[i][p];
+			}
+			if (i == 0) {
+				dFitArrayPlus[i][nCoefficients-1] =
+					(1.0 - dSum) / dConstraint[nCoefficients-1];
+			} else {
+				dFitArrayPlus[i][nCoefficients-1] =
+					- dSum / dConstraint[nCoefficients-1];
+			}
+		}
+*/
+/*
+///// HIGH ORDER FIT ARRAY
+		// Least squares arrays
+		DataMatrix<double> dFitArrayHighOrder;
+		DataVector<double> dFitWeightsHighOrder;
+		DataMatrix<double> dFitArrayPlusHighOrder;
+
+		BuildFitArray(
+			meshInput,
+			triquadrule,
+			ixFirst,
+			vecAdjFaces,
+			nOrder+1,
+			dConstraint,
+			dFitArrayHighOrder,
+			dFitWeightsHighOrder,
+			dFitArrayPlusHighOrder
+		);
+
+		DataMatrix<double> dFitArrayPlus(nAdjFaces, nCoefficients);
+		int ixp = 0;
+		int ixpHighOrder = 0;
+		for (int p = 0; p < nOrder+1; p++) {
+		for (int q = 0; q < nOrder+1; q++) {
+			if ((p != nOrder) && (q != nOrder)) {
+				for (int i = 0; i < nAdjFaces; i++) {
+					dFitArrayPlus[i][ixp] =
+						dFitArrayPlusHighOrder[i][ixpHighOrder];
+				}
+				ixp++;
+			}
+			ixpHighOrder++;
+		}
+		}
+///// END HIGH ORDER FIT ARRAY
+*/
 /*
 		printf("\n");
 		for (int i = 0; i < nAdjFaces; i++) {
@@ -1011,6 +1283,36 @@ void LinearRemapFVtoFV(
 /*
 		for (int p = 0; p < nCoefficients; p++) {
 			printf("%1.10e\n", dConstraint[p]);
+		}
+*/
+/*
+		if (ixFirst == 200) {
+
+			for (int p = 0; p < nCoefficients; p++) {
+				printf("%1.15e\n", dConstraint[p]);
+			}
+
+			printf("\n");
+
+			for (int i = 0; i < nAdjFaces; i++) {
+			for (int p = 0; p < nCoefficients; p++) {
+				printf("%1.15e  ", dFitArray[p][i]);
+			}
+			printf(";\n");
+			}
+
+			printf("\n");
+
+			for (int p = 0; p < nCoefficients; p++) {
+			for (int i = 0; i < nAdjFaces; i++) {
+				printf("%1.15e  ", dFitArrayPlus[i][p]);
+			}
+			printf(";\n");
+			}
+
+			printf("\n");
+
+			_EXCEPTION();
 		}
 */
 /*
@@ -1031,7 +1333,7 @@ void LinearRemapFVtoFV(
 		// Multiply integration array and fit array
 		DataMatrix<double> dComposedArray;
 		dComposedArray.Initialize(nAdjFaces, nOverlapFaces);
-
+/*
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
 		for (int k = 0; k < nCoefficients; k++) {
@@ -1039,6 +1341,25 @@ void LinearRemapFVtoFV(
 		}
 		}
 		}
+*/
+
+		for (int j = 0; j < nOverlapFaces; j++) {
+			dComposedArray[0][j] = meshOverlap.vecFaceArea[ixOverlap + j];
+		}
+
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < nOverlapFaces; j++) {
+		for (int k = 1; k < nCoefficients; k++) {
+			double dOverlapArea =
+				meshOverlap.vecFaceArea[ixOverlap + j];
+
+			dComposedArray[i][j] +=
+				(dIntArray[k][j] - dConstraint[k] * dOverlapArea)
+					* dFitArrayPlus[i][k];
+		}
+		}
+		}
+
 /*
 		DataVector<double> dRowSums;
 		dRowSums.Initialize(nOverlapFaces);
@@ -1336,6 +1657,9 @@ void LinearRemapFVtoGLL_Simple(
 
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(8);
+
 	// Number of elements needed
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
@@ -1404,6 +1728,7 @@ void LinearRemapFVtoGLL_Simple(
 
 		BuildFitArray(
 			meshInput,
+			triquadrule,
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
@@ -1576,7 +1901,7 @@ void LinearRemapFVtoGLL(
 	}
 
 	// Triangular quadrature rule
-	TriangularQuadratureRule triquadrule(4);
+	TriangularQuadratureRule triquadrule(8);
 
 	const DataMatrix<double> & dG = triquadrule.GetG();
 	const DataVector<double> & dW = triquadrule.GetW();
@@ -2165,6 +2490,7 @@ void LinearRemapFVtoGLL(
 
 		BuildFitArray(
 			meshInput,
+			triquadrule,
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
@@ -2310,7 +2636,7 @@ void LinearRemapGLLtoGLL2(
 	bool fContinuousOut
 ) {
 	// Triangular quadrature rule
-	TriangularQuadratureRule triquadrule(4);
+	TriangularQuadratureRule triquadrule(8);
 
 	const DataMatrix<double> & dG = triquadrule.GetG();
 	const DataVector<double> & dW = triquadrule.GetW();
