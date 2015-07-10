@@ -53,7 +53,26 @@ void LinearRemapFVtoGLL_Simple(
 	const DataVector<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
+	bool fContinuous
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite volumes to finite
+///		elements using a new experimental method.
+///	</summary>
+void LinearRemapFVtoGLL_Volumetric(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataVector<double> & dataGLLNodalArea,
+	int nOrder,
+	OfflineMap & mapRemap,
+	int nMonotoneType,
 	bool fContinuous
 );
 
@@ -72,7 +91,7 @@ void LinearRemapFVtoGLL(
 	const DataVector<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuous
 );
 
@@ -94,7 +113,7 @@ void LinearRemapGLLtoGLL(
 	int nPin,
 	int nPout,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut
 );

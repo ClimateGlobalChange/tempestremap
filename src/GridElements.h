@@ -823,5 +823,50 @@ Real CalculateFaceArea(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Find a node within the specified quadrilateral.
+///	</summary>
+inline Node InterpolateQuadrilateralNode(
+	const Node & node0,
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB
+) {
+	Node nodeRef(0.0, 0.0, 0.0);
+
+	nodeRef.x =
+		  (1.0 - dA) * (1.0 - dB) * node0.x
+		+        dA  * (1.0 - dB) * node1.x
+		+        dA  *        dB  * node2.x
+		+ (1.0 - dA) *        dB  * node3.x;
+
+	nodeRef.y =
+		  (1.0 - dA) * (1.0 - dB) * node0.y
+		+        dA  * (1.0 - dB) * node1.y
+		+        dA  *        dB  * node2.y
+		+ (1.0 - dA) *        dB  * node3.y;
+
+	nodeRef.z =
+		  (1.0 - dA) * (1.0 - dB) * node0.z
+		+        dA  * (1.0 - dB) * node1.z
+		+        dA  *        dB  * node2.z
+		+ (1.0 - dA) *        dB  * node3.z;
+
+	double dMag = sqrt(
+		  nodeRef.x * nodeRef.x
+		+ nodeRef.y * nodeRef.y
+		+ nodeRef.z * nodeRef.z);
+
+	nodeRef.x /= dMag;
+	nodeRef.y /= dMag;
+	nodeRef.z /= dMag;
+
+	return nodeRef;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 #endif
 

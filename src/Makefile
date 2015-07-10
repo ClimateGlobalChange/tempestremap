@@ -54,7 +54,8 @@ CALCULATEDIFFNORMS_FILES= CalculateDiffNorms.cpp $(FILES)
 
 APPLYOFFLINEMAP_FILES= ApplyOfflineMap.cpp $(FILES)
 
-GENERATEOFFLINEMAP_FILES= GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
+GENERATEOFFLINEMAP_FILES= GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp OverlapMesh.cpp $(FILES)
+GENERATEOFFLINEMAP_CFILES= kdtree.c
 
 GENERATEOFFLINEMAPV1_FILES= GenerateOfflineMap_v1.cpp LinearRemapSE0.cpp LinearRemapFV.cpp $(FILES)
 
@@ -67,7 +68,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap GenerateOfflineMap_v1
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
 	mv $^ ../bin
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
@@ -103,11 +104,8 @@ CalculateDiffNorms: $(CALCULATEDIFFNORMS_FILES:%.cpp=$(BUILDDIR)/%.o)
 ApplyOfflineMap: $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(APPLYOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
-GenerateOfflineMap: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
-
-GenerateOfflineMap_v1: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o)
-	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+GenerateOfflineMap: $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOFFLINEMAP_CFILES:%.c=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEOFFLINEMAP_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOFFLINEMAP_CFILES:%.c=$(BUILDDIR)/%.o) $(LDFILES)
 
 
 ##

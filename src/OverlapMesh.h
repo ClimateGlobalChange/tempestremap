@@ -59,6 +59,24 @@ void GenerateOverlapMeshFromFace(
 	OverlapMeshMethod method
 );
 */
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Compute the overlap polygon between two Faces.
+///	</summary>
+template <
+	class MeshUtilities,
+	class NodeIntersectType
+>
+void GenerateOverlapFace(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	int iSourceFace,
+	int iTargetFace,
+	NodeVector & nodevecOutput
+);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>

@@ -517,7 +517,7 @@ DataVector<double> g_dCoeffAlpha;
 DataVector<double> g_dCoeffBeta;
 
 void SampleGLLFiniteElement(
-	bool fMonotone,
+	int nMonotoneType,
 	int nP,
 	double dAlpha,
 	double dBeta,
@@ -528,7 +528,7 @@ void SampleGLLFiniteElement(
 	g_dCoeffBeta.Initialize(nP);
 
 	// Non-monotone interpolation
-	if (!fMonotone) {
+	if (nMonotoneType == 0) {
 
 		if (nP > 4) {
 			// GLL Quadrature nodes on [0,1]
@@ -592,8 +592,8 @@ void SampleGLLFiniteElement(
 				* (dBeta + 1.0) * (5.0 * dBeta * dBeta - 1.0);
 		}
 
-	// Monotone interpolation
-	} else {
+	// Standard monotone interpolation
+	} else if (nMonotoneType == 1) {
 
 		// Map dAlpha and dBeta to [-1,1]
 		dAlpha = 2.0 * dAlpha - 1.0;
@@ -601,6 +601,7 @@ void SampleGLLFiniteElement(
 
 		// Second order monotone interpolation
 		if (nP == 2) {
+
 			g_dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
 			g_dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
 
@@ -624,6 +625,7 @@ void SampleGLLFiniteElement(
 				g_dCoeffBeta[1] = 1.0 - dBeta * dBeta;
 				g_dCoeffBeta[2] = dBeta * dBeta;
 			}
+
 /*
 			if (dAlpha < 0.0) {
 				g_dCoeffAlpha[0] = - dAlpha;
@@ -640,6 +642,7 @@ void SampleGLLFiniteElement(
 				g_dCoeffBeta[2] = dBeta;
 			}
 */
+
 		// Fourth order monotone interpolation
 		} else if (nP == 4) {
 
@@ -692,6 +695,85 @@ void SampleGLLFiniteElement(
 		} else {
 			_EXCEPTIONT("Not implemented");
 		}
+
+
+	// Standard monotone interpolation
+	} else if (nMonotoneType == 2) {
+
+		// Map dAlpha and dBeta to [-1,1]
+		dAlpha = 2.0 * dAlpha - 1.0;
+		dBeta  = 2.0 * dBeta  - 1.0;
+
+		// Second order monotone interpolation
+		if (nP == 2) {
+
+			g_dCoeffAlpha.Zero();
+			g_dCoeffBeta.Zero();
+
+			if (dAlpha < 0.0) {
+				g_dCoeffAlpha[0] = 1.0;
+			} else {
+				g_dCoeffAlpha[1] = 1.0;
+			}
+			if (dBeta < 0.0) {
+				g_dCoeffBeta[0] = 1.0;
+			} else {
+				g_dCoeffBeta[1] = 1.0;
+			}
+
+		// Third order monotone interpolation
+		} else if (nP == 3) {
+
+			g_dCoeffAlpha.Zero();
+			g_dCoeffBeta.Zero();
+
+			if (dAlpha < -2.0/3.0) {
+				g_dCoeffAlpha[0] = 1.0;
+			} else if (dAlpha <= 2.0/3.0) {
+				g_dCoeffAlpha[1] = 1.0;
+			} else {
+				g_dCoeffAlpha[2] = 1.0;
+			}
+			if (dBeta < -2.0/3.0) {
+				g_dCoeffBeta[0] = 1.0;
+			} else if (dBeta <= 2.0/3.0) {
+				g_dCoeffBeta[1] = 1.0;
+			} else {
+				g_dCoeffBeta[2] = 1.0;
+			}
+
+		// Fourth order monotone interpolation
+		} else if (nP == 4) {
+
+			g_dCoeffAlpha.Zero();
+			g_dCoeffBeta.Zero();
+
+			if (dAlpha < -5.0/6.0) {
+				g_dCoeffAlpha[0] = 1.0;
+			} else if (dAlpha <= 0.0) {
+				g_dCoeffAlpha[1] = 1.0;
+			} else if (dAlpha <= 5.0/6.0) {
+				g_dCoeffAlpha[2] = 1.0;
+			} else {
+				g_dCoeffAlpha[3] = 1.0;
+			}
+
+			if (dBeta < -5.0/6.0) {
+				g_dCoeffBeta[0] = 1.0;
+			} else if (dBeta <= 0.0) {
+				g_dCoeffBeta[1] = 1.0;
+			} else if (dBeta <= 5.0/6.0) {
+				g_dCoeffBeta[2] = 1.0;
+			} else {
+				g_dCoeffBeta[3] = 1.0;
+			}
+
+		} else {
+			_EXCEPTIONT("Not implemented");
+		}
+
+	} else {
+		_EXCEPTIONT("Invalid monotone type");
 	}
 
 	// Combine coefficients

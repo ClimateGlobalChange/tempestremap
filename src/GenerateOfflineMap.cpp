@@ -144,7 +144,10 @@ try {
 	bool fBubble;
 
 	// Enforce monotonicity
-	bool fMonotone;
+	bool fMonotoneType1;
+
+	// Enforce monotonicity
+	bool fMonotoneType2;
 
 	// Turn off checking for conservation / consistency
 	bool fNoCheck;
@@ -191,7 +194,8 @@ try {
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
 		CommandLineBool(fBubble, "bubble");
-		CommandLineBool(fMonotone, "mono");
+		CommandLineBool(fMonotoneType1, "mono");
+		CommandLineBool(fMonotoneType2, "mono2");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputMap, "out_map", "");
@@ -215,6 +219,7 @@ try {
 	if (strOutputMesh == "") {
 		_EXCEPTIONT("No output mesh specified");
 	}
+
 	// Overlap mesh
 	if (strOverlapMesh == "") {
 		_EXCEPTIONT("No overlap mesh specified");
@@ -255,6 +260,18 @@ try {
 	} else {
 		_EXCEPTION1("Invalid \"out_type\" value (%s), expected [fv|cgll|dgll]",
 			strOutputType.c_str());
+	}
+
+	// Monotonicity flags
+	int nMonotoneType = 0;
+	if (fMonotoneType1 && fMonotoneType2) {
+		_EXCEPTIONT("Only one of --mono and --mono2 may be set");
+	}
+	if (fMonotoneType1) {
+		nMonotoneType = 1;
+	}
+	if (fMonotoneType2) {
+		nMonotoneType = 2;
 	}
 
 	// Create Offline Map
@@ -468,7 +485,7 @@ try {
 			mapRemap.GetTargetAreas(),
 			nPin,
 			mapRemap,
-			fMonotone,
+			nMonotoneType,
 			fContinuous);
 
 	// Finite element input / Finite volume output
@@ -537,7 +554,7 @@ try {
 			meshOverlap,
 			dataGLLNodes,
 			dataGLLJacobian,
-			fMonotone,
+			nMonotoneType,
 			fContinuousIn,
 			mapRemap
 		);
@@ -627,7 +644,7 @@ try {
 			mapRemap.GetTargetAreas(),
 			nPin,
 			nPout,
-			fMonotone,
+			nMonotoneType,
 			fContinuousIn,
 			fContinuousOut,
 			mapRemap
@@ -645,7 +662,7 @@ try {
 		mapRemap.IsConsistent(1.0e-8);
 		mapRemap.IsConservative(1.0e-8);
 
-		if (fMonotone) {
+		if (nMonotoneType != 0) {
 			mapRemap.IsMonotone(1.0e-12);
 		}
 		AnnounceEndBlock(NULL);

@@ -51,7 +51,7 @@ void LinearRemapSE4(
 	const Mesh & meshOverlap,
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	OfflineMap & mapRemap
 );
@@ -73,7 +73,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
 	OfflineMap & mapRemap
@@ -96,7 +96,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
 	OfflineMap & mapRemap

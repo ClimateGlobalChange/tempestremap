@@ -116,7 +116,7 @@ void GenerateDiscontinuousJacobian(
 ///		specified point.
 ///	</summary>
 void SampleGLLFiniteElement(
-	bool fMonotone,
+	int nMonotoneType,
 	int nP,
 	double dAlpha,
 	double dBeta,

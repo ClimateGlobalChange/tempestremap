@@ -743,7 +743,7 @@ void LinearRemapSE4(
 	const Mesh & meshOverlap,
 	const DataMatrix3D<int> & dataGLLNodes,
 	const DataMatrix3D<double> & dataGLLJacobian,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	OfflineMap & mapRemap
 ) {
@@ -899,7 +899,8 @@ void LinearRemapSE4(
 
 					// Sample the finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nP,
+						nMonotoneType,
+						nP,
 						dAlpha,
 						dBeta,
 						dSampleCoeff);
@@ -953,7 +954,7 @@ void LinearRemapSE4(
 				vecSourceArea,
 				vecTargetArea,
 				dCoeff,
-				fMonotone);
+				(nMonotoneType != 0));
 
 			for (int j = 0; j < nOverlapFaces; j++) {
 			for (int p = 0; p < nP; p++) {
@@ -1009,7 +1010,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
 	OfflineMap & mapRemap
@@ -1184,14 +1185,16 @@ void LinearRemapGLLtoGLL_Pointwise(
 
 					// Sample the First finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPin,
+						nMonotoneType,
+						nPin,
 						dAlphaIn,
 						dBetaIn,
 						dSampleCoeffIn);
 
 					// Sample the Second finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPout,
+						nMonotoneType,
+						nPout,
 						dAlphaOut,
 						dBetaOut,
 						dSampleCoeffOut);
@@ -1283,7 +1286,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 
 					// Sample the First finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPin,
+						nMonotoneType,
+						nPin,
 						dAlphaIn,
 						dBetaIn,
 						dSampleCoeffIn);
@@ -1343,7 +1347,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -1450,7 +1454,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 
 /*
 		// Check column sums (conservation)
@@ -1586,7 +1590,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
 	OfflineMap & mapRemap
@@ -1761,14 +1765,16 @@ void LinearRemapGLLtoGLL_Integrated(
 
 					// Sample the First finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPin,
+						nMonotoneType,
+						nPin,
 						dAlphaIn,
 						dBetaIn,
 						dSampleCoeffIn);
 
 					// Sample the Second finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPout,
+						nMonotoneType,
+						nPout,
 						dAlphaOut,
 						dBetaOut,
 						dSampleCoeffOut);
@@ -1838,7 +1844,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -1945,7 +1951,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 /*
 		// Check column sums (conservation)
 		for (int i = 0; i < dCoeff.GetColumns(); i++) {

@@ -235,7 +235,7 @@ try {
 		}
 
 		if (dMinA == 0.0) {
-			_EXCEPTION();
+			_EXCEPTIONT("Zero minimum field value");
 		}
 
 		if (dDataB[i] > dMaxB) {
@@ -246,7 +246,6 @@ try {
 		}
 
 		dDataA[i] = fabs(dDataA[i] - dDataB[i]);
-
 	}
 
 	// Min / Max Norm

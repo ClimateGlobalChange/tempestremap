@@ -21,6 +21,7 @@
 #include "GaussLobattoQuadrature.h"
 #include "TriangularQuadrature.h"
 #include "MeshUtilitiesFuzzy.h"
+#include "OverlapMesh.h"
 
 #include "Announce.h"
 #include "MathHelper.h"
@@ -175,6 +176,39 @@ typedef std::vector<FaceDistancePair> AdjacentFaceVector;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Node GetReferenceNode(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	Node nodeRef;
+
+	nodeRef.x = 0.0;
+	nodeRef.y = 0.0;
+	nodeRef.z = 0.0;
+
+	for (int i = 0; i < face.edges.size(); i++) {
+		nodeRef.x += nodes[face[i]].x;
+		nodeRef.y += nodes[face[i]].y;
+		nodeRef.z += nodes[face[i]].z;
+	}
+	nodeRef.x /= static_cast<double>(face.edges.size());
+	nodeRef.y /= static_cast<double>(face.edges.size());
+	nodeRef.z /= static_cast<double>(face.edges.size());
+/*
+	double dMag = sqrt(
+		  nodeRef.x * nodeRef.x
+		+ nodeRef.y * nodeRef.y
+		+ nodeRef.z * nodeRef.z);
+
+	nodeRef.x /= dMag;
+	nodeRef.y /= dMag;
+	nodeRef.z /= dMag;
+*/
+	return nodeRef;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void GetAdjacentFaceVectorByEdge(
 	const Mesh & mesh,
 	int iFaceInitial,
@@ -326,6 +360,10 @@ void GetAdjacentFaceVectorByNode(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Build the integration array, an operator that integrates a polynomial
+///		reconstruction over all overlap faces.
+///	</summary>
 void BuildIntegrationArray(
 	const Mesh & meshInput,
 	const Mesh & meshOverlap,
@@ -352,29 +390,7 @@ void BuildIntegrationArray(
 	const Face & faceFirst = meshInput.faces[ixFirstFace];
 
 	// Coordinate axes
-	//const Node & nodeRef = meshInput.nodes[faceFirst[0]];
-
-	Node nodeRef(0.0, 0.0, 0.0);
-	{
-		for (int i = 0; i < faceFirst.edges.size(); i++) {
-			nodeRef.x += meshInput.nodes[faceFirst[i]].x;
-			nodeRef.y += meshInput.nodes[faceFirst[i]].y;
-			nodeRef.z += meshInput.nodes[faceFirst[i]].z;
-		}
-		nodeRef.x /= static_cast<double>(faceFirst.edges.size());
-		nodeRef.y /= static_cast<double>(faceFirst.edges.size());
-		nodeRef.z /= static_cast<double>(faceFirst.edges.size());
-/*
-		double dMag = sqrt(
-			  nodeRef.x * nodeRef.x
-			+ nodeRef.y * nodeRef.y
-			+ nodeRef.z * nodeRef.z);
-
-		nodeRef.x /= dMag;
-		nodeRef.y /= dMag;
-		nodeRef.z /= dMag;
-*/
-	}
+	Node nodeRef = GetReferenceNode(faceFirst, meshInput.nodes);
 
 	Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
@@ -544,29 +560,7 @@ void BuildFitArray(
 	const DataVector<double> & dW = triquadrule.GetW();
 
 	// Coordinate axes
-	//const Node & nodeRef = mesh.nodes[faceFirst[0]];
-
-	Node nodeRef(0.0, 0.0, 0.0);
-	{
-		for (int i = 0; i < faceFirst.edges.size(); i++) {
-			nodeRef.x += mesh.nodes[faceFirst[i]].x;
-			nodeRef.y += mesh.nodes[faceFirst[i]].y;
-			nodeRef.z += mesh.nodes[faceFirst[i]].z;
-		}
-		nodeRef.x /= static_cast<double>(faceFirst.edges.size());
-		nodeRef.y /= static_cast<double>(faceFirst.edges.size());
-		nodeRef.z /= static_cast<double>(faceFirst.edges.size());
-/*
-		double dMag = sqrt(
-			  nodeRef.x * nodeRef.x
-			+ nodeRef.y * nodeRef.y
-			+ nodeRef.z * nodeRef.z);
-
-		nodeRef.x /= dMag;
-		nodeRef.y /= dMag;
-		nodeRef.z /= dMag;
-*/
-	}
+	Node nodeRef = GetReferenceNode(faceFirst, mesh.nodes);
 
 	Node nodeA1 = mesh.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = mesh.nodes[faceFirst[2]] - nodeRef;
@@ -849,7 +843,6 @@ void BuildFitArray(
 		return;
 	}
 
-	_EXCEPTION();
 /*
 	for (int i = 0; i < dConstraint.GetRows(); i++) {
 		printf("%1.15e\n", dConstraint[i]);
@@ -1113,9 +1106,6 @@ void LinearRemapFVtoFV(
 
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(4);
-
-	const DataMatrix<double> & dG = triquadrule.GetG();
-	const DataVector<double> & dW = triquadrule.GetW();
 
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
@@ -1631,7 +1621,7 @@ void LinearRemapFVtoGLL_Simple(
 	const DataVector<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuous
 ) {
 	// Verify ReverseNodeArray has been calculated
@@ -1690,7 +1680,7 @@ void LinearRemapFVtoGLL_Simple(
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
 		// Coordinate axes
-		const Node & nodeRef = meshInput.nodes[faceFirst[0]];
+		Node nodeRef = GetReferenceNode(faceFirst, meshInput.nodes);
 
 		Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 		Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
@@ -1880,6 +1870,268 @@ void LinearRemapFVtoGLL_Simple(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void LinearRemapFVtoGLL_Volumetric(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodes,
+	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataVector<double> & dataGLLNodalArea,
+	int nOrder,
+	OfflineMap & mapRemap,
+	int nMonotoneType,
+	bool fContinuous
+) {
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.revnodearray.size() == 0) {
+		_EXCEPTIONT("ReverseNodeArray has not been calculated for meshInput");
+	}
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(4);
+
+	// Order of the finite element method
+	int nP = dataGLLNodes.GetRows();
+
+	// Gauss-Lobatto quadrature nodes and weights
+	DataVector<double> dG;
+	DataVector<double> dW;
+
+	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+
+	// Get SparseMatrix represntation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+
+	// Number of elements needed
+#ifdef RECTANGULAR_TRUNCATION
+	int nCoefficients = nOrder * nOrder;
+#endif
+#ifdef TRIANGULAR_TRUNCATION 
+	int nCoefficients = nOrder * (nOrder + 1) / 2;
+#endif
+
+#pragma message "This should be a command-line parameter"
+	int nRequiredFaceSetSize = nCoefficients;
+
+	// Accumulated weight vector
+	DataVector<double> dAccumW(nP+1);
+	dAccumW[0] = 0.0;
+	for (int i = 1; i < nP+1; i++) {
+		dAccumW[i] = dAccumW[i-1] + dW[i-1];
+	}
+	if (fabs(dAccumW[dAccumW.GetRows()-1] - 1.0) > 1.0e-14) {
+		_EXCEPTIONT("Logic error in accumulated weight");
+	}
+
+	// Create sub-element mesh
+	Announce("Generating sub-element mesh");
+	Mesh meshTargetSubElement;
+	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
+
+		const Face & faceSecond = meshOutput.faces[ixSecond];
+
+		const Node & nodeOutput0 = meshOutput.nodes[faceSecond[0]];
+		const Node & nodeOutput1 = meshOutput.nodes[faceSecond[1]];
+		const Node & nodeOutput2 = meshOutput.nodes[faceSecond[2]];
+		const Node & nodeOutput3 = meshOutput.nodes[faceSecond[3]];
+
+		for (int q = 0; q < nP; q++) {
+		for (int p = 0; p < nP; p++) {
+
+			Node node0 =
+				InterpolateQuadrilateralNode(
+					nodeOutput0, nodeOutput1, nodeOutput2, nodeOutput3,
+					dAccumW[p], dAccumW[q]);
+
+			Node node1 =
+				InterpolateQuadrilateralNode(
+					nodeOutput0, nodeOutput1, nodeOutput2, nodeOutput3,
+					dAccumW[p+1], dAccumW[q]);
+
+			Node node2 =
+				InterpolateQuadrilateralNode(
+					nodeOutput0, nodeOutput1, nodeOutput2, nodeOutput3,
+					dAccumW[p+1], dAccumW[q+1]);
+
+			Node node3 =
+				InterpolateQuadrilateralNode(
+					nodeOutput0, nodeOutput1, nodeOutput2, nodeOutput3,
+					dAccumW[p], dAccumW[q+1]);
+
+			int nNodeStart = meshTargetSubElement.nodes.size();
+			meshTargetSubElement.nodes.push_back(node0);
+			meshTargetSubElement.nodes.push_back(node1);
+			meshTargetSubElement.nodes.push_back(node2);
+			meshTargetSubElement.nodes.push_back(node3);
+
+			Face faceNew(4);
+			faceNew.SetNode(0, nNodeStart);
+			faceNew.SetNode(1, nNodeStart+1);
+			faceNew.SetNode(2, nNodeStart+2);
+			faceNew.SetNode(3, nNodeStart+3);
+
+			meshTargetSubElement.faces.push_back(faceNew);
+		}
+		}
+	}
+
+	// Current overlap face
+	int ixOverlap = 0;
+
+	// Loop through all faces on meshInput
+	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+
+		// Output every 100 elements
+		if (ixFirst % 100 == 0) {
+			Announce("Element %i", ixFirst);
+		}
+
+		// This Face
+		const Face & faceFirst = meshInput.faces[ixFirst];
+
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+				break;
+			}
+		}
+
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		// Create a new Mesh representing the division of target finite
+		// elements associated with this finite volume.
+		Mesh meshThisElement;
+
+		for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
+
+			int iTargetFace = meshOverlap.vecTargetFaceIx[i];
+
+			int iSubElementBegin =  iTargetFace      * nP * nP;
+			int iSubElementEnd   = (iTargetFace + 1) * nP * nP;
+
+			int iSubElement = iSubElementBegin;
+			for (int p = 0; p < nP; p++) {
+			for (int q = 0; q < nP; q++) {
+
+				// Calculate overlap polygon between sub-element
+				// and finite volume
+				NodeVector nodevecOutput;
+
+				GenerateOverlapFace<MeshUtilitiesFuzzy, Node>(
+					meshInput,
+					meshTargetSubElement,
+					ixFirst,
+					iSubElementBegin + p * nP + q,
+					nodevecOutput);
+
+				if (nodevecOutput.size() < 3) {
+					continue;
+				}
+
+				Face faceNew(nodevecOutput.size());
+				for (int n = 0; n < nodevecOutput.size(); n++) {
+					meshThisElement.nodes.push_back(nodevecOutput[n]);
+					faceNew.SetNode(n, nodevecOutput.size()-1);
+				}
+				meshThisElement.faces.push_back(faceNew);
+
+				iSubElement++;
+			}
+			}
+		}
+
+		_EXCEPTION();
+
+		// Build integration array
+		DataMatrix<double> dIntArray;
+
+		BuildIntegrationArray(
+			meshInput,
+			meshThisElement,
+			triquadrule,
+			ixFirst,
+			0,
+			meshThisElement.faces.size(),
+			nOrder,
+			dIntArray);
+
+		// Set of Faces to use in building the reconstruction and associated
+		// distance metric.
+		AdjacentFaceVector vecAdjFaces;
+
+		GetAdjacentFaceVectorByEdge(
+			meshInput,
+			ixFirst,
+			nRequiredFaceSetSize,
+			vecAdjFaces);
+
+		// Number of adjacent Faces
+		int nAdjFaces = vecAdjFaces.size();
+
+		// Determine the conservative constraint equation
+		DataVector<double> dConstraint;
+
+		dConstraint.Initialize(nCoefficients);
+
+		double dFirstArea = meshInput.vecFaceArea[ixFirst];
+
+		for (int p = 0; p < nCoefficients; p++) {
+			for (int j = 0; j < nOverlapFaces; j++) {
+				dConstraint[p] += dIntArray[p][j];
+			}
+			dConstraint[p] /= dFirstArea;
+		}
+
+		// Least squares arrays
+		DataMatrix<double> dFitArray;
+		DataVector<double> dFitWeights;
+		DataMatrix<double> dFitArrayPlus;
+
+		BuildFitArray(
+			meshInput,
+			triquadrule,
+			ixFirst,
+			vecAdjFaces,
+			nOrder,
+			dConstraint,
+			dFitArray,
+			dFitWeights,
+			dFitArrayPlus
+		);
+
+		// Test conservative constraint equation
+		DataVector<double> dColumnSums;
+		dColumnSums.Initialize(nAdjFaces);
+
+		// Multiply integration array and fit array
+		DataMatrix<double> dComposedArray;
+		dComposedArray.Initialize(nAdjFaces, nOverlapFaces);
+/*
+		// Put composed array into map
+		for (int i = 0; i < vecAdjFaces.size(); i++) {
+		for (int j = 0; j < nOverlapFaces; j++) {
+			int ixFirstFace = vecAdjFaces[i].first;
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			smatMap(ixSecondFace, ixFirstFace) +=
+				dComposedArray[i][j]
+				/ meshOutput.vecFaceArea[ixSecondFace];
+		}
+		}
+*/
+		// Increment the current overlap index
+		ixOverlap += nOverlapFaces;
+
+		//_EXCEPTION();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void LinearRemapFVtoGLL(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -1889,7 +2141,7 @@ void LinearRemapFVtoGLL(
 	const DataVector<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuous
 ) {
 	// Verify ReverseNodeArray has been calculated
@@ -1986,7 +2238,7 @@ void LinearRemapFVtoGLL(
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
 		// Coordinate axes
-		const Node & nodeRef = meshInput.nodes[faceFirst[0]];
+		Node nodeRef = GetReferenceNode(faceFirst, meshInput.nodes);
 
 		Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 		Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
@@ -2086,7 +2338,7 @@ void LinearRemapFVtoGLL(
 						nodeQuadrature,
 						dAlpha,
 						dBeta);
-
+/*
 					// Check inverse map value
 					if ((dAlpha < -1.0e-12) || (dAlpha > 1.0 + 1.0e-12) ||
 						(dBeta  < -1.0e-12) || (dBeta  > 1.0 + 1.0e-12)
@@ -2094,10 +2346,11 @@ void LinearRemapFVtoGLL(
 						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
 							dAlpha, dBeta);
 					}
-
+*/
 					// Sample the finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nP,
+						nMonotoneType,
+						nP,
 						dAlpha,
 						dBeta,
 						dSampleCoeff);
@@ -2298,7 +2551,7 @@ void LinearRemapFVtoGLL(
 			vecSourceArea,
 			vecTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;
@@ -2631,7 +2884,7 @@ void LinearRemapGLLtoGLL2(
 	int nPin,
 	int nPout,
 	OfflineMap & mapRemap,
-	bool fMonotone,
+	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut
 ) {
@@ -2813,14 +3066,16 @@ void LinearRemapGLLtoGLL2(
 
 					// Sample the First finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPin,
+						nMonotoneType,
+						nPin,
 						dAlphaIn,
 						dBetaIn,
 						dSampleCoeffIn);
 
 					// Sample the Second finite element at this point
 					SampleGLLFiniteElement(
-						fMonotone, nPout,
+						nMonotoneType,
+						nPout,
 						dAlphaOut,
 						dBetaOut,
 						dSampleCoeffOut);
@@ -3003,7 +3258,7 @@ void LinearRemapGLLtoGLL2(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			fMonotone);
+			(nMonotoneType != 0));
 
 		// Coefficients
 		for (int i = 0; i < nOverlapFaces; i++) {
