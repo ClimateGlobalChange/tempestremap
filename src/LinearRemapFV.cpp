@@ -1267,9 +1267,11 @@ void LinearRemapFVtoFV(
 			printf("\n");
 		}
 */
+/*
 		// Test conservative constraint equation
 		DataVector<double> dColumnSums;
 		dColumnSums.Initialize(nAdjFaces);
+*/
 /*
 		for (int p = 0; p < nCoefficients; p++) {
 			printf("%1.10e\n", dConstraint[p]);
@@ -1923,9 +1925,15 @@ void LinearRemapFVtoGLL_Volumetric(
 		_EXCEPTIONT("Logic error in accumulated weight");
 	}
 
-	// Create sub-element mesh
+	// Create sub-element mesh and redistribution map
 	Announce("Generating sub-element mesh");
 	Mesh meshTargetSubElement;
+
+	DataVector<double> dFiniteVolumeArea(nP * nP);
+	DataVector<double> dQuadratureArea(nP * nP);
+	std::vector< DataMatrix<double> > dRedistributionMaps;
+	dRedistributionMaps.resize(meshOutput.faces.size());
+
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
 
 		const Face & faceSecond = meshOutput.faces[ixSecond];
@@ -1971,8 +1979,53 @@ void LinearRemapFVtoGLL_Volumetric(
 			faceNew.SetNode(3, nNodeStart+3);
 
 			meshTargetSubElement.faces.push_back(faceNew);
+
+			dFiniteVolumeArea[q * nP + p] =
+				CalculateFaceArea(
+					faceNew, meshTargetSubElement.nodes);
+
+			dQuadratureArea[q * nP + p] =
+				dataGLLJacobian[q][p][ixSecond];
 		}
 		}
+
+		dRedistributionMaps[ixSecond].Initialize(nP * nP, nP * nP);
+		for (int i = 0; i < nP * nP; i++) {
+			dRedistributionMaps[ixSecond][i][i] = 1.0;
+		}
+
+		ForceIntArrayConsistencyConservation(
+			dFiniteVolumeArea,
+			dQuadratureArea,
+			dRedistributionMaps[ixSecond],
+			(nMonotoneType != 0));
+/*
+		double dSumQuadArea = 0.0;
+		double dSumFVArea = 0.0;
+		for (int i = 0; i < nP * nP; i++) {
+			dSumQuadArea += dQuadratureArea[i];
+			dSumFVArea += dFiniteVolumeArea[i];
+		}
+		if (fabs(dSumQuadArea - dSumFVArea) > 1.0e-14) {
+			printf("%1.15e\n", dSumQuadArea - dSumFVArea);
+			_EXCEPTION();
+		}
+*/
+		for (int i = 0; i < nP * nP; i++) {
+		for (int j = 0; j < nP * nP; j++) {
+			dRedistributionMaps[ixSecond][i][j] *=
+				dQuadratureArea[i] / dFiniteVolumeArea[j];
+		}
+		}
+
+/*
+		for (int i = 0; i < nP * nP; i++) {
+		for (int j = 0; j < nP * nP; j++) {
+			printf("%i %i %1.15e\n", i, j, dRedistributionMaps[ixSecond][i][j]);
+		}
+		}
+		_EXCEPTION();
+*/
 	}
 
 	// Current overlap face
@@ -2005,6 +2058,8 @@ void LinearRemapFVtoGLL_Volumetric(
 		// Create a new Mesh representing the division of target finite
 		// elements associated with this finite volume.
 		Mesh meshThisElement;
+		meshThisElement.faces.reserve(nOverlapFaces * nP * nP);
+		meshThisElement.vecTargetFaceIx.reserve(nOverlapFaces * nP * nP);
 
 		for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
 
@@ -2027,24 +2082,45 @@ void LinearRemapFVtoGLL_Volumetric(
 					ixFirst,
 					iSubElementBegin + p * nP + q,
 					nodevecOutput);
-
+/*
 				if (nodevecOutput.size() < 3) {
 					continue;
 				}
 
 				Face faceNew(nodevecOutput.size());
 				for (int n = 0; n < nodevecOutput.size(); n++) {
-					meshThisElement.nodes.push_back(nodevecOutput[n]);
-					faceNew.SetNode(n, nodevecOutput.size()-1);
+					faceNew.SetNode(n, n);
 				}
+				Real dArea = CalculateFaceArea(faceNew, nodevecOutput);
+
+				if (dArea < 1.0e-13) {
+					continue;
+				}
+*/
+/*
+				if (dataGLLNodes[p][q][iTargetFace] - 1 == 3) {
+					printf("%1.15e %1.15e %1.15e\n", dArea, dataGLLJacobian[p][q][iTargetFace], dataGLLNodalArea[dataGLLNodes[p][q][iTargetFace] - 1]);
+				}
+*/
+				Face faceNew(nodevecOutput.size());
+				for (int n = 0; n < nodevecOutput.size(); n++) {
+					meshThisElement.nodes.push_back(nodevecOutput[n]);
+					faceNew.SetNode(n, meshThisElement.nodes.size()-1);
+				}
+
 				meshThisElement.faces.push_back(faceNew);
+
+				meshThisElement.vecTargetFaceIx.push_back(
+					dataGLLNodes[p][q][iTargetFace] - 1);
 
 				iSubElement++;
 			}
 			}
 		}
 
-		_EXCEPTION();
+		if (meshThisElement.faces.size() != nOverlapFaces * nP * nP) {
+			_EXCEPTIONT("Logic error");
+		}
 
 		// Build integration array
 		DataMatrix<double> dIntArray;
@@ -2080,7 +2156,7 @@ void LinearRemapFVtoGLL_Volumetric(
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
 		for (int p = 0; p < nCoefficients; p++) {
-			for (int j = 0; j < nOverlapFaces; j++) {
+			for (int j = 0; j < meshThisElement.faces.size(); j++) {
 				dConstraint[p] += dIntArray[p][j];
 			}
 			dConstraint[p] /= dFirstArea;
@@ -2103,26 +2179,52 @@ void LinearRemapFVtoGLL_Volumetric(
 			dFitArrayPlus
 		);
 
-		// Test conservative constraint equation
-		DataVector<double> dColumnSums;
-		dColumnSums.Initialize(nAdjFaces);
-
 		// Multiply integration array and fit array
 		DataMatrix<double> dComposedArray;
-		dComposedArray.Initialize(nAdjFaces, nOverlapFaces);
-/*
+		dComposedArray.Initialize(nAdjFaces, meshThisElement.faces.size());
+
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < meshThisElement.faces.size(); j++) {
+		for (int k = 0; k < nCoefficients; k++) {
+			dComposedArray[i][j] += dIntArray[k][j] * dFitArrayPlus[i][k];
+		}
+		}
+		}
+
+		// Apply redistribution operator
+		DataMatrix<double> dRedistributedArray;
+		dRedistributedArray.Initialize(nAdjFaces, meshThisElement.faces.size());
+
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < meshThisElement.faces.size(); j++) {
+			int ixSubElement = j % (nP * nP);
+			int ixElement = j / (nP * nP);
+
+			int ixSecondFace =
+				meshOverlap.vecTargetFaceIx[ixOverlap + ixElement];
+
+			for (int k = 0; k < nP * nP; k++) {
+				dRedistributedArray[i][j] +=
+					dComposedArray[i][ixElement * nP * nP + k]
+					* dRedistributionMaps[ixSecondFace][ixSubElement][k];
+			}
+		}
+		}
+
 		// Put composed array into map
 		for (int i = 0; i < vecAdjFaces.size(); i++) {
-		for (int j = 0; j < nOverlapFaces; j++) {
+		for (int j = 0; j < meshThisElement.faces.size(); j++) {
 			int ixFirstFace = vecAdjFaces[i].first;
-			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+			int ixSecondNode = meshThisElement.vecTargetFaceIx[j];
 
-			smatMap(ixSecondFace, ixFirstFace) +=
-				dComposedArray[i][j]
-				/ meshOutput.vecFaceArea[ixSecondFace];
+			smatMap(ixSecondNode, ixFirstFace) +=
+				dRedistributedArray[i][j]
+				/ dataGLLNodalArea[ixSecondNode];
+				// meshThisElement.vecFaceArea[j];
+				// dataGLLJacobian[ixS][ixT][ixSecondElement];
 		}
 		}
-*/
+
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
 
@@ -2552,7 +2654,7 @@ void LinearRemapFVtoGLL(
 			vecTargetArea,
 			dCoeff,
 			(nMonotoneType != 0));
-
+/*
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;
 			for (int j = 0; j < dCoeff.GetColumns(); j++) {
@@ -2560,7 +2662,7 @@ void LinearRemapFVtoGLL(
 			}
 			//printf("%1.15e\n", dConsistency);
 		}
-
+*/
 		for (int i = 0; i < vecReverseFaceIx[ixSecond].size(); i++) {
 			int ixOverlap = vecReverseFaceIx[ixSecond][i];
 

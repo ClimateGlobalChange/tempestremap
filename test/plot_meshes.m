@@ -17,12 +17,21 @@ nodeset = unique(faces1(facelist1,:));
 plot3(nodes1(nodeset,1), nodes1(nodeset,2), nodes1(nodeset,3), 'k.');
 hold on;
 
-nodeix = 2403+1;
+%0 64 777 63
+nodeix = 0+1;
 plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'mo','MarkerSize',12);
-nodeix = 2405+1;
+nodeix = 64+1;
 plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'ro','MarkerSize',12);
-nodeix = 2404+1;
+nodeix = 777+1;
 plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'go','MarkerSize',12);
+nodeix = 63+1;
+plot3(nodes1(nodeix,1), nodes1(nodeix,2), nodes1(nodeix,3), 'bo','MarkerSize',12);
+
+nodeov = [5.773502691896258e-01 -5.773502691896258e-01 -5.773502691896258e-01; ...
+5.873896999853543e-01 -5.722645106727813e-01 -5.722645106727813e-01; ...
+5.847268088646043e-01 -5.847268088646043e-01 -5.623069606451916e-01; ...
+5.722645106727812e-01 -5.873896999853543e-01 -5.722645106727812e-01];
+plot3(nodeov(:,1), nodeov(:,2), nodeov(:,3), 'ko', 'MarkerSize', 12);
 
 xnodes = nodes1(:,1);
 ynodes = nodes1(:,2);

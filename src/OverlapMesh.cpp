@@ -1399,8 +1399,6 @@ void GenerateOverlapFace(
 		nodevecOutput.push_back(nodesTarget[evecTarget[i][0]]);
 	}
 
-	//std::cout << nodevecOutput.size() << std::endl;
-
 	// for (Edge clipEdge in clipPolygon) do
 	for (int i = 0; i < evecSource.size(); i++) {
 
@@ -1536,7 +1534,7 @@ void GenerateOverlapFace(
 	}
 
 	//std::cout << nodevecOutput.size() << std::endl;
-/*
+
 	// Check for repeats
 	for (int i = 0; i < nodevecOutput.size(); i++) {
 		if (nodevecOutput[i] == nodevecOutput[(i+1)%(nodevecOutput.size())]) {
@@ -1544,7 +1542,7 @@ void GenerateOverlapFace(
 			i--;
 		}
  	}
-*/
+
 	// If the overlap consists of fewer than three nodes, ignore
 	if (nodevecOutput.size() < 3) {
 		nodevecOutput.clear();

@@ -834,7 +834,7 @@ inline Node InterpolateQuadrilateralNode(
 	double dA,
 	double dB
 ) {
-	Node nodeRef(0.0, 0.0, 0.0);
+	Node nodeRef;
 
 	nodeRef.x =
 		  (1.0 - dA) * (1.0 - dB) * node0.x

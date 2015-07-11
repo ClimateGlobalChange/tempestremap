@@ -476,6 +476,7 @@ try {
 		AnnounceStartBlock("Calculating offline map");
 
 		//LinearRemapFVtoGLL_Simple(
+		//LinearRemapFVtoGLL_Volumetric(
 		LinearRemapFVtoGLL(
 			meshInput,
 			meshOutput,
