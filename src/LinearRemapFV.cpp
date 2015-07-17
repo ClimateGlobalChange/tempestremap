@@ -182,6 +182,8 @@ Node GetReferenceNode(
 ) {
 	Node nodeRef;
 
+	//nodeRef = nodes[face[0]];
+
 	nodeRef.x = 0.0;
 	nodeRef.y = 0.0;
 	nodeRef.z = 0.0;
@@ -194,6 +196,7 @@ Node GetReferenceNode(
 	nodeRef.x /= static_cast<double>(face.edges.size());
 	nodeRef.y /= static_cast<double>(face.edges.size());
 	nodeRef.z /= static_cast<double>(face.edges.size());
+
 /*
 	double dMag = sqrt(
 		  nodeRef.x * nodeRef.x
@@ -391,7 +394,21 @@ void BuildIntegrationArray(
 
 	// Coordinate axes
 	Node nodeRef = GetReferenceNode(faceFirst, meshInput.nodes);
+/*
+	Node node0 = meshInput.nodes[faceFirst[0]];
+	Node node1 = meshInput.nodes[faceFirst[1]];
+	Node node2 = meshInput.nodes[faceFirst[2]];
 
+	Node nodeA1(
+		0.5 * (node0.x + node1.x) - nodeRef.x,
+		0.5 * (node0.y + node1.y) - nodeRef.y,
+		0.5 * (node0.z + node1.z) - nodeRef.z);
+
+	Node nodeA2(
+		0.5 * (node1.x + node2.x) - nodeRef.x,
+		0.5 * (node1.y + node2.y) - nodeRef.y,
+		0.5 * (node1.z + node2.z) - nodeRef.z);
+*/
 	Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
 
@@ -532,8 +549,7 @@ void BuildFitArray(
 	int nOrder,
 	DataVector<double> & dConstraint,
 	DataMatrix<double> & dFitArray,
-	DataVector<double> & dFitWeights,
-	DataMatrix<double> & dFitArrayPlus
+	DataVector<double> & dFitWeights
 ) {
 
 	// Reference to active Face
@@ -553,7 +569,6 @@ void BuildFitArray(
 	// Initialize arrays,
 	dFitArray.Initialize(nCoefficients, nAdjFaces);
 	dFitWeights.Initialize(nAdjFaces);
-	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
 
 	// Triangular quadrature rule
 	const DataMatrix<double> & dG = triquadrule.GetG();
@@ -561,7 +576,21 @@ void BuildFitArray(
 
 	// Coordinate axes
 	Node nodeRef = GetReferenceNode(faceFirst, mesh.nodes);
+/*
+	Node node0 = mesh.nodes[faceFirst[0]];
+	Node node1 = mesh.nodes[faceFirst[1]];
+	Node node2 = mesh.nodes[faceFirst[2]];
 
+	Node nodeA1(
+		0.5 * (node0.x + node1.x) - nodeRef.x,
+		0.5 * (node0.y + node1.y) - nodeRef.y,
+		0.5 * (node0.z + node1.z) - nodeRef.z);
+
+	Node nodeA2(
+		0.5 * (node1.x + node2.x) - nodeRef.x,
+		0.5 * (node1.y + node2.y) - nodeRef.y,
+		0.5 * (node1.z + node2.z) - nodeRef.z);
+*/
 	Node nodeA1 = mesh.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = mesh.nodes[faceFirst[2]] - nodeRef;
 
@@ -652,7 +681,6 @@ void BuildFitArray(
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder - p; q++) {
 #endif
-
 					dFitArray[ixp][iAdjFace] +=
 						  IPow(dX[0], p)
 						* IPow(dX[1], q)
@@ -666,384 +694,124 @@ void BuildFitArray(
 			}
 		}
 
+		// Integrate locally using the constraint
+		if (iAdjFace == 0) {
+			for (int p = 0; p < nCoefficients; p++) {
+				dFitArray[p][0] = dConstraint[p];
+			}
+		}
+
 		// Reweight the fit array
-		if (nOrder != 1) {
-			dFitWeights[iAdjFace] =
-				pow(static_cast<double>(fdp.second),
-				    - static_cast<double>(nOrder+1));
+		dFitWeights[iAdjFace] =
+			pow(static_cast<double>(fdp.second),
+			    - static_cast<double>(nOrder+2));
 
-			for (int j = 0; j < dFitArray.GetRows(); j++) {
-				dFitArray[j][iAdjFace] *= dFitWeights[iAdjFace];
-			}
+		for (int j = 0; j < dFitArray.GetRows(); j++) {
+			dFitArray[j][iAdjFace] *= dFitWeights[iAdjFace];
 		}
 	}
-/*
-	// Orthogonalize
-	for (int ixp = 0; ixp < dFitArray.GetRows(); ixp++) {
-		double dDotP = 0.0;
-		for (int j = 0; j < dFitArray.GetColumns(); j++) {
-			dDotP += dFitArray[ixp][j] * dFitArray[ixp][j];
-		}
+}
 
-		if (dDotP == 0.0) {
-			_EXCEPTION();
-		}
+///////////////////////////////////////////////////////////////////////////////
 
-		for (int i = ixp + 1; i < dFitArray.GetRows(); i++) {
+void InvertFitArray_Corrected(
+	DataVector<double> & dConstraint,
+	DataMatrix<double> & dFitArray,
+	DataVector<double> & dFitWeights,
+	DataMatrix<double> & dFitArrayPlus
+) {
+	// Dimensions of the fit operator
+	int nCoefficients = dFitArray.GetRows();
+	int nAdjFaces = dFitArray.GetColumns();
 
-			double dDot = 0.0;
-			for (int j = 0; j < dFitArray.GetColumns(); j++) {
-				dDot += dFitArray[i][j] * dFitArray[ixp][j];
-			}
-			for (int j = 0; j < dFitArray.GetColumns(); j++) {
-				dFitArray[i][j] -= dDot / dDotP * dFitArray[ixp][j];
-			}
-		}
+	// Check parameters
+	if (dConstraint.GetRows() != nCoefficients) {
+		_EXCEPTIONT("Dimension mismatch between dConstraint and dFitWeights");
 	}
-*/
-	// First order
-	if ((dConstraint.GetRows() == 0) || (nOrder == 1)) {
-/*
-		// Invert the fit array using Moore-Penrose pseudoinverse
-		int m = nCoefficients;
-		int n = nAdjFaces;
-		int lda = nCoefficients;
-		int ldb = nAdjFaces;
-		int nrhs = nCoefficients;
-		double rcond = 0.0;
-		int rank = 0;
-		int lwork = -1;
-		int info = 0;
-
-		DataVector<double> dS(nAdjFaces);
-
-		DataVector<double> dWork(1);
-
-		DataMatrix<double> dA(nAdjFaces, nCoefficients);
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nCoefficients; j++) {
-			dA[i][j] = dFitArray[j][i];
-		}
-		}
-
-		DataMatrix<double> dB(nCoefficients, nAdjFaces);
-		for (int i = 0; i < nCoefficients; i++) {
-			dB[i][i] = 1.0;
-		}
-
-		dgelss_(
-			&m,
-			&n,
-			&nrhs,
-			&(dA[0][0]),
-			&lda,
-			&(dB[0][0]),
-			&ldb,
-			&(dS[0]),
-			&rcond,
-			&rank,
-			&(dWork[0]),
-			&lwork,
-			&info);
-
-		if (info != 0) {
-			_EXCEPTION();
-		}
-
-		lwork = static_cast<int>(dWork[0]);
-		dWork.Initialize(lwork);
-
-		dgelss_(
-			&m,
-			&n,
-			&nrhs,
-			&(dA[0][0]),
-			&lda,
-			&(dB[0][0]),
-			&ldb,
-			&(dS[0]),
-			&rcond,
-			&rank,
-			&(dWork[0]),
-			&lwork,
-			&info);
-
-		if (info != 0) {
-			_EXCEPTION();
-		}
-
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nCoefficients; j++) {
-			dFitArrayPlus[i][j] = dB[j][i];
-		}
-		}
-*/
-		DataMatrix<double> dFit2;
-		dFit2.Initialize(nCoefficients, nCoefficients);
-
-		for (int j = 0; j < nCoefficients; j++) {
-		for (int k = 0; k < nCoefficients; k++) {
-		for (int l = 0; l < nAdjFaces; l++) {
-			dFit2[j][k] += dFitArray[j][l] * dFitArray[k][l];
-		}
-		}
-		}
-
-		// Calculate pseudoinverse of FitArray
-		int m = nCoefficients;
-		int n = nCoefficients;
-		int lda = nCoefficients;
-		int info;
-
-		DataVector<int> iPIV;
-		iPIV.Initialize(nCoefficients);
-
-		DataVector<double> dWork;
-		dWork.Initialize(nCoefficients);
-
-		int lWork = nCoefficients;
-
-		dgetrf_(&m, &n, &(dFit2[0][0]), &lda, &(iPIV[0]), &info);
-
-		dgetri_(&n, &(dFit2[0][0]), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
-
-		// Calculate pseudoinverse
-		for (int j = 0; j < nAdjFaces; j++) {
-		for (int k = 0; k < nCoefficients; k++) {
-		for (int l = 0; l < nCoefficients; l++) {
-			dFitArrayPlus[j][k] += dFitArray[l][j] * dFit2[l][k];
-		}
-		}
-		}
-
-		if (nOrder != 1) {
-			for (int j = 0; j < nAdjFaces; j++) {
-			for (int k = 0; k < nCoefficients; k++) {
-				dFitArrayPlus[j][k] *= dFitWeights[j];
-			}
-			}
-/*
-#pragma message "DEBUG: REMOVE"
-			// Reweight the fit array
-			for (int i = 0; i < nAdjFaces; i++) {
-			for (int j = 0; j < nCoefficients; j++) {
-				dFitArray[j][i] /= dFitWeights[i];
-			}
-			}
-*/
-		}
-/*
-		for (int j = 0; j < nAdjFaces; j++) {
-			for (int k = 0; k < nCoefficients; k++) {
-				printf("%1.5e, ", dFitArrayPlus[j][k]);
-			}
-			printf("\n");
-		}
-*/
-		return;
+	if (dFitWeights.GetRows() != nAdjFaces) {
+		_EXCEPTIONT("Dimension mismatch between dFitArray and dFitWeights");
 	}
 
-/*
-	for (int i = 0; i < dConstraint.GetRows(); i++) {
-		printf("%1.15e\n", dConstraint[i]);
-	}
+	// Allocate inverse
+	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
 
-	for (int i = 0; i < dFitArray.GetRows(); i++) {
-		for (int j = 0; j < dFitArray.GetColumns(); j++) {
-			printf("%1.15e  ", dFitArray[i][j]);
-		}
-		printf(";\n");
-	}
-*/
-	// Compute QR factorization of the constraint
-	DataMatrix<double> dQ;
-	dQ.Initialize(nCoefficients, nCoefficients);
-
-	double dR;
-
-	{
-		int m = nCoefficients;
-		int n = 1;
-		int lda = m;
-
-		double tau;
-
-		DataVector<double> dWork;
-		int lwork = nCoefficients;
-		dWork.Initialize(nCoefficients);
-
-		int info;
-
-		memcpy(&(dQ[0][0]), &(dConstraint[0]), nCoefficients * sizeof(double));
-
-		dgeqrf_(&m, &n, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
-		if (info != 0) {
-			_EXCEPTION1("Error in dgeqrf: %i", info);
-		}
-
-		dR = dQ[0][0];
-
-		int k = 1;
-		n = nCoefficients;
-		dorgqr_(&m, &n, &k, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
-		if (info != 0) {
-			_EXCEPTION1("Error in dorgqr: %i", info);
-		}
-	}
-/*
-	printf("R: %1.15e\n", dR);
-	printf("Q:\n");
-	for (int i = 0; i < nCoefficients; i++) {
-		for (int j = 0; j < nCoefficients; j++) {
-			printf("%1.15e  ", dQ[j][i]);
-		}
-		printf("\n");
-	}
-*/
-	// Calculate G = F * Q 
-	DataMatrix<double> dGG;
-	dGG.Initialize(nCoefficients, nAdjFaces);
-
-	for (int i = 0; i < nCoefficients; i++) {
-	for (int j = 0; j < nAdjFaces; j++) {
-		for (int k = 0; k < nCoefficients; k++) {
-			dGG[i][j] += dFitArray[k][j] * dQ[i][k];
-		}
-	}
-	}
-/*
-	printf("G:\n");
-	for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nCoefficients; j++) {
-			printf("%1.15e  ", dGG[j][i]);
-		}
-		printf("\n");
-	}
-*/
-	// Calculate Moore-Penrose pseudoinverse of G(:,2:p)
-	DataMatrix<double> dGxPlus;
-	dGxPlus.Initialize(nAdjFaces, nCoefficients-1);
-
-	{
-		// Gx2 = G(:, 2:p)^T * G(:,2:p)
-		DataMatrix<double> dGx2;
-		dGx2.Initialize(nCoefficients-1, nCoefficients-1);
-
-		for (int i = 0; i < nCoefficients-1; i++) {
-		for (int j = 0; j < nCoefficients-1; j++) {
-			for (int k = 0; k < nAdjFaces; k++) {
-				dGx2[i][j] += dGG[i+1][k] * dGG[j+1][k];
-			}
-		}
-		}
-
-		int m = nCoefficients-1;
-		int n = nCoefficients-1;
-		int lda = nCoefficients-1;
-		int info;
-
-		DataVector<int> iPIV;
-		iPIV.Initialize(nCoefficients-1);
-
-		DataVector<double> dWork;
-		dWork.Initialize(nCoefficients-1);
-
-		int lWork = nCoefficients-1;
-
-		dgetrf_(&m, &n, &(dGx2[0][0]), &lda, &(iPIV[0]), &info);
-
-		dgetri_(&n, &(dGx2[0][0]), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
-
-		// Calculate pseudoinverse
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nCoefficients-1; j++) {
-			for (int k = 0; k < nCoefficients-1; k++) {
-				dGxPlus[i][j] += dGG[k+1][i] * dGx2[k][j];
-			}
-		}
-		}
-	}
-/*
-	printf("Gp:\n");
-	for (int i = 0; i < nCoefficients-1; i++) {
-		for (int j = 0; j < nAdjFaces; j++) {
-			printf("%1.15e  ", dGxPlus[j][i]);
-		}
-		printf("\n");
-	}
-*/
-	// Z = G+ * (I - G(:,1) * R^{-1} * e0T)
-	DataMatrix<double> dZ;
-	dZ.Initialize(nAdjFaces, nCoefficients-1);
-
-	{
-		DataMatrix<double> dSubZ;
-		dSubZ.Initialize(nAdjFaces, nAdjFaces);
-
-		for (int i = 0; i < nAdjFaces; i++) {
-			dSubZ[i][i] = 1.0;
-		}
-
-		for (int i = 0; i < nAdjFaces; i++) {
-			dSubZ[0][i] -= dGG[0][i] / dR;
-		}
-
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nCoefficients-1; j++) {
-			for (int k = 0; k < nAdjFaces; k++) {
-				dZ[i][j] += dGxPlus[k][j] * dSubZ[i][k];
-			}
-		}
-		}
-	}
-/*
-	printf("Z:\n");
-	for (int i = 0; i < nCoefficients-1; i++) {
-		for (int j = 0; j < nAdjFaces; j++) {
-			printf("%1.15e  ", dZ[j][i]);
-		}
-		printf("\n");
-	}
-*/
-	// Fhat = Q(:,1) * R^{-1} * e0T + Q(:,2:p) * Z
-	for (int i = 0; i < nCoefficients; i++) {
-		dFitArrayPlus[0][i] += dQ[0][i] / dR;
-	}
-	for (int i = 0; i < nAdjFaces; i++) {
-	for (int j = 0; j < nCoefficients; j++) {
-		for (int k = 0; k < nCoefficients-1; k++) {
-			dFitArrayPlus[i][j] += dQ[k+1][j] * dZ[i][k];
-		}
-	}
-	}
-
-	for (int i = 0; i < nAdjFaces; i++) {
-	for (int j = 0; j < nCoefficients; j++) {
-		dFitArrayPlus[i][j] *= dFitWeights[i];
-	}
-	}
-/*
-#pragma message "DEBUG: REMOVE"
-	// Reweight the fit array
-	for (int i = 0; i < nAdjFaces; i++) {
-	for (int j = 0; j < nCoefficients; j++) {
-		dFitArray[j][i] /= dFitWeights[i];
-	}
-	}
-*/
-/*
-	printf("Fp:\n");
-	for (int i = 0; i < nCoefficients; i++) {
-		for (int j = 0; j < nAdjFaces; j++) {
-			printf("%1.15e  ", dFitArrayPlus[j][i]);
-		}
-		printf("\n");
-	}
-
-	_EXCEPTION();
-*/
 /*
 	// Invert the fit array using Moore-Penrose pseudoinverse
+	int m = nCoefficients;
+	int n = nAdjFaces;
+	int lda = nCoefficients;
+	int ldb = nAdjFaces;
+	int nrhs = nCoefficients;
+	double rcond = 0.0;
+	int rank = 0;
+	int lwork = -1;
+	int info = 0;
+
+	DataVector<double> dS(nAdjFaces);
+
+	DataVector<double> dWork(1);
+
+	DataMatrix<double> dA(nAdjFaces, nCoefficients);
+	for (int i = 0; i < nAdjFaces; i++) {
+	for (int j = 0; j < nCoefficients; j++) {
+		dA[i][j] = dFitArray[j][i];
+	}
+	}
+
+	DataMatrix<double> dB(nCoefficients, nAdjFaces);
+	for (int i = 0; i < nCoefficients; i++) {
+		dB[i][i] = 1.0;
+	}
+
+	dgelss_(
+		&m,
+		&n,
+		&nrhs,
+		&(dA[0][0]),
+		&lda,
+		&(dB[0][0]),
+		&ldb,
+		&(dS[0]),
+		&rcond,
+		&rank,
+		&(dWork[0]),
+		&lwork,
+		&info);
+
+	if (info != 0) {
+		_EXCEPTION();
+	}
+
+	lwork = static_cast<int>(dWork[0]);
+	dWork.Initialize(lwork);
+
+	dgelss_(
+		&m,
+		&n,
+		&nrhs,
+		&(dA[0][0]),
+		&lda,
+		&(dB[0][0]),
+		&ldb,
+		&(dS[0]),
+		&rcond,
+		&rank,
+		&(dWork[0]),
+		&lwork,
+		&info);
+
+	if (info != 0) {
+		_EXCEPTION();
+	}
+
+	for (int i = 0; i < nAdjFaces; i++) {
+	for (int j = 0; j < nCoefficients; j++) {
+		dFitArrayPlus[i][j] = dB[j][i];
+	}
+	}
+*/
+
+	// Compute Moore-Penrose pseudoinverse via QR method
 	DataMatrix<double> dFit2;
 	dFit2.Initialize(nCoefficients, nCoefficients);
 
@@ -1087,7 +855,202 @@ void BuildFitArray(
 		dFitArrayPlus[j][k] *= dFitWeights[j];
 	}
 	}
+
+	// Apply correction to constant mode
+	for (int i = 0; i < nAdjFaces; i++) {
+		double dSum = 0.0;
+		for (int p = 1; p < nCoefficients; p++) {
+			dSum += dConstraint[p] * dFitArrayPlus[i][p];
+		}
+		if (i == 0) {
+			dFitArrayPlus[i][0] = 1.0 - dSum;
+		} else {
+			dFitArrayPlus[i][0] = - dSum;
+		}
+	}
+
+/*
+	// Apply correction to highest degree mode
+	for (int i = 0; i < nAdjFaces; i++) {
+		double dSum = 0.0;
+		for (int p = 0; p < nCoefficients-1; p++) {
+			dSum += dConstraint[p] * dFitArrayPlus[i][p];
+		}
+		if (i == 0) {
+			dFitArrayPlus[i][nCoefficients-1] =
+				(1.0 - dSum) / dConstraint[nCoefficients-1];
+		} else {
+			dFitArrayPlus[i][nCoefficients-1] =
+				- dSum / dConstraint[nCoefficients-1];
+		}
+	}
 */
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void InvertFitArray_LeastSquares(
+	DataVector<double> & dConstraint,
+	DataMatrix<double> & dFitArray,
+	DataVector<double> & dFitWeights,
+	DataMatrix<double> & dFitArrayPlus
+) {
+	// Dimensions of the fit operator
+	int nCoefficients = dFitArray.GetRows();
+	int nAdjFaces = dFitArray.GetColumns();
+
+	// Check parameters
+	if (dConstraint.GetRows() != nCoefficients) {
+		_EXCEPTIONT("Dimension mismatch between dConstraint and dFitWeights");
+	}
+	if (dFitWeights.GetRows() != nAdjFaces) {
+		_EXCEPTIONT("Dimension mismatch between dFitArray and dFitWeights");
+	}
+
+	// Allocate inverse
+	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
+
+	// Special case: First order
+	if (nCoefficients == 1) {
+		dFitArrayPlus[0][0] = 1.0;
+		return;
+	}
+
+	// Compute QR factorization of the constraint
+	DataMatrix<double> dQ;
+	dQ.Initialize(nCoefficients, nCoefficients);
+
+	double dR;
+
+	{
+		int m = nCoefficients;
+		int n = 1;
+		int lda = m;
+
+		double tau;
+
+		DataVector<double> dWork;
+		int lwork = nCoefficients;
+		dWork.Initialize(nCoefficients);
+
+		int info;
+
+		memcpy(&(dQ[0][0]), &(dConstraint[0]), nCoefficients * sizeof(double));
+
+		dgeqrf_(&m, &n, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
+		if (info != 0) {
+			_EXCEPTION1("Error in dgeqrf: %i", info);
+		}
+
+		dR = dQ[0][0];
+
+		int k = 1;
+		n = nCoefficients;
+		dorgqr_(&m, &n, &k, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
+		if (info != 0) {
+			_EXCEPTION1("Error in dorgqr: %i", info);
+		}
+	}
+
+	// Calculate G = F * Q 
+	DataMatrix<double> dGG;
+	dGG.Initialize(nCoefficients, nAdjFaces);
+
+	for (int i = 0; i < nCoefficients; i++) {
+	for (int j = 0; j < nAdjFaces; j++) {
+		for (int k = 0; k < nCoefficients; k++) {
+			dGG[i][j] += dFitArray[k][j] * dQ[i][k];
+		}
+	}
+	}
+
+	// Calculate Moore-Penrose pseudoinverse of G(:,2:p)
+	DataMatrix<double> dGxPlus;
+	dGxPlus.Initialize(nAdjFaces, nCoefficients-1);
+
+	{
+		// Gx2 = G(:, 2:p)^T * G(:,2:p)
+		DataMatrix<double> dGx2;
+		dGx2.Initialize(nCoefficients-1, nCoefficients-1);
+
+		for (int i = 0; i < nCoefficients-1; i++) {
+		for (int j = 0; j < nCoefficients-1; j++) {
+			for (int k = 0; k < nAdjFaces; k++) {
+				dGx2[i][j] += dGG[i+1][k] * dGG[j+1][k];
+			}
+		}
+		}
+
+		int m = nCoefficients-1;
+		int n = nCoefficients-1;
+		int lda = nCoefficients-1;
+		int info;
+
+		DataVector<int> iPIV;
+		iPIV.Initialize(nCoefficients-1);
+
+		DataVector<double> dWork;
+		dWork.Initialize(nCoefficients-1);
+
+		int lWork = nCoefficients-1;
+
+		dgetrf_(&m, &n, &(dGx2[0][0]), &lda, &(iPIV[0]), &info);
+
+		dgetri_(&n, &(dGx2[0][0]), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+
+		// Calculate pseudoinverse
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < nCoefficients-1; j++) {
+			for (int k = 0; k < nCoefficients-1; k++) {
+				dGxPlus[i][j] += dGG[k+1][i] * dGx2[k][j];
+			}
+		}
+		}
+	}
+
+	// Z = G+ * (I - G(:,1) * R^{-1} * e0T)
+	DataMatrix<double> dZ;
+	dZ.Initialize(nAdjFaces, nCoefficients-1);
+
+	{
+		DataMatrix<double> dSubZ;
+		dSubZ.Initialize(nAdjFaces, nAdjFaces);
+
+		for (int i = 0; i < nAdjFaces; i++) {
+			dSubZ[i][i] = 1.0;
+		}
+
+		for (int i = 0; i < nAdjFaces; i++) {
+			dSubZ[0][i] -= dGG[0][i] / dR;
+		}
+
+		for (int i = 0; i < nAdjFaces; i++) {
+		for (int j = 0; j < nCoefficients-1; j++) {
+			for (int k = 0; k < nAdjFaces; k++) {
+				dZ[i][j] += dGxPlus[k][j] * dSubZ[i][k];
+			}
+		}
+		}
+	}
+
+	// Fhat = Q(:,1) * R^{-1} * e0T + Q(:,2:p) * Z
+	for (int i = 0; i < nCoefficients; i++) {
+		dFitArrayPlus[0][i] += dQ[0][i] / dR;
+	}
+	for (int i = 0; i < nAdjFaces; i++) {
+	for (int j = 0; j < nCoefficients; j++) {
+		for (int k = 0; k < nCoefficients-1; k++) {
+			dFitArrayPlus[i][j] += dQ[k+1][j] * dZ[i][k];
+		}
+	}
+	}
+
+	for (int i = 0; i < nAdjFaces; i++) {
+	for (int j = 0; j < nCoefficients; j++) {
+		dFitArrayPlus[i][j] *= dFitWeights[i];
+	}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1099,13 +1062,16 @@ void LinearRemapFVtoFV(
 	int nOrder,
 	OfflineMap & mapRemap
 ) {
+	// Order of triangular quadrature rule
+	const int TriQuadRuleOrder = 4;
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.revnodearray.size() == 0) {
 		_EXCEPTIONT("ReverseNodeArray has not been calculated for meshInput");
 	}
 
 	// Triangular quadrature rule
-	TriangularQuadratureRule triquadrule(4);
+	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
 
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
@@ -1120,6 +1086,11 @@ void LinearRemapFVtoFV(
 
 #pragma message "This should be a command-line parameter"
 	int nRequiredFaceSetSize = nCoefficients;
+
+	// Announcemnets
+	Announce("Triangular quadrature rule order %i", TriQuadRuleOrder);
+	Announce("Number of coefficients: %i", nCoefficients);
+	Announce("Required adjacency set size: %i", nRequiredFaceSetSize);
 
 	// Current overlap face
 	int ixOverlap = 0;
@@ -1190,8 +1161,7 @@ void LinearRemapFVtoFV(
 			dConstraint[p] /= dFirstArea;
 		}
 
-
-		// Least squares arrays
+		// Build the fit array from the integration operator
 		DataMatrix<double> dFitArray;
 		DataVector<double> dFitWeights;
 		DataMatrix<double> dFitArrayPlus;
@@ -1202,130 +1172,23 @@ void LinearRemapFVtoFV(
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
-			dNoConstraint,
+			dConstraint,
+			dFitArray,
+			dFitWeights
+		);
+
+		// Compute the inverse fit array
+		InvertFitArray_Corrected(
+			dConstraint,
 			dFitArray,
 			dFitWeights,
 			dFitArrayPlus
 		);
-/*
-		for (int i = 0; i < nAdjFaces; i++) {
-			double dSum = 0.0;
-			for (int p = 0; p < nCoefficients-1; p++) {
-				dSum += dConstraint[p] * dFitArrayPlus[i][p];
-			}
-			if (i == 0) {
-				dFitArrayPlus[i][nCoefficients-1] =
-					(1.0 - dSum) / dConstraint[nCoefficients-1];
-			} else {
-				dFitArrayPlus[i][nCoefficients-1] =
-					- dSum / dConstraint[nCoefficients-1];
-			}
-		}
-*/
-/*
-///// HIGH ORDER FIT ARRAY
-		// Least squares arrays
-		DataMatrix<double> dFitArrayHighOrder;
-		DataVector<double> dFitWeightsHighOrder;
-		DataMatrix<double> dFitArrayPlusHighOrder;
-
-		BuildFitArray(
-			meshInput,
-			triquadrule,
-			ixFirst,
-			vecAdjFaces,
-			nOrder+1,
-			dConstraint,
-			dFitArrayHighOrder,
-			dFitWeightsHighOrder,
-			dFitArrayPlusHighOrder
-		);
-
-		DataMatrix<double> dFitArrayPlus(nAdjFaces, nCoefficients);
-		int ixp = 0;
-		int ixpHighOrder = 0;
-		for (int p = 0; p < nOrder+1; p++) {
-		for (int q = 0; q < nOrder+1; q++) {
-			if ((p != nOrder) && (q != nOrder)) {
-				for (int i = 0; i < nAdjFaces; i++) {
-					dFitArrayPlus[i][ixp] =
-						dFitArrayPlusHighOrder[i][ixpHighOrder];
-				}
-				ixp++;
-			}
-			ixpHighOrder++;
-		}
-		}
-///// END HIGH ORDER FIT ARRAY
-*/
-/*
-		printf("\n");
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int p = 0; p < nCoefficients; p++) {
-			printf("%1.3e  ", dFitArray[p][i]);
-		}
-			printf("\n");
-		}
-*/
-/*
-		// Test conservative constraint equation
-		DataVector<double> dColumnSums;
-		dColumnSums.Initialize(nAdjFaces);
-*/
-/*
-		for (int p = 0; p < nCoefficients; p++) {
-			printf("%1.10e\n", dConstraint[p]);
-		}
-*/
-/*
-		if (ixFirst == 200) {
-
-			for (int p = 0; p < nCoefficients; p++) {
-				printf("%1.15e\n", dConstraint[p]);
-			}
-
-			printf("\n");
-
-			for (int i = 0; i < nAdjFaces; i++) {
-			for (int p = 0; p < nCoefficients; p++) {
-				printf("%1.15e  ", dFitArray[p][i]);
-			}
-			printf(";\n");
-			}
-
-			printf("\n");
-
-			for (int p = 0; p < nCoefficients; p++) {
-			for (int i = 0; i < nAdjFaces; i++) {
-				printf("%1.15e  ", dFitArrayPlus[i][p]);
-			}
-			printf(";\n");
-			}
-
-			printf("\n");
-
-			_EXCEPTION();
-		}
-*/
-/*
-		for (int p = 0; p < nCoefficients; p++) {
-		for (int i = 0; i < nAdjFaces; i++) {
-			dColumnSums[i] += dConstraint[p] * dFitArrayPlus[i][p];
-			printf("%1.3e  ", dFitArrayPlus[i][p]);
-		}
-		printf(";\n");
-		}
-
-		for (int i = 0; i < nAdjFaces; i++) {
-			printf("%1.10e\n", dColumnSums[i]);
-		}
-		_EXCEPTION();
-*/
 
 		// Multiply integration array and fit array
 		DataMatrix<double> dComposedArray;
 		dComposedArray.Initialize(nAdjFaces, nOverlapFaces);
-/*
+
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
 		for (int k = 0; k < nCoefficients; k++) {
@@ -1333,8 +1196,8 @@ void LinearRemapFVtoFV(
 		}
 		}
 		}
-*/
 
+/*
 		for (int j = 0; j < nOverlapFaces; j++) {
 			dComposedArray[0][j] = meshOverlap.vecFaceArea[ixOverlap + j];
 		}
@@ -1351,29 +1214,8 @@ void LinearRemapFVtoFV(
 		}
 		}
 		}
-
-/*
-		DataVector<double> dRowSums;
-		dRowSums.Initialize(nOverlapFaces);
-
-		DataVector<double> dColSums;
-		dColSums.Initialize(nAdjFaces);
-
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nOverlapFaces; j++) {
-			dRowSums[j] += dComposedArray[i][j] / meshOverlap.vecFaceArea[ixOverlap + j];
-			dColSums[i] += dComposedArray[i][j];
-		}
-		}
-
-		printf("\n");
-		for (int j = 0; j < nOverlapFaces; j++) {
-			printf("%1.15e\n", dRowSums[j]);
-		}
-		printf("\n");
-		printf("%1.15e %1.15e\n", dColSums[0], meshInput.vecFaceArea[ixFirst]);
-		_EXCEPTION();
 */
+
 		// Put composed array into map
 		for (int i = 0; i < vecAdjFaces.size(); i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
@@ -1388,8 +1230,6 @@ void LinearRemapFVtoFV(
 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
-
-		//_EXCEPTION();
 	}
 }
 
@@ -1724,6 +1564,13 @@ void LinearRemapFVtoGLL_Simple(
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
+			dConstraint,
+			dFitArray,
+			dFitWeights
+		);
+
+		// Compute the inverse fit array
+		InvertFitArray_Corrected(
 			dConstraint,
 			dFitArray,
 			dFitWeights,
@@ -2173,6 +2020,13 @@ void LinearRemapFVtoGLL_Volumetric(
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
+			dConstraint,
+			dFitArray,
+			dFitWeights
+		);
+
+		// Compute the inverse fit array
+		InvertFitArray_Corrected(
 			dConstraint,
 			dFitArray,
 			dFitWeights,
@@ -2838,7 +2692,7 @@ void LinearRemapFVtoGLL(
 		// Number of adjacent Faces
 		int nAdjFaces = vecAdjFaces.size();
 
-		// Least squares arrays
+		// Build the fit operator
 		DataMatrix<double> dFitArray;
 		DataVector<double> dFitWeights;
 		DataMatrix<double> dFitArrayPlus;
@@ -2849,6 +2703,13 @@ void LinearRemapFVtoGLL(
 			ixFirst,
 			vecAdjFaces,
 			nOrder,
+			dConstraint,
+			dFitArray,
+			dFitWeights
+		);
+
+		// Compute the inverse fit array
+		InvertFitArray_Corrected(
 			dConstraint,
 			dFitArray,
 			dFitWeights,

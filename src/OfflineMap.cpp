@@ -266,41 +266,6 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 	m_vecTargetDimNames.resize(2);
 	m_vecTargetDimNames[0] = strDim0Name;
 	m_vecTargetDimNames[1] = strDim1Name;
-/*
-	// Special case: rectilinear lat/lon
-	if (m_vecTargetDimNames.size() == 2) {
-
-		// Latitude
-		int ixLat = (-1);
-		if (m_vecTargetDimNames[0] == "lat") {
-			ixLat = 0;
-		} else if (m_vecTargetDimNames[1] == "lat") {
-			ixLat = 1;
-		}
-
-		if (ixLat != (-1)) {
-			m_dVectorTargetCenterLat.Initialize(m_vecSourceDimSizes[ixLat]);
-			for (int i = 0; i < m_vecSourceDimSizes[ixLat]; i++) {
-				
-			}
-		}
-
-		// Longitude
-		int ixLon = (-1);
-		if (m_vecTargetDimNames[0] == "lat") {
-			ixLon = 0;
-		} else if (m_vecTargetDimNames[1] == "lat") {
-			ixLon = 1;
-		}
-
-		if (ixLon != (-1)) {
-			m_dVectorTargetCenterLon.Initialize(m_vecSourceDimSizes[ixLon]);
-			for (int i = 0; i < m_vecSourceDimSizes[ixLon]; i++) {
-				
-			}
-		}
-	}
-*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////
