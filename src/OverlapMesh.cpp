@@ -1534,7 +1534,9 @@ void GenerateOverlapFace(
 	}
 
 	//std::cout << nodevecOutput.size() << std::endl;
-
+/*
+	// NOTE: Uncommenting this seems to lead to an erroneous overlap mesh
+	// for CSne30 and CSne30t.
 	// Check for repeats
 	for (int i = 0; i < nodevecOutput.size(); i++) {
 		if (nodevecOutput[i] == nodevecOutput[(i+1)%(nodevecOutput.size())]) {
@@ -1542,7 +1544,7 @@ void GenerateOverlapFace(
 			i--;
 		}
  	}
-
+*/
 	// If the overlap consists of fewer than three nodes, ignore
 	if (nodevecOutput.size() < 3) {
 		nodevecOutput.clear();

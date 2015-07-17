@@ -321,6 +321,10 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 			double dY = node.y;
 			double dZ = node.z;
 
+			dXc += dX;
+			dYc += dY;
+			dZc += dZ;
+
 			double dLonV = atan2(dY, dX) / M_PI * 180.0;
 			double dLatV = asin(dZ) / M_PI * 180.0;
 
@@ -607,32 +611,42 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 		m_dSourceVertexLat,
 		fLatLon);
 
-/*
 	// Initialize vector coordinate
 	if (fLatLon) {
 		if (m_vecSourceDimNames[0] == "lon") {
 			InitializeRectilinearCoordinateVector(
 				m_vecSourceDimSizes[0],
 				m_vecSourceDimSizes[1],
+				m_dSourceVertexLon,
+				m_dSourceVertexLat,
+				true,
 				m_dSourceCenterLon,
 				m_dSourceCenterLat,
-				true,
 				m_dVectorSourceCenterLon,
-				m_dVectorSourceCenterLat
+				m_dVectorSourceCenterLat,
+				m_dVectorSourceBoundsLon,
+				m_dVectorSourceBoundsLat
 			);
-		} else {
+
+		} else if (m_vecSourceDimNames[1] == "lon") {
 			InitializeRectilinearCoordinateVector(
 				m_vecSourceDimSizes[1],
 				m_vecSourceDimSizes[0],
+				m_dSourceVertexLon,
+				m_dSourceVertexLat,
+				false,
 				m_dSourceCenterLon,
 				m_dSourceCenterLat,
-				true,
 				m_dVectorSourceCenterLon,
-				m_dVectorSourceCenterLat
+				m_dVectorSourceCenterLat,
+				m_dVectorSourceBoundsLon,
+				m_dVectorSourceBoundsLat
 			);
+
+		} else {
+			_EXCEPTIONT("LatLon specified but no dimensions have name \"lon\"");
 		}
 	}
-*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -311,6 +311,26 @@ protected:
 	DataMatrix<double> m_dSourceVertexLat;
 
 	///	<summary>
+	///		Vector containing cell center longitude along "lon" dimension.
+	///	</sumamry>
+	DataVector<double> m_dVectorSourceCenterLon;
+
+	///	<summary>
+	///		Vector containing cell center latitude along "lat" dimension.
+	///	</sumamry>
+	DataVector<double> m_dVectorSourceCenterLat;
+
+	///	<summary>
+	///		Vector containing bounds for longitude along "lon" dimension.
+	///	</summary>
+	DataMatrix<double> m_dVectorSourceBoundsLon;
+
+	///	<summary>
+	///		Vector containing bounds for latitude along "lat" dimension.
+	///	</summary>
+	DataMatrix<double> m_dVectorSourceBoundsLat;
+
+	///	<summary>
 	///		Matrix of vertex longitudes on source grid.
 	///	</summary>
 	DataMatrix<double> m_dTargetVertexLon;
