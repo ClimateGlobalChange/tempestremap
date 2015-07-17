@@ -1721,6 +1721,10 @@ void OfflineMap::Write(
 	// Attributes
 	ncMap.add_att("Title", "TempestRemap Offline Regridding Weight Generator");
 
+	// Map dimensions
+	int nA = (int)(m_dSourceAreas.GetRows());
+	int nB = (int)(m_dTargetAreas.GetRows());
+
 	// Write output dimensions entries
 	int nSrcGridDims = (int)(m_vecSourceDimSizes.size());
 	int nDstGridDims = (int)(m_vecTargetDimSizes.size());
@@ -1733,22 +1737,31 @@ void OfflineMap::Write(
 	NcVar * varDstGridDims =
 		ncMap.add_var("dst_grid_dims", ncInt, dimDstGridRank);
 
-	varSrcGridDims->put(&(m_vecSourceDimSizes[0]), nSrcGridDims);
-	varDstGridDims->put(&(m_vecTargetDimSizes[0]), nDstGridDims);
+	char szDim[64];
+	if ((nSrcGridDims == 1) && (m_vecSourceDimSizes[0] != nA)) {
+		varSrcGridDims->put(&nA, 1);
+		varSrcGridDims->add_att("name0", "num_dof");
 
-	int nA = (int)(m_dSourceAreas.GetRows());
-	int nB = (int)(m_dTargetAreas.GetRows());
+	} else {
+		varSrcGridDims->put(&(m_vecSourceDimSizes[0]), nSrcGridDims);
 
-	for (int i = 0; i < m_vecSourceDimSizes.size(); i++) {
-		char szDim[64];
-		sprintf(szDim, "name%i", i);
-		varSrcGridDims->add_att(szDim, m_vecSourceDimNames[i].c_str());
+		for (int i = 0; i < m_vecSourceDimSizes.size(); i++) {
+			sprintf(szDim, "name%i", i);
+			varSrcGridDims->add_att(szDim, m_vecSourceDimNames[i].c_str());
+		}
 	}
 
-	for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
-		char szDim[64];
-		sprintf(szDim, "name%i", i);
-		varDstGridDims->add_att(szDim, m_vecTargetDimNames[i].c_str());
+	if ((nDstGridDims == 1) && (m_vecSourceDimSizes[0] != nB)) {
+		varDstGridDims->put(&nB, 1);
+		varDstGridDims->add_att("name0", "num_dof");
+
+	} else {
+		varDstGridDims->put(&(m_vecTargetDimSizes[0]), nDstGridDims);
+
+		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
+			sprintf(szDim, "name%i", i);
+			varDstGridDims->add_att(szDim, m_vecTargetDimNames[i].c_str());
+		}
 	}
 
 	// Source and Target mesh resolutions
