@@ -1337,10 +1337,10 @@ void OfflineMap::Apply(
 		for (int t = 0; t < nVarTotalEntries; t++) {
 
 			long tt = static_cast<long>(t);
-			for (int d = 0; d < vecDimSizes.GetRows(); d++) {
+			for (int d = vecDimSizes.GetRows()-1; d >= 0; d--) {
 				nCountsIn[d]  = tt % vecDimSizes[d];
 				nCountsOut[d] = tt % vecDimSizes[d];
-				tt -= nCountsOut[d] * vecDimSizes[d];
+				tt /= vecDimSizes[d];
 			}
 
 			for (int d = vecDimSizes.GetRows(); d < nCountsIn.GetRows(); d++) {
@@ -1401,6 +1401,16 @@ void OfflineMap::Apply(
 					dSourceMax = dataInDouble[i];
 				}
 			}
+/*
+			for (int d = 0; d < nCountsIn.GetRows(); d++) {
+				printf("%li ", nCountsIn[d]);
+			}
+			printf(" : ");
+			for (int d = 0; d < nCountsOut.GetRows(); d++) {
+				printf("%li ", nCountsOut[d]);
+			}
+			printf("\n");
+*/
 			Announce("Source Mass: %1.15e Min %1.10e Max %1.10e",
 				dSourceMass, dSourceMin, dSourceMax);
 

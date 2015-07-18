@@ -1858,7 +1858,7 @@ void GenerateOverlapMesh_v2(
 			meshTarget.nodes[ixNodeCorner].x,
 			meshTarget.nodes[ixNodeCorner].y,
 			meshTarget.nodes[ixNodeCorner].z,
-			(void*)(((char*)(nullptr)) + i));
+			(void*)(&(meshTarget.faces[i])));
 	}
 
 	// Generate Overlap mesh for each Face
@@ -1875,9 +1875,9 @@ void GenerateOverlapMesh_v2(
 				meshSource.nodes[ixNodeCorner].y,
 				meshSource.nodes[ixNodeCorner].z);
 
-		void * pdata = kd_res_item_data(kdresTarget);
+		Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
-		int iTargetFaceSeed = ((char*)(pdata)) - nullptr;
+		int iTargetFaceSeed = pFace - &(meshTarget.faces[0]);
 
 		std::cout << "\tNearest target face " << iTargetFaceSeed << std::endl;
 
