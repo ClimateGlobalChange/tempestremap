@@ -626,23 +626,6 @@ void SampleGLLFiniteElement(
 				g_dCoeffBeta[2] = dBeta * dBeta;
 			}
 
-/*
-			if (dAlpha < 0.0) {
-				g_dCoeffAlpha[0] = - dAlpha;
-				g_dCoeffAlpha[1] = 1.0 + dAlpha;
-			} else {
-				g_dCoeffAlpha[1] = 1.0 - dAlpha;
-				g_dCoeffAlpha[2] = dAlpha;
-			}
-			if (dBeta < 0.0) {
-				g_dCoeffBeta[0] = - dBeta;
-				g_dCoeffBeta[1] = 1.0 + dBeta;
-			} else {
-				g_dCoeffBeta[1] = 1.0 - dBeta;
-				g_dCoeffBeta[2] = dBeta;
-			}
-*/
-
 		// Fourth order monotone interpolation
 		} else if (nP == 4) {
 
@@ -696,8 +679,7 @@ void SampleGLLFiniteElement(
 			_EXCEPTIONT("Not implemented");
 		}
 
-
-	// Standard monotone interpolation
+	// Piecewise constant monotone interpolation
 	} else if (nMonotoneType == 2) {
 
 		// Map dAlpha and dBeta to [-1,1]
@@ -766,6 +748,85 @@ void SampleGLLFiniteElement(
 				g_dCoeffBeta[2] = 1.0;
 			} else {
 				g_dCoeffBeta[3] = 1.0;
+			}
+
+		} else {
+			_EXCEPTIONT("Not implemented");
+		}
+
+	// Piecewise linear monotone interpolation
+	} else if (nMonotoneType == 3) {
+
+		// Map dAlpha and dBeta to [-1,1]
+		dAlpha = 2.0 * dAlpha - 1.0;
+		dBeta  = 2.0 * dBeta  - 1.0;
+
+		// Second order monotone interpolation
+		if (nP == 2) {
+
+			g_dCoeffAlpha[0] = 0.5 * (1.0 - dAlpha);
+			g_dCoeffAlpha[1] = 0.5 * (1.0 + dAlpha);
+
+			g_dCoeffBeta[0] = 0.5 * (1.0 - dBeta);
+			g_dCoeffBeta[1] = 0.5 * (1.0 + dBeta);
+
+		// Third order monotone interpolation
+		} else if (nP == 3) {
+
+			if (dAlpha < 0.0) {
+				g_dCoeffAlpha[0] = - dAlpha;
+				g_dCoeffAlpha[1] = 1.0 + dAlpha;
+			} else {
+				g_dCoeffAlpha[1] = 1.0 - dAlpha;
+				g_dCoeffAlpha[2] = dAlpha;
+			}
+			if (dBeta < 0.0) {
+				g_dCoeffBeta[0] = - dBeta;
+				g_dCoeffBeta[1] = 1.0 + dBeta;
+			} else {
+				g_dCoeffBeta[1] = 1.0 - dBeta;
+				g_dCoeffBeta[2] = dBeta;
+			}
+
+		// Fourth order monotone interpolation
+		} else if (nP == 4) {
+
+			const double dGLL1 = 1.0/sqrt(5.0);
+
+			const double dA = 5.0 + sqrt(5.0);
+
+			if (dAlpha < -dGLL1) {
+				g_dCoeffAlpha[0] =
+					-1.0 / 20.0 * dA * (5.0 * dAlpha + sqrt(5.0));
+				g_dCoeffAlpha[1] =
+					1.0 / 4.0 * dA * (dAlpha + 1.0);
+
+			} else if (dAlpha < dGLL1) {
+				g_dCoeffAlpha[1] = 0.5 * (1.0 - sqrt(5.0) * dAlpha);
+				g_dCoeffAlpha[2] = 0.5 * (1.0 + sqrt(5.0) * dAlpha);
+
+			} else {
+				g_dCoeffAlpha[2] =
+					- 1.0 / 4.0 * dA * (dAlpha - 1.0);
+				g_dCoeffAlpha[3] =
+					- 1.0 / 20.0 * dA * (-5.0 * dAlpha + sqrt(5.0));
+			}
+
+			if (dBeta < -dGLL1) {
+				g_dCoeffBeta[0] =
+					-1.0 / 20.0 * dA * (5.0 * dBeta + sqrt(5.0));
+				g_dCoeffBeta[1] =
+					1.0 / 4.0 * dA * (dBeta + 1.0);
+
+			} else if (dBeta < dGLL1) {
+				g_dCoeffBeta[1] = 0.5 * (1.0 - sqrt(5.0) * dBeta);
+				g_dCoeffBeta[2] = 0.5 * (1.0 + sqrt(5.0) * dBeta);
+
+			} else {
+				g_dCoeffBeta[2] =
+					- 1.0 / 4.0 * dA * (dBeta - 1.0);
+				g_dCoeffBeta[3] =
+					- 1.0 / 20.0 * dA * (-5.0 * dBeta + sqrt(5.0));
 			}
 
 		} else {

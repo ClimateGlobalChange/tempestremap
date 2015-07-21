@@ -149,6 +149,12 @@ try {
 	// Enforce monotonicity
 	bool fMonotoneType2;
 
+	// Enforce monotonicity
+	bool fMonotoneType3;
+
+	// No conservation
+	bool fNoConservation;
+
 	// Turn off checking for conservation / consistency
 	bool fNoCheck;
 
@@ -196,6 +202,8 @@ try {
 		CommandLineBool(fBubble, "bubble");
 		CommandLineBool(fMonotoneType1, "mono");
 		CommandLineBool(fMonotoneType2, "mono2");
+		CommandLineBool(fMonotoneType3, "mono3");
+		CommandLineBool(fNoConservation, "noconserve");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
 		CommandLineString(strOutputMap, "out_map", "");
@@ -264,14 +272,20 @@ try {
 
 	// Monotonicity flags
 	int nMonotoneType = 0;
-	if (fMonotoneType1 && fMonotoneType2) {
-		_EXCEPTIONT("Only one of --mono and --mono2 may be set");
-	}
 	if (fMonotoneType1) {
 		nMonotoneType = 1;
 	}
 	if (fMonotoneType2) {
+		if (nMonotoneType != 0) {
+			_EXCEPTIONT("Only one of --mono, --mono2 and --mono3 may be set");
+		}
 		nMonotoneType = 2;
+	}
+	if (fMonotoneType3) {
+		if (nMonotoneType != 0) {
+			_EXCEPTIONT("Only one of --mono, --mono2 and --mono3 may be set");
+		}
+		nMonotoneType = 3;
 	}
 
 	// Create Offline Map
@@ -557,6 +571,7 @@ try {
 			dataGLLJacobian,
 			nMonotoneType,
 			fContinuousIn,
+			fNoConservation,
 			mapRemap
 		);
 

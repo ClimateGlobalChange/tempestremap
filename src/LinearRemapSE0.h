@@ -53,6 +53,7 @@ void LinearRemapSE4(
 	const DataMatrix3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
+	bool fNoConservation,
 	OfflineMap & mapRemap
 );
 

@@ -745,6 +745,7 @@ void LinearRemapSE4(
 	const DataMatrix3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
+	bool fNoConservation,
 	OfflineMap & mapRemap
 ) {
 	// Order of the polynomial interpolant
@@ -921,47 +922,49 @@ void LinearRemapSE4(
 		}
 
 		// Force consistency and conservation
-		double dSourceArea = 0.0;
-		for (int p = 0; p < nP; p++) {
-		for (int q = 0; q < nP; q++) {
-			vecSourceArea[p * nP + q] = dataGLLJacobian[p][q][ixFirst];
-			dSourceArea += dataGLLJacobian[p][q][ixFirst];
-		}
-		}
-
-		double dTargetArea = 0.0;
-		vecTargetArea.Initialize(nOverlapFaces);
-		for (int j = 0; j < nOverlapFaces; j++) {
-			vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
-			dTargetArea += meshOverlap.vecFaceArea[ixOverlap + j];
-		}
-
-		if (fabs(dTargetArea - meshInput.vecFaceArea[ixFirst]) > 1.0e-10) {
-			Announce("Partial element: %i", ixFirst);
-
-		} else {
-			dCoeff.Initialize(nOverlapFaces, nP * nP);
-
-			for (int j = 0; j < nOverlapFaces; j++) {
+		if (!fNoConservation) {
+			double dSourceArea = 0.0;
 			for (int p = 0; p < nP; p++) {
 			for (int q = 0; q < nP; q++) {
-				dCoeff[j][p * nP + q] = dRemapCoeff[p][q][j];
-			}
+				vecSourceArea[p * nP + q] = dataGLLJacobian[p][q][ixFirst];
+				dSourceArea += dataGLLJacobian[p][q][ixFirst];
 			}
 			}
 
-			ForceConsistencyConservation3(
-				vecSourceArea,
-				vecTargetArea,
-				dCoeff,
-				(nMonotoneType != 0));
-
+			double dTargetArea = 0.0;
+			vecTargetArea.Initialize(nOverlapFaces);
 			for (int j = 0; j < nOverlapFaces; j++) {
-			for (int p = 0; p < nP; p++) {
-			for (int q = 0; q < nP; q++) {
-				dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
+				vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
+				dTargetArea += meshOverlap.vecFaceArea[ixOverlap + j];
 			}
-			}
+
+			if (fabs(dTargetArea - meshInput.vecFaceArea[ixFirst]) > 1.0e-10) {
+				Announce("Partial element: %i", ixFirst);
+
+			} else {
+				dCoeff.Initialize(nOverlapFaces, nP * nP);
+
+				for (int j = 0; j < nOverlapFaces; j++) {
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					dCoeff[j][p * nP + q] = dRemapCoeff[p][q][j];
+				}
+				}
+				}
+
+				ForceConsistencyConservation3(
+					vecSourceArea,
+					vecTargetArea,
+					dCoeff,
+					(nMonotoneType != 0));
+
+				for (int j = 0; j < nOverlapFaces; j++) {
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
+				}
+				}
+				}
 			}
 		}
 
