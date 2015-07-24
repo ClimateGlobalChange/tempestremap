@@ -96,12 +96,12 @@ void LinearRemapFVtoGLL(
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-/*
+
 ///	<summary>
 ///		Generate the OfflineMap for remapping from finite elements to finite
 ///		elements.
 ///	</summary>
-void LinearRemapGLLtoGLL(
+void LinearRemapGLLtoGLL2(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
@@ -112,12 +112,35 @@ void LinearRemapGLLtoGLL(
 	const DataVector<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
-	OfflineMap & mapRemap,
 	int nMonotoneType,
 	bool fContinuousIn,
-	bool fContinuousOut
+	bool fContinuousOut,
+	OfflineMap & mapRemap
 );
-*/
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite elements to finite
+///		elements.
+///	</summary>
+void LinearRemapGLLtoGLL2_Pointwise(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	const DataMatrix3D<int> & dataGLLNodesIn,
+	const DataMatrix3D<double> & dataGLLJacobianIn,
+	const DataMatrix3D<int> & dataGLLNodesOut,
+	const DataMatrix3D<double> & dataGLLJacobianOut,
+	const DataVector<double> & dataNodalAreaOut,
+	int nPin,
+	int nPout,
+	int nMonotoneType,
+	bool fContinuousIn,
+	bool fContinuousOut,
+	OfflineMap & mapRemap
+);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif

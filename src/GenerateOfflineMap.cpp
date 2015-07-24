@@ -649,7 +649,7 @@ try {
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
 
-		LinearRemapGLLtoGLL_Pointwise(
+		LinearRemapGLLtoGLL2(
 			meshInput,
 			meshOutput,
 			meshOverlap,

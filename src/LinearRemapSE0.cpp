@@ -923,11 +923,9 @@ void LinearRemapSE4(
 
 		// Force consistency and conservation
 		if (!fNoConservation) {
-			double dSourceArea = 0.0;
 			for (int p = 0; p < nP; p++) {
 			for (int q = 0; q < nP; q++) {
 				vecSourceArea[p * nP + q] = dataGLLJacobian[p][q][ixFirst];
-				dSourceArea += dataGLLJacobian[p][q][ixFirst];
 			}
 			}
 
