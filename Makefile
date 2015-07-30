@@ -1,16 +1,16 @@
 ##############################################################################
 # Compiler and flags
 CC= g++
-CFLAGS= -O3
+CFLAGS= -g -O3  -std=c++0x 
 
 USEBLAS= True
 
 # NETCDF library directories
-NETCDF_INCLUDEDIR=/opt/local/include
-NETCDF_LIBDIR=/opt/local/lib
+NETCDF_INCLUDEDIR=/usr/include
+NETCDF_LIBDIR=/usr/lib64
 
 # Library files to include
-LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
+LDFILES= -llapack -lblas -lnetcdf -lnetcdf_c++ 
 
 ##############################################################################
 # DO NOT MODIFY BELOW THIS LINE
