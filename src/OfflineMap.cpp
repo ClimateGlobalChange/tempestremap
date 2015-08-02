@@ -137,12 +137,12 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		if (dimGridRank->size() == 1) {
 			m_vecTargetDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecTargetDimNames.push_back("lat");
 			m_vecTargetDimNames.push_back("lon");
+			m_vecTargetDimNames.push_back("lat");
 
 			int nTemp = m_vecTargetDimSizes[0];
-			m_vecTargetDimSizes[0] = m_vecTargetDimSizes[1];
-			m_vecTargetDimSizes[1] = nTemp;
+			m_vecTargetDimSizes[1] = m_vecTargetDimSizes[1];
+			m_vecTargetDimSizes[0] = nTemp;
 
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
@@ -260,12 +260,12 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 
 	// Push rectilinear attributes into array
 	m_vecTargetDimSizes.resize(2);
-	m_vecTargetDimSizes[0] = nDim0Size;
-	m_vecTargetDimSizes[1] = nDim1Size;
+	m_vecTargetDimSizes[0] = nDim1Size;
+	m_vecTargetDimSizes[1] = nDim0Size;
 
 	m_vecTargetDimNames.resize(2);
-	m_vecTargetDimNames[0] = strDim0Name;
-	m_vecTargetDimNames[1] = strDim1Name;
+	m_vecTargetDimNames[0] = strDim1Name;
+	m_vecTargetDimNames[1] = strDim0Name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
