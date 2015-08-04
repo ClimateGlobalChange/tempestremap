@@ -52,6 +52,9 @@ try {
 	// Last latitude line on mesh
 	double dLatEnd;
 
+	// Flip latitude and longitude dimension in FaceVector ordering
+	bool fFlipLatLon;
+
 	// Output filename
 	std::string strOutputFile;
 
@@ -63,6 +66,7 @@ try {
 		CommandLineDouble(dLonEnd, "lon_end", 360.0);
 		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
 		CommandLineDouble(dLatEnd, "lat_end", 90.0);
+		CommandLineBool(fFlipLatLon, "flip");
 		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
 
 		ParseCommandLine(argc, argv);
@@ -224,6 +228,17 @@ try {
 		}
 	}
 
+	// Reorder the faces
+	if (fFlipLatLon) {
+		FaceVector faceTemp = mesh.faces;
+		mesh.faces.clear();
+		for (int i = 0; i < nLongitudes; i++) {
+		for (int j = 0; j < nLatitudes; j++) {
+			mesh.faces.push_back(faceTemp[j * nLongitudes + i]);
+		}
+		}
+	}
+
 	// Announce
 	std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
 	std::cout << std::endl;
@@ -238,10 +253,18 @@ try {
 
 	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
 	ncOutput.add_att("rectilinear", "true");
-	ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
-	ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
-	ncOutput.add_att("rectilinear_dim0_name", "lat");
-	ncOutput.add_att("rectilinear_dim1_name", "lon");
+
+	if (fFlipLatLon) {
+		ncOutput.add_att("rectilinear_dim0_size", nLongitudes);
+		ncOutput.add_att("rectilinear_dim1_size", nLatitudes);
+		ncOutput.add_att("rectilinear_dim0_name", "lon");
+		ncOutput.add_att("rectilinear_dim1_name", "lat");
+	} else {
+		ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
+		ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
+		ncOutput.add_att("rectilinear_dim0_name", "lat");
+		ncOutput.add_att("rectilinear_dim1_name", "lon");
+	}
 	ncOutput.close();
 
 	// Announce
