@@ -415,7 +415,7 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 			dG[j],
 			node);
 
-		int iNode = dataGLLnodes[i][j][k] - 1;
+		int iNode = dataGLLnodes[j][i][k] - 1;
 
 		double dLon = atan2(node.y, node.x);
 		double dLat = asin(node.z);
