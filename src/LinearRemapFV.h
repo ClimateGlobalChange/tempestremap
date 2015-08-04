@@ -115,6 +115,7 @@ void LinearRemapGLLtoGLL2(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool fNoConservation,
 	OfflineMap & mapRemap
 );
 

@@ -214,7 +214,7 @@ try {
 	Announce("=========================================================");
 
 	// Triangular quadrature rule
-	const int TriQuadratureOrder = 8;
+	const int TriQuadratureOrder = 10;
 
 	Announce("Using triangular quadrature of order %i", TriQuadratureOrder);
 
@@ -457,7 +457,7 @@ try {
 		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 		// Get Gauss quadrature nodes
-		const int nGaussP = 8;
+		const int nGaussP = 10;
 
 		DataVector<double> dGaussG;
 		DataVector<double> dGaussW;
@@ -544,7 +544,7 @@ try {
 					// Find components of quadrature point in basis
 					// of the first Face
 					SampleGLLFiniteElement(
-						false,
+						0,
 						nP,
 						dGaussG[p],
 						dGaussG[q],
@@ -562,22 +562,21 @@ try {
 					// Integrate
 					for (int i = 0; i < nP; i++) {
 					for (int j = 0; j < nP; j++) {
-						
-						dVar[dataGLLNodes[j][i][k]-1] +=
-							dSample
-							* dCoeff[j][i]
+
+						double dNodalArea =
+							dCoeff[i][j]
 							* dGaussW[p]
 							* dGaussW[q]
 							* dJacobian;
 
-						dNodeArea[dataGLLNodes[j][i][k]-1] +=
-							dCoeff[j][i]
-							* dGaussW[p]
-							* dGaussW[q]
-							* dJacobian;
+						dVar[dataGLLNodes[i][j][k]-1] +=
+							dSample * dNodalArea;
 
+						dNodeArea[dataGLLNodes[i][j][k]-1] +=
+							dNodalArea;
 					}
 					}
+
 				}
 				}
 			}
