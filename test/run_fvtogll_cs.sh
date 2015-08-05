@@ -1,5 +1,9 @@
 #!/bin/sh
 
+time ../bin/GenerateOverlapMesh --a outCSne15.g --b outCSne30t.g --out overlap_CSne15_CSne30t.g
+time ../bin/GenerateOverlapMesh --a outCSne30.g --b outCSne30t.g --out overlap_CSne30_CSne30t.g
+time ../bin/GenerateOverlapMesh --a outCSne60.g --b outCSne30t.g --out overlap_CSne60_CSne30t.g
+
 time ../bin/GenerateTestData --mesh outCSne15.g --test 1 --out testdata_CSne15_1.nc
 time ../bin/GenerateTestData --mesh outCSne15.g --test 2 --out testdata_CSne15_2.nc
 time ../bin/GenerateTestData --mesh outCSne15.g --test 3 --out testdata_CSne15_3.nc

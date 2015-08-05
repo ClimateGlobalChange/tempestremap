@@ -41,9 +41,9 @@ axis off;
 for i = 1:size(xfaces,1)
     patch(xfaces(i,:), yfaces(i,:), zfaces(i,:),'w','EdgeColor','k','LineWidth',2);
 end
-patch(xfaces(1,:), yfaces(1,:), zfaces(1,:),'g','EdgeColor','k','LineWidth',2);
-patch(xfaces(690,:), yfaces(690,:), zfaces(690,:),'b','EdgeColor','k','LineWidth',2);
-patch(xfaces(1336,:), yfaces(1336,:), zfaces(1336,:),'r','EdgeColor','k','LineWidth',2);
+%patch(xfaces(1,:), yfaces(1,:), zfaces(1,:),'g','EdgeColor','k','LineWidth',2);
+%patch(xfaces(690,:), yfaces(690,:), zfaces(690,:),'b','EdgeColor','k','LineWidth',2);
+%patch(xfaces(1336,:), yfaces(1336,:), zfaces(1336,:),'r','EdgeColor','k','LineWidth',2);
 %patch(xfaces(11816,:), yfaces(11816,:), zfaces(11816,:),'r');
 hold off;
 

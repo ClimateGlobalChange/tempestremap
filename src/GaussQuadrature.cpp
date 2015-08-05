@@ -2,7 +2,7 @@
 ///
 ///	\file    GaussQuadrature.cpp
 ///	\author  Paul Ullrich
-///	\version March 30, 2012
+///	\version January 1, 2015
 ///
 ///	<remarks>
 ///		Copyright 2000-2010 Paul Ullrich
@@ -15,7 +15,7 @@
 ///	</remarks>
 
 #include "GaussQuadrature.h"
-
+#include "LegendrePolynomial.h"
 #include "Exception.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,8 +26,8 @@ void GaussQuadrature::GetPoints(
 	DataVector<double> & dW
 ) {
 	// Check for valid range
-	if ((nCount < 1) || (nCount > 10)) {
-		_EXCEPTIONT("Invalid degree: Expected [1,10]");
+	if (nCount < 1) {
+		_EXCEPTION1("Invalid count (%i): Minimum count 1", nCount);
 	}
 
 	// Initialize the arrays
@@ -182,6 +182,18 @@ void GaussQuadrature::GetPoints(
 		dW[7] = 0.2190863625159820;
 		dW[8] = 0.1494513491505806;
 		dW[9] = 0.0666713443086881;
+
+	// Higher degrees
+	} else {
+		LegendrePolynomial::AllRoots(nCount, dG);
+
+		for (int k = 0; k < nCount; k++) {
+			double dDeriv =
+				LegendrePolynomial::EvaluateDerivative(nCount, dG[k]);
+
+			dW[k] = 2.0 / ((1.0 - dG[k] * dG[k]) * dDeriv * dDeriv);
+		}
+
 	}
 }
 

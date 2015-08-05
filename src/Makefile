@@ -25,6 +25,7 @@ FILES= Announce.cpp \
        MeshUtilitiesExact.cpp \
        GaussQuadrature.cpp \
        GaussLobattoQuadrature.cpp \
+	   LegendrePolynomial.cpp \
        FiniteElementTools.cpp \
        NetCDFUtilities.cpp \
        OfflineMap.cpp \

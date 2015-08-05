@@ -2,7 +2,7 @@
 ///
 ///	\file    GaussLobattoQuadrature.cpp
 ///	\author  Paul Ullrich
-///	\version July 9, 2012
+///	\version January 1, 2015
 ///
 ///	<remarks>
 ///		Copyright 2000-2010 Paul Ullrich
@@ -16,6 +16,8 @@
 
 #include "GaussLobattoQuadrature.h"
 
+#include "LegendrePolynomial.h"
+
 #include "Exception.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,8 +28,8 @@ void GaussLobattoQuadrature::GetPoints(
 	DataVector<double> & dW
 ) {
 	// Check for valid range
-	if ((nCount < 2) || (nCount > 10)) {
-		_EXCEPTION1("Invalid degree (%i): Expected [2,10]", nCount);
+	if (nCount < 2) {
+		_EXCEPTION1("Invalid count (%i): Minimum count 2", nCount);
 	}
 
 	// Initialize the arrays
@@ -177,6 +179,25 @@ void GaussLobattoQuadrature::GetPoints(
 		dW[7] = 0.224889342063126;
 		dW[8] = 0.133305990851070;
 		dW[9] = 0.022222222222222;
+
+	// Higher degrees
+	} else {
+		DataVector<double> dRoots(nCount);
+		
+		LegendrePolynomial::AllDerivativeRoots(nCount-1, dRoots);
+
+		dG[0] = -1.0;
+		memcpy(dG+1, dRoots, (nCount-2) * sizeof(double));
+		dG[nCount-1] = +1.0;
+
+		for (int k = 0; k < nCount; k++) {
+			double dValue =
+				LegendrePolynomial::Evaluate(nCount-1, dG[k]);
+
+			double dDegree = static_cast<double>(nCount);
+
+			dW[k] = 2.0 / (dDegree * (dDegree - 1.0) * dValue * dValue);
+		}
 	}
 }
 

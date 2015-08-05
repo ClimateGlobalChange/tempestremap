@@ -19,6 +19,8 @@
 
 #include "DataMatrix.h"
 #include "Announce.h"
+#include "FiniteElementTools.h"
+#include "GaussQuadrature.h"
 
 #include <cmath>
 #include <cstring>
@@ -1087,7 +1089,112 @@ int BuildCoincidentNodeVector(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Real CalculateFaceArea(
+Real CalculateFaceAreaQuadratureMethod(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	int nTriangles = face.edges.size() - 2;
+
+	const int nOrder = 6;
+
+	DataVector<double> dG;
+	DataVector<double> dW;
+	GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
+
+	double dFaceArea = 0.0;
+
+	// Loop over all sub-triangles of this Face
+	for (int j = 0; j < nTriangles; j++) {
+
+		// Calculate the area of the modified Face
+		Node node1 = nodes[face[0]];
+		Node node2 = nodes[face[j+1]];
+		Node node3 = nodes[face[j+2]];
+
+		// Calculate area at quadrature node
+		for (int p = 0; p < dW.GetRows(); p++) {
+		for (int q = 0; q < dW.GetRows(); q++) {
+
+			double dA = dG[p];
+			double dB = dG[q];
+
+			Node dF(
+				(1.0 - dB) * ((1.0 - dA) * node1.x + dA * node2.x) + dB * node3.x,
+				(1.0 - dB) * ((1.0 - dA) * node1.y + dA * node2.y) + dB * node3.y,
+				(1.0 - dB) * ((1.0 - dA) * node1.z + dA * node2.z) + dB * node3.z);
+
+			Node dDaF(
+				(1.0 - dB) * (node2.x - node1.x),
+				(1.0 - dB) * (node2.y - node1.y),
+				(1.0 - dB) * (node2.z - node1.z));
+
+			Node dDbF(
+				- (1.0 - dA) * node1.x - dA * node2.x + node3.x,
+				- (1.0 - dA) * node1.y - dA * node2.y + node3.y,
+				- (1.0 - dA) * node1.z - dA * node2.z + node3.z);
+
+			double dR = sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
+
+			Node dDaG(
+				dDaF.x * (dF.y * dF.y + dF.z * dF.z)
+					- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
+				dDaF.y * (dF.x * dF.x + dF.z * dF.z)
+					- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
+				dDaF.z * (dF.x * dF.x + dF.y * dF.y)
+					- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
+
+			Node dDbG(
+				dDbF.x * (dF.y * dF.y + dF.z * dF.z)
+					- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
+				dDbF.y * (dF.x * dF.x + dF.z * dF.z)
+					- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
+				dDbF.z * (dF.x * dF.x + dF.y * dF.y)
+					- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
+
+			double dDenomTerm = 1.0 / (dR * dR * dR);
+
+			dDaG.x *= dDenomTerm;
+			dDaG.y *= dDenomTerm;
+			dDaG.z *= dDenomTerm;
+
+			dDaG.x *= dDenomTerm;
+			dDaG.y *= dDenomTerm;
+			dDaG.z *= dDenomTerm;
+/*
+			Node node;
+			Node dDx1G;
+			Node dDx2G;
+
+			ApplyLocalMap(
+				faceQuad,
+				nodes,
+				dG[p],
+				dG[q],
+				node,
+				dDx1G,
+				dDx2G);
+*/
+			// Cross product gives local Jacobian
+			Node nodeCross = CrossProduct(dDaG, dDbG);
+
+			double dJacobian = sqrt(
+				  nodeCross.x * nodeCross.x
+				+ nodeCross.y * nodeCross.y
+				+ nodeCross.z * nodeCross.z);
+
+			//dFaceArea += 2.0 * dW[p] * dW[q] * (1.0 - dG[q]) * dJacobian;
+			
+			dFaceArea += dW[p] * dW[q] * dJacobian;
+		}
+		}
+	}
+
+	return dFaceArea;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceAreaKarneysMethod(
 	const Face & face,
 	const NodeVector & nodes
 ) {
@@ -1175,13 +1282,26 @@ Real CalculateFaceArea(
 		//printf("%1.15e %1.15e\n", dFaceArea, dAccumulatedExcess - dPlanarSum);
 		//_EXCEPTIONT("Negative area element detected");
 	}
-/*
-	if (dPlanarSum > dAccumulatedExcess) {
-		printf("%1.15e %1.15e\n", dPlanarSum, dAccumulatedExcess);
-		_EXCEPTIONT("Negative area element detected");
-	}
-*/
+	
 	return dFaceArea;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceArea(
+	const Face & face,
+	const NodeVector & nodes
+) {
+/*
+	double dArea1 = CalculateFaceAreaQuadratureMethod(face, nodes);
+
+	double dArea2 = CalculateFaceAreaKarneysMethod(face, nodes);
+
+	printf("%1.15e %1.15e\n", dArea1, dArea2);
+*/
+	return CalculateFaceAreaQuadratureMethod(face, nodes);
+
+	//return CalculateFaceAreaKarneysMethod(face, nodes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
