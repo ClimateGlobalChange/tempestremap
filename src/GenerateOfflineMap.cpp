@@ -106,12 +106,13 @@ void LoadMetaDataFile(
 	dataGLLJacobian_tmp.Initialize(nP, nP, nElem);
  
 	varGLLNodes->get(&(dataGLLNodes_tmp[0][0][0]), nP, nP, nElem);
- 	varGLLJacobian->get(&(dataGLLJacobian[0][0][0]), nP, nP, nElem);
+ 	varGLLJacobian->get(&(dataGLLJacobian_tmp[0][0][0]), nP, nP, nElem);
 
 	for (int i = 0; i < nP; i++) {
 		for (int j = 0; j < nP; j++) {
 			for (int k = 0; k < nElem; k++) {
 				dataGLLNodes[i][j][k] = dataGLLNodes_tmp[j][i][k];
+				dataGLLJacobian[i][j][k] = dataGLLJacobian_tmp[j][i][k];
 			}
 		}
 	}
