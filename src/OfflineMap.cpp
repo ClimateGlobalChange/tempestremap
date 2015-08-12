@@ -59,6 +59,71 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 		} else {
 			_EXCEPTIONT("Source grid grid_rank must be < 3");
 		}
+
+		// Number of faces
+		NcDim * dimGridSize = ncSourceMesh.get_dim("grid_size");
+		if (dimGridSize == NULL) {
+			_EXCEPTIONT("Missing \"grid_size\" dimension in grid file");
+		}
+
+		// Number of grid corners
+		NcDim * dimGridCorners = ncSourceMesh.get_dim("grid_corners");
+		if (dimGridCorners == NULL) {
+			_EXCEPTIONT("Missing \"grid_corners\" dimension in grid file");
+		}
+
+		// Pull grid center information from file
+		NcVar * varGridCenterLon = ncSourceMesh.get_var("grid_center_lon");
+		if (varGridCenterLon == NULL) {
+			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
+		}
+
+		m_dSourceCenterLon.Initialize(dimGridSize->size());
+
+		varGridCenterLon->get(
+			&(m_dSourceCenterLon[0]),
+			dimGridSize->size());
+
+		NcVar * varGridCenterLat = ncSourceMesh.get_var("grid_center_lat");
+		if (varGridCenterLat == NULL) {
+			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
+		}
+
+		m_dSourceCenterLat.Initialize(dimGridSize->size());
+
+		varGridCenterLat->get(
+			&(m_dSourceCenterLat[0]),
+			dimGridSize->size());
+
+		// Pull grid vertex information from file
+		NcVar * varGridVertexLon = ncSourceMesh.get_var("grid_corner_lon");
+		if (varGridVertexLon == NULL) {
+			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
+		}
+
+		m_dSourceVertexLon.Initialize(
+			dimGridSize->size(),
+			dimGridCorners->size());
+
+		varGridVertexLon->get(
+			&(m_dSourceVertexLon[0][0]),
+			dimGridSize->size(),
+			dimGridCorners->size());
+
+		NcVar * varGridVertexLat = ncSourceMesh.get_var("grid_corner_lat");
+		if (varGridVertexLat == NULL) {
+			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
+		}
+
+		m_dSourceVertexLat.Initialize(
+			dimGridSize->size(),
+			dimGridCorners->size());
+
+		varGridVertexLat->get(
+			&(m_dSourceVertexLat[0][0]),
+			dimGridSize->size(),
+			dimGridCorners->size());
+
 		return;
 	}
 
