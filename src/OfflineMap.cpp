@@ -147,7 +147,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
-/*
+
 		// Number of faces
 		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
 		if (dimGridSize == NULL) {
@@ -211,7 +211,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			&(m_dTargetVertexLat[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
-*/
+
 		return;
 	}
 
@@ -590,7 +590,24 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 	const Mesh & meshSource
 ) {
+	// Check if these arrays have been read from file
+	if ((m_dSourceVertexLon.IsInitialized()) ||
+		(m_dSourceVertexLat.IsInitialized()) ||
+		(m_dSourceCenterLon.IsInitialized()) ||
+		(m_dSourceCenterLat.IsInitialized())
+	) {
+		if ((m_dSourceVertexLon.IsInitialized()) &&
+			(m_dSourceVertexLat.IsInitialized()) &&
+			(m_dSourceCenterLon.IsInitialized()) &&
+			(m_dSourceCenterLat.IsInitialized())
+		) {
+			return;
+		}
 
+		_EXCEPTIONT("Logic error");
+	}
+
+	// Generate arrays
 	bool fLatLon = false;
 	if ((m_vecSourceDimNames[0] == "lat") &&
 	    (m_vecSourceDimNames[1] == "lon")
@@ -611,7 +628,7 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 		m_dSourceVertexLat,
 		fLatLon);
 
-	// Initialize vector coordinate
+	// Initialize coordinate arrays
 	if (fLatLon) {
 		if (m_vecSourceDimNames[0] == "lon") {
 			InitializeRectilinearCoordinateVector(
@@ -654,6 +671,24 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 	const Mesh & meshTarget
 ) {
+	// Check if these arrays have been read from file
+	if ((m_dTargetVertexLon.IsInitialized()) ||
+		(m_dTargetVertexLat.IsInitialized()) ||
+		(m_dTargetCenterLon.IsInitialized()) ||
+		(m_dTargetCenterLat.IsInitialized())
+	) {
+		if ((m_dTargetVertexLon.IsInitialized()) &&
+			(m_dTargetVertexLat.IsInitialized()) &&
+			(m_dTargetCenterLon.IsInitialized()) &&
+			(m_dTargetCenterLat.IsInitialized())
+		) {
+			return;
+		}
+
+		_EXCEPTIONT("Logic error");
+	}
+
+	// Initialize coordinate arrays
 	bool fLatLon = false;
 	if ((m_vecTargetDimNames[0] == "lat") &&
 	    (m_vecTargetDimNames[1] == "lon")
