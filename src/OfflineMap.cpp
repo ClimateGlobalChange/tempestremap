@@ -1617,9 +1617,6 @@ void OfflineMap::Read(
 		m_vecTargetDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
 	}
 
-	printf("%i %i\n", m_vecTargetDimSizes[0], m_vecTargetDimSizes[1]);
-	printf("%s %s\n", m_vecTargetDimNames[0].c_str(), m_vecTargetDimNames[1].c_str());
-
 	// Source and Target mesh resolutions
 	NcDim * dimNA = ncMap.get_dim("n_a");
 	if (dimNA == NULL) {
@@ -1860,7 +1857,7 @@ void OfflineMap::Write(
 		varSrcGridDims->add_att("name0", "num_dof");
 
 	} else {
-		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
+		for (int i = 0; i < m_vecSourceDimSizes.size(); i++) {
 			varSrcGridDims->set_cur(nSrcGridDims - i - 1);
 			varSrcGridDims->put(&(m_vecSourceDimSizes[i]), 1);
 		}
