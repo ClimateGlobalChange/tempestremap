@@ -52,10 +52,6 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 		} else if (dimGridRank->size() == 2) {
 			m_vecSourceDimNames.push_back("lon");
 			m_vecSourceDimNames.push_back("lat");
-
-			int nTemp = m_vecSourceDimSizes[0];
-			m_vecSourceDimSizes[0] = m_vecSourceDimSizes[1];
-			m_vecSourceDimSizes[1] = nTemp;
 		} else {
 			_EXCEPTIONT("Source grid grid_rank must be < 3");
 		}
@@ -204,10 +200,6 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		} else if (dimGridRank->size() == 2) {
 			m_vecTargetDimNames.push_back("lon");
 			m_vecTargetDimNames.push_back("lat");
-
-			int nTemp = m_vecTargetDimSizes[0];
-			m_vecTargetDimSizes[1] = m_vecTargetDimSizes[1];
-			m_vecTargetDimSizes[0] = nTemp;
 
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
@@ -1601,17 +1593,32 @@ void OfflineMap::Read(
 	varSrcGridDims->get(&(m_vecSourceDimSizes[0]), nSrcGridDims);
 	varDstGridDims->get(&(m_vecTargetDimSizes[0]), nDstGridDims);
 
+	for (int i = 0; i < nSrcGridDims/2; i++) {
+		int iTemp = m_vecSourceDimSizes[i];
+		m_vecSourceDimSizes[i] = m_vecSourceDimSizes[nSrcGridDims - i - 1];
+		m_vecSourceDimSizes[nSrcGridDims - i - 1] = iTemp;
+	}
+
 	for (int i = 0; i < nSrcGridDims; i++) {
 		char szDim[64];
-		sprintf(szDim, "name%i", i);
+		sprintf(szDim, "name%i", nSrcGridDims - i - 1);
 		m_vecSourceDimNames[i] = varSrcGridDims->get_att(szDim)->as_string(0);
+	}
+
+	for (int i = 0; i < nDstGridDims/2; i++) {
+		int iTemp = m_vecTargetDimSizes[i];
+		m_vecTargetDimSizes[i] = m_vecTargetDimSizes[nDstGridDims - i - 1];
+		m_vecTargetDimSizes[nDstGridDims - i - 1] = iTemp;
 	}
 
 	for (int i = 0; i < nDstGridDims; i++) {
 		char szDim[64];
-		sprintf(szDim, "name%i", i);
+		sprintf(szDim, "name%i", nDstGridDims - i - 1);
 		m_vecTargetDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
 	}
+
+	printf("%i %i\n", m_vecTargetDimSizes[0], m_vecTargetDimSizes[1]);
+	printf("%s %s\n", m_vecTargetDimNames[0].c_str(), m_vecTargetDimNames[1].c_str());
 
 	// Source and Target mesh resolutions
 	NcDim * dimNA = ncMap.get_dim("n_a");
@@ -1853,11 +1860,15 @@ void OfflineMap::Write(
 		varSrcGridDims->add_att("name0", "num_dof");
 
 	} else {
-		varSrcGridDims->put(&(m_vecSourceDimSizes[0]), nSrcGridDims);
+		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
+			varSrcGridDims->set_cur(nSrcGridDims - i - 1);
+			varSrcGridDims->put(&(m_vecSourceDimSizes[i]), 1);
+		}
 
 		for (int i = 0; i < m_vecSourceDimSizes.size(); i++) {
 			sprintf(szDim, "name%i", i);
-			varSrcGridDims->add_att(szDim, m_vecSourceDimNames[i].c_str());
+			varSrcGridDims->add_att(szDim,
+				m_vecSourceDimNames[nSrcGridDims - i - 1].c_str());
 		}
 	}
 
@@ -1866,11 +1877,15 @@ void OfflineMap::Write(
 		varDstGridDims->add_att("name0", "num_dof");
 
 	} else {
-		varDstGridDims->put(&(m_vecTargetDimSizes[0]), nDstGridDims);
+		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
+			varDstGridDims->set_cur(nDstGridDims - i - 1);
+			varDstGridDims->put(&(m_vecTargetDimSizes[i]), 1);
+		}
 
 		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
 			sprintf(szDim, "name%i", i);
-			varDstGridDims->add_att(szDim, m_vecTargetDimNames[i].c_str());
+			varDstGridDims->add_att(szDim,
+				m_vecTargetDimNames[nDstGridDims - i - 1].c_str());
 		}
 	}
 
