@@ -1474,7 +1474,8 @@ void LinearRemapFVtoGLL_Simple(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 ) {
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 8;
@@ -1746,7 +1747,8 @@ void LinearRemapFVtoGLL_Volumetric(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 ) {
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 4;
@@ -1864,11 +1866,13 @@ void LinearRemapFVtoGLL_Volumetric(
 			dRedistributionMaps[ixSecond][i][i] = 1.0;
 		}
 
-		ForceIntArrayConsistencyConservation(
-			dFiniteVolumeArea,
-			dQuadratureArea,
-			dRedistributionMaps[ixSecond],
-			(nMonotoneType != 0));
+		if (!fNoConservation) {
+			ForceIntArrayConsistencyConservation(
+				dFiniteVolumeArea,
+				dQuadratureArea,
+				dRedistributionMaps[ixSecond],
+				(nMonotoneType != 0));
+		}
 /*
 		double dSumQuadArea = 0.0;
 		double dSumFVArea = 0.0;
@@ -2131,7 +2135,8 @@ void LinearRemapFVtoGLL(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 ) {
 	// NOTE: Reducing this quadrature rule order greatly affects error norms
 	// Order of triangular quadrature rule
@@ -2549,11 +2554,13 @@ void LinearRemapFVtoGLL(
 			vecSourceArea[i] = meshOverlap.vecFaceArea[ixOverlap];
 		}
 
-		ForceIntArrayConsistencyConservation(
-			vecSourceArea,
-			vecTargetArea,
-			dCoeff,
-			(nMonotoneType != 0));
+		if (!fNoConservation) {
+			ForceIntArrayConsistencyConservation(
+				vecSourceArea,
+				vecTargetArea,
+				dCoeff,
+				(nMonotoneType != 0));
+		}
 /*
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;

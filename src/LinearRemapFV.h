@@ -54,7 +54,8 @@ void LinearRemapFVtoGLL_Simple(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,7 +74,8 @@ void LinearRemapFVtoGLL_Volumetric(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +94,8 @@ void LinearRemapFVtoGLL(
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
-	bool fContinuous
+	bool fContinuous,
+	bool fNoConservation
 );
 
 ///////////////////////////////////////////////////////////////////////////////
