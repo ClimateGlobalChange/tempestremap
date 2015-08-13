@@ -50,8 +50,12 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 		if (dimGridRank->size() == 1) {
 			m_vecSourceDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecSourceDimNames.push_back("lon");
 			m_vecSourceDimNames.push_back("lat");
+			m_vecSourceDimNames.push_back("lon");
+
+			int iTemp = m_vecSourceDimSizes[0];
+			m_vecSourceDimSizes[0] = m_vecSourceDimSizes[1];
+			m_vecSourceDimSizes[1] = iTemp;
 		} else {
 			_EXCEPTIONT("Source grid grid_rank must be < 3");
 		}
@@ -198,8 +202,12 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		if (dimGridRank->size() == 1) {
 			m_vecTargetDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecTargetDimNames.push_back("lon");
 			m_vecTargetDimNames.push_back("lat");
+			m_vecTargetDimNames.push_back("lon");
+
+			int iTemp = m_vecTargetDimSizes[0];
+			m_vecTargetDimSizes[0] = m_vecTargetDimSizes[1];
+			m_vecTargetDimSizes[1] = iTemp;
 
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
