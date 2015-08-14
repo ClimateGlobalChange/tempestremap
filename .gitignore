@@ -7,7 +7,8 @@
 *.txt
 *.m~
 *.nc
-gecore2
+*--
+bin/*
 
 UnitTest
 
@@ -42,3 +43,5 @@ GenerateLambertConfConicMesh
 run_glltofv_rll_np5_diffnorms.sh
 
 run_glltofv_rll_np5.sh
+
+src/GenerateOverlapMesh_v1
