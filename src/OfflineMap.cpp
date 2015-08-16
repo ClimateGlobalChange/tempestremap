@@ -1610,7 +1610,11 @@ void OfflineMap::Read(
 	for (int i = 0; i < nSrcGridDims; i++) {
 		char szDim[64];
 		sprintf(szDim, "name%i", nSrcGridDims - i - 1);
-		m_vecSourceDimNames[i] = varSrcGridDims->get_att(szDim)->as_string(0);
+                if ( NULL == varSrcGridDims->get_att(szDim) ) {
+                  m_vecSourceDimNames[i]="";
+                }else{
+                  m_vecSourceDimNames[i] = varSrcGridDims->get_att(szDim)->as_string(0);
+                }
 	}
 
 	for (int i = 0; i < nDstGridDims/2; i++) {
@@ -1622,7 +1626,11 @@ void OfflineMap::Read(
 	for (int i = 0; i < nDstGridDims; i++) {
 		char szDim[64];
 		sprintf(szDim, "name%i", nDstGridDims - i - 1);
-		m_vecTargetDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
+                if ( NULL == varDstGridDims->get_att(szDim) ) {
+                  m_vecTargetDimNames[i]="";
+                }else{
+                  m_vecTargetDimNames[i] = varDstGridDims->get_att(szDim)->as_string(0);
+                }
 	}
 
 	// Source and Target mesh resolutions
