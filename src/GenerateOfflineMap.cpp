@@ -68,11 +68,11 @@ void ParseVariableList(
 ///////////////////////////////////////////////////////////////////////////////
 
 void LoadMetaDataFile(
-	const std::string & strMetaFile,
+	const std::string & strInputMeta,
 	DataMatrix3D<int> & dataGLLNodes,
 	DataMatrix3D<double> & dataGLLJacobian
 ) {
-	NcFile ncMeta(strMetaFile.c_str(), NcFile::ReadOnly);
+	NcFile ncMeta(strInputMeta.c_str(), NcFile::ReadOnly);
 
 	NcDim * dimNp = ncMeta.get_dim("np");
 	if (dimNp == NULL) {
@@ -139,8 +139,11 @@ try {
 	// Overlap mesh file
 	std::string strOverlapMesh;
 
-	// Metadata file
-	std::string strMetaFile;
+	// Input metadata file
+	std::string strInputMeta;
+
+	// Output metadata file
+	std::string strOutputMeta;
 
 	// Input data type
 	std::string strInputType;
@@ -165,6 +168,9 @@ try {
 
 	// Enforce monotonicity
 	bool fMonotoneType3;
+
+	// Volumetric remapping
+	bool fVolumetric;
 
 	// No conservation
 	bool fNoConservation;
@@ -208,7 +214,8 @@ try {
 		CommandLineString(strInputMesh, "in_mesh", "");
 		CommandLineString(strOutputMesh, "out_mesh", "");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
-		CommandLineString(strMetaFile, "in_meta", "");
+		CommandLineString(strInputMeta, "in_meta", "");
+		CommandLineString(strOutputMeta, "out_meta", "");
 		CommandLineStringD(strInputType, "in_type", "fv", "[fv|cgll|dgll]");
 		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
 		CommandLineInt(nPin, "in_np", 4);
@@ -217,6 +224,7 @@ try {
 		CommandLineBool(fMonotoneType1, "mono");
 		CommandLineBool(fMonotoneType2, "mono2");
 		CommandLineBool(fMonotoneType3, "mono3");
+		CommandLineBool(fVolumetric, "volumetric");
 		CommandLineBool(fNoConservation, "noconserve");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
@@ -236,10 +244,10 @@ try {
 
 	// Check command line parameters (mesh arguments)
 	if (strInputMesh == "") {
-		_EXCEPTIONT("No input mesh specified");
+		_EXCEPTIONT("No input mesh (--in_mesh) specified");
 	}
 	if (strOutputMesh == "") {
-		_EXCEPTIONT("No output mesh specified");
+		_EXCEPTIONT("No output mesh (--out_mesh) specified");
 	}
 
 	// Overlap mesh
@@ -249,10 +257,18 @@ try {
 
 	// Check command line parameters (data arguments)
 	if ((strInputData != "") && (strOutputData == "")) {
-		_EXCEPTIONT("in_data specified without out_data");
+		_EXCEPTIONT("--in_data specified without --out_data");
 	}
 	if ((strInputData == "") && (strOutputData != "")) {
-		_EXCEPTIONT("out_data specified without in_data");
+		_EXCEPTIONT("--out_data specified without --in_data");
+	}
+
+	// Check metadata parameters
+	if ((strInputMeta != "") && (strInputType == "fv")) {
+		_EXCEPTIONT("--in_meta cannot be used with --in_type fv");
+	}
+	if ((strOutputMeta != "") && (strOutputType == "fv")) {
+		_EXCEPTIONT("--out_meta cannot be used with --out_type fv");
 	}
 
 	// Check command line parameters (data type arguments)
@@ -300,6 +316,11 @@ try {
 			_EXCEPTIONT("Only one of --mono, --mono2 and --mono3 may be set");
 		}
 		nMonotoneType = 3;
+	}
+
+	// Volumetric
+	if (fVolumetric && (nMonotoneType != 0)) {
+		_EXCEPTIONT("--volumetric cannot be used in conjunction with --mono#");
 	}
 
 	// Create Offline Map
@@ -457,9 +478,9 @@ try {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
-		if (strMetaFile != "") {
+		if (strOutputMeta != "") {
 			AnnounceStartBlock("Loading meta data file");
-			LoadMetaDataFile(strMetaFile, dataGLLNodes, dataGLLJacobian);
+			LoadMetaDataFile(strOutputMeta, dataGLLNodes, dataGLLJacobian);
 			AnnounceEndBlock(NULL);
 
 		} else {
@@ -503,20 +524,34 @@ try {
 		// Generate remap weights
 		AnnounceStartBlock("Calculating offline map");
 
-		//LinearRemapFVtoGLL_Simple(
-		//LinearRemapFVtoGLL_Volumetric(
-		LinearRemapFVtoGLL(
-			meshInput,
-			meshOutput,
-			meshOverlap,
-			dataGLLNodes,
-			dataGLLJacobian,
-			mapRemap.GetTargetAreas(),
-			nPin,
-			mapRemap,
-			nMonotoneType,
-			fContinuous,
-			fNoConservation);
+		if (fVolumetric) {
+			LinearRemapFVtoGLL_Volumetric(
+				meshInput,
+				meshOutput,
+				meshOverlap,
+				dataGLLNodes,
+				dataGLLJacobian,
+				mapRemap.GetTargetAreas(),
+				nPin,
+				mapRemap,
+				nMonotoneType,
+				fContinuous,
+				fNoConservation);
+
+		} else {
+			LinearRemapFVtoGLL(
+				meshInput,
+				meshOutput,
+				meshOverlap,
+				dataGLLNodes,
+				dataGLLJacobian,
+				mapRemap.GetTargetAreas(),
+				nPin,
+				mapRemap,
+				nMonotoneType,
+				fContinuous,
+				fNoConservation);
+		}
 
 	// Finite element input / Finite volume output
 	} else if (
@@ -526,9 +561,9 @@ try {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
-		if (strMetaFile != "") {
+		if (strInputMeta != "") {
 			AnnounceStartBlock("Loading meta data file");
-			LoadMetaDataFile(strMetaFile, dataGLLNodes, dataGLLJacobian);
+			LoadMetaDataFile(strInputMeta, dataGLLNodes, dataGLLJacobian);
 			AnnounceEndBlock(NULL);
 
 		} else {
@@ -578,6 +613,11 @@ try {
 		// Generate offline map
 		AnnounceStartBlock("Calculating offline map");
 
+		if (fVolumetric) {
+			_EXCEPTIONT("Unimplemented: Volumetric currently unavailable for"
+				"GLL input mesh");
+		}
+
 		LinearRemapSE4(
 			meshInput,
 			meshOutput,
@@ -601,29 +641,57 @@ try {
 		DataMatrix3D<int> dataGLLNodesOut;
 		DataMatrix3D<double> dataGLLJacobianOut;
 
-		AnnounceStartBlock("Generating input mesh meta data");
-		double dNumericalAreaIn =
-			GenerateMetaData(
-				meshInput,
-				nPin,
-				fBubble,
-				dataGLLNodesIn,
-				dataGLLJacobianIn);
+		// Input metadata
+		if (strInputMeta != "") {
+			AnnounceStartBlock("Loading input meta data file");
+			LoadMetaDataFile(
+				strInputMeta, dataGLLNodesIn, dataGLLJacobianIn);
+			AnnounceEndBlock(NULL);
 
-		Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
-		AnnounceEndBlock(NULL);
+		} else {
+			AnnounceStartBlock("Generating input mesh meta data");
+			double dNumericalAreaIn =
+				GenerateMetaData(
+					meshInput,
+					nPin,
+					fBubble,
+					dataGLLNodesIn,
+					dataGLLJacobianIn);
 
-		AnnounceStartBlock("Generating output mesh meta data");
-		double dNumericalAreaOut =
-			GenerateMetaData(
-				meshOutput,
-				nPout,
-				fBubble,
-				dataGLLNodesOut,
-				dataGLLJacobianOut);
+			Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
+			AnnounceEndBlock(NULL);
 
-		Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
-		AnnounceEndBlock(NULL);
+			if (fabs(dNumericalAreaIn - dTotalAreaInput) > 1.0e-12) {
+				Announce("WARNING: Significant mismatch between input mesh "
+					"numerical area and geometric area");
+			}
+		}
+
+		// Output metadata
+		if (strOutputMeta != "") {
+			AnnounceStartBlock("Loading output meta data file");
+			LoadMetaDataFile(
+				strOutputMeta, dataGLLNodesOut, dataGLLJacobianOut);
+			AnnounceEndBlock(NULL);
+
+		} else {
+			AnnounceStartBlock("Generating output mesh meta data");
+			double dNumericalAreaOut =
+				GenerateMetaData(
+					meshOutput,
+					nPout,
+					fBubble,
+					dataGLLNodesOut,
+					dataGLLJacobianOut);
+
+			Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
+			AnnounceEndBlock(NULL);
+
+			if (fabs(dNumericalAreaOut - dTotalAreaOutput) > 1.0e-12) {
+				Announce("WARNING: Significant mismatch between output mesh "
+					"numerical area and geometric area");
+			}
+		}
 
 		// Initialize coordinates for map
 		mapRemap.InitializeSourceCoordinatesFromMeshFE(
