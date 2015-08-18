@@ -1,14 +1,32 @@
-tempestgecore
+TempestRemap
 =============
 
 Author:  Paul Ullrich
 Email:   paullrich@ucdavis.edu
 
-This software constitutes the alpha release of TempestRemap, a conservative,
+Copyright 2000-2014 Paul Ullrich
+
+This file is distributed as part of the Tempest source code package.
+Permission is granted to use, copy, modify and distribute this
+source code and its documentation under the terms of the GNU General
+Public License.  This software is provided "as is" without express
+or implied warranty.
+
+This software constitutes the beta release of TempestRemap, a conservative,
 consistent and monotone remapping package for arbitrary grid geometry with
 support for finite volumes and finite elements.  There is still quite a bit of
 work to be done, but any feedback is appreciated on the software in its current
 form.
+
+If you choose to use this software in your work, please cite our papers:
+
+Paul A. Ullrich and Mark A. Taylor, 2015: Arbitrary-Order Conservative
+and Consistent Remapping and a Theory of Linear Maps: Part I.
+Mon. Wea. Rev., 143, 2419–2440.  doi: http://dx.doi.org/10.1175/MWR-D-14-00343.1
+
+Paul A. Ullrich, Dharshi Devendran and Hans Johansen, 2015:
+Arbitrary-Order Conservative and Consistent Remapping and a Theory of
+Linear Maps: Part II.  Submitted to Mon. Wea. Rev.
 
 Build Instructions
 ------------------
