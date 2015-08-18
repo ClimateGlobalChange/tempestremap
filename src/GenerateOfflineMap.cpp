@@ -317,12 +317,12 @@ try {
 		}
 		nMonotoneType = 3;
 	}
-
+/*
 	// Volumetric
 	if (fVolumetric && (nMonotoneType != 0)) {
 		_EXCEPTIONT("--volumetric cannot be used in conjunction with --mono#");
 	}
-
+*/
 	// Create Offline Map
 	OfflineMap mapRemap;
 
