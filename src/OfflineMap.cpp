@@ -425,6 +425,27 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 
 		dCenterLon[i] = dLonC;
 		dCenterLat[i] = dLatC;
+
+		// Modify vertex coordinates of polar volumes on latlon grid
+		if (fLatLon) {
+
+			// Change longitudes of polar volumes
+			int nNodesMod = dVertexLat.GetColumns();
+			for (int j = 0; j < nNodesMod; j++) {
+				if (fabs(fabs(dVertexLat[i][j]) - 90.0) < 1.0e-12) {
+					int jn = (j + 1) % nNodesMod;
+					int jp = (j + nNodesMod - 1) % nNodesMod;
+
+					if (fabs(fabs(dVertexLat[i][jn]) - 90.0) > 1.0e-12) {
+						dVertexLon[i][j] = dVertexLon[i][jn];
+					} else if (fabs(fabs(dVertexLat[i][jp]) - 90.0) > 1.0e-12) {
+						dVertexLon[i][j] = dVertexLon[i][jp];
+					} else {
+						_EXCEPTIONT("Logic error");
+					}
+				}
+			}
+		}
 	}
 }
 
