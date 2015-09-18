@@ -39,6 +39,8 @@ GENERATEICOMESH_FILES= GenerateICOMesh.cpp $(FILES)
 
 GENERATELAMBERTCONFCONICMESH_FILES = GenerateLambertConfConicMesh.cpp $(FILES)
 
+GENERATEVOLUMETRICMESH_FILES = GenerateVolumetricMesh.cpp $(FILES)
+
 GENERATEOVERLAPMESH_FILES= GenerateOverlapMesh.cpp OverlapMesh.cpp $(FILES)
 GENERATEOVERLAPMESH_CFILES= kdtree.c
 
@@ -69,7 +71,7 @@ include Make.defs
 ##
 ## Build instructions
 ##
-all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
+all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateVolumetricMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
 	mv $^ ../bin
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
@@ -83,6 +85,9 @@ GenerateICOMesh: $(GENERATEICOMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 GenerateLambertConfConicMesh: $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATELAMBERTCONFCONICMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
+
+GenerateVolumetricMesh: $(GENERATEVOLUMETRICMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
+	$(CC) $(LDFLAGS) -o $@ $(GENERATEVOLUMETRICMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(LDFILES)
 
 GenerateOverlapMesh: $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESH_CFILES:%.c=$(BUILDDIR)/%.o)
 	$(CC) $(LDFLAGS) -o $@ $(GENERATEOVERLAPMESH_FILES:%.cpp=$(BUILDDIR)/%.o) $(GENERATEOVERLAPMESH_CFILES:%.c=$(BUILDDIR)/%.o) $(LDFILES)
