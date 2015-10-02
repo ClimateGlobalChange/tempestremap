@@ -128,11 +128,7 @@ try {
 	int iSouthPoleOffset = (fIncludeSouthPole)?(1):(0);
 
 	// Increase number of latitudes if south pole is not included
-	if (!fIncludeSouthPole) {
-		nLatitudes++;
-	}
-
-	int iInteriorLatBegin = (fIncludeSouthPole)?(1):(1);
+	int iInteriorLatBegin = (fIncludeSouthPole)?(1):(0);
 	int iInteriorLatEnd   = (fIncludeNorthPole)?(nLatitudes-1):(nLatitudes);
 
 	// Number of longitude nodes
