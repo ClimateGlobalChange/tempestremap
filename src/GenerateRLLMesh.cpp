@@ -184,9 +184,11 @@ try {
 	}
 
 	// Generate interior faces
-	for (int j = 1; j < iInteriorLatEnd; j++) {
-		int iThisLatNodeIx = (j-1) * nLongitudeNodes + iSouthPoleOffset;
-		int iNextLatNodeIx =  j    * nLongitudeNodes + iSouthPoleOffset;
+	for (int j = iInteriorLatBegin; j < iInteriorLatEnd; j++) {
+		int jx = j - iInteriorLatBegin;
+
+		int iThisLatNodeIx =  jx    * nLongitudeNodes + iSouthPoleOffset;
+		int iNextLatNodeIx = (jx+1) * nLongitudeNodes + iSouthPoleOffset;
 
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
@@ -206,7 +208,11 @@ try {
 
 	// Generate north polar faces
 	if (fIncludeNorthPole) {
-		int iThisLatNodeIx = (nLatitudes - 2) * nLongitudeNodes + iSouthPoleOffset;
+		int jx = nLatitudes - iInteriorLatBegin - 1;
+
+		int iThisLatNodeIx =  jx    * nLongitudeNodes + iSouthPoleOffset;
+		int iNextLatNodeIx = (jx+1) * nLongitudeNodes + iSouthPoleOffset;
+
 		int iNorthPolarNodeIx = static_cast<int>(nodes.size()-1);
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
