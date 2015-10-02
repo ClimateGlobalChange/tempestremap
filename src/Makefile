@@ -72,6 +72,7 @@ include Make.defs
 ## Build instructions
 ##
 all: GenerateRLLMesh GenerateCSMesh GenerateICOMesh GenerateVolumetricMesh GenerateLambertConfConicMesh GenerateOverlapMesh GenerateOverlapMesh_v1 GenerateGLLMetaData MeshToTxt GenerateTestData CalculateDiffNorms ApplyOfflineMap GenerateOfflineMap
+	mkdir -p ../bin
 	mv $^ ../bin
 
 GenerateRLLMesh: $(GENERATERLLMESH_FILES:%.cpp=$(BUILDDIR)/%.o)
