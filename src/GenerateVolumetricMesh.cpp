@@ -237,6 +237,7 @@ try {
 
 		// Open output file
 		FILE * fp = fopen(strOutputConnectivity.c_str(), "w");
+		fprintf(fp, "%lu\n", vecConnectivity.size());
 		for (size_t f = 0; f < vecConnectivity.size(); f++) {
 			const Node & node = vecNodes[f];
 
@@ -248,7 +249,8 @@ try {
 			}
 
 			fprintf(fp, "%1.14f,", dLon / M_PI * 180.0);
-			fprintf(fp, "%1.14f", dLat / M_PI * 180.0);
+			fprintf(fp, "%1.14f,", dLat / M_PI * 180.0);
+			fprintf(fp, "%lu", vecConnectivity[f].size());
 
 			std::set<int>::const_iterator iter = vecConnectivity[f].begin();
 			for (; iter != vecConnectivity[f].end(); iter++) {
