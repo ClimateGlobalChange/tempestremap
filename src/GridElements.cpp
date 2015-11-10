@@ -521,10 +521,6 @@ void Mesh::Read(const std::string & strFile) {
 
 		// Check rank
 		NcDim * dimGridRank = ncFile.get_dim("grid_rank");
-		if (dimGridRank->size() != 2) {
-			_EXCEPTION1("Mesh has unexpected grid_rank: Found %i, expected 2",
-				dimGridRank->size());
-		}
 
 		// Get the grid corners
 		NcVar * varGridCornerLat = ncFile.get_var("grid_corner_lat");
