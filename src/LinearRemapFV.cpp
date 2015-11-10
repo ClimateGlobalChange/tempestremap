@@ -269,6 +269,10 @@ void GetAdjacentFaceVectorByEdge(
 					_EXCEPTIONT("Logic error");
 				}
 
+				if (iNewFace == InvalidFace) {
+					continue;
+				}
+
 				// If this is a new Face, insert into vector
 				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
 					vecFaces.push_back(FaceDistancePair(iNewFace, iDistance));
@@ -279,6 +283,10 @@ void GetAdjacentFaceVectorByEdge(
 		}
 
 		setCurrentFaces = setNextFaces;
+	}
+
+	if (vecFaces.size() < nRequiredFaceSetSize) {
+		_EXCEPTION1("Unable to find enough adjacent faces to Face %i to meet required size", iFaceInitial);
 	}
 }
 
@@ -2412,6 +2420,7 @@ void LinearRemapFVtoGLL(
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
 	}
+
 /*
 	// Output mass matrix
 	for (int i = 0; i < nP * nP; i++) {
@@ -2523,6 +2532,10 @@ void LinearRemapFVtoGLL(
 	// Force consistency and conservation
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
 
+		if (vecReverseFaceIx[ixSecond].size() == 0) {
+			continue;
+		}
+
 		DataMatrix<double> dCoeff;
 		dCoeff.Initialize(
 			nP * nP,
@@ -2621,6 +2634,7 @@ void LinearRemapFVtoGLL(
 		_EXCEPTION();
 */
 	}
+
 /*
 	// Check consistency
 	DataMatrix<double> dIntSums;
@@ -2745,6 +2759,12 @@ void LinearRemapFVtoGLL(
 		// Number of adjacent Faces
 		int nAdjFaces = vecAdjFaces.size();
 
+		for (int x = 0; x < nAdjFaces; x++) {
+			if (vecAdjFaces[x].first == (-1)) {
+				_EXCEPTION();
+			}
+		}
+
 		// Build the fit operator
 		DataMatrix<double> dFitArray;
 		DataVector<double> dFitWeights;
@@ -2785,7 +2805,6 @@ void LinearRemapFVtoGLL(
 		}
 		_EXCEPTION();
 */
-
 		// Multiply integration array and fit array
 		DataMatrix<double> dComposedArray;
 		dComposedArray.Initialize(nAdjFaces, nOverlapFaces * nP * nP);
