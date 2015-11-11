@@ -91,6 +91,23 @@ public:
 	}
 };
 
+///	<summary>
+///		The constant function
+///	</summary>
+class TestFunction1 : public TestFunction {
+
+public:
+	///	<summary>
+	///		Evaluate the test function.
+	///	</summary>
+	virtual double operator()(
+		double dLon,
+		double dLat
+	) {
+          return 1;
+	}
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
@@ -233,6 +250,8 @@ try {
 		pTest = new TestFunctionY16b32;
 	} else if (iTestData == 3) {
 		pTest = new TestFunctionVortex;
+	} else if (iTestData == 4) {
+		pTest = new TestFunction1;
 	} else {
 		_EXCEPTIONT("Test index out of range; expected [1,2,3]");
 	}
