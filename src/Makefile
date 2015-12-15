@@ -10,7 +10,12 @@ NETCDF_INCLUDEDIR=/opt/local/include
 NETCDF_LIBDIR=/opt/local/lib
 
 # Library files to include
-LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
+UNAME=$(shell uname)
+ifeq ($(UNAME), Linux)
+	LDFILES= -lnetcdf_c++ -lnetcdf -llapack -lblas -Wl,-rpath=${NETCDF_LIBDIR}
+else
+	LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
+endif
 
 ##############################################################################
 # DO NOT MODIFY BELOW THIS LINE
