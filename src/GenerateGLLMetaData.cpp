@@ -108,8 +108,14 @@ try {
 	// Done
 	AnnounceBanner();
 
+	return (0);
+
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
+	return (-1);
+
+} catch(...) {
+	return (-2);
 }
 }
 

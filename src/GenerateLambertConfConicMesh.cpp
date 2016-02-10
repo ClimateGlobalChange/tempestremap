@@ -314,8 +314,14 @@ try {
 	Announce("Mesh generator exited successfully");
 	AnnounceBanner();
 
+	return (0);
+
 } catch(Exception & e) {
-	std::cout << e.ToString() << std::endl;
+	Announce(e.ToString().c_str());
+	return (-1);
+
+} catch(...) {
+	return (-2);
 }
 }
 

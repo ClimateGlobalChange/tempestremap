@@ -19,6 +19,7 @@
 #include "FiniteElementTools.h"
 #include "GaussLobattoQuadrature.h"
 #include "Exception.h"
+#include "Announce.h"
 
 #include "netcdfcpp.h"
 
@@ -278,8 +279,14 @@ try {
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
+	return (0);
+
 } catch(Exception & e) {
-	std::cout << e.ToString() << std::endl;
+	Announce(e.ToString().c_str());
+	return (-1);
+
+} catch(...) {
+	return (-2);
 }
 }
 
