@@ -974,16 +974,13 @@ void Mesh::Read(const std::string & strFile) {
 			}
 
 			NcVar * varEdgeType = ncFile.get_var(szEdgeType);
-			if (varEdgeType == NULL) {
-				_EXCEPTION2("Exodus Grid file \"%s\" is missing variable "
-						"\"%s\"", strFile.c_str(), szEdgeType);
+			if (varEdgeType != NULL) {
+				varEdgeType->set_cur(0, 0);
+				varEdgeType->get(
+					&(iEdgeType[0][0]),
+					nElementCount,
+					nNodesPerElement);
 			}
-
-			varEdgeType->set_cur(0, 0);
-			varEdgeType->get(
-				&(iEdgeType[0][0]),
-				nElementCount,
-				nNodesPerElement);
 
 			// Load in parent from A grid for all elements in this block
 			char szParentA[ParamLenString];
