@@ -1220,22 +1220,28 @@ void OfflineMap::Apply(
 		if (m_vecTargetDimNames[1] == "lon") {
 			dimLon = dim1;
 		}
-		NcVar * varLon =
-			ncTarget.add_var("lon", ncDouble, dimLon);
-
+		NcVar * varLon = ncTarget.get_var("lon");
 		if (varLon == NULL) {
-			_EXCEPTIONT("Cannot create variable \"lon\" in target file");
+			varLon = ncTarget.add_var("lon", ncDouble, dimLon);
+			if (varLon == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lon\" in target file");
+			}
+
+			varLon->put(
+				&(m_dVectorTargetCenterLon[0]),
+				m_dVectorTargetCenterLon.GetRows());
+
+			varLon->add_att("bounds", "lon_bnds");
+			varLon->add_att("units", "degrees_east");
+			varLon->add_att("axis", "X");
+			varLon->add_att("long_name", "longitude");
+			varLon->add_att("standard_name", "longitude");
+
+		} else {
+			if (varLon->get_dim(0)->size() != dimLon->size()) {
+				_EXCEPTIONT("\"lon\" variable mismatch");
+			}
 		}
-
-		varLon->put(
-			&(m_dVectorTargetCenterLon[0]),
-			m_dVectorTargetCenterLon.GetRows());
-
-		varLon->add_att("bounds", "lon_bnds");
-		varLon->add_att("units", "degrees_east");
-		varLon->add_att("axis", "X");
-		varLon->add_att("long_name", "longitude");
-		varLon->add_att("standard_name", "longitude");
 
 		NcDim * dimLat;
 		if (m_vecTargetDimNames[0] == "lat") {
@@ -1244,26 +1250,33 @@ void OfflineMap::Apply(
 		if (m_vecTargetDimNames[1] == "lat") {
 			dimLat = dim1;
 		}
-		NcVar * varLat =
-			ncTarget.add_var("lat", ncDouble, dimLat);
-
+		NcVar * varLat = ncTarget.get_var("lat");
 		if (varLat == NULL) {
-			_EXCEPTIONT("Cannot create variable \"lat\" in target file");
+			varLat = ncTarget.add_var("lat", ncDouble, dimLat);
+			if (varLat == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lat\" in target file");
+			}
+
+			varLat->put(
+				&(m_dVectorTargetCenterLat[0]),
+				m_dVectorTargetCenterLat.GetRows());
+
+			varLat->add_att("bounds", "lat_bnds");
+			varLat->add_att("units", "degrees_north");
+			varLat->add_att("axis", "Y");
+			varLat->add_att("long_name", "latitude");
+			varLat->add_att("standard_name", "latitude");
+
+		} else {
+			if (varLat->get_dim(0)->size() != dimLat->size()) {
+				_EXCEPTIONT("\"lat\" variable mismatch");
+			}
 		}
-
-		varLat->put(
-			&(m_dVectorTargetCenterLat[0]),
-			m_dVectorTargetCenterLat.GetRows());
-
-		varLat->add_att("bounds", "lat_bnds");
-		varLat->add_att("units", "degrees_north");
-		varLat->add_att("axis", "Y");
-		varLat->add_att("long_name", "latitude");
-		varLat->add_att("standard_name", "latitude");
 
 		// Output bounds variables
 		if ((m_dVectorTargetBoundsLon.GetRows() != 0) &&
-		    (m_dVectorTargetBoundsLat.GetRows() != 0)
+		    (m_dVectorTargetBoundsLat.GetRows() != 0) &&
+			(ncTarget.get_dim("bnds") != NULL)
 		) {
 			NcDim * dimBounds = ncTarget.add_dim("bnds", 2);
 
@@ -1271,7 +1284,8 @@ void OfflineMap::Apply(
 				ncTarget.add_var("lon_bnds", ncDouble, dimLon, dimBounds);
 
 			if (varLonBounds == NULL) {
-				_EXCEPTIONT("Cannot create variable \"lon_bnds\" in target file");
+				_EXCEPTIONT("Cannot create variable \"lon_bnds\""
+					" in target file");
 			}
 
 			varLonBounds->put(&(m_dVectorTargetBoundsLon[0][0]),
@@ -1281,7 +1295,8 @@ void OfflineMap::Apply(
 				ncTarget.add_var("lat_bnds", ncDouble, dimLat, dimBounds);
 
 			if (varLatBounds == NULL) {
-				_EXCEPTIONT("Cannot create variable \"lat_bnds\" in target file");
+				_EXCEPTIONT("Cannot create variable \"lat_bnds\""
+					" in target file");
 			}
 
 			varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
