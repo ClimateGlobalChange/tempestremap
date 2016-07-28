@@ -1570,8 +1570,15 @@ int FindFaceContainingNode(
 	if (ixSourceFaceSeed > meshSource.faces.size()) {
 		_EXCEPTIONT("SourceFaceSeed greater than Source mesh size");
 	}
+	if (ixSourceFaceSeed < 0) {
+		_EXCEPTIONT("SourceFaceSeed less than zero");
+	}
 	if (ixTargetFaceSeed > meshTarget.faces.size()) {
 		_EXCEPTIONT("TargetFaceSeed greater than Target mesh size");
+	}
+	if (ixTargetFaceSeed < 0) {
+		_EXCEPTIONT("TargetFaceSeed less than zero");
+
 	}
 
 	const Node & node =
@@ -1594,6 +1601,10 @@ int FindFaceContainingNode(
 
 		int ixCurrentTargetFace = queueTargetFaces.front();
 		queueTargetFaces.pop();
+
+		if (ixCurrentTargetFace == InvalidFace) {
+			continue;
+		}
 
 		const Face & faceTarget = meshTarget.faces[ixCurrentTargetFace];
 
@@ -1658,7 +1669,8 @@ int FindFaceContainingNode(
 		}
 	}
 
-	_EXCEPTIONT("Unable to find Target Face");
+	return InvalidFace;
+	//_EXCEPTIONT("Unable to find Target Face");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1705,12 +1717,18 @@ void GenerateOverlapMeshFromFace(
 		_EXCEPTIONT("No target face found");
 	}
 */
+
 	int ixCurrentTargetFace =
 		FindFaceContainingNode<MeshUtilitiesFuzzy, Node>(
 			meshSource,
 			meshTarget,
 			ixSourceFace,
 			ixTargetFaceSeed);
+
+	if (ixCurrentTargetFace == InvalidFace) {
+		std::cout << "\tNo overlapping face found" << std::endl;
+		return;
+	}
 
 	std::cout << "\tFirst overlap match " << ixCurrentTargetFace << std::endl;
 /*
@@ -1743,6 +1761,9 @@ void GenerateOverlapMeshFromFace(
 		ixCurrentTargetFace = queueTargetFaces.front();
 		queueTargetFaces.pop();
 
+		if (ixCurrentTargetFace == InvalidFace) {
+			_EXCEPTIONT("Logic error");
+		}
 		const Face & faceTarget = meshTarget.faces[ixCurrentTargetFace];
 
 		// Find the overlap polygon
@@ -1783,6 +1804,10 @@ void GenerateOverlapMeshFromFace(
 
 				} else {
 					_EXCEPTIONT("EdgeMap error");
+				}
+
+				if (iPushFace == InvalidFace) {
+					continue;
 				}
 
 				std::set<int>::const_iterator iterFace =
@@ -1906,7 +1931,6 @@ void GenerateOverlapMesh_v2(
 	// Calculate Face areas
 	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
 	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
