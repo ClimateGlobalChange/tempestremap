@@ -81,7 +81,7 @@ bin_PROGRAMS = GenerateRLLMesh$(EXEEXT) GenerateCSMesh$(EXEEXT) GenerateICOMesh$
 							 GenerateLambertConfConicMesh$(EXEEXT) GenerateOverlapMesh$(EXEEXT) \
 							 GenerateOverlapMesh_v1$(EXEEXT) GenerateGLLMetaData$(EXEEXT) MeshToTxt$(EXEEXT) \
 							 GenerateTestData$(EXEEXT) CalculateDiffNorms$(EXEEXT) \
-							 ApplyOfflineMap$(EXEEXT) GenerateOfflineMap$(EXEEXT) GenerateOfflineMap_v1$(EXEEXT)
+							 ApplyOfflineMap$(EXEEXT) GenerateOfflineMap$(EXEEXT) # GenerateOfflineMap_v1$(EXEEXT)
 
 # DO NOT DELETE
 
