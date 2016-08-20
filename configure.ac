@@ -6,7 +6,7 @@ AC_INIT([TempestRemap], [1.0-beta], [paullrich@ucdavis.edu])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 #AC_CONFIG_SRCDIR([test/optimtest.m])
-AC_CONFIG_HEADERS([TempestConfig.h])
+AC_CONFIG_HEADERS([src/TempestConfig.h])
 
 AM_INIT_AUTOMAKE([subdir-objects])
 LT_INIT

@@ -52,7 +52,8 @@ nobase_libTempestRemap_la_include_HEADERS = \
 	LinearRemapFV.h \
 	MeshUtilitiesFuzzy.h \
 	OverlapFace.h \
-	STLStringHelper.h
+	STLStringHelper.h \
+	TempestConfig.h
 
 # Load system-specific defaults
 #CFLAGS+= -I$(NETCDF_INCLUDEDIR)
@@ -73,15 +74,11 @@ GenerateTestData_SOURCES = GenerateTestData.cpp
 CalculateDiffNorms_SOURCES = CalculateDiffNorms.cpp
 ApplyOfflineMap_SOURCES = ApplyOfflineMap.cpp
 GenerateOfflineMap_SOURCES = GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp OverlapMesh.cpp kdtree.c
-GenerateOfflineMap_v1_SOURCES = GenerateOfflineMap_v1.cpp LinearRemapSE0.cpp LinearRemapFV.cpp
-
-#include Make.defs
+#GenerateOfflineMap_v1_SOURCES = GenerateOfflineMap_v1.cpp LinearRemapSE0.cpp LinearRemapFV.cpp
 
 bin_PROGRAMS = GenerateRLLMesh$(EXEEXT) GenerateCSMesh$(EXEEXT) GenerateICOMesh$(EXEEXT) \
 							 GenerateLambertConfConicMesh$(EXEEXT) GenerateOverlapMesh$(EXEEXT) \
 							 GenerateOverlapMesh_v1$(EXEEXT) GenerateGLLMetaData$(EXEEXT) MeshToTxt$(EXEEXT) \
 							 GenerateTestData$(EXEEXT) CalculateDiffNorms$(EXEEXT) \
 							 ApplyOfflineMap$(EXEEXT) GenerateOfflineMap$(EXEEXT) # GenerateOfflineMap_v1$(EXEEXT)
-
-# DO NOT DELETE
 
