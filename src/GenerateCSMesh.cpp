@@ -129,7 +129,7 @@ void GenerateFacesFromQuad(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int GenerateCSMesh(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -292,6 +292,7 @@ try {
 } catch(...) {
 	return (-2);
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

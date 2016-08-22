@@ -22,7 +22,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void ParseVariableList(
+static void ParseVariableList(
 	const std::string & strVariables,
 	std::vector< std::string > & vecVariableStrings
 ) {
@@ -55,7 +55,7 @@ void ParseVariableList(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int ApplyOfflineMap(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -230,6 +230,7 @@ try {
 } catch(...) {
 	return (-2);
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

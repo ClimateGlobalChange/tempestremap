@@ -27,7 +27,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int GenerateOverlapMesh_v1(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -146,6 +146,7 @@ try {
 } catch(...) {
 	return (-2);
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

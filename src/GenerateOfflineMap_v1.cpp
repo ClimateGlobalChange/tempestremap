@@ -33,7 +33,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void ParseVariableList(
+static void ParseVariableList(
 	const std::string & strVariables,
 	std::vector< std::string > & vecVariableStrings
 ) {
@@ -105,7 +105,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int GenerateOfflineMap_v1(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -699,6 +699,7 @@ try {
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -369,6 +369,7 @@ public:
 ///	<summary>
 ///		Parse command line parameters.
 ///	</summary>
+inline
 void _ParseCommandLine(
 	int argc,
 	char ** argv,

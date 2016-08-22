@@ -459,7 +459,7 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int GenerateICOMesh(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -505,6 +505,7 @@ try {
 } catch(Exception & e) {
 	std::cout << e.ToString() << std::endl;
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
