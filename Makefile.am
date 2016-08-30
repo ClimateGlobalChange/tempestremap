@@ -58,6 +58,7 @@ nobase_libTempestRemap_la_include_HEADERS = \
 	src/MeshUtilitiesFuzzy.h \
 	src/OverlapFace.h \
 	src/STLStringHelper.h \
+	src/TempestRemapAPI.h \
 	src/TempestConfig.h
 
 # Load system-specific defaults
