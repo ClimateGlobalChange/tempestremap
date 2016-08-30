@@ -120,7 +120,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int GenerateOfflineMap(int argc, char** argv) {
+extern "C" int GenerateOfflineMap(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -829,3 +829,14 @@ try {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+
+	// For now, this is just a placeholder; need to refactor
+	return GenerateOfflineMap(argc, argv);
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

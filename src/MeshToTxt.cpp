@@ -22,7 +22,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int MeshToTxt(int argc, char** argv) {
+int main(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 

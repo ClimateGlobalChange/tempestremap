@@ -27,39 +27,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int GenerateOverlapMesh(int argc, char** argv) {
+extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
 
 	NcError error(NcError::silent_nonfatal);
 
+	// Construct the overlap mesh
+	Mesh *meshOverlap = new Mesh();
+
 try {
-
-	// Input mesh A
-	std::string strMeshA;
-
-	// Input mesh B
-	std::string strMeshB;
-
-	// Output mesh file
-	std::string strOverlapMesh;
-
-	// Overlap grid generation method
-	std::string strMethod;
-
-	// No validation of the meshes
-	bool fNoValidate;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMeshA, "a", "");
-		CommandLineString(strMeshB, "b", "");
-		CommandLineString(strOverlapMesh, "out", "overlap.g");
-		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
-		CommandLineBool(fNoValidate, "novalidate");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
 
 	// Method string
 	OverlapMeshMethod method;
@@ -109,8 +84,6 @@ try {
 	meshB.ConstructEdgeMap();
 	AnnounceEndBlock(NULL);
 
-	// 
-	Mesh meshOverlap;
 /*
 	GenerateOverlapMeshFromFace(
 		meshA,
@@ -120,7 +93,7 @@ try {
 		method);
 */
 	AnnounceStartBlock("Construct overlap mesh");
-	GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method);
+	GenerateOverlapMesh_v2(meshA, meshB, *meshOverlap, method);
 	AnnounceEndBlock(NULL);
 /*
 	// Construct the reverse node array on both meshes
@@ -146,12 +119,8 @@ try {
 */
 	// Write the overlap mesh
 	AnnounceStartBlock("Writing overlap mesh");
-	meshOverlap.Write(strOverlapMesh.c_str());
+	meshOverlap->Write(strOverlapMesh.c_str());
 	AnnounceEndBlock(NULL);
-
-	AnnounceBanner();
-
-	return (0);
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
@@ -160,8 +129,53 @@ try {
 } catch(...) {
 	return (-2);
 }
-	return 0;
+	return meshOverlap;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+
+	// Input mesh A
+	std::string strMeshA;
+
+	// Input mesh B
+	std::string strMeshB;
+
+	// Output mesh file
+	std::string strOverlapMesh;
+
+	// Overlap grid generation method
+	std::string strMethod;
+
+	// No validation of the meshes
+	bool fNoValidate;
+
+	// Parse the command line
+	BeginCommandLine()
+		CommandLineString(strMeshA, "a", "");
+		CommandLineString(strMeshB, "b", "");
+		CommandLineString(strOverlapMesh, "out", "overlap.g");
+		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
+		CommandLineBool(fNoValidate, "novalidate");
+
+		ParseCommandLine(argc, argv);
+	EndCommandLine(argv)
+
+	AnnounceBanner();
+
+	// Call the actual mesh generator
+	Mesh* mesh = GenerateOverlapMesh(strMeshA, strMeshB, strOverlapMesh, strMethod, fNoValidate);
+	if (mesh) delete mesh;
+	else return (-1);
+
+	AnnounceBanner();
+
+	return 0;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

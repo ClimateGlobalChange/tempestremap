@@ -55,67 +55,13 @@ static void ParseVariableList(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int ApplyOfflineMap(int argc, char** argv) {
+extern "C" int ApplyOfflineMap( std::string strInputData, std::string strInputMap, std::string strVariables, std::string strInputData2, 
+								std::string strInputMap2, std::string strVariables2, std::string strOutputData, std::string strNColName, 
+								bool fOutputDouble, std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
-
-	// Input data file
-	std::string strInputData;
-
-	// Input map file
-	std::string strInputMap;
-
-	// List of variables
-	std::string strVariables;
-
-	// Input data file (second instance)
-	std::string strInputData2;
-
-	// Input map file (second instance)
-	std::string strInputMap2;
-
-	// List of variables (second instance)
-	std::string strVariables2;
-
-	// Output data file
-	std::string strOutputData;
-
-	// Name of the ncol variable
-	std::string strNColName;
-
-	// Output as double
-	bool fOutputDouble;
-
-	// List of variables to preserve
-	std::string strPreserveVariables;
-
-	// Preserve all non-remapped variables
-	bool fPreserveAll;
-
-	// Fill value override
-	double dFillValueOverride;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strInputData, "in_data", "");
-		CommandLineString(strInputMap, "map", "");
-		CommandLineString(strVariables, "var", "");
-		CommandLineString(strInputData2, "in_data2", "");
-		CommandLineString(strInputMap2, "map2", "");
-		CommandLineString(strVariables2, "var2", "");
-		CommandLineString(strOutputData, "out_data", "");
-		CommandLineString(strNColName, "ncol_name", "ncol");
-		CommandLineBool(fOutputDouble, "out_double");
-		CommandLineString(strPreserveVariables, "preserve", "");
-		CommandLineBool(fPreserveAll, "preserveall");
-		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
 
 	// Check parameters
 	if (strInputMap == "") {
@@ -176,7 +122,7 @@ try {
 		false);
 	AnnounceEndBlock(NULL);
 
-	if (strInputMap2 != "") {
+	if (strInputMap2.size()) {
 		AnnounceStartBlock("Applying second offline map to data");
 
 		// OfflineMap
@@ -219,10 +165,6 @@ try {
 		AnnounceEndBlock(NULL);
 	}
 
-	AnnounceBanner();
-
-	return (0);
-
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
 	return (-1);
@@ -235,4 +177,78 @@ try {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
 
+int main(int argc, char** argv) {
+
+	// Input data file
+	std::string strInputData;
+
+	// Input map file
+	std::string strInputMap;
+
+	// List of variables
+	std::string strVariables;
+
+	// Input data file (second instance)
+	std::string strInputData2;
+
+	// Input map file (second instance)
+	std::string strInputMap2;
+
+	// List of variables (second instance)
+	std::string strVariables2;
+
+	// Output data file
+	std::string strOutputData;
+
+	// Name of the ncol variable
+	std::string strNColName;
+
+	// Output as double
+	bool fOutputDouble;
+
+	// List of variables to preserve
+	std::string strPreserveVariables;
+
+	// Preserve all non-remapped variables
+	bool fPreserveAll;
+
+	// Fill value override
+	double dFillValueOverride;
+
+	// Parse the command line
+	BeginCommandLine()
+		CommandLineString(strInputData, "in_data", "");
+		CommandLineString(strInputMap, "map", "");
+		CommandLineString(strVariables, "var", "");
+		CommandLineString(strInputData2, "in_data2", "");
+		CommandLineString(strInputMap2, "map2", "");
+		CommandLineString(strVariables2, "var2", "");
+		CommandLineString(strOutputData, "out_data", "");
+		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineBool(fOutputDouble, "out_double");
+		CommandLineString(strPreserveVariables, "preserve", "");
+		CommandLineBool(fPreserveAll, "preserveall");
+		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
+
+		ParseCommandLine(argc, argv);
+	EndCommandLine(argv)
+
+	AnnounceBanner();
+
+	// Calculate metadata
+	int err = ApplyOfflineMap ( strInputData, strInputMap, strVariables, strInputData2, 
+								strInputMap2, strVariables2, strOutputData, strNColName, 
+								fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride );
+	if (err) exit(err);
+
+	// Done
+	AnnounceBanner();
+
+	return 0;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

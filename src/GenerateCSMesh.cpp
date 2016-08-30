@@ -127,30 +127,24 @@ void GenerateFacesFromQuad(
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
 
-int GenerateCSMesh(int argc, char** argv) {
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Input Parameters:
+// Number of elements in mesh: int nResolution;
+// Alternate arrangement: bool fAlt;
+// Output filename:  std::string strOutputFile;
+// 
+// Output Parameters: Mesh*
+// 
+extern "C" Mesh* GenerateCSMesh(int nResolution, bool fAlt, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
+	// Generate the mesh
+	Mesh *mesh = new Mesh();
+
 try {
-	// Number of elements in mesh
-	int nResolution;
-
-	// Alternate arrangement
-	bool fAlt;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nResolution, "res", 10);
-		CommandLineBool(fAlt, "alt");
-		CommandLineString(strOutputFile, "file", "outCSMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
 
 	// Announce
 	std::cout << "=========================================================";
@@ -158,11 +152,8 @@ try {
 	std::cout << "..Generating mesh with resolution [" << nResolution << "]";
 	std::cout << std::endl;
 
-	// Generate the mesh
-	Mesh mesh;
-
-	NodeVector & nodes = mesh.nodes;
-	FaceVector & faces = mesh.faces;
+	NodeVector & nodes = mesh->nodes;
+	FaceVector & faces = mesh->faces;
 
 	// Generate corner points
 	Real dInvDeltaX = 1.0 / sqrt(3.0);
@@ -271,12 +262,15 @@ try {
 		}
 	}
 
-	// Announce
-	std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
-	std::cout << std::endl;
-
 	// Output the mesh
-	mesh.Write(strOutputFile);
+	if (strOutputFile.size()) {
+
+		// Announce
+		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
+		std::cout << std::endl;
+
+		mesh->Write(strOutputFile);
+	}
 
 	// Announce
 	std::cout << "..Mesh generator exited successfully" << std::endl;
@@ -292,8 +286,41 @@ try {
 } catch(...) {
 	return (-2);
 }
-	return 0;
+	return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+
+   // Number of elements in mesh
+   int nResolution;
+
+   // Alternate arrangement
+   bool fAlt;
+
+   // Output filename
+   std::string strOutputFile;
+
+	// Parse the command line
+	BeginCommandLine()
+		CommandLineInt(nResolution, "res", 10);
+		CommandLineBool(fAlt, "alt");
+		CommandLineString(strOutputFile, "file", "outCSMesh.g");
+
+		ParseCommandLine(argc, argv);
+	EndCommandLine(argv)
+
+	// Call the actual mesh generator
+	Mesh* mesh = GenerateCSMesh(nResolution, fAlt, strOutputFile);
+	if (mesh) delete mesh;
+	else return (-1);
+
+	return 0;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

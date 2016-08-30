@@ -459,12 +459,50 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int GenerateICOMesh(int argc, char** argv) {
+extern "C" Mesh* GenerateICOMesh(int nResolution, bool fDual, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
+	// Generate the mesh
+	Mesh *mesh = new Mesh();
+
 try {
 
+
+	// Generate Mesh
+	AnnounceBanner();
+	AnnounceStartBlock("Generating Mesh");
+	GenerateIcosahedralQuadGrid(nResolution, mesh->nodes, mesh->faces);
+	AnnounceEndBlock("Done");
+
+	// Generate the dual grid
+	if (fDual) {
+		Dual(*mesh);
+	}
+
+	// Output the mesh
+	if (strOutputFile.size()) {
+		AnnounceStartBlock("Writing Mesh to file");
+		Announce("Mesh size: Nodes [%i] Elements [%i]",
+			mesh->nodes.size(), mesh->faces.size());
+
+		mesh->Write(strOutputFile);
+		
+		AnnounceEndBlock("Done");
+	}
+
+} catch(Exception & e) {
+	std::cout << e.ToString() << std::endl;
+}
+	return mesh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+    
 	// Resolution
 	int nResolution;
 
@@ -483,31 +521,14 @@ try {
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
-	// Generate Mesh
-	AnnounceBanner();
-	AnnounceStartBlock("Generating Mesh");
-	Mesh mesh;
-	GenerateIcosahedralQuadGrid(nResolution, mesh.nodes, mesh.faces);
-	AnnounceEndBlock("Done");
+	// Call the actual mesh generator
+	Mesh* mesh = GenerateICOMesh(nResolution, fDual, strOutputFile);
+	if (mesh) delete mesh;
+	else return (-1);
 
-	// Generate the dual grid
-	if (fDual) {
-		Dual(mesh);
-	}
-
-	// Output the mesh
-	AnnounceStartBlock("Writing Mesh to file");
-	Announce("Mesh size: Nodes [%i] Elements [%i]",
-		mesh.nodes.size(), mesh.faces.size());
-	mesh.Write(strOutputFile);
-	AnnounceEndBlock("Done");
-
-} catch(Exception & e) {
-	std::cout << e.ToString() << std::endl;
-}
 	return 0;
 }
 
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
-
-

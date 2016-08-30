@@ -26,56 +26,18 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int GenerateLambertConfConicMesh(int argc, char** argv) {
+extern "C" Mesh* GenerateLambertConfConicMesh(  int nNCol, int nNRow, 
+												double dLon0, double dLat0, 
+												double dLat1, double dLat2, 
+												double dXLL, double dYLL, double dDX, 
+												std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
+	// Generate the mesh
+	Mesh *mesh = new Mesh();
+
 try {
-	// Number of columns in mesh
-	int nNCol;
-
-	// Number of rows in mesh
-	int nNRow;
-
-	// Reference longitude
-	double dLon0;
-
-	// Reference latitude
-	double dLat0;
-
-	// First standard parallel
-	double dLat1;
-
-	// Second standard parallel
-	double dLat2;
-
-	// Meters to bottom-left X position
-	double dXLL;
-
-	// Meters to bottom-left Y position
-	double dYLL;
-
-	// Cell size
-	double dDX;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nNCol, "ncol", 5268);
-		CommandLineInt(nNRow, "nrow", 4823);
-		CommandLineDouble(dLon0, "lon0", -100.0);
-		CommandLineDouble(dLat0, "lat0", 42.5);
-		CommandLineDouble(dLat1, "lat1", 25.0);
-		CommandLineDouble(dLat2, "lat2", 60.0);
-		CommandLineDoubleD(dXLL,  "xll", -2015000.0, "(meters)");
-		CommandLineDoubleD(dYLL,  "yll", 1785000.0, "(meters)");
-		CommandLineDoubleD(dDX,   "dx", 1000.0, "(meters)");
-		CommandLineString(strOutputFile, "file", "outLCCMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
 
 	// Verify latitude box is increasing
 	if (dLat1 >= dLat2) {
@@ -87,9 +49,6 @@ try {
 	if (dLat0 >= dLat2) {
 		_EXCEPTIONT("--lat0 must be less than --lat2");
 	}
-
-	// Announce
-	AnnounceBanner();
 
 	// Convert latitude and longitude to radians
 	dLon0 *= M_PI / 180.0;
@@ -110,11 +69,8 @@ try {
 
 	double dRho0 = dF * pow(1.0 / tan(0.25 * M_PI + 0.5 * dLat0), dN);
 
-	// Generate the mesh
-	Mesh mesh;
-
-	NodeVector & nodes = mesh.nodes;
-	FaceVector & faces = mesh.faces;
+	NodeVector & nodes = mesh->nodes;
+	FaceVector & faces = mesh->faces;
 
 	// Announce
 	AnnounceStartBlock("Distributing nodes");
@@ -155,7 +111,7 @@ try {
 		nodes.push_back(Node(dX, dY, dZ));
 	}
 	}
-	return (-1);
+	return NULL;
 
 	// Announce
 	AnnounceEndBlock("Done");
@@ -295,24 +251,25 @@ try {
 		}
 	}
 */
-	// Announce
-	Announce("Writing mesh to file [%s]", strOutputFile.c_str());
+	if (strOutputFile.size()) {
+		// Announce
+		Announce("Writing mesh to file [%s]", strOutputFile.c_str());
 
-	// Output the mesh
-	mesh.Write(strOutputFile);
+		// Output the mesh
+		mesh->Write(strOutputFile);
 
-	// Add rectilinear properties
-	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
-	ncOutput.add_att("rectilinear", "true");
-	ncOutput.add_att("rectilinear_dim0_size", nNRow);
-	ncOutput.add_att("rectilinear_dim1_size", nNCol);
-	ncOutput.add_att("rectilinear_dim0_name", "y");
-	ncOutput.add_att("rectilinear_dim1_name", "x");
-	ncOutput.close();
+		// Add rectilinear properties
+		NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
+		ncOutput.add_att("rectilinear", "true");
+		ncOutput.add_att("rectilinear_dim0_size", nNRow);
+		ncOutput.add_att("rectilinear_dim1_size", nNCol);
+		ncOutput.add_att("rectilinear_dim0_name", "y");
+		ncOutput.add_att("rectilinear_dim1_name", "x");
+		ncOutput.close();
+	}
 
 	// Announce
 	Announce("Mesh generator exited successfully");
-	AnnounceBanner();
 
 	return (0);
 
@@ -323,8 +280,75 @@ try {
 } catch(...) {
 	return (-2);
 }
-	return 0;
+	return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+
+	// Number of columns in mesh
+	int nNCol;
+
+	// Number of rows in mesh
+	int nNRow;
+
+	// Reference longitude
+	double dLon0;
+
+	// Reference latitude
+	double dLat0;
+
+	// First standard parallel
+	double dLat1;
+
+	// Second standard parallel
+	double dLat2;
+
+	// Meters to bottom-left X position
+	double dXLL;
+
+	// Meters to bottom-left Y position
+	double dYLL;
+
+	// Cell size
+	double dDX;
+
+	// Output filename
+	std::string strOutputFile;
+
+	// Parse the command line
+	BeginCommandLine()
+		CommandLineInt(nNCol, "ncol", 5268);
+		CommandLineInt(nNRow, "nrow", 4823);
+		CommandLineDouble(dLon0, "lon0", -100.0);
+		CommandLineDouble(dLat0, "lat0", 42.5);
+		CommandLineDouble(dLat1, "lat1", 25.0);
+		CommandLineDouble(dLat2, "lat2", 60.0);
+		CommandLineDoubleD(dXLL,  "xll", -2015000.0, "(meters)");
+		CommandLineDoubleD(dYLL,  "yll", 1785000.0, "(meters)");
+		CommandLineDoubleD(dDX,   "dx", 1000.0, "(meters)");
+		CommandLineString(strOutputFile, "file", "outLCCMesh.g");
+
+		ParseCommandLine(argc, argv);
+	EndCommandLine(argv)
+
+	// Announce
+	AnnounceBanner();
+
+	// Calculate metadata
+	Mesh* mesh = GenerateLambertConfConicMesh(nNCol, nNRow, dLon0, dLat0, dLat1, dLat2, dXLL, dYLL, dDX, strOutputFile);
+	if (mesh) delete mesh;
+	else return (-1);
+
+	// Done
+	AnnounceBanner();
+
+	return 0;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

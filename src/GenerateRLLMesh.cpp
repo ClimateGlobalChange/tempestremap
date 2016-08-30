@@ -28,50 +28,29 @@
 
 #define ONLY_GREAT_CIRCLES
 
-///////////////////////////////////////////////////////////////////////////////
 
-int GenerateRLLMesh(int argc, char** argv) {
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Input Parameters:
+// Number of longitudes in mesh: int nLongitudes;
+// Number of latitudes in mesh: int nLatitudes;
+// First longitude line on mesh: double dLonBegin;
+// Last longitude line on mesh: double dLonEnd;
+// First latitude line on mesh: double dLatBegin;
+// Last latitude line on mesh: double dLatEnd;
+// Flip latitude and longitude dimension in FaceVector ordering: bool fFlipLatLon;
+// Output filename:  std::string strOutputFile;
+// 
+// Output Parameters: Mesh*
+// 
+extern "C" Mesh* GenerateRLLMesh(int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
+	// Generate the mesh
+	Mesh *mesh = new Mesh();
+
 try {
-	// Number of longitudes in mesh
-	int nLongitudes;
-
-	// Number of latitudes in mesh
-	int nLatitudes;
-
-	// First longitude line on mesh
-	double dLonBegin;
-
-	// Last longitude line on mesh
-	double dLonEnd;
-
-	// First latitude line on mesh
-	double dLatBegin;
-
-	// Last latitude line on mesh
-	double dLatEnd;
-
-	// Flip latitude and longitude dimension in FaceVector ordering
-	bool fFlipLatLon;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nLongitudes, "lon", 128);
-		CommandLineInt(nLatitudes, "lat", 64);
-		CommandLineDouble(dLonBegin, "lon_begin", 0.0);
-		CommandLineDouble(dLonEnd, "lon_end", 360.0);
-		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
-		CommandLineDouble(dLatEnd, "lat_end", 90.0);
-		CommandLineBool(fFlipLatLon, "flip");
-		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
 
 	// Verify latitude box is increasing
 	if (dLatBegin >= dLatEnd) {
@@ -101,18 +80,15 @@ try {
 	// Check parameters
 	if (nLatitudes < 2) {
 		std::cout << "Error: At least 2 latitudes are required." << std::endl;
-		return (-1);
+		return NULL;
 	}
 	if (nLongitudes < 2) {
 		std::cout << "Error: At least 2 longitudes are required." << std::endl;
-		return (-1);
+		return NULL;
 	}
 
-	// Generate the mesh
-	Mesh mesh;
-
-	NodeVector & nodes = mesh.nodes;
-	FaceVector & faces = mesh.faces;
+	NodeVector & nodes = mesh->nodes;
+	FaceVector & faces = mesh->faces;
 
 	// Change in longitude
 	double dDeltaLon = dLonEnd - dLonBegin;
@@ -233,38 +209,45 @@ try {
 
 	// Reorder the faces
 	if (fFlipLatLon) {
-		FaceVector faceTemp = mesh.faces;
-		mesh.faces.clear();
+		FaceVector faceTemp = mesh->faces;
+		mesh->faces.clear();
 		for (int i = 0; i < nLongitudes; i++) {
 		for (int j = 0; j < nLatitudes; j++) {
-			mesh.faces.push_back(faceTemp[j * nLongitudes + i]);
+			mesh->faces.push_back(faceTemp[j * nLongitudes + i]);
 		}
 		}
 	}
-
-	// Announce
-	std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
-	std::cout << std::endl;
 
 	// Output the mesh
-	mesh.Write(strOutputFile);
+	if (strOutputFile.size()) {
 
-	// Add rectilinear properties
-	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
-	ncOutput.add_att("rectilinear", "true");
+		// Announce
+		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
+		std::cout << std::endl;
 
-	if (fFlipLatLon) {
-		ncOutput.add_att("rectilinear_dim0_size", nLongitudes);
-		ncOutput.add_att("rectilinear_dim1_size", nLatitudes);
-		ncOutput.add_att("rectilinear_dim0_name", "lon");
-		ncOutput.add_att("rectilinear_dim1_name", "lat");
-	} else {
-		ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
-		ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
-		ncOutput.add_att("rectilinear_dim0_name", "lat");
-		ncOutput.add_att("rectilinear_dim1_name", "lon");
+		mesh->Write(strOutputFile);
+
+		// Add rectilinear properties
+		if (!fIncludeSouthPole) {
+			nLatitudes--;
+		}
+
+		NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
+		ncOutput.add_att("rectilinear", "true");
+
+		if (fFlipLatLon) {
+			ncOutput.add_att("rectilinear_dim0_size", nLongitudes);
+			ncOutput.add_att("rectilinear_dim1_size", nLatitudes);
+			ncOutput.add_att("rectilinear_dim0_name", "lon");
+			ncOutput.add_att("rectilinear_dim1_name", "lat");
+		} else {
+			ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
+			ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
+			ncOutput.add_att("rectilinear_dim0_name", "lat");
+			ncOutput.add_att("rectilinear_dim1_name", "lon");
+		}
+		ncOutput.close();
 	}
-	ncOutput.close();
 
 	// Announce
 	std::cout << "..Mesh generator exited successfully" << std::endl;
@@ -280,8 +263,60 @@ try {
 } catch(...) {
 	return (-2);
 }
-	return 0;
+	return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+    // Number of longitudes in mesh
+	int nLongitudes;
+
+	// Number of latitudes in mesh
+	int nLatitudes;
+
+	// First longitude line on mesh
+	double dLonBegin;
+
+	// Last longitude line on mesh
+	double dLonEnd;
+
+	// First latitude line on mesh
+	double dLatBegin;
+
+	// Last latitude line on mesh
+	double dLatEnd;
+
+	// Flip latitude and longitude dimension in FaceVector ordering
+	bool fFlipLatLon;
+
+	// Output filename
+	std::string strOutputFile;
+
+	// Parse the command line
+	BeginCommandLine()
+		CommandLineInt(nLongitudes, "lon", 128);
+		CommandLineInt(nLatitudes, "lat", 64);
+		CommandLineDouble(dLonBegin, "lon_begin", 0.0);
+		CommandLineDouble(dLonEnd, "lon_end", 360.0);
+		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
+		CommandLineDouble(dLatEnd, "lat_end", 90.0);
+		CommandLineBool(fFlipLatLon, "flip");
+		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
+
+		ParseCommandLine(argc, argv);
+	EndCommandLine(argv)
+
+	// Call the actual mesh generator
+	Mesh* mesh = GenerateRLLMesh(nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, strOutputFile);
+	if (mesh) delete mesh;
+	else return (-1);
+
+	return 0;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
