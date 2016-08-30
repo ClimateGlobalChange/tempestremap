@@ -255,7 +255,7 @@ void ApplyInverseMap(
 double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
-	bool fBubble,
+	int fBubble,
 	DataMatrix3D<int> & dataGLLnodes,
 	DataMatrix3D<double> & dataGLLJacobian
 ) {
@@ -273,6 +273,15 @@ double GenerateMetaData(
 	DataVector<double> dG;
 	DataVector<double> dW;
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+
+	double su_ =0;
+	for(int i = 0; i < nP; i++)
+		for (int j = 0; j < nP; j++){
+			su_ += dW[i]*dW[j];
+			std::cout << "\n HEYYYYYYYYYYYYY " << dW[i] << "  "<< dW[j] <<"\n";
+		}
+	std::cout << "HEYYYYYYYYYYYYY sum of weights " <<su_ <<"\n";
+
 
 	// Accumulated Jacobian
 	double dAccumulatedJacobian = 0.0;
@@ -421,18 +430,52 @@ double GenerateMetaData(
 		}
 		}
 
+
+		std::cout << "fbubble ? " << fBubble << "\n";
+
 		// Apply bubble adjustment to area
 		if (fBubble && (dFaceNumericalArea != mesh.vecFaceArea[k])) {
-			double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
-			for (int j = 0; j < nP; j++) {
-			for (int i = 0; i < nP; i++) {
-				dataGLLJacobian[j][i][k] +=
-					dMassDifference * dW[i] * dW[j];
- 			}
-			}
 
-			dFaceNumericalArea += dMassDifference;
-		}
+			//original code
+			if( fBubble == 1 ){
+			    double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
+			    for (int j = 0; j < nP; j++) {
+			        for (int i = 0; i < nP; i++) {
+				        dataGLLJacobian[j][i][k] +=
+					        dMassDifference * dW[i] * dW[j];
+ 			        }
+			    }
+
+			    dFaceNumericalArea += dMassDifference;
+			}// if fBubble == 1
+			if( fBubble == 2 ){
+			    double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
+			    double loc_sum = 0;
+			    for (int j = 1; j < nP-1; j++)
+			        for (int i = 1; i < nP-1; i++)
+				        loc_sum += dataGLLJacobian[i][j][k];
+
+			    //get a check that loc_sum is not too small
+			    if ( std::abs(loc_sum) < 1e-15 ) {
+					_EXCEPTIONT("fBubble=2 correction cannot be performed, sum of inner weights is too small.");
+				}
+			    loc_sum = dMassDifference / loc_sum;
+			    for (int j = 1; j < nP-1; j++)
+			        for (int i = 1; i < nP-1; i++)
+				        dataGLLJacobian[j][i][k] *= 1 + loc_sum;
+
+			    double newmass = 0;
+			    for (int j = 0; j < nP; j++)
+			        for (int i = 0; i < nP; i++)
+				        newmass += dataGLLJacobian[j][i][k];
+
+			    std::cout << "New mass  -  true mass " << newmass - mesh.vecFaceArea[k] << "\n";
+
+			    std::cout << "New mass = " << newmass << ", true mass = " << mesh.vecFaceArea[k] << "\n";
+
+			    dFaceNumericalArea += dMassDifference;
+			}// if fBubble == 2
+		}//if fBubble and ...
 
 		// Accumulate area from element
 		dAccumulatedJacobian += dFaceNumericalArea;

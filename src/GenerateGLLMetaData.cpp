@@ -37,7 +37,7 @@ try {
 	int nP;
 
 	// Use of bubble to adjust areas
-	bool fBubble;
+	int fBubble;
 
 	// Output metadata file
 	std::string strOutput;

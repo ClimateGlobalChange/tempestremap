@@ -140,7 +140,7 @@ try {
 	int nPout;
 
 	// Use bubble on interior of spectral element nodes
-	bool fBubble;
+	int fBubble;
 
 	// Enforce monotonicity
 	bool fMonotone;
@@ -189,7 +189,10 @@ try {
 		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fBubble, "bubble");
+		//0 for no bubble correction,
+		//1 for old bubble correction,
+		//2 is for homme 'epsilon-bubble correction'
+		CommandLineInt(fBubble, "bubble", 0);
 		CommandLineBool(fMonotone, "mono");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
