@@ -23,12 +23,11 @@ libTempestRemap_la_SOURCES = \
 	src/FiniteElementTools.cpp \
 	src/NetCDFUtilities.cpp \
 	src/OfflineMap.cpp \
-	src/TriangularQuadrature.cpp
 	src/TriangularQuadrature.cpp \
 	src/kdtree.c
 
 # The list of header files which are to be installed 
-nobase_libTempestRemap_la_include_HEADERS = \
+libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
 	src/DataVector.h \
 	src/FixedPoint.h \
@@ -104,14 +103,14 @@ bin_PROGRAMS += GenerateCSMesh GenerateRLLMesh GenerateICOMesh \
 else
 
 EXTRA_LIB_SRCS = \
-	GenerateRLLMesh.cpp \
-	GenerateCSMesh.cpp \
-	GenerateGLLMetaData.cpp \
-	GenerateOfflineMap.cpp LinearRemapSE0.cpp LinearRemapFV.cpp OverlapMesh.cpp \
-	MeshToTxt.cpp \
-	GenerateOverlapMesh.cpp GenerateOverlapMesh_v1.cpp \
-	GenerateICOMesh.cpp GenerateLambertConfConicMesh.cpp \
-	ApplyOfflineMap.cpp
+	src/GenerateRLLMesh.cpp \
+	src/GenerateCSMesh.cpp \
+	src/GenerateICOMesh.cpp src/GenerateLambertConfConicMesh.cpp \
+	src/GenerateGLLMetaData.cpp \
+	src/GenerateOfflineMap.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp \
+	src/GenerateOverlapMesh.cpp src/GenerateOverlapMesh_v1.cpp \
+	src/ApplyOfflineMap.cpp
+
 libTempestRemap_la_SOURCES += $(EXTRA_LIB_SRCS)
 
 endif

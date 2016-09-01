@@ -85,14 +85,12 @@ try {
 		varJacobian->put(&(dataGLLJacobian[0][0][0]), nP, nP, nElements);
 	}
 
-	return (0);
-
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
 	return meshInput;
 }

@@ -277,14 +277,12 @@ try {
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
-	return (0);
-
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
 	return mesh;
 }
