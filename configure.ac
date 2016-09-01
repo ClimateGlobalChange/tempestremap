@@ -1,6 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-
+# Usage: autoreconf -fi
+#
 AC_PREREQ([2.69])
 AC_INIT([TempestRemap], [1.0-beta], [paullrich@ucdavis.edu])
 AC_CONFIG_AUX_DIR([config])
@@ -52,11 +53,6 @@ AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset pow sqrt])
 
-#CPPFLAGS = $(CPPFLAGS) -I$(NETCDF_INCLUDEDIR)
-#LDFLAGS = $(LDFLAGS) -L$(NETCDF_LIBDIR)
-
-AC_CONFIG_FILES([Makefile
-                 src/Makefile])
-
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
