@@ -29,7 +29,7 @@ extern "C" {
 
 	// Compute the overlap mesh given a source and target mesh objects
 	// An overload method which takes as arguments the source and target meshes that are pre-loaded into memory
-	// Mesh* GenerateOverlapMesh_IM(Mesh* meshA, Mesh* meshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);
+    Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);
 
 	// New version of the implementation to compute the overlap mesh given a source and target mesh file names
 	Mesh* GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);

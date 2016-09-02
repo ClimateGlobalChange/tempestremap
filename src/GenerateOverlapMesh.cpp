@@ -27,7 +27,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+extern "C" Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -47,32 +47,6 @@ try {
 		method = OverlapMeshMethod_Mixed;
 	} else {
 		_EXCEPTIONT("Invalid \"method\" value");
-	}
-
-	// Load input mesh
-	AnnounceStartBlock("Loading mesh A");
-	Mesh meshA(strMeshA);
-	meshA.RemoveZeroEdges();
-	AnnounceEndBlock(NULL);
-
-	// Validate mesh
-	if (!fNoValidate) {
-		AnnounceStartBlock("Validate mesh A");
-		meshA.Validate();
-		AnnounceEndBlock(NULL);
-	}
-
-	// Load output mesh
-	AnnounceStartBlock("Loading mesh B");
-	Mesh meshB(strMeshB);
-	meshB.RemoveZeroEdges();
-	AnnounceEndBlock(NULL);
-
-	// Validate mesh
-	if (!fNoValidate) {
-		AnnounceStartBlock("Validate mesh B");
-		meshB.Validate();
-		AnnounceEndBlock(NULL);
 	}
 
 	// Construct the edge map on both meshes
@@ -130,6 +104,54 @@ try {
 	return (0);
 }
 	return meshOverlap;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+
+    NcError error(NcError::silent_nonfatal);
+
+    Mesh* meshOverlap = NULL;
+
+try {
+
+    // Load input mesh
+    AnnounceStartBlock("Loading mesh A");
+    Mesh meshA(strMeshA);
+    meshA.RemoveZeroEdges();
+    AnnounceEndBlock(NULL);
+
+    // Validate mesh
+    if (!fNoValidate) {
+        AnnounceStartBlock("Validate mesh A");
+        meshA.Validate();
+        AnnounceEndBlock(NULL);
+    }
+
+    // Load output mesh
+    AnnounceStartBlock("Loading mesh B");
+    Mesh meshB(strMeshB);
+    meshB.RemoveZeroEdges();
+    AnnounceEndBlock(NULL);
+
+    // Validate mesh
+    if (!fNoValidate) {
+        AnnounceStartBlock("Validate mesh B");
+        meshB.Validate();
+        AnnounceEndBlock(NULL);
+    }
+
+    meshOverlap = GenerateOverlapWithMeshes(meshA, meshB, strOverlapMesh, strMethod, fNoValidate);
+
+} catch(Exception & e) {
+    Announce(e.ToString().c_str());
+    return (0);
+
+} catch(...) {
+    return (0);
+}
+    return meshOverlap;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
