@@ -17,8 +17,9 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
-# Enable C++11 features
-AX_CXX_COMPILE_STDCXX(11, [ext], [mandatory])
+# Check how to add C++0x flags
+# TODO: Should we check for partial C++11 support also ?
+AX_CXX_COMPILE_STDCXX_0X
 
 # Checks for FORTRAN.
 AC_PROG_F77([gfortran g77])    
