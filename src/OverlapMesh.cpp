@@ -1169,7 +1169,8 @@ void GenerateOverlapMesh_v1(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
-	OverlapMeshMethod method
+    OverlapMeshMethod method,
+    const bool verbose
 ) {
 	meshOverlap.Clear();
 
@@ -1184,7 +1185,7 @@ void GenerateOverlapMesh_v1(
 		BuildCoincidentNodeVector(
 			meshSource, meshTarget, vecTargetNodeMap);
 
-	Announce("Number of coincident nodes between mesh A and B [%i]",
+    if (verbose) Announce("Number of coincident nodes between mesh A and B [%i]",
 		nCoincidentNodes);
 
 	// Insert all nodes from the two NodeVectors
@@ -1360,7 +1361,7 @@ void GenerateOverlapFace(
 	const Mesh & meshTarget,
 	int iSourceFace,
 	int iTargetFace,
-	NodeVector & nodevecOutput
+    NodeVector & nodevecOutput
 ) {
 /*
   // Sutherland–Hodgman algorithm (pseudocode)
@@ -1682,7 +1683,8 @@ void GenerateOverlapMeshFromFace(
 	Mesh & meshOverlap,
 	NodeMap & nodemapOverlap,
 	OverlapMeshMethod method,
-	int ixTargetFaceSeed = 0
+    int ixTargetFaceSeed = 0,
+    const bool verbose = true
 ) {
 	// Verify the EdgeMap exists in both meshSource and meshTarget
 	if (meshSource.edgemap.size() == 0) {
@@ -1730,7 +1732,7 @@ void GenerateOverlapMeshFromFace(
 		return;
 	}
 
-	std::cout << "\tFirst overlap match " << ixCurrentTargetFace << std::endl;
+    if (verbose) std::cout << "\tFirst overlap match " << ixCurrentTargetFace << std::endl;
 /*
 	// Verify starting Node is not on the Exterior
 	if (aFindFaceStruct.loc == Face::NodeLocation_Exterior) {
@@ -1819,8 +1821,7 @@ void GenerateOverlapMeshFromFace(
 				}
 			}
 
-			std::cout << "\tOverlap with Face " << ixCurrentTargetFace
-				<< std::endl;
+            if (verbose) std::cout << "\tOverlap with Face " << ixCurrentTargetFace << std::endl;
 
 			// Calculate face area
 			Face faceTemp(nodevecOutput.size());
@@ -1869,7 +1870,8 @@ void GenerateOverlapMesh_v2(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
-	OverlapMeshMethod method
+    OverlapMeshMethod method,
+    const bool verbose
 ) {
 	NodeMap nodemapOverlap;
 
@@ -1888,7 +1890,7 @@ void GenerateOverlapMesh_v2(
 
 	// Generate Overlap mesh for each Face
 	for (int i = 0; i < meshSource.faces.size(); i++) {
-		std::cout << "Source Face " << i << std::endl;
+        if (verbose) std::cout << "Source Face " << i << std::endl;
 
 		// Find a Target face near this source face
 		int ixNodeCorner = meshSource.faces[i][0];
@@ -1904,7 +1906,7 @@ void GenerateOverlapMesh_v2(
 
 		int iTargetFaceSeed = pFace - &(meshTarget.faces[0]);
 
-		std::cout << "\tNearest target face " << iTargetFaceSeed << std::endl;
+        if (verbose) std::cout << "\tNearest target face " << iTargetFaceSeed << std::endl;
 
 		// Generate the overlap mesh associated with this source face
 		GenerateOverlapMeshFromFace(
@@ -1914,7 +1916,8 @@ void GenerateOverlapMesh_v2(
 			meshOverlap,
 			nodemapOverlap,
 			method,
-			iTargetFaceSeed);
+            iTargetFaceSeed,
+            verbose);
 	}
 
 	// Destroy the KD tree
@@ -1929,8 +1932,10 @@ void GenerateOverlapMesh_v2(
 	}
 
 	// Calculate Face areas
-	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
-	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
+    if (verbose) {
+        double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
+        Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

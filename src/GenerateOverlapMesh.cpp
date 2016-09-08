@@ -27,7 +27,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+extern "C" Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, const bool verbose) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -67,7 +67,7 @@ try {
 		method);
 */
 	AnnounceStartBlock("Construct overlap mesh");
-	GenerateOverlapMesh_v2(meshA, meshB, *meshOverlap, method);
+    GenerateOverlapMesh_v2(meshA, meshB, *meshOverlap, method, verbose);
 	AnnounceEndBlock(NULL);
 /*
 	// Construct the reverse node array on both meshes
@@ -92,9 +92,11 @@ try {
 	AnnounceEndBlock(NULL);
 */
 	// Write the overlap mesh
-	AnnounceStartBlock("Writing overlap mesh");
-	meshOverlap->Write(strOverlapMesh.c_str());
-	AnnounceEndBlock(NULL);
+    if (strOverlapMesh.size()) {
+        AnnounceStartBlock("Writing overlap mesh");
+        meshOverlap->Write(strOverlapMesh.c_str());
+        AnnounceEndBlock(NULL);
+    }
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
@@ -108,7 +110,7 @@ try {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, const bool fNoValidate, const bool verbose) {
 
     NcError error(NcError::silent_nonfatal);
 
@@ -142,7 +144,7 @@ try {
         AnnounceEndBlock(NULL);
     }
 
-    meshOverlap = GenerateOverlapWithMeshes(meshA, meshB, strOverlapMesh, strMethod, fNoValidate);
+    meshOverlap = GenerateOverlapWithMeshes(meshA, meshB, strOverlapMesh, strMethod, verbose);
 
 } catch(Exception & e) {
     Announce(e.ToString().c_str());

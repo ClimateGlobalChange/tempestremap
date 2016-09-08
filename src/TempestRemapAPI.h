@@ -26,14 +26,14 @@ extern "C" {
 												std::string strOutputFile);
 
 	// Compute the overlap mesh given a source and target mesh file names
-	Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);
+    Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate, const bool verbose=true);
 
 	// Compute the overlap mesh given a source and target mesh objects
 	// An overload method which takes as arguments the source and target meshes that are pre-loaded into memory
-    Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);
+    Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, const bool verbose=true);
 
 	// New version of the implementation to compute the overlap mesh given a source and target mesh file names
-	Mesh* GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate);
+    Mesh* GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, const bool fNoValidate=true);
 
 	Mesh* GenerateGLLMetaData(std::string strMesh, int nP, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian);
 
