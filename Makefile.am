@@ -29,7 +29,7 @@ libTempestRemap_la_SOURCES = \
 	src/TriangularQuadrature.cpp
 
 # The list of header files which are to be installed 
-nobase_libTempestRemap_la_include_HEADERS = \
+libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
 	src/DataVector.h \
 	src/FixedPoint.h \
