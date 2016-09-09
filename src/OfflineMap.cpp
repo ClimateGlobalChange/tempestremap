@@ -180,6 +180,40 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 	m_vecSourceDimNames[1] = strDim1Name;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::InitializeSourceDimensionsFromMesh(
+    const Mesh & sourceMesh
+) {
+    // Push rectilinear attributes into array
+    const int nElems = sourceMesh.faces.size();
+    m_vecSourceDimSizes.resize(2);
+    m_vecSourceDimNames.resize(2);
+    switch(sourceMesh.type) {
+        case Mesh::MeshType_CubedSphere:
+            m_vecSourceDimSizes[0] = nElems;
+
+            m_vecSourceDimNames[0] = "num_elem";
+            break;
+        case Mesh::MeshType_RLL:
+            m_vecSourceDimSizes[0] = std::sqrt(nElems/2);
+            m_vecSourceDimSizes[0] = 2*m_vecSourceDimSizes[0];
+
+            m_vecSourceDimNames[0] = "lat";
+            m_vecSourceDimNames[0] = "lon";
+            break;
+        case Mesh::MeshType_IcosaHedral:
+            m_vecSourceDimSizes[0] = nElems;
+
+            m_vecSourceDimNames[0] = "num_elem";
+            break;
+        default:
+            break;
+    }
+    return;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::InitializeTargetDimensionsFromFile(
@@ -331,6 +365,39 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 	m_vecTargetDimNames.resize(2);
 	m_vecTargetDimNames[0] = strDim0Name;
 	m_vecTargetDimNames[1] = strDim1Name;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::InitializeTargetDimensionsFromMesh(
+    const Mesh & targetMesh
+) {
+    // Push rectilinear attributes into array
+    const int nElems = targetMesh.faces.size();
+    m_vecTargetDimSizes.resize(2);
+    m_vecTargetDimNames.resize(2);
+    switch(targetMesh.type) {
+        case Mesh::MeshType_CubedSphere:
+            m_vecTargetDimSizes[0] = nElems;
+
+            m_vecTargetDimNames[0] = "num_elem";
+            break;
+        case Mesh::MeshType_RLL:
+            m_vecTargetDimSizes[0] = std::sqrt(nElems/2);
+            m_vecTargetDimSizes[1] = 2*m_vecTargetDimSizes[0];
+
+            m_vecTargetDimNames[0] = "lat";
+            m_vecTargetDimNames[1] = "lon";
+            break;
+        case Mesh::MeshType_IcosaHedral:
+            m_vecTargetDimSizes[0] = nElems;
+
+            m_vecTargetDimNames[0] = "num_elem";
+            break;
+        default:
+            break;
+    }
+    return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

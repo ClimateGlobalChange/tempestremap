@@ -120,6 +120,566 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+extern "C" OfflineMap* GenerateOfflineMapWithMeshes(  Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+                                            std::string strInputMeta, std::string strOutputMeta,
+                                            std::string strInputType, std::string strOutputType,
+                                            int nPin, int nPout,
+                                            bool fBubble, int fMonotoneTypeID,
+                                            bool fVolumetric, bool fNoConservation, bool fNoCheck,
+                                            std::string strVariables, std::string strOutputMap,
+                                            std::string strInputData, std::string strOutputData,
+                                            std::string strNColName, bool fOutputDouble,
+                                            std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride )
+{
+    NcError error(NcError::silent_nonfatal);
+
+    // Create Offline Map
+    OfflineMap* mapRemap = new OfflineMap();
+
+try {
+
+    // Input / Output types
+    enum DiscretizationType {
+        DiscretizationType_FV,
+        DiscretizationType_CGLL,
+        DiscretizationType_DGLL
+    };
+
+    // Check command line parameters (data arguments)
+    if ((strInputData != "") && (strOutputData == "")) {
+        _EXCEPTIONT("--in_data specified without --out_data");
+    }
+    if ((strInputData == "") && (strOutputData != "")) {
+        _EXCEPTIONT("--out_data specified without --in_data");
+    }
+
+    // Check metadata parameters
+    if ((strInputMeta != "") && (strInputType == "fv")) {
+        _EXCEPTIONT("--in_meta cannot be used with --in_type fv");
+    }
+    if ((strOutputMeta != "") && (strOutputType == "fv")) {
+        _EXCEPTIONT("--out_meta cannot be used with --out_type fv");
+    }
+
+    // Check command line parameters (data type arguments)
+    STLStringHelper::ToLower(strInputType);
+    STLStringHelper::ToLower(strOutputType);
+
+    DiscretizationType eInputType;
+    DiscretizationType eOutputType;
+
+    if (strInputType == "fv") {
+        eInputType = DiscretizationType_FV;
+    } else if (strInputType == "cgll") {
+        eInputType = DiscretizationType_CGLL;
+    } else if (strInputType == "dgll") {
+        eInputType = DiscretizationType_DGLL;
+    } else {
+        _EXCEPTION1("Invalid \"in_type\" value (%s), expected [fv|cgll|dgll]",
+            strInputType.c_str());
+    }
+
+    if (strOutputType == "fv") {
+        eOutputType = DiscretizationType_FV;
+    } else if (strOutputType == "cgll") {
+        eOutputType = DiscretizationType_CGLL;
+    } else if (strOutputType == "dgll") {
+        eOutputType = DiscretizationType_DGLL;
+    } else {
+        _EXCEPTION1("Invalid \"out_type\" value (%s), expected [fv|cgll|dgll]",
+            strOutputType.c_str());
+    }
+
+    // Monotonicity flags
+    int nMonotoneType = fMonotoneTypeID;
+
+/*
+    // Volumetric
+    if (fVolumetric && (nMonotoneType != 0)) {
+        _EXCEPTIONT("--volumetric cannot be used in conjunction with --mono#");
+    }
+*/
+
+    // Initialize dimension information from file
+    AnnounceStartBlock("Initializing dimensions of map");
+    Announce("Input mesh");
+    mapRemap->InitializeSourceDimensionsFromMesh(meshInput);
+    Announce("Output mesh");
+    mapRemap->InitializeTargetDimensionsFromMesh(meshOutput);
+    AnnounceEndBlock(NULL);
+
+    // Parse variable list
+    std::vector< std::string > vecVariableStrings;
+    ParseVariableList(strVariables, vecVariableStrings);
+
+    // Parse preserve variable list
+    std::vector< std::string > vecPreserveVariableStrings;
+    ParseVariableList(strPreserveVariables, vecPreserveVariableStrings);
+
+    if (fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
+        _EXCEPTIONT("--preserveall and --preserve cannot both be specified");
+    }
+
+    // Calculate Face areas
+    AnnounceStartBlock("Calculating input mesh Face areas");
+    double dTotalAreaInput = meshInput.CalculateFaceAreas();
+    Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
+    AnnounceEndBlock(NULL);
+
+    // Input mesh areas
+    if (eInputType == DiscretizationType_FV) {
+        mapRemap->SetSourceAreas(meshInput.vecFaceArea);
+    }
+
+    // Calculate Face areas
+    AnnounceStartBlock("Calculating output mesh Face areas");
+    Real dTotalAreaOutput = meshOutput.CalculateFaceAreas();
+    Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
+    AnnounceEndBlock(NULL);
+
+    // Output mesh areas
+    if (eOutputType == DiscretizationType_FV) {
+        mapRemap->SetTargetAreas(meshOutput.vecFaceArea);
+    }
+
+    // Verify that overlap mesh is in the correct order
+    int ixSourceFaceMax = (-1);
+    int ixTargetFaceMax = (-1);
+
+    if (meshOverlap.vecSourceFaceIx.size() !=
+        meshOverlap.vecTargetFaceIx.size()
+    ) {
+        _EXCEPTIONT("Invalid overlap mesh:\n"
+            "    Possible mesh file corruption?");
+    }
+
+    for (int i = 0; i < meshOverlap.vecSourceFaceIx.size(); i++) {
+        if (meshOverlap.vecSourceFaceIx[i] + 1 > ixSourceFaceMax) {
+            ixSourceFaceMax = meshOverlap.vecSourceFaceIx[i] + 1;
+        }
+        if (meshOverlap.vecTargetFaceIx[i] + 1 > ixTargetFaceMax) {
+            ixTargetFaceMax = meshOverlap.vecTargetFaceIx[i] + 1;
+        }
+    }
+
+    // Check for forward correspondence in overlap mesh
+    if (ixSourceFaceMax == meshInput.faces.size() //&&
+        //(ixTargetFaceMax == meshOutput.faces.size())
+    ) {
+        Announce("Overlap mesh forward correspondence found");
+
+    // Check for reverse correspondence in overlap mesh
+    } else if (
+        ixSourceFaceMax == meshOutput.faces.size() //&&
+        //(ixTargetFaceMax == meshInput.faces.size())
+    ) {
+        Announce("Overlap mesh reverse correspondence found (reversing)");
+
+        // Reorder overlap mesh
+        meshOverlap.ExchangeFirstAndSecondMesh();
+
+    // No correspondence found
+    } else {
+        _EXCEPTION2("Invalid overlap mesh:\n"
+            "    No correspondence found with input and output meshes (%i,%i)",
+            ixSourceFaceMax, ixTargetFaceMax);
+    }
+
+    AnnounceEndBlock(NULL);
+
+    // Calculate Face areas
+    AnnounceStartBlock("Calculating overlap mesh Face areas");
+    Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
+    Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
+    AnnounceEndBlock(NULL);
+
+    // Partial cover
+    if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
+        if (!fNoCheck) {
+            Announce("WARNING: Significant mismatch between overlap mesh area "
+                "and input mesh area.\n  Automatically enabling --nocheck");
+            fNoCheck = true;
+        }
+    }
+
+/*
+    // Recalculate input mesh area from overlap mesh
+    if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
+        AnnounceStartBlock("Overlap mesh only covers a sub-area of the sphere");
+        Announce("Recalculating source mesh areas");
+        dTotalAreaInput = meshInput.CalculateFaceAreasFromOverlap(meshOverlap);
+        Announce("New Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
+        AnnounceEndBlock(NULL);
+    }
+*/
+    // Finite volume input / Finite volume output
+    if ((eInputType  == DiscretizationType_FV) &&
+        (eOutputType == DiscretizationType_FV)
+    ) {
+
+        // Generate reverse node array and edge map
+        meshInput.ConstructReverseNodeArray();
+        meshInput.ConstructEdgeMap();
+
+        // Initialize coordinates for map
+        mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
+        mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
+
+        // Construct OfflineMap
+        AnnounceStartBlock("Calculating offline map");
+        LinearRemapFVtoFV(meshInput, meshOutput, meshOverlap, nPin, *mapRemap);
+
+    // Finite volume input / Finite element output
+    } else if (eInputType == DiscretizationType_FV) {
+        DataMatrix3D<int> dataGLLNodes;
+        DataMatrix3D<double> dataGLLJacobian;
+
+        if (strOutputMeta != "") {
+            AnnounceStartBlock("Loading meta data file");
+            LoadMetaDataFile(strOutputMeta, dataGLLNodes, dataGLLJacobian);
+            AnnounceEndBlock(NULL);
+
+        } else {
+            AnnounceStartBlock("Generating output mesh meta data");
+            double dNumericalArea =
+                GenerateMetaData(
+                    meshOutput,
+                    nPout,
+                    fBubble,
+                    dataGLLNodes,
+                    dataGLLJacobian);
+
+            Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
+            AnnounceEndBlock(NULL);
+        }
+
+        // Initialize coordinates for map
+        mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
+        mapRemap->InitializeTargetCoordinatesFromMeshFE(
+            meshOutput, nPout, dataGLLNodes);
+
+        // Generate the continuous Jacobian
+        bool fContinuous = (eOutputType == DiscretizationType_CGLL);
+
+        if (eOutputType == DiscretizationType_CGLL) {
+            GenerateUniqueJacobian(
+                dataGLLNodes,
+                dataGLLJacobian,
+                mapRemap->GetTargetAreas());
+
+        } else {
+            GenerateDiscontinuousJacobian(
+                dataGLLJacobian,
+                mapRemap->GetTargetAreas());
+        }
+
+        // Generate reverse node array and edge map
+        meshInput.ConstructReverseNodeArray();
+        meshInput.ConstructEdgeMap();
+
+        // Generate remap weights
+        AnnounceStartBlock("Calculating offline map");
+
+        if (fVolumetric) {
+            LinearRemapFVtoGLL_Volumetric(
+                meshInput,
+                meshOutput,
+                meshOverlap,
+                dataGLLNodes,
+                dataGLLJacobian,
+                mapRemap->GetTargetAreas(),
+                nPin,
+                *mapRemap,
+                nMonotoneType,
+                fContinuous,
+                fNoConservation);
+
+        } else {
+            LinearRemapFVtoGLL(
+                meshInput,
+                meshOutput,
+                meshOverlap,
+                dataGLLNodes,
+                dataGLLJacobian,
+                mapRemap->GetTargetAreas(),
+                nPin,
+                *mapRemap,
+                nMonotoneType,
+                fContinuous,
+                fNoConservation);
+        }
+
+    // Finite element input / Finite volume output
+    } else if (
+        (eInputType != DiscretizationType_FV) &&
+        (eOutputType == DiscretizationType_FV)
+    ) {
+        DataMatrix3D<int> dataGLLNodes;
+        DataMatrix3D<double> dataGLLJacobian;
+
+        if (strInputMeta != "") {
+            AnnounceStartBlock("Loading meta data file");
+            LoadMetaDataFile(strInputMeta, dataGLLNodes, dataGLLJacobian);
+            AnnounceEndBlock(NULL);
+
+        } else {
+            AnnounceStartBlock("Generating input mesh meta data");
+            double dNumericalArea =
+                GenerateMetaData(
+                    meshInput,
+                    nPin,
+                    fBubble,
+                    dataGLLNodes,
+                    dataGLLJacobian);
+
+            Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
+            AnnounceEndBlock(NULL);
+
+            if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
+                Announce("WARNING: Significant mismatch between input mesh "
+                    "numerical area and geometric area");
+            }
+        }
+
+        if (dataGLLNodes.GetSubColumns() != meshInput.faces.size()) {
+            _EXCEPTIONT("Number of element does not match between metadata and "
+                "input mesh");
+        }
+
+        // Initialize coordinates for map
+        mapRemap->InitializeSourceCoordinatesFromMeshFE(
+            meshInput, nPin, dataGLLNodes);
+        mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
+
+        // Generate the continuous Jacobian for input mesh
+        bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
+
+        if (eInputType == DiscretizationType_CGLL) {
+            GenerateUniqueJacobian(
+                dataGLLNodes,
+                dataGLLJacobian,
+                mapRemap->GetSourceAreas());
+
+        } else {
+            GenerateDiscontinuousJacobian(
+                dataGLLJacobian,
+                mapRemap->GetSourceAreas());
+        }
+
+        // Generate offline map
+        AnnounceStartBlock("Calculating offline map");
+
+        if (fVolumetric) {
+            _EXCEPTIONT("Unimplemented: Volumetric currently unavailable for"
+                "GLL input mesh");
+        }
+
+        LinearRemapSE4(
+            meshInput,
+            meshOutput,
+            meshOverlap,
+            dataGLLNodes,
+            dataGLLJacobian,
+            nMonotoneType,
+            fContinuousIn,
+            fNoConservation,
+            *mapRemap
+        );
+
+    // Finite element input / Finite element output
+    } else if (
+        (eInputType  != DiscretizationType_FV) &&
+        (eOutputType != DiscretizationType_FV)
+    ) {
+        DataMatrix3D<int> dataGLLNodesIn;
+        DataMatrix3D<double> dataGLLJacobianIn;
+
+        DataMatrix3D<int> dataGLLNodesOut;
+        DataMatrix3D<double> dataGLLJacobianOut;
+
+        // Input metadata
+        if (strInputMeta != "") {
+            AnnounceStartBlock("Loading input meta data file");
+            LoadMetaDataFile(
+                strInputMeta, dataGLLNodesIn, dataGLLJacobianIn);
+            AnnounceEndBlock(NULL);
+
+        } else {
+            AnnounceStartBlock("Generating input mesh meta data");
+            double dNumericalAreaIn =
+                GenerateMetaData(
+                    meshInput,
+                    nPin,
+                    fBubble,
+                    dataGLLNodesIn,
+                    dataGLLJacobianIn);
+
+            Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
+            AnnounceEndBlock(NULL);
+
+            if (fabs(dNumericalAreaIn - dTotalAreaInput) > 1.0e-12) {
+                Announce("WARNING: Significant mismatch between input mesh "
+                    "numerical area and geometric area");
+            }
+        }
+
+        // Output metadata
+        if (strOutputMeta != "") {
+            AnnounceStartBlock("Loading output meta data file");
+            LoadMetaDataFile(
+                strOutputMeta, dataGLLNodesOut, dataGLLJacobianOut);
+            AnnounceEndBlock(NULL);
+
+        } else {
+            AnnounceStartBlock("Generating output mesh meta data");
+            double dNumericalAreaOut =
+                GenerateMetaData(
+                    meshOutput,
+                    nPout,
+                    fBubble,
+                    dataGLLNodesOut,
+                    dataGLLJacobianOut);
+
+            Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
+            AnnounceEndBlock(NULL);
+
+            if (fabs(dNumericalAreaOut - dTotalAreaOutput) > 1.0e-12) {
+                Announce("WARNING: Significant mismatch between output mesh "
+                    "numerical area and geometric area");
+            }
+        }
+
+        // Initialize coordinates for map
+        mapRemap->InitializeSourceCoordinatesFromMeshFE(
+            meshInput, nPin, dataGLLNodesIn);
+        mapRemap->InitializeTargetCoordinatesFromMeshFE(
+            meshOutput, nPout, dataGLLNodesOut);
+
+        // Generate the continuous Jacobian for input mesh
+        bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
+
+        if (eInputType == DiscretizationType_CGLL) {
+            GenerateUniqueJacobian(
+                dataGLLNodesIn,
+                dataGLLJacobianIn,
+                mapRemap->GetSourceAreas());
+
+        } else {
+            GenerateDiscontinuousJacobian(
+                dataGLLJacobianIn,
+                mapRemap->GetSourceAreas());
+        }
+
+        // Generate the continuous Jacobian for output mesh
+        bool fContinuousOut = (eOutputType == DiscretizationType_CGLL);
+
+        if (eOutputType == DiscretizationType_CGLL) {
+            GenerateUniqueJacobian(
+                dataGLLNodesOut,
+                dataGLLJacobianOut,
+                mapRemap->GetTargetAreas());
+
+        } else {
+            GenerateDiscontinuousJacobian(
+                dataGLLJacobianOut,
+                mapRemap->GetTargetAreas());
+        }
+
+        // Generate offline map
+        AnnounceStartBlock("Calculating offline map");
+
+        LinearRemapGLLtoGLL2(
+            meshInput,
+            meshOutput,
+            meshOverlap,
+            dataGLLNodesIn,
+            dataGLLJacobianIn,
+            dataGLLNodesOut,
+            dataGLLJacobianOut,
+            mapRemap->GetTargetAreas(),
+            nPin,
+            nPout,
+            nMonotoneType,
+            fContinuousIn,
+            fContinuousOut,
+            fNoConservation,
+            *mapRemap
+        );
+
+    } else {
+        _EXCEPTIONT("Not implemented");
+    }
+
+//#pragma warning "NOTE: VERIFICATION DISABLED"
+
+    // Verify consistency, conservation and monotonicity
+    if (!fNoCheck) {
+        AnnounceStartBlock("Verifying map");
+        mapRemap->IsConsistent(1.0e-8);
+        mapRemap->IsConservative(1.0e-8);
+
+        if (nMonotoneType != 0) {
+            mapRemap->IsMonotone(1.0e-12);
+        }
+        AnnounceEndBlock(NULL);
+    }
+
+    AnnounceEndBlock(NULL);
+
+    // Initialize element dimensions from input/output Mesh
+    AnnounceStartBlock("Writing output");
+
+    // Output the Offline Map
+    if (strOutputMap != "") {
+        AnnounceStartBlock("Writing offline map");
+        mapRemap->Write(strOutputMap);
+        AnnounceEndBlock(NULL);
+    }
+
+    // Apply Offline Map to data
+    if (strInputData != "") {
+        AnnounceStartBlock("Applying offline map to data");
+
+        mapRemap->SetFillValueOverride(static_cast<float>(dFillValueOverride));
+        mapRemap->Apply(
+            strInputData,
+            strOutputData,
+            vecVariableStrings,
+            strNColName,
+            fOutputDouble,
+            false);
+        AnnounceEndBlock(NULL);
+    }
+    AnnounceEndBlock(NULL);
+
+    // Copy variables from input file to output file
+    if ((strInputData != "") && (strOutputData != "")) {
+        if (fPreserveAll) {
+            AnnounceStartBlock("Preserving variables");
+            mapRemap->PreserveAllVariables(strInputData, strOutputData);
+            AnnounceEndBlock(NULL);
+
+        } else if (vecPreserveVariableStrings.size() != 0) {
+            AnnounceStartBlock("Preserving variables");
+            mapRemap->PreserveVariables(
+                strInputData,
+                strOutputData,
+                vecPreserveVariableStrings);
+            AnnounceEndBlock(NULL);
+        }
+    }
+
+} catch(Exception & e) {
+    Announce(e.ToString().c_str());
+    return (0);
+
+} catch(...) {
+    return (0);
+}
+    return mapRemap;
+}
+
+
 extern "C" OfflineMap* GenerateOfflineMap(  std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh, 
 											std::string strInputMeta, std::string strOutputMeta, 
 											std::string strInputType, std::string strOutputType,
@@ -134,7 +694,7 @@ extern "C" OfflineMap* GenerateOfflineMap(  std::string strInputMesh, std::strin
 	NcError error(NcError::silent_nonfatal);
 
 	// Create Offline Map
-	OfflineMap* mapRemap = new OfflineMap();
+    OfflineMap* mapRemap = NULL;
 
 try {
 
@@ -158,61 +718,6 @@ try {
 		_EXCEPTIONT("No overlap mesh specified");
 	}
 
-	// Check command line parameters (data arguments)
-	if ((strInputData != "") && (strOutputData == "")) {
-		_EXCEPTIONT("--in_data specified without --out_data");
-	}
-	if ((strInputData == "") && (strOutputData != "")) {
-		_EXCEPTIONT("--out_data specified without --in_data");
-	}
-
-	// Check metadata parameters
-	if ((strInputMeta != "") && (strInputType == "fv")) {
-		_EXCEPTIONT("--in_meta cannot be used with --in_type fv");
-	}
-	if ((strOutputMeta != "") && (strOutputType == "fv")) {
-		_EXCEPTIONT("--out_meta cannot be used with --out_type fv");
-	}
-
-	// Check command line parameters (data type arguments)
-	STLStringHelper::ToLower(strInputType);
-	STLStringHelper::ToLower(strOutputType);
-
-	DiscretizationType eInputType;
-	DiscretizationType eOutputType;
-
-	if (strInputType == "fv") {
-		eInputType = DiscretizationType_FV;
-	} else if (strInputType == "cgll") {
-		eInputType = DiscretizationType_CGLL;
-	} else if (strInputType == "dgll") {
-		eInputType = DiscretizationType_DGLL;
-	} else {
-		_EXCEPTION1("Invalid \"in_type\" value (%s), expected [fv|cgll|dgll]",
-			strInputType.c_str());
-	}
-
-	if (strOutputType == "fv") {
-		eOutputType = DiscretizationType_FV;
-	} else if (strOutputType == "cgll") {
-		eOutputType = DiscretizationType_CGLL;
-	} else if (strOutputType == "dgll") {
-		eOutputType = DiscretizationType_DGLL;
-	} else {
-		_EXCEPTION1("Invalid \"out_type\" value (%s), expected [fv|cgll|dgll]",
-			strOutputType.c_str());
-	}
-
-	// Monotonicity flags
-	int nMonotoneType = fMonotoneTypeID;
-
-/*
-	// Volumetric
-	if (fVolumetric && (nMonotoneType != 0)) {
-		_EXCEPTIONT("--volumetric cannot be used in conjunction with --mono#");
-	}
-*/
-
 	// Initialize dimension information from file
 	AnnounceStartBlock("Initializing dimensions of map");
 	Announce("Input mesh");
@@ -221,34 +726,11 @@ try {
 	mapRemap->InitializeTargetDimensionsFromFile(strOutputMesh);
 	AnnounceEndBlock(NULL);
 
-	// Parse variable list
-	std::vector< std::string > vecVariableStrings;
-	ParseVariableList(strVariables, vecVariableStrings);
-
-	// Parse preserve variable list
-	std::vector< std::string > vecPreserveVariableStrings;
-	ParseVariableList(strPreserveVariables, vecPreserveVariableStrings);
-
-	if (fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
-		_EXCEPTIONT("--preserveall and --preserve cannot both be specified");
-	}
-
 	// Load input mesh
 	AnnounceStartBlock("Loading input mesh");
 	Mesh meshInput(strInputMesh);
 	meshInput.RemoveZeroEdges();
 	AnnounceEndBlock(NULL);
-
-	// Calculate Face areas
-	AnnounceStartBlock("Calculating input mesh Face areas");
-	double dTotalAreaInput = meshInput.CalculateFaceAreas();
-	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
-	AnnounceEndBlock(NULL);
-
-	// Input mesh areas
-	if (eInputType == DiscretizationType_FV) {
-		mapRemap->SetSourceAreas(meshInput.vecFaceArea);
-	}
 
 	// Load output mesh
 	AnnounceStartBlock("Loading output mesh");
@@ -256,448 +738,21 @@ try {
 	meshOutput.RemoveZeroEdges();
 	AnnounceEndBlock(NULL);
 
-	// Calculate Face areas
-	AnnounceStartBlock("Calculating output mesh Face areas");
-	Real dTotalAreaOutput = meshOutput.CalculateFaceAreas();
-	Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
-	AnnounceEndBlock(NULL);
-
-	// Output mesh areas
-	if (eOutputType == DiscretizationType_FV) {
-		mapRemap->SetTargetAreas(meshOutput.vecFaceArea);
-	}
-
 	// Load overlap mesh
 	AnnounceStartBlock("Loading overlap mesh");
 	Mesh meshOverlap(strOverlapMesh);
 	meshOverlap.RemoveZeroEdges();
 
-	// Verify that overlap mesh is in the correct order
-	int ixSourceFaceMax = (-1);
-	int ixTargetFaceMax = (-1);
-
-	if (meshOverlap.vecSourceFaceIx.size() !=
-		meshOverlap.vecTargetFaceIx.size()
-	) {
-		_EXCEPTIONT("Invalid overlap mesh:\n"
-			"    Possible mesh file corruption?");
-	}
-
-	for (int i = 0; i < meshOverlap.vecSourceFaceIx.size(); i++) {
-		if (meshOverlap.vecSourceFaceIx[i] + 1 > ixSourceFaceMax) {
-			ixSourceFaceMax = meshOverlap.vecSourceFaceIx[i] + 1;
-		}
-		if (meshOverlap.vecTargetFaceIx[i] + 1 > ixTargetFaceMax) {
-			ixTargetFaceMax = meshOverlap.vecTargetFaceIx[i] + 1;
-		}
-	}
-
-	// Check for forward correspondence in overlap mesh
-	if (ixSourceFaceMax == meshInput.faces.size() //&&
-		//(ixTargetFaceMax == meshOutput.faces.size())
-	) {
-		Announce("Overlap mesh forward correspondence found");
-
-	// Check for reverse correspondence in overlap mesh
-	} else if (
-		ixSourceFaceMax == meshOutput.faces.size() //&&
-		//(ixTargetFaceMax == meshInput.faces.size())
-	) {
-		Announce("Overlap mesh reverse correspondence found (reversing)");
-
-		// Reorder overlap mesh
-		meshOverlap.ExchangeFirstAndSecondMesh();
-
-	// No correspondence found
-	} else {
-		_EXCEPTION2("Invalid overlap mesh:\n"
-			"    No correspondence found with input and output meshes (%i,%i)",
-			ixSourceFaceMax, ixTargetFaceMax);
-	}
-
-	AnnounceEndBlock(NULL);
-
-	// Calculate Face areas
-	AnnounceStartBlock("Calculating overlap mesh Face areas");
-	Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
-	Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
-	AnnounceEndBlock(NULL);
-
-	// Partial cover
-	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
-		if (!fNoCheck) {
-			Announce("WARNING: Significant mismatch between overlap mesh area "
-				"and input mesh area.\n  Automatically enabling --nocheck");
-			fNoCheck = true;
-		}
-	}
-
-/*
-	// Recalculate input mesh area from overlap mesh
-	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
-		AnnounceStartBlock("Overlap mesh only covers a sub-area of the sphere");
-		Announce("Recalculating source mesh areas");
-		dTotalAreaInput = meshInput.CalculateFaceAreasFromOverlap(meshOverlap);
-		Announce("New Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
-		AnnounceEndBlock(NULL);
-	}
-*/
-	// Finite volume input / Finite volume output
-	if ((eInputType  == DiscretizationType_FV) &&
-		(eOutputType == DiscretizationType_FV)
-	) {
-
-		// Generate reverse node array and edge map
-		meshInput.ConstructReverseNodeArray();
-		meshInput.ConstructEdgeMap();
-
-		// Initialize coordinates for map
-		mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
-		mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
-
-		// Construct OfflineMap
-		AnnounceStartBlock("Calculating offline map");
-		LinearRemapFVtoFV(meshInput, meshOutput, meshOverlap, nPin, *mapRemap);
-
-	// Finite volume input / Finite element output
-	} else if (eInputType == DiscretizationType_FV) {
-		DataMatrix3D<int> dataGLLNodes;
-		DataMatrix3D<double> dataGLLJacobian;
-
-		if (strOutputMeta != "") {
-			AnnounceStartBlock("Loading meta data file");
-			LoadMetaDataFile(strOutputMeta, dataGLLNodes, dataGLLJacobian);
-			AnnounceEndBlock(NULL);
-
-		} else {
-			AnnounceStartBlock("Generating output mesh meta data");
-			double dNumericalArea =
-				GenerateMetaData(
-					meshOutput,
-					nPout,
-					fBubble,
-					dataGLLNodes,
-					dataGLLJacobian);
-
-			Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
-			AnnounceEndBlock(NULL);
-		}
-
-		// Initialize coordinates for map
-		mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
-		mapRemap->InitializeTargetCoordinatesFromMeshFE(
-			meshOutput, nPout, dataGLLNodes);
-
-		// Generate the continuous Jacobian
-		bool fContinuous = (eOutputType == DiscretizationType_CGLL);
-
-		if (eOutputType == DiscretizationType_CGLL) {
-			GenerateUniqueJacobian(
-				dataGLLNodes,
-				dataGLLJacobian,
-				mapRemap->GetTargetAreas());
-
-		} else {
-			GenerateDiscontinuousJacobian(
-				dataGLLJacobian,
-				mapRemap->GetTargetAreas());
-		}
-
-		// Generate reverse node array and edge map
-		meshInput.ConstructReverseNodeArray();
-		meshInput.ConstructEdgeMap();
-
-		// Generate remap weights
-		AnnounceStartBlock("Calculating offline map");
-
-		if (fVolumetric) {
-			LinearRemapFVtoGLL_Volumetric(
-				meshInput,
-				meshOutput,
-				meshOverlap,
-				dataGLLNodes,
-				dataGLLJacobian,
-				mapRemap->GetTargetAreas(),
-				nPin,
-				*mapRemap,
-				nMonotoneType,
-				fContinuous,
-				fNoConservation);
-
-		} else {
-			LinearRemapFVtoGLL(
-				meshInput,
-				meshOutput,
-				meshOverlap,
-				dataGLLNodes,
-				dataGLLJacobian,
-				mapRemap->GetTargetAreas(),
-				nPin,
-				*mapRemap,
-				nMonotoneType,
-				fContinuous,
-				fNoConservation);
-		}
-
-	// Finite element input / Finite volume output
-	} else if (
-		(eInputType != DiscretizationType_FV) &&
-		(eOutputType == DiscretizationType_FV)
-	) {
-		DataMatrix3D<int> dataGLLNodes;
-		DataMatrix3D<double> dataGLLJacobian;
-
-		if (strInputMeta != "") {
-			AnnounceStartBlock("Loading meta data file");
-			LoadMetaDataFile(strInputMeta, dataGLLNodes, dataGLLJacobian);
-			AnnounceEndBlock(NULL);
-
-		} else {
-			AnnounceStartBlock("Generating input mesh meta data");
-			double dNumericalArea =
-				GenerateMetaData(
-					meshInput,
-					nPin,
-					fBubble,
-					dataGLLNodes,
-					dataGLLJacobian);
-
-			Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
-			AnnounceEndBlock(NULL);
-
-			if (fabs(dNumericalArea - dTotalAreaInput) > 1.0e-12) {
-				Announce("WARNING: Significant mismatch between input mesh "
-					"numerical area and geometric area");
-			}
-		}
-
-		if (dataGLLNodes.GetSubColumns() != meshInput.faces.size()) {
-			_EXCEPTIONT("Number of element does not match between metadata and "
-				"input mesh");
-		}
-
-		// Initialize coordinates for map
-		mapRemap->InitializeSourceCoordinatesFromMeshFE(
-			meshInput, nPin, dataGLLNodes);
-		mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
-
-		// Generate the continuous Jacobian for input mesh
-		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
-
-		if (eInputType == DiscretizationType_CGLL) {
-			GenerateUniqueJacobian(
-				dataGLLNodes,
-				dataGLLJacobian,
-				mapRemap->GetSourceAreas());
-
-		} else {
-			GenerateDiscontinuousJacobian(
-				dataGLLJacobian,
-				mapRemap->GetSourceAreas());
-		}
-
-		// Generate offline map
-		AnnounceStartBlock("Calculating offline map");
-
-		if (fVolumetric) {
-			_EXCEPTIONT("Unimplemented: Volumetric currently unavailable for"
-				"GLL input mesh");
-		}
-
-		LinearRemapSE4(
-			meshInput,
-			meshOutput,
-			meshOverlap,
-			dataGLLNodes,
-			dataGLLJacobian,
-			nMonotoneType,
-			fContinuousIn,
-			fNoConservation,
-			*mapRemap
-		);
-
-	// Finite element input / Finite element output
-	} else if (
-		(eInputType  != DiscretizationType_FV) &&
-		(eOutputType != DiscretizationType_FV)
-	) {
-		DataMatrix3D<int> dataGLLNodesIn;
-		DataMatrix3D<double> dataGLLJacobianIn;
-
-		DataMatrix3D<int> dataGLLNodesOut;
-		DataMatrix3D<double> dataGLLJacobianOut;
-
-		// Input metadata
-		if (strInputMeta != "") {
-			AnnounceStartBlock("Loading input meta data file");
-			LoadMetaDataFile(
-				strInputMeta, dataGLLNodesIn, dataGLLJacobianIn);
-			AnnounceEndBlock(NULL);
-
-		} else {
-			AnnounceStartBlock("Generating input mesh meta data");
-			double dNumericalAreaIn =
-				GenerateMetaData(
-					meshInput,
-					nPin,
-					fBubble,
-					dataGLLNodesIn,
-					dataGLLJacobianIn);
-
-			Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
-			AnnounceEndBlock(NULL);
-
-			if (fabs(dNumericalAreaIn - dTotalAreaInput) > 1.0e-12) {
-				Announce("WARNING: Significant mismatch between input mesh "
-					"numerical area and geometric area");
-			}
-		}
-
-		// Output metadata
-		if (strOutputMeta != "") {
-			AnnounceStartBlock("Loading output meta data file");
-			LoadMetaDataFile(
-				strOutputMeta, dataGLLNodesOut, dataGLLJacobianOut);
-			AnnounceEndBlock(NULL);
-
-		} else {
-			AnnounceStartBlock("Generating output mesh meta data");
-			double dNumericalAreaOut =
-				GenerateMetaData(
-					meshOutput,
-					nPout,
-					fBubble,
-					dataGLLNodesOut,
-					dataGLLJacobianOut);
-
-			Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
-			AnnounceEndBlock(NULL);
-
-			if (fabs(dNumericalAreaOut - dTotalAreaOutput) > 1.0e-12) {
-				Announce("WARNING: Significant mismatch between output mesh "
-					"numerical area and geometric area");
-			}
-		}
-
-		// Initialize coordinates for map
-		mapRemap->InitializeSourceCoordinatesFromMeshFE(
-			meshInput, nPin, dataGLLNodesIn);
-		mapRemap->InitializeTargetCoordinatesFromMeshFE(
-			meshOutput, nPout, dataGLLNodesOut);
-
-		// Generate the continuous Jacobian for input mesh
-		bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
-
-		if (eInputType == DiscretizationType_CGLL) {
-			GenerateUniqueJacobian(
-				dataGLLNodesIn,
-				dataGLLJacobianIn,
-				mapRemap->GetSourceAreas());
-
-		} else {
-			GenerateDiscontinuousJacobian(
-				dataGLLJacobianIn,
-				mapRemap->GetSourceAreas());
-		}
-
-		// Generate the continuous Jacobian for output mesh
-		bool fContinuousOut = (eOutputType == DiscretizationType_CGLL);
-
-		if (eOutputType == DiscretizationType_CGLL) {
-			GenerateUniqueJacobian(
-				dataGLLNodesOut,
-				dataGLLJacobianOut,
-				mapRemap->GetTargetAreas());
-
-		} else {
-			GenerateDiscontinuousJacobian(
-				dataGLLJacobianOut,
-				mapRemap->GetTargetAreas());
-		}
-
-		// Generate offline map
-		AnnounceStartBlock("Calculating offline map");
-
-		LinearRemapGLLtoGLL2(
-			meshInput,
-			meshOutput,
-			meshOverlap,
-			dataGLLNodesIn,
-			dataGLLJacobianIn,
-			dataGLLNodesOut,
-			dataGLLJacobianOut,
-			mapRemap->GetTargetAreas(),
-			nPin,
-			nPout,
-			nMonotoneType,
-			fContinuousIn,
-			fContinuousOut,
-			fNoConservation,
-			*mapRemap
-		);
-
-	} else {
-		_EXCEPTIONT("Not implemented");
-	}
-
-//#pragma warning "NOTE: VERIFICATION DISABLED"
-
-	// Verify consistency, conservation and monotonicity
-	if (!fNoCheck) {
-		AnnounceStartBlock("Verifying map");
-		mapRemap->IsConsistent(1.0e-8);
-		mapRemap->IsConservative(1.0e-8);
-
-		if (nMonotoneType != 0) {
-			mapRemap->IsMonotone(1.0e-12);
-		}
-		AnnounceEndBlock(NULL);
-	}
-
-	AnnounceEndBlock(NULL);
-
-	// Initialize element dimensions from input/output Mesh
-	AnnounceStartBlock("Writing output");
-
-	// Output the Offline Map
-	if (strOutputMap != "") {
-		AnnounceStartBlock("Writing offline map");
-		mapRemap->Write(strOutputMap);
-		AnnounceEndBlock(NULL);
-	}
-
-	// Apply Offline Map to data
-	if (strInputData != "") {
-		AnnounceStartBlock("Applying offline map to data");
-
-		mapRemap->SetFillValueOverride(static_cast<float>(dFillValueOverride));
-		mapRemap->Apply(
-			strInputData,
-			strOutputData,
-			vecVariableStrings,
-			strNColName,
-			fOutputDouble,
-			false);
-		AnnounceEndBlock(NULL);
-	}
-	AnnounceEndBlock(NULL);
-
-	// Copy variables from input file to output file
-	if ((strInputData != "") && (strOutputData != "")) {
-		if (fPreserveAll) {
-			AnnounceStartBlock("Preserving variables");
-			mapRemap->PreserveAllVariables(strInputData, strOutputData);
-			AnnounceEndBlock(NULL);
-
-		} else if (vecPreserveVariableStrings.size() != 0) {
-			AnnounceStartBlock("Preserving variables");
-			mapRemap->PreserveVariables(
-				strInputData,
-				strOutputData,
-				vecPreserveVariableStrings);
-			AnnounceEndBlock(NULL);
-		}
-	}
+    mapRemap = GenerateOfflineMapWithMeshes(meshInput, meshOutput, meshOverlap,
+                                            strInputMeta, strOutputMeta,
+                                            strInputType, strOutputType,
+                                            nPin, nPout,
+                                            fBubble, fMonotoneTypeID,
+                                            fVolumetric, fNoConservation, fNoCheck,
+                                            strVariables, strOutputMap,
+                                            strInputData, strOutputData,
+                                            strNColName, fOutputDouble,
+                                            strPreserveVariables, fPreserveAll, dFillValueOverride );
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());

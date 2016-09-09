@@ -41,12 +41,26 @@ public:
 		const std::string & strSourceMesh
 	);
 
+    ///	<summary>
+    ///		Initialize the array of input dimensions from a mesh.
+    ///	</summary>
+    void InitializeSourceDimensionsFromMesh(
+        const Mesh & sourceMesh
+    );
+
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
 	///	</summary>
 	void InitializeTargetDimensionsFromFile(
 		const std::string & strTargetMesh
 	);
+
+    ///	<summary>
+    ///		Initialize the array of output dimensions from a mesh.
+    ///	</summary>
+    void InitializeTargetDimensionsFromMesh(
+        const Mesh & targetMesh
+    );
 
 private:
 	///	<summary>

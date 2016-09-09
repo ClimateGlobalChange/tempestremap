@@ -48,6 +48,17 @@ extern "C" {
 									std::string strNColName="", bool fOutputDouble=false, 
 									std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0 );
 
+    OfflineMap* GenerateOfflineMapWithMeshes(  Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+                                               std::string strInputMeta, std::string strOutputMeta,
+                                               std::string strInputType, std::string strOutputType,
+                                               int nPin=4, int nPout=4,
+                                               bool fBubble=false, int fMonotoneTypeID=0,
+                                               bool fVolumetric=false, bool fNoConservation=false, bool fNoCheck=false,
+                                               std::string strVariables="", std::string strOutputMap="",
+                                               std::string strInputData="", std::string strOutputData="",
+                                               std::string strNColName="", bool fOutputDouble=false,
+                                               std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0 );
+
 	int ApplyOfflineMap(std::string strInputData, std::string strInputMap, std::string strVariables, std::string strInputData2, 
 						std::string strInputMap2, std::string strVariables2, std::string strOutputData, std::string strNColName, 
 						bool fOutputDouble, std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride);
