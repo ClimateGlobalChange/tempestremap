@@ -49,6 +49,8 @@ try {
 		_EXCEPTIONT("Invalid \"method\" value");
 	}
 
+    meshOverlap->type = Mesh::MeshType_Overlap;
+
 	// Construct the edge map on both meshes
 	AnnounceStartBlock("Constructing edge map on mesh A");
 	meshA.ConstructEdgeMap();
@@ -191,7 +193,7 @@ int main(int argc, char** argv) {
 	AnnounceBanner();
 
 	// Call the actual mesh generator
-	Mesh* mesh = GenerateOverlapMesh(strMeshA, strMeshB, strOverlapMesh, strMethod, fNoValidate);
+    Mesh* mesh = GenerateOverlapMesh(strMeshA, strMeshB, strOverlapMesh, strMethod, fNoValidate, true);
 	if (mesh) delete mesh;
 	else return (-1);
 

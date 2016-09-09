@@ -478,7 +478,9 @@ try {
 	// Generate the dual grid
 	if (fDual) {
 		Dual(*mesh);
+        mesh->type = Mesh::MeshType_IcosaHedralDual;
 	}
+    else mesh->type = Mesh::MeshType_IcosaHedral;
 
 	// Output the mesh
 	if (strOutputFile.size()) {

@@ -154,6 +154,7 @@ try {
 
 	NodeVector & nodes = mesh->nodes;
 	FaceVector & faces = mesh->faces;
+    mesh->type = Mesh::MeshType_CubedSphere;
 
 	// Generate corner points
 	Real dInvDeltaX = 1.0 / sqrt(3.0);

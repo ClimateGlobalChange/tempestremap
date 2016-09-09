@@ -89,6 +89,7 @@ try {
 
 	NodeVector & nodes = mesh->nodes;
 	FaceVector & faces = mesh->faces;
+    mesh->type = Mesh::MeshType_RLL;
 
 	// Change in longitude
 	double dDeltaLon = dLonEnd - dLonBegin;

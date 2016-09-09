@@ -560,6 +560,21 @@ typedef std::vector< std::set<int> > ReverseNodeArray;
 class Mesh {
 
 public:
+    ///	<summary>
+    ///		Type of standard mesh
+    ///	</summary>
+    enum MeshType {
+        MeshType_Unknown = (-1),
+        MeshType_CubedSphere = 0,
+        MeshType_RLL = 1,
+        MeshType_IcosaHedral = 2,
+        MeshType_IcosaHedralDual = 3,
+        MeshType_Overlap = 4
+    };
+
+    MeshType type;
+
+public:
 	///	<summary>
 	///		Vector of Nodes for this mesh.
 	///	</summary>
