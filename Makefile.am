@@ -7,9 +7,6 @@ ACLOCAL_AMFLAGS = -I config
 ##############################################################################
 lib_LTLIBRARIES = libTempestRemap.la
 
-# Library files to include
-LDFILES= -lnetcdf -lnetcdf_c++ -framework accelerate
-
 libTempestRemap_la_includedir = $(includedir)
 
 # The list of source files, and any header files that do not need to be installed
@@ -29,7 +26,7 @@ libTempestRemap_la_SOURCES = \
 	src/TriangularQuadrature.cpp
 
 # The list of header files which are to be installed 
-nobase_libTempestRemap_la_include_HEADERS = \
+libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
 	src/DataVector.h \
 	src/FixedPoint.h \
@@ -64,7 +61,7 @@ nobase_libTempestRemap_la_include_HEADERS = \
 # Load system-specific defaults
 AM_CPPFLAGS = -I$(srcdir)/src -I$(builddir) -I$(builddir)/src ${NETCDF_CPPFLAGS}
 AM_LDFLAGS = ${LDFLAGS} ${NETCDF_LDFLAGS}
-LDADD = libTempestRemap.la ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
+LDADD = libTempestRemap.la ${NETCDF_LIBS} ${HDF5_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
 
 GenerateRLLMesh_SOURCES = src/GenerateRLLMesh.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMesh.cpp

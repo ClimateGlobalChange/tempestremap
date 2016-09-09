@@ -85,6 +85,7 @@ _AX_BLAS(gemm_, [ax_blas_ok=yes; ax_blas_underscore=yes],
 
 AC_SUBST(BLAS_LIBS)
 
+fortran_mangling_format=""
 if test x"$ax_blas_ok" = xyes; then
     ifelse([$1],, [
         AC_DEFINE(HAVE_BLAS,1, [Define if you have a BLAS library.])
@@ -92,8 +93,10 @@ if test x"$ax_blas_ok" = xyes; then
                 [Define to a macro mangling the given Fortan function name])
         if test x"$ax_blas_underscore" = xyes; then
             AC_DEFINE([F77_FUNC(name)], [name ## _])
+            fortran_mangling_format="name_"
         else
             AC_DEFINE([F77_FUNC(name)], [name])
+            fortran_mangling_format="name"
         fi
         ],
         [$1])
