@@ -100,9 +100,7 @@ AS_IF([test "x$with_hdf5" != xno],
   AC_CHECK_HEADER([hdf5_hl.h],[acx_hdf5_ok=yes],[acx_hdf5_ok=no],[AC_INCLUDES_DEFAULT 
                                                                         #include <hdf5.h>])
         ],
-        [C++],[AC_MSG_NOTICE([C++ not checked for yet])],
-        [Fortran 77],[AC_MSG_NOTICE([F77 not checked for yet])],
-        [Fortran],[AC_MSG_NOTICE([Fortran not checked for yet])])
+        [C++],[AC_MSG_NOTICE([C++ not checked for yet])] )
       ])
 
 AC_SUBST(HDF5_LIBS)

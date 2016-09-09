@@ -21,11 +21,9 @@ AC_PROG_MAKE_SET
 # TODO: Should we check for partial C++11 support also ?
 AX_CXX_COMPILE_STDCXX_0X
 
-# Checks for FORTRAN.
-AC_PROG_F77([gfortran g77])    
-AC_PROG_FC([gfortran g77])    
-AC_FC_LIBRARY_LDFLAGS
-LIBS="$LIBS $FCLIBS -lm"
+# Checks for some standard libraries
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_LIB([dl], [dlopen])
 
 # Checks for BLAS/LAPACK libraries:
 AX_BLAS([], [AC_MSG_ERROR([BLAS library not found])])
@@ -35,7 +33,7 @@ AX_LAPACK([], [AC_MSG_ERROR([LAPACK library not found])])
 # FIXME: Replace `main' with a function in `-lnetcdf':
 # checking for netCDF
 AC_LANG_PUSH(C++)
-ACX_NETCDF([],[AC_MSG_ERROR(cannot find netCDF fortran library)])
+ACX_NETCDF([],[AC_MSG_ERROR(cannot find NetCDF C++ library)])
 AC_LANG_POP(C++)
 
 # Checks for header files.
