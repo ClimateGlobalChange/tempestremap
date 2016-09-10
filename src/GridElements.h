@@ -564,7 +564,7 @@ public:
     ///		Type of standard mesh
     ///	</summary>
     enum MeshType {
-        MeshType_Unknown = (-1),
+        MeshType_Unknown = -1,
         MeshType_CubedSphere = 0,
         MeshType_RLL = 1,
         MeshType_IcosaHedral = 2,
@@ -614,7 +614,7 @@ public:
 	///	<summary>
 	///		Default constructor.
 	///	</summary>
-	Mesh() {
+    Mesh() : type(MeshType_Unknown) {
 	}
 
 	///	<summary>
