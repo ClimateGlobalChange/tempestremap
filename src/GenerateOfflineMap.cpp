@@ -120,7 +120,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" OfflineMap* GenerateOfflineMapWithMeshes(  Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                             std::string strInputMeta, std::string strOutputMeta,
                                             std::string strInputType, std::string strOutputType,
                                             int nPin, int nPout,
@@ -134,7 +134,11 @@ extern "C" OfflineMap* GenerateOfflineMapWithMeshes(  Mesh& meshInput, Mesh& mes
     NcError error(NcError::silent_nonfatal);
 
     // Create Offline Map
-    OfflineMap* mapRemap = new OfflineMap();
+    bool created_local=false;
+    if(!mapRemap) {
+    	mapRemap = new OfflineMap();
+    	created_local = true;
+    }
 
 try {
 
@@ -200,13 +204,15 @@ try {
     }
 */
 
-    // Initialize dimension information from file
-    AnnounceStartBlock("Initializing dimensions of map");
-    Announce("Input mesh");
-    mapRemap->InitializeSourceDimensionsFromMesh(meshInput);
-    Announce("Output mesh");
-    mapRemap->InitializeTargetDimensionsFromMesh(meshOutput);
-    AnnounceEndBlock(NULL);
+    // // Initialize dimension information from file
+    if (created_local) {
+    	AnnounceStartBlock("Initializing dimensions of map");
+	    Announce("Input mesh");
+	    mapRemap->InitializeSourceDimensionsFromMesh(meshInput);
+	    Announce("Output mesh");
+	    mapRemap->InitializeTargetDimensionsFromMesh(meshOutput);
+	    AnnounceEndBlock(NULL);
+    }
 
     // Parse variable list
     std::vector< std::string > vecVariableStrings;
@@ -694,7 +700,7 @@ extern "C" OfflineMap* GenerateOfflineMap(  std::string strInputMesh, std::strin
 	NcError error(NcError::silent_nonfatal);
 
 	// Create Offline Map
-    OfflineMap* mapRemap = NULL;
+    OfflineMap* mapRemap = new OfflineMap();
 
 try {
 
@@ -743,7 +749,7 @@ try {
 	Mesh meshOverlap(strOverlapMesh);
 	meshOverlap.RemoveZeroEdges();
 
-    mapRemap = GenerateOfflineMapWithMeshes(meshInput, meshOutput, meshOverlap,
+    mapRemap = GenerateOfflineMapWithMeshes(mapRemap, meshInput, meshOutput, meshOverlap,
                                             strInputMeta, strOutputMeta,
                                             strInputType, strOutputType,
                                             nPin, nPout,

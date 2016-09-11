@@ -48,7 +48,7 @@ extern "C" {
 									std::string strNColName="", bool fOutputDouble=false, 
 									std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0 );
 
-    OfflineMap* GenerateOfflineMapWithMeshes(  Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+    OfflineMap* GenerateOfflineMapWithMeshes(  OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                                std::string strInputMeta, std::string strOutputMeta,
                                                std::string strInputType, std::string strOutputType,
                                                int nPin=4, int nPout=4,
