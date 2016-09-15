@@ -157,8 +157,11 @@ try {
 	// Order of polynomial in each output element
 	int nPout;
 
+	// Use bubble on all spectral element nodes
+	bool fBubble_uniform;
+	
 	// Use bubble on interior of spectral element nodes
-	int fBubble;
+	bool fBubble_interior;
 
 	// Enforce monotonicity
 	bool fMonotoneType1;
@@ -220,10 +223,10 @@ try {
 		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		//0 for no bubble correction,
-		//1 for old bubble correction,
-		//2 is for homme 'epsilon-bubble correction'
-		CommandLineInt(fBubble, "bubble",0);
+		//fBubble_uniform is for old bubble correction,
+		//fBubble_interior is for homme 'epsilon-bubble correction'
+		CommandLineBool(fBubble_uniform, "bubble-uniform");
+		CommandLineBool(fBubble_interior, "bubble-interior");
 		CommandLineBool(fMonotoneType1, "mono");
 		CommandLineBool(fMonotoneType2, "mono2");
 		CommandLineBool(fMonotoneType3, "mono3");
@@ -273,7 +276,11 @@ try {
 	if ((strOutputMeta != "") && (strOutputType == "fv")) {
 		_EXCEPTIONT("--out_meta cannot be used with --out_type fv");
 	}
-
+	
+	if ( fBubble_interior && fBubble_uniform) {
+		_EXCEPTIONT("Cannot use both bubble-uniform and bubble-interior options, use only one.");
+	}
+	
 	// Check command line parameters (data type arguments)
 	STLStringHelper::ToLower(strInputType);
 	STLStringHelper::ToLower(strOutputType);
@@ -492,7 +499,8 @@ try {
 				GenerateMetaData(
 					meshOutput,
 					nPout,
-					fBubble,
+					fBubble_uniform,
+					fBubble_interior,
 					dataGLLNodes,
 					dataGLLJacobian);
 
@@ -575,7 +583,8 @@ try {
 				GenerateMetaData(
 					meshInput,
 					nPin,
-					fBubble,
+					fBubble_uniform,
+					fBubble_interior,
 					dataGLLNodes,
 					dataGLLJacobian);
 
@@ -657,7 +666,8 @@ try {
 				GenerateMetaData(
 					meshInput,
 					nPin,
-					fBubble,
+					fBubble_uniform,
+					fBubble_interior,
 					dataGLLNodesIn,
 					dataGLLJacobianIn);
 
@@ -683,7 +693,8 @@ try {
 				GenerateMetaData(
 					meshOutput,
 					nPout,
-					fBubble,
+					fBubble_uniform,
+					fBubble_interior,
 					dataGLLNodesOut,
 					dataGLLJacobianOut);
 
