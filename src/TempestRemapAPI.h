@@ -1,3 +1,6 @@
+#ifndef TEMPESTREMAP_API_H
+#define TEMPESTREMAP_API_H
+
 #include "TempestConfig.h"
 #include "DataMatrix3D.h"
 #include "GridElements.h"
@@ -64,3 +67,5 @@ extern "C" {
 						bool fOutputDouble, std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride);
 
 }
+
+#endif // TEMPESTREMAP_API_H
