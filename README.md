@@ -4,7 +4,7 @@ TempestRemap
 Author:  Paul Ullrich
 Email:   paullrich@ucdavis.edu
 
-Copyright 2000-2014 Paul Ullrich
+Copyright 2000-2017 Paul Ullrich
 
 This file is distributed as part of the Tempest source code package.
 Permission is granted to use, copy, modify and distribute this
@@ -21,8 +21,12 @@ form.
 If you choose to use this software in your work, please cite our papers:
 
 Paul A. Ullrich and Mark A. Taylor, 2015: Arbitrary-Order Conservative
-and Consistent Remapping and a Theory of Linear Maps: Part I.
-Mon. Wea. Rev., 143, 2419–2440.  doi: http://dx.doi.org/10.1175/MWR-D-14-00343.1
+and Consistent Remapping and a Theory of Linear Maps: Part 1.
+Mon. Wea. Rev., 143, 2419–2440, doi: 10.1175/MWR-D-14-00343.1
+
+Paul A. Ullrich, Darshi Devendran and Hans Johansen, 2016: Arbitrary-Order
+Conservative and Consistent Remapping and a Theory of Linear Maps, Part 2.
+Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1. 
 
 Paul A. Ullrich, Dharshi Devendran and Hans Johansen, 2015:
 Arbitrary-Order Conservative and Consistent Remapping and a Theory of
