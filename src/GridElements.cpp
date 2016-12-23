@@ -21,6 +21,7 @@
 #include "Announce.h"
 #include "FiniteElementTools.h"
 #include "GaussQuadrature.h"
+#include "STLStringHelper.h"
 
 #include <ctime>
 #include <cmath>
@@ -807,6 +808,29 @@ void Mesh::Read(const std::string & strFile) {
 		faces.resize(nGridSize);
 		nodes.resize(nGridSize * nGridCorners);
 
+		// Check for units attribute; if "degrees" then convert to radians
+		bool fConvertLonToRadians = false;
+		NcAtt * attGridCornerLonUnits = varGridCornerLon->get_att("units");
+
+		if (attGridCornerLonUnits != NULL) {
+			std::string strLonUnits = attGridCornerLonUnits->as_string(0);
+			STLStringHelper::ToLower(strLonUnits);
+			if (strLonUnits == "degrees") {
+				fConvertLonToRadians = true;
+			}
+		}
+
+		bool fConvertLatToRadians = false;
+		NcAtt * attGridCornerLatUnits = varGridCornerLat->get_att("units");
+
+		if (attGridCornerLatUnits != NULL) {
+			std::string strLatUnits = attGridCornerLatUnits->as_string(0);
+			STLStringHelper::ToLower(strLatUnits);
+			if (strLatUnits == "degrees") {
+				fConvertLatToRadians = true;
+			}
+		}
+
 		// Current global node index
 		int ixNode = 0;
 
@@ -821,10 +845,15 @@ void Mesh::Read(const std::string & strFile) {
 
 			// Insert Face corners into node table
 			for (int j = 0; j < nGridCorners; j++) {
-				double dLon = dCornerLon[i][j] / 180.0 * M_PI;
-				double dLat = dCornerLat[i][j] / 180.0 * M_PI;
+				double dLon = dCornerLon[i][j];
+				double dLat = dCornerLat[i][j];
 
-				//printf("%1.5e %1.5e\n", dLon, dLat);
+				if (fConvertLonToRadians) {
+					dLon = dLon / 180.0 * M_PI;
+				}
+				if (fConvertLatToRadians) {
+					dLat = dLat / 180.0 * M_PI;
+				}
 
 				if (dLat > 0.5 * M_PI) {
 					dLat = 0.5 * M_PI;
