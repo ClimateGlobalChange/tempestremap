@@ -120,7 +120,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap_in, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                             std::string strInputMeta, std::string strOutputMeta,
                                             std::string strInputType, std::string strOutputType,
                                             int nPin, int nPout,
@@ -134,8 +134,9 @@ extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap, Mesh&
     NcError error(NcError::silent_nonfatal);
 
     // Create Offline Map
+    OfflineMap* mapRemap = mapRemap_in;
     bool created_local=false;
-    if(!mapRemap) {
+    if(!mapRemap_in) {
     	mapRemap = new OfflineMap();
     	created_local = true;
     }

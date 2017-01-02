@@ -127,6 +127,7 @@ Real Mesh::CalculateFaceAreas() {
 	for (int i = 0; i < faces.size(); i++) {
 		vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
 		if (vecFaceArea[i] < 1.0e-13) {
+			Announce("WARNING: %i is a small element with area %14.12f", i, vecFaceArea[i]);
 			nCount++;
 		}
 	}
@@ -1114,6 +1115,9 @@ void Mesh::Validate() const {
 		double dMag = nodes[i].Magnitude();
 
 		if (fabs(dMag - 1.0) > ReferenceTolerance) {
+			Announce("Mesh validation failed: "
+				"Node[%i] of non-unit magnitude detected (%1.10e, %1.10e, %1.10e) = %1.10e",
+				i, nodes[i].x, nodes[i].y, nodes[i].z, dMag);
 			_EXCEPTION2("Mesh validation failed: "
 				"Node of non-unit magnitude detected (%i, %1.10e)",
 				i, dMag);
@@ -1680,16 +1684,18 @@ Real CalculateFaceArea(
 	const Face & face,
 	const NodeVector & nodes
 ) {
-/*
-	double dArea1 = CalculateFaceAreaQuadratureMethod(face, nodes);
 
-	double dArea2 = CalculateFaceAreaKarneysMethod(face, nodes);
+	// double dArea1 = CalculateFaceAreaQuadratureMethod(face, nodes);
 
-	printf("%1.15e %1.15e\n", dArea1, dArea2);
-*/
+	// double dArea2 = CalculateFaceAreaKarneysMethod(face, nodes);
+
+	// printf("%1.15e %1.15e\n", dArea1, dArea2);
+
+	// return dArea2;
+
 	return CalculateFaceAreaQuadratureMethod(face, nodes);
 
-	//return CalculateFaceAreaKarneysMethod(face, nodes);
+	// return CalculateFaceAreaKarneysMethod(face, nodes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
