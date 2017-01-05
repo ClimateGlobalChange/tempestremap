@@ -41,7 +41,8 @@ EXEC_FILES= ApplyOfflineMap.cpp \
             GenerateRLLMesh.cpp \
             GenerateTestData.cpp \
             GenerateVolumetricMesh.cpp \
-			MeshToTxt.cpp 
+			MeshToTxt.cpp \
+			ShpToMesh.cpp
 
 EXEC_TARGETS= $(EXEC_FILES:%.cpp=%)
 
