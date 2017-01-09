@@ -188,32 +188,32 @@ void OfflineMap::InitializeSourceDimensionsFromMesh(
 ) {
     // Push rectilinear attributes into array
     const int nElems = sourceMesh.faces.size();
-    m_vecSourceDimSizes.resize(2);
-    m_vecSourceDimNames.resize(2);
     switch(sourceMesh.type) {
         case Mesh::MeshType_CubedSphere:
+            m_vecSourceDimSizes.resize(1);
+            m_vecSourceDimNames.resize(1);
             m_vecSourceDimSizes[0] = nElems;
-            m_vecSourceDimSizes[1] = 0;
             m_vecSourceDimNames[0] = "num_elem";
-            m_vecSourceDimNames[1] = "";
             break;
         case Mesh::MeshType_RLL:
+            m_vecSourceDimSizes.resize(2);
+            m_vecSourceDimNames.resize(2);
             m_vecSourceDimSizes[0] = std::sqrt(nElems/2);
             m_vecSourceDimSizes[1] = 2*m_vecSourceDimSizes[0];
             m_vecSourceDimNames[0] = "lat";
             m_vecSourceDimNames[1] = "lon";
             break;
         case Mesh::MeshType_IcosaHedral:
+            m_vecSourceDimSizes.resize(1);
+            m_vecSourceDimNames.resize(1);
             m_vecSourceDimSizes[0] = nElems;
-            m_vecSourceDimSizes[1] = 0;
             m_vecSourceDimNames[0] = "num_elem";
-            m_vecSourceDimNames[1] = "";
             break;
         default:
+            m_vecSourceDimSizes.resize(1);
+            m_vecSourceDimNames.resize(1);
             m_vecSourceDimSizes[0] = 0;
-            m_vecSourceDimSizes[1] = 0;
             m_vecSourceDimNames[0] = "";
-            m_vecSourceDimNames[1] = "";
             break;
     }
     return;
@@ -379,17 +379,18 @@ void OfflineMap::InitializeTargetDimensionsFromMesh(
 ) {
     // Push rectilinear attributes into array
     const int nElems = targetMesh.faces.size();
-    m_vecTargetDimSizes.resize(2);
-    m_vecTargetDimNames.resize(2);
     switch(targetMesh.type) {
         case Mesh::MeshType_CubedSphere:
+            m_vecTargetDimSizes.resize(1);
+            m_vecTargetDimNames.resize(1);
+            // should probably have nxElems * nyELems
+            // That would mean we need to resize(2) and not to 1.
             m_vecTargetDimSizes[0] = nElems;
-            m_vecTargetDimSizes[1] = 0;
-
             m_vecTargetDimNames[0] = "num_elem";
-            m_vecTargetDimNames[1] = "";
             break;
         case Mesh::MeshType_RLL:
+            m_vecTargetDimSizes.resize(2);
+            m_vecTargetDimNames.resize(2);
             m_vecTargetDimSizes[0] = std::sqrt(nElems/2);
             m_vecTargetDimSizes[1] = 2*m_vecTargetDimSizes[0];
 
@@ -397,17 +398,16 @@ void OfflineMap::InitializeTargetDimensionsFromMesh(
             m_vecTargetDimNames[1] = "lon";
             break;
         case Mesh::MeshType_IcosaHedral:
+            m_vecTargetDimSizes.resize(1);
+            m_vecTargetDimNames.resize(1);
             m_vecTargetDimSizes[0] = nElems;
-            m_vecTargetDimSizes[1] = 0;
-
             m_vecTargetDimNames[0] = "num_elem";
-            m_vecTargetDimNames[1] = "";
             break;
         default:
+            m_vecTargetDimSizes.resize(1);
+            m_vecTargetDimNames.resize(1);
             m_vecTargetDimSizes[0] = 0;
-            m_vecTargetDimSizes[1] = 0;
             m_vecTargetDimNames[0] = "";
-            m_vecTargetDimNames[1] = "";
             break;
     }
     return;

@@ -29,7 +29,7 @@
 enum OverlapMeshMethod {
 	OverlapMeshMethod_Fuzzy,
 	OverlapMeshMethod_Exact,
-	OverlapMeshMethod_Mixed,
+	OverlapMeshMethod_Mixed
 };
 
 ///////////////////////////////////////////////////////////////////////////////

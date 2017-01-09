@@ -130,7 +130,7 @@ public:
 
 		m_mapEntries.clear();
 
-		for (int i = 0; i < dataRows.GetRows(); i++) {
+		for (unsigned i = 0; i < dataRows.GetRows(); i++) {
 			if (dataRows[i] >= m_nRows) {
 				m_nRows = dataRows[i] + 1;
 			}

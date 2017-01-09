@@ -35,7 +35,7 @@ enum ParameterType {
 	ParameterTypeBool,
 	ParameterTypeString,
 	ParameterTypeInt,
-	ParameterTypeDouble,
+	ParameterTypeDouble
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ public:
 	///	<summary>
 	///		Identify the type of parameter.
 	///	</summary>
-	virtual ParameterType GetParameterType() {
+	virtual ParameterType GetParameterType() const {
 		return ParameterTypeNone;
 	}
 
@@ -89,8 +89,8 @@ public:
 	///		Set the value from a string.
 	///	</summary>
 	virtual void SetValue(
-		int ix,
-		std::string strValue
+		int /*ix*/,
+		std::string /*strValue*/
 	) {
 		_EXCEPTIONT("Invalid value index.");
 	}
@@ -131,7 +131,7 @@ public:
 	///	<summary>
 	///		Identify the type of parameter.
 	///	</summary>
-	virtual ParameterType GetParameterType() {
+	virtual ParameterType GetParameterType() const {
 		return ParameterTypeBool;
 	}
 
@@ -191,7 +191,7 @@ public:
 	///	<summary>
 	///		Identify the type of parameter.
 	///	</summary>
-	virtual ParameterType GetParameterType() {
+	virtual ParameterType GetParameterType() const {
 		return ParameterTypeString;
 	}
 
@@ -423,7 +423,7 @@ void _ParseCommandLine(
 		}
 
 		// Parse parameters
-		for (int p = 0; p < vecParameters.size(); p++) {
+		for (unsigned p = 0; p < vecParameters.size(); p++) {
 			if (vecParameters[p]->m_strName == argv[command]) {
 				found = true;
 				vecParameters[p]->Activate();
