@@ -107,8 +107,8 @@ try {
 					iter->second[1]);
 			}
 
-			vecConnectivity[iter->second[0]].insert(iter->second[1]);
-			vecConnectivity[iter->second[1]].insert(iter->second[0]);
+			vecConnectivity[iter->second[0]].insert(iter->second[1]+1);
+			vecConnectivity[iter->second[1]].insert(iter->second[0]+1);
 		}
 	}
 
