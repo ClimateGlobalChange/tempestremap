@@ -1693,9 +1693,9 @@ Real CalculateFaceArea(
 
 	// return dArea2;
 
-	return CalculateFaceAreaQuadratureMethod(face, nodes);
+	// return CalculateFaceAreaQuadratureMethod(face, nodes);
 
-	// return CalculateFaceAreaKarneysMethod(face, nodes);
+	return CalculateFaceAreaKarneysMethod(face, nodes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -35,6 +35,13 @@ class OfflineMap {
 
 public:
 	///	<summary>
+	///		An empty virtual destructor.
+	///	</summary>
+	virtual ~OfflineMap()
+	{ }
+
+public:
+	///	<summary>
 	///		Initialize the array of input dimensions from a file.
 	///	</summary>
 	void InitializeSourceDimensionsFromFile(
