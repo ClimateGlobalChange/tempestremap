@@ -11,7 +11,7 @@ F90=               gfortran
 MPICXX=            mpiCC
 MPIF90=            mpif90
 
-CXXFLAGS+=         -fPIC
+CXXFLAGS+=         -fPIC -Wno-literal-suffix
 F90FLAGS+=         -fPIC
 
 F90_RUNTIME=       -lgfortran
@@ -22,10 +22,17 @@ NETCDF_CXXFLAGS=   -I$(NETCDF_ROOT)/include
 NETCDF_LIBRARIES=  -lnetcdf -lnetcdf_c++
 NETCDF_LDFLAGS=    -L$(NETCDF_ROOT)/lib
 
+# PetSc
+PETSC_ROOT=        /opt/local/lib/petsc
+X11_ROOT=          /opt/X11
+PETSC_CXXFLAGS=    -I$(PETSC_ROOT)/include
+PETSC_LIBRARIES=   -lpetsc -lX11
+PETSC_LDFLAGS=     -L$(PETSC_ROOT)/lib -L$(X11_ROOT)/lib
+
 # LAPACK (Mac OS X Accelerate Framework)
 LAPACK_INTERFACE=  FORTRAN
 LAPACK_CXXFLAGS=
-LAPACK_LIBRARIES=  
-LAPACK_LDFLAGS=    -llapack -lblas
+LAPACK_LIBRARIES=  -llapack -lblas
+LAPACK_LDFLAGS=    
 
 # DO NOT DELETE
