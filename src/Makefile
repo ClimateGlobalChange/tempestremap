@@ -30,6 +30,7 @@ UTIL_FILES= Announce.cpp \
 
 EXEC_FILES= ApplyOfflineMap.cpp \
             CalculateDiffNorms.cpp \
+			CoarsenRectilinearData.cpp \
 			GenerateConnectivityFile.cpp \
             GenerateCSMesh.cpp \
             GenerateGLLMetaData.cpp \
