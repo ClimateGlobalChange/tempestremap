@@ -37,11 +37,15 @@ try {
 	// Output face file
 	std::string strOutputFaces;
 
+	// Pad faces
+	bool fPad;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputMesh, "in", "");
 		CommandLineString(strOutputNodes, "out_nodes", "nodes.dat");
 		CommandLineString(strOutputFaces, "out_faces", "faces.dat");
+		CommandLineBool(fPad, "pad");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -69,6 +73,16 @@ try {
 	fclose(fpNodes);
 	AnnounceEndBlock("Done!");
 
+	// Maximum number of nodes per face
+	int nMaximumNodes = 0;
+	if (fPad) {
+		for (int i = 0; i < meshInput.faces.size(); i++) {
+			if (meshInput.faces[i].edges.size() > nMaximumNodes) {
+				nMaximumNodes = meshInput.faces[i].edges.size();
+			}
+		}
+	}
+
 	// Output faces
 	AnnounceStartBlock("Writing faces");
 	FILE * fpFaces = fopen(strOutputFaces.c_str(), "w");
@@ -77,6 +91,12 @@ try {
 			fprintf(fpFaces, "%i", meshInput.faces[i][j] + 1);
 			if (j != meshInput.faces[i].edges.size()-1) {
 				fprintf(fpFaces, " ");
+			}
+		}
+		if (fPad) {
+			int j = meshInput.faces[i].edges.size();
+			for (; j < nMaximumNodes; j++) {
+				fprintf(fpFaces, " %i", meshInput.faces[i][0] + 1);
 			}
 		}
 		fprintf(fpFaces, "\n");

@@ -19,6 +19,7 @@
 #include "Exception.h"
 #include "Announce.h"
 #include "order32.h"
+#include "MeshUtilitiesFuzzy.h"
 
 #include "netcdfcpp.h"
 
@@ -106,6 +107,250 @@ double SwapEndianDouble(const double num) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Convert a concave Face into a Convex face.
+///	</summary>
+///	<returns>
+///		true if the Face is convex and has been removed from the mesh.faces
+///		vector.
+///	</returns>
+bool ConvexifyFace(
+	Mesh & mesh,
+	int iFace
+) {
+	if ((iFace < 0) || (iFace > mesh.faces.size())) {
+		_EXCEPTIONT("Face index out of range");
+	}
+
+	Face & face = mesh.faces[iFace];
+
+	const int nEdges = face.edges.size();
+
+	MeshUtilitiesFuzzy meshutils;
+
+	bool fHasReflexNodes = false;
+
+	// Search for reflex nodes on Face
+	for (int i = 0; i < nEdges; i++) {
+		
+		int ixLast = (i + nEdges - 1) % nEdges;
+		int ixCurr = i;
+		int ixNext = (i + 1) % nEdges;
+
+		const Node & nodeLast = mesh.nodes[face[ixLast]];
+		const Node & nodeCurr = mesh.nodes[face[ixCurr]];
+		const Node & nodeNext = mesh.nodes[face[ixNext]];
+
+		int iSide = meshutils.FindNodeEdgeSide(
+			nodeLast,
+			nodeCurr,
+			Edge::Type_GreatCircleArc,
+			nodeNext);
+
+		if (iSide != (-1)) {
+			continue;
+		}
+
+		Announce("Reflex node found: %i", face[ixCurr]);
+
+		// Reflex node found; divide mesh at this node
+		int ixDividingNode = (-1);
+		double dMinDist = (-1.0);
+		for (int j = 0; j < nEdges; j++) {
+			if ((j == ixLast) || (j == ixCurr) || (j == ixNext)) {
+				continue;
+			}
+
+			const Node & nodeCandidate = mesh.nodes[face[j]];
+
+			// Check that this Node is in the range of the reflex node
+			const int iSide0 = meshutils.FindNodeEdgeSide(
+				nodeLast,
+				nodeCurr,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			if (iSide0 == (-1)) {
+				continue;
+			}
+
+			const int iSide1 = meshutils.FindNodeEdgeSide(
+				nodeCurr,
+				nodeNext,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			if (iSide1 == (-1)) {
+				continue;
+			}
+
+			// Check that this Node is of minimum distance
+			Node nodeDelta = nodeCandidate - nodeCurr;
+
+			double dDist = nodeDelta.Magnitude();
+
+			//printf("%i ", face[j]);
+
+			if ((dMinDist < 0.0) || (dDist < dMinDist)) {
+				ixDividingNode = j;
+				dMinDist = dDist;
+			}
+		}
+
+		// No dividing node found -- add a Steiner vertex
+		if (ixDividingNode == (-1)) {
+
+			Announce("No dividing node found -- adding a Steiner vertex");
+
+			// Find a node that bisects the two angles
+			Node nodeBisect;
+			nodeBisect.x = 3.0 * nodeCurr.x - nodeLast.x - nodeNext.x;
+			nodeBisect.y = 3.0 * nodeCurr.y - nodeLast.y - nodeNext.y;
+			nodeBisect.z = 3.0 * nodeCurr.z - nodeLast.z - nodeNext.z;
+
+			double dBisectMag = nodeBisect.Magnitude();
+			nodeBisect.x /= dBisectMag;
+			nodeBisect.y /= dBisectMag;
+			nodeBisect.z /= dBisectMag;
+
+			int ixIntersectEdge;
+			Node nodeClosestIntersect;
+			dMinDist = (-1.0);
+
+			for (int j = 0; j < nEdges; j++) {
+				if ((j == ixCurr) || (j == ixLast)) {
+					continue;
+				}
+
+				std::vector<Node> vecIntersections;
+
+				bool fCoincident = meshutils.CalculateEdgeIntersectionsSemiClip(
+					mesh.nodes[face[j]],
+					mesh.nodes[face[(j+1)%nEdges]],
+					Edge::Type_GreatCircleArc,
+					nodeCurr,
+					nodeBisect,
+					Edge::Type_GreatCircleArc,
+					vecIntersections);
+
+				if (fCoincident) {
+					_EXCEPTIONT("Coincident lines detected");
+				}
+
+				if (vecIntersections.size() > 1) {
+					_EXCEPTIONT("Logic error");
+
+				} else if (vecIntersections.size() == 1) {
+					Node nodeDelta = vecIntersections[0] - nodeCurr;
+					double dDist = nodeDelta.Magnitude();
+
+					if ((dMinDist == -1.0) || (dDist < dMinDist)) {
+						dMinDist = dDist;
+						ixIntersectEdge = j;
+						nodeClosestIntersect = vecIntersections[0];
+					}
+				}
+			}
+
+			Edge edgeIntersect = face.edges[ixIntersectEdge];
+
+			if (dMinDist == -1.0) {
+				_EXCEPTIONT("Logic error: No intersecting lines found");
+			}
+
+			int ixNewIntersectNode = mesh.nodes.size();
+			mesh.nodes.push_back(nodeClosestIntersect);
+
+			int iFaceSize1 = 1;
+			for (int k = (i+1)%nEdges; face[k] != edgeIntersect[0]; k = (k+1)%nEdges) {
+				iFaceSize1++;
+			}
+
+			Face faceNew1(iFaceSize1 + 2);
+			Face faceNew2(nEdges - iFaceSize1 + 1);
+
+			for (int k = 0; k < iFaceSize1 + 1; k++) {
+				faceNew1.SetNode(k, face[(i+k)%nEdges]);
+				//printf("%i\n", (i+k)%nEdges);
+			}
+			faceNew1.SetNode(iFaceSize1 + 1, ixNewIntersectNode);
+			for (int k = 0; k < nEdges - iFaceSize1; k++) {
+				faceNew2.SetNode(k, face[(ixIntersectEdge+k+1)%nEdges]);
+				//printf("%i\n", (ixIntersectEdge+k+1)%nEdges);
+			}
+			faceNew2.SetNode(nEdges - iFaceSize1, ixNewIntersectNode);
+
+			mesh.faces.push_back(faceNew1);
+			mesh.faces.push_back(faceNew2);
+			mesh.faces.erase(mesh.faces.begin() + iFace);
+
+			int nFaces = mesh.faces.size();
+			ConvexifyFace(mesh, nFaces-1);
+			ConvexifyFace(mesh, nFaces-2);
+
+		// Divide the mesh
+		} else {
+			Announce("Dividing node found %i", face[ixDividingNode]);
+
+			int iFaceSize1 = 0;
+			for (int k = (i+1)%nEdges; k != ixDividingNode; k = (k+1)%nEdges) {
+				iFaceSize1++;
+			}
+
+			Face faceNew1(iFaceSize1 + 2);
+			Face faceNew2(nEdges - iFaceSize1);
+
+			for (int k = 0; k < iFaceSize1 + 2; k++) {
+				faceNew1.SetNode(k, face[(i+k)%nEdges]);
+				//printf("%i\n", (i+k)%nEdges);
+			}
+			for (int k = 0; k < nEdges - iFaceSize1; k++) {
+				faceNew2.SetNode(k, face[(ixDividingNode+k)%nEdges]);
+				//printf("%i\n", (ixDividingNode+k)%nEdges);
+			}
+
+			mesh.faces.push_back(faceNew1);
+			mesh.faces.push_back(faceNew2);
+			mesh.faces.erase(mesh.faces.begin() + iFace);
+
+			int nFaces = mesh.faces.size();
+			ConvexifyFace(mesh, nFaces-1);
+			ConvexifyFace(mesh, nFaces-2);
+		}
+
+		fHasReflexNodes = true;
+		break;
+	}
+
+	return fHasReflexNodes;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ConvexifyMesh(
+	Mesh & mesh
+) {
+	char szBuffer[256];
+
+	// Loop through all Faces in the Mesh
+	int nFaces = mesh.faces.size();
+	for (int f = 0; f < nFaces; f++) {
+		sprintf(szBuffer, "Face %i", f);
+		AnnounceStartBlock(szBuffer);
+
+		// Adjust current Face index
+		bool fConcaveFaceRemoved = ConvexifyFace(mesh, f);
+		if (fConcaveFaceRemoved) {
+			f--;
+			nFaces--;
+		}
+
+		AnnounceEndBlock("Done");
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -117,10 +362,14 @@ try {
 	// Output mesh filename
 	std::string strOutputFile;
 
+	// Convexify the mesh
+	bool fConvexify;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputFile, "in", "");
 		CommandLineString(strOutputFile, "out", "");
+		CommandLineBool(fConvexify, "convexify");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -288,7 +537,10 @@ try {
 			}
 		}
 
-		// Convert to Exodus mesh
+		// Convert to Exodus mesh.  Note that shapefile polygons are specified
+		// in clockwise order, whereas Exodus files request polygons to be
+		// specified in counter-clockwise order.  Hence we need to reorient
+		// the alignment of Faces.
 		int nFaces = mesh.faces.size();
 		int nNodes = mesh.nodes.size();
 		mesh.faces.resize(nFaces+1);
@@ -303,13 +555,30 @@ try {
 			mesh.nodes[nNodes+i].y = cos(dLatRad) * sin(dLonRad);
 			mesh.nodes[nNodes+i].z = sin(dLatRad);
 
-			mesh.faces[nFaces].SetNode(i, nNodes + i);
+			mesh.faces[nFaces].SetNode(
+				shppolyhead.nNumPoints - i - 1, nNodes + i);
 		}
+/*
+		Face face5(5);
+		face5.SetNode(0, 37);
+		face5.SetNode(1, 32);
+		face5.SetNode(2, 28);
+		face5.SetNode(3, 27);
+		face5.SetNode(4, 26);
 
+		mesh.faces[0] = face5;
+*/
 		AnnounceEndBlock("Done");
 	}
 
 	AnnounceEndBlock("Done");
+
+	// Convexify the mesh
+	if (fConvexify) {
+		AnnounceStartBlock("Convexify mesh");
+		ConvexifyMesh(mesh);
+		AnnounceEndBlock("Done");
+	}
 
 	// Write to file
 	AnnounceStartBlock("Write Exodus mesh");

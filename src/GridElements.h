@@ -154,6 +154,18 @@ public:
 	}
 
 	///	<summary>
+	///		Sum of two nodes.
+	///	</summary>
+	Node operator+(const Node & node) const {
+		Node nodeSum;
+		nodeSum.x = x + node.x;
+		nodeSum.y = y + node.y;
+		nodeSum.z = z + node.z;
+
+		return nodeSum;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	Real Magnitude() const {
