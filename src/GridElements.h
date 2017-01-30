@@ -836,6 +836,31 @@ Real CalculateFaceArea(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Convert a concave Face into a Convex face.  Based on routine by
+///		Mark Bayazit (https://mpen.ca/406/bayazit).
+///	</summary>
+///	<returns>
+///		true if the Face is convex and has been removed from the mesh.faces
+///		vector.
+///	</returns>
+bool ConvexifyFace(
+	Mesh & mesh,
+	int iFace
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Convert all concave Faces into the Mesh into Concave faces via
+///		subdivision.
+///	</summary>
+void ConvexifyMesh(
+	Mesh & mesh
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Find a node within the specified quadrilateral.
 ///	</summary>
 inline Node InterpolateQuadrilateralNode(
