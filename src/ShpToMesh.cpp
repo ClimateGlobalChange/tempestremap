@@ -330,7 +330,7 @@ try {
 	// Convexify the mesh
 	if (fConvexify) {
 		AnnounceStartBlock("Convexify mesh");
-		ConvexifyMesh(mesh);
+		ConvexifyMesh(mesh, true);
 		AnnounceEndBlock("Done");
 	}
 

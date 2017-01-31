@@ -1283,10 +1283,54 @@ void Mesh::Validate() const {
 					nodeCross.x, nodeCross.y, nodeCross.z);
 
 				_EXCEPTIONT(
-					"Mesh validation failed: Clockwise element detected");
+					"Mesh validation failed: Clockwise or concave face detected");
 			}
 		}
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool Mesh::IsFaceConcave(
+	int iFace
+) const {
+	if ((iFace < 0) || (iFace > faces.size())) {
+		_EXCEPTIONT("Face index out of range");
+	}
+
+	const Face & face = faces[iFace];
+
+	const int nEdges = face.edges.size();
+
+	MeshUtilitiesFuzzy meshutils;
+
+	bool fHasReflexNodes = false;
+
+	// Search for reflex nodes on Face
+	for (int i = 0; i < nEdges; i++) {
+		
+		int ixLast = (i + nEdges - 1) % nEdges;
+		int ixCurr = i;
+		int ixNext = (i + 1) % nEdges;
+
+		const Node & nodeLast = nodes[face[ixLast]];
+		const Node & nodeCurr = nodes[face[ixCurr]];
+		const Node & nodeNext = nodes[face[ixNext]];
+
+		int iSide = meshutils.FindNodeEdgeSide(
+			nodeLast,
+			nodeCurr,
+			Edge::Type_GreatCircleArc,
+			nodeNext);
+
+		if (iSide != (-1)) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1726,7 +1770,10 @@ Real CalculateFaceArea(
 
 bool ConvexifyFace(
 	Mesh & mesh,
-	int iFace
+	Mesh & meshout,
+	int iFace,
+	bool fRemoveConcaveFaces,
+	bool fVerbose
 ) {
 	if ((iFace < 0) || (iFace > mesh.faces.size())) {
 		_EXCEPTIONT("Face index out of range");
@@ -1761,7 +1808,9 @@ bool ConvexifyFace(
 			continue;
 		}
 
-		Announce("Reflex node found: %i", face[ixCurr]);
+		if (fVerbose) {
+			Announce("Reflex node found: %i", face[ixCurr]);
+		}
 
 		// Reflex node found; divide mesh at this node
 		int ixDividingNode = (-1);
@@ -1810,7 +1859,9 @@ bool ConvexifyFace(
 		// No dividing node found -- add a Steiner vertex
 		if (ixDividingNode == (-1)) {
 
-			Announce("No dividing node found -- adding a Steiner vertex");
+			if (fVerbose) {
+				Announce("No dividing node found -- adding a Steiner vertex");
+			}
 
 			// Find a node that bisects the two angles
 			Node nodeBisect;
@@ -1869,7 +1920,7 @@ bool ConvexifyFace(
 			}
 
 			int ixNewIntersectNode = mesh.nodes.size();
-			mesh.nodes.push_back(nodeClosestIntersect);
+			meshout.nodes.push_back(nodeClosestIntersect);
 
 			int iFaceSize1 = 1;
 			for (int k = (i+1)%nEdges; face[k] != edgeIntersect[0]; k = (k+1)%nEdges) {
@@ -1890,17 +1941,22 @@ bool ConvexifyFace(
 			}
 			faceNew2.SetNode(nEdges - iFaceSize1, ixNewIntersectNode);
 
-			mesh.faces.push_back(faceNew1);
-			mesh.faces.push_back(faceNew2);
-			mesh.faces.erase(mesh.faces.begin() + iFace);
+			meshout.faces.push_back(faceNew1);
+			meshout.faces.push_back(faceNew2);
 
-			int nFaces = mesh.faces.size();
-			ConvexifyFace(mesh, nFaces-1);
-			ConvexifyFace(mesh, nFaces-2);
+			if (fRemoveConcaveFaces) {
+				mesh.faces.erase(mesh.faces.begin() + iFace);
+			}
+
+			int nFaces = meshout.faces.size();
+			ConvexifyFace(meshout, meshout, nFaces-1, true, fVerbose);
+			ConvexifyFace(meshout, meshout, nFaces-2, true, fVerbose);
 
 		// Divide the mesh
 		} else {
-			Announce("Dividing node found %i", face[ixDividingNode]);
+			if (fVerbose) {
+				Announce("Dividing node found %i", face[ixDividingNode]);
+			}
 
 			int iFaceSize1 = 0;
 			for (int k = (i+1)%nEdges; k != ixDividingNode; k = (k+1)%nEdges) {
@@ -1919,13 +1975,16 @@ bool ConvexifyFace(
 				//printf("%i\n", (ixDividingNode+k)%nEdges);
 			}
 
-			mesh.faces.push_back(faceNew1);
-			mesh.faces.push_back(faceNew2);
-			mesh.faces.erase(mesh.faces.begin() + iFace);
+			meshout.faces.push_back(faceNew1);
+			meshout.faces.push_back(faceNew2);
 
-			int nFaces = mesh.faces.size();
-			ConvexifyFace(mesh, nFaces-1);
-			ConvexifyFace(mesh, nFaces-2);
+			if (fRemoveConcaveFaces) {
+				mesh.faces.erase(mesh.faces.begin() + iFace);
+			}
+
+			int nFaces = meshout.faces.size();
+			ConvexifyFace(meshout, meshout, nFaces-1, true, fVerbose);
+			ConvexifyFace(meshout, meshout, nFaces-2, true, fVerbose);
 		}
 
 		fHasReflexNodes = true;
@@ -1938,24 +1997,82 @@ bool ConvexifyFace(
 ///////////////////////////////////////////////////////////////////////////////
 
 void ConvexifyMesh(
-	Mesh & mesh
+	Mesh & mesh,
+	bool fVerbose
 ) {
 	char szBuffer[256];
 
 	// Loop through all Faces in the Mesh
 	int nFaces = mesh.faces.size();
 	for (int f = 0; f < nFaces; f++) {
-		sprintf(szBuffer, "Face %i", f);
-		AnnounceStartBlock(szBuffer);
+		if (fVerbose) {
+			sprintf(szBuffer, "Face %i", f);
+			AnnounceStartBlock(szBuffer);
+		}
 
 		// Adjust current Face index
-		bool fConcaveFaceRemoved = ConvexifyFace(mesh, f);
-		if (fConcaveFaceRemoved) {
+		bool fConcaveFace = ConvexifyFace(mesh, mesh, f, true, fVerbose);
+		if (fConcaveFace) {
+			mesh.faces.erase(mesh.faces.begin() + f);
 			f--;
 			nFaces--;
 		}
 
-		AnnounceEndBlock("Done");
+		if (fVerbose) {
+			AnnounceEndBlock("Done");
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ConvexifyMesh(
+	Mesh & mesh,
+	Mesh & meshout,
+	bool fVerbose
+) {
+	char szBuffer[256];
+
+	// Copy all nodes to output mesh
+	meshout.nodes = mesh.nodes;
+
+	// Remove all Faces from output mesh
+	meshout.faces.clear();
+
+	// Clear the MultiFaceMap
+	meshout.vecMultiFaceMap.clear();
+
+	// Loop through all Faces in the input Mesh
+	int nFaces = mesh.faces.size();
+	for (int f = 0; f < nFaces; f++) {
+		if (fVerbose) {
+			sprintf(szBuffer, "Face %i", f);
+			AnnounceStartBlock(szBuffer);
+		}
+
+		// Adjust current Face index
+		int nMeshSize = meshout.faces.size();
+
+		bool fConcaveFace = ConvexifyFace(mesh, meshout, f, false, fVerbose);
+		if (fConcaveFace) {
+			int nAddedFaces = meshout.faces.size() - nMeshSize;
+
+			for (int i = 0; i < nAddedFaces; i++) {
+				meshout.vecMultiFaceMap.push_back(f);
+			}
+
+		} else {
+			meshout.faces.push_back(mesh.faces[f]);
+			meshout.vecMultiFaceMap.push_back(f);
+		}
+
+		if (fVerbose) {
+			AnnounceEndBlock("Done");
+		}
+	}
+
+	if (meshout.vecMultiFaceMap.size() != meshout.faces.size()) {
+		_EXCEPTIONT("Logic error");
 	}
 }
 

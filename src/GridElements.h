@@ -607,6 +607,12 @@ public:
 	///	</summary>
 	ReverseNodeArray revnodearray;
 
+	///	<summary>
+	///		Indices of the original Faces for this mesh (for use when
+	///		the original mesh has been subdivided).
+	///	</summary>
+	std::vector<int> vecMultiFaceMap;
+
 public:
 	///	<summary>
 	///		Default constructor.
@@ -678,6 +684,11 @@ public:
 	///		Validate the Mesh.
 	///	</summary>
 	void Validate() const;
+
+	///	<summary>
+	///		Check if the specified Face is concave.
+	///	</summary>
+	bool IsFaceConcave(int iFace) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -844,8 +855,11 @@ Real CalculateFaceArea(
 ///		vector.
 ///	</returns>
 bool ConvexifyFace(
-	Mesh & mesh,
-	int iFace
+	Mesh & meshin,
+	Mesh & meshout,
+	int iFace,
+	bool fRemoveConcaveFaces,
+	bool fVerbose = false
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -855,7 +869,20 @@ bool ConvexifyFace(
 ///		subdivision.
 ///	</summary>
 void ConvexifyMesh(
-	Mesh & mesh
+	Mesh & mesh,
+	bool fVerbose = false
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Convert concave Mesh meshin to convex Mesh meshout by dividing
+///		Faces and populating the MultiFaceMap.
+///	</summary>
+void ConvexifyMesh(
+	Mesh & meshin,
+	Mesh & meshout,
+	bool fVerbose = false
 );
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -48,6 +48,12 @@ try {
 	// No validation of the meshes
 	bool fNoValidate;
 
+	// Concave elements may be present in mesh A
+	bool fHasConcaveFacesA;
+
+	// Concave elements may be present in mesh B
+	bool fHasConcaveFacesB;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshA, "a", "");
@@ -55,6 +61,8 @@ try {
 		CommandLineString(strOverlapMesh, "out", "overlap.g");
 		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
 		CommandLineBool(fNoValidate, "novalidate");
+		CommandLineBool(fHasConcaveFacesA, "concavea");
+		CommandLineBool(fHasConcaveFacesB, "concaveb");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -80,6 +88,12 @@ try {
 	meshA.RemoveZeroEdges();
 	AnnounceEndBlock(NULL);
 
+	// Convexify Mesh
+	if (fHasConcaveFacesA) {
+		Mesh meshTemp = meshA;
+		ConvexifyMesh(meshTemp, meshA);
+	}
+
 	// Validate mesh
 	if (!fNoValidate) {
 		AnnounceStartBlock("Validate mesh A");
@@ -92,6 +106,12 @@ try {
 	Mesh meshB(strMeshB);
 	meshB.RemoveZeroEdges();
 	AnnounceEndBlock(NULL);
+
+	// Convexify Mesh
+	if (fHasConcaveFacesB) {
+		Mesh meshTemp = meshB;
+		ConvexifyMesh(meshTemp, meshB);
+	}
 
 	// Validate mesh
 	if (!fNoValidate) {

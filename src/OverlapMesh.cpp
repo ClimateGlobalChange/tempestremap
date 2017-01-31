@@ -1917,6 +1917,22 @@ void GenerateOverlapMesh_v2(
 			iTargetFaceSeed);
 	}
 
+	// Replace parent indices if meshSource has a MultiFaceMap
+	if (meshSource.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecSourceFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecSourceFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshTarget has a MultiFaceMap
+	if (meshTarget.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecTargetFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecTargetFaceIx[f]];
+		}
+	}
+
 	// Destroy the KD tree
 	kd_free(kdTarget);
 
