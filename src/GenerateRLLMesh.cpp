@@ -97,7 +97,7 @@ try {
 	dLonEnd   *= M_PI / 180.0;
 	dLatBegin *= M_PI / 180.0;
 	dLatEnd   *= M_PI / 180.0;
-
+/*
 	// Check parameters
 	if (nLatitudes < 2) {
 		std::cout << "Error: At least 2 latitudes are required." << std::endl;
@@ -107,7 +107,7 @@ try {
 		std::cout << "Error: At least 2 longitudes are required." << std::endl;
 		return (-1);
 	}
-
+*/
 	// Generate the mesh
 	Mesh mesh;
 

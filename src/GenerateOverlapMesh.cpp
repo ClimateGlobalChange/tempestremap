@@ -139,7 +139,7 @@ try {
 		meshOverlap,
 		method);
 */
-	AnnounceStartBlock("Construct overlap mesh");
+	AnnounceStartBlock("Construct overlap mesh\n");
 	GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method);
 	AnnounceEndBlock(NULL);
 /*

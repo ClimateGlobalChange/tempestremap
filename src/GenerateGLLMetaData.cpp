@@ -65,7 +65,7 @@ try {
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating input mesh Face areas");
-	double dTotalAreaInput = meshInput.CalculateFaceAreas();
+	double dTotalAreaInput = meshInput.CalculateFaceAreas(false);
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 

@@ -117,14 +117,26 @@ try {
 	// Output mesh filename
 	std::string strOutputFile;
 
+	// Units for each dimension
+	std::string strXYUnits;
+
 	// Convexify the mesh
 	bool fConvexify;
+
+	// First polygon
+	int iPolygonFirst;
+
+	// Last polygon
+	int iPolygonLast;
 
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputFile, "in", "");
 		CommandLineString(strOutputFile, "out", "");
+		CommandLineString(strXYUnits, "xyunits", "lonlat");
 		CommandLineBool(fConvexify, "convexify");
+		CommandLineInt(iPolygonFirst, "polygon_first", (-1));
+		CommandLineInt(iPolygonLast, "polygon_last", (-1));
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -264,8 +276,10 @@ try {
 		Announce("Ymax: %3.5f", shppolyhead.dYmax);
 
 		if (shppolyhead.nNumParts != 1) {
-			_EXCEPTIONT("Only polygons with 1 part currently supported"
-				" in Exodus format");
+			Announce("WARNING: Only polygons with 1 part currently supported"
+				" in Exodus format; ignoring remaining parts");
+			//_EXCEPTIONT("Only polygons with 1 part currently supported"
+			//	" in Exodus format");
 		}
 
 		DataVector<int32_t> iParts(shppolyhead.nNumParts);
@@ -291,6 +305,16 @@ try {
 			}
 		}
 
+		if ((iPolygonFirst != (-1)) && (shprechead.iNumber < iPolygonFirst)) {
+			AnnounceEndBlock("Done");
+			continue;
+		}
+
+		if ((iPolygonLast != (-1)) && (shprechead.iNumber > iPolygonLast)) {
+			AnnounceEndBlock("Done");
+			continue;
+		}
+
 		// Convert to Exodus mesh.  Note that shapefile polygons are specified
 		// in clockwise order, whereas Exodus files request polygons to be
 		// specified in counter-clockwise order.  Hence we need to reorient
@@ -301,16 +325,23 @@ try {
 		mesh.nodes.resize(nNodes + shppolyhead.nNumPoints);
 
 		mesh.faces[nFaces] = Face(shppolyhead.nNumPoints);
-		for (int i = 0; i < shppolyhead.nNumPoints; i++) {
-			double dLonRad = dPoints[2*i] / 180.0 * M_PI;
-			double dLatRad = dPoints[2*i+1] / 180.0 * M_PI;
 
-			mesh.nodes[nNodes+i].x = cos(dLatRad) * cos(dLonRad);
-			mesh.nodes[nNodes+i].y = cos(dLatRad) * sin(dLonRad);
-			mesh.nodes[nNodes+i].z = sin(dLatRad);
+		// Convert from longitude/latitude to XYZ
+		if (strXYUnits == "lonlat") {
+			for (int i = 0; i < shppolyhead.nNumPoints; i++) {
+				double dLonRad = dPoints[2*i] / 180.0 * M_PI;
+				double dLatRad = dPoints[2*i+1] / 180.0 * M_PI;
 
-			mesh.faces[nFaces].SetNode(
-				shppolyhead.nNumPoints - i - 1, nNodes + i);
+				mesh.nodes[nNodes+i].x = cos(dLatRad) * cos(dLonRad);
+				mesh.nodes[nNodes+i].y = cos(dLatRad) * sin(dLonRad);
+				mesh.nodes[nNodes+i].z = sin(dLatRad);
+
+				mesh.faces[nFaces].SetNode(
+					shppolyhead.nNumPoints - i - 1, nNodes + i);
+			}
+
+		} else {
+			_EXCEPTION1("Invalid units \"%s\"", strXYUnits.c_str());
 		}
 /*
 		Face face5(5);

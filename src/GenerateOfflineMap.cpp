@@ -208,6 +208,12 @@ try {
 	// Fill value override
 	double dFillValueOverride;
 
+	// Input mesh contains concave elements
+	bool fInputConcave;
+
+	// Output mesh contains concave elements
+	bool fOutputConcave;
+
 	// Parse the command line
 	BeginCommandLine()
 		//CommandLineStringD(strMethod, "method", "", "[se]");
@@ -236,6 +242,8 @@ try {
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
+		CommandLineBool(fInputConcave, "in_concave");
+		CommandLineBool(fOutputConcave, "out_concave");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -354,7 +362,7 @@ try {
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating input mesh Face areas");
-	double dTotalAreaInput = meshInput.CalculateFaceAreas();
+	double dTotalAreaInput = meshInput.CalculateFaceAreas(fInputConcave);
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 
@@ -371,7 +379,7 @@ try {
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating output mesh Face areas");
-	Real dTotalAreaOutput = meshOutput.CalculateFaceAreas();
+	Real dTotalAreaOutput = meshOutput.CalculateFaceAreas(fOutputConcave);
 	Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
 	AnnounceEndBlock(NULL);
 
@@ -432,7 +440,7 @@ try {
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating overlap mesh Face areas");
-	Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
+	Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
 	Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
 	AnnounceEndBlock(NULL);
 

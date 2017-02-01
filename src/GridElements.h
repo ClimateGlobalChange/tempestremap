@@ -646,7 +646,9 @@ public:
 	///	<summary>
 	///		Calculate Face areas.
 	///	</summary>
-	Real CalculateFaceAreas();
+	Real CalculateFaceAreas(
+		bool fContainsConcaveFaces
+	);
 
 	///	<summary>
 	///		Calculate Face areas from an Overlap mesh.

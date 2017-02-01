@@ -58,6 +58,9 @@ try {
 	// Output filename
 	std::string strOutputFile;
 
+	// Contains concave faces
+	bool fContainsConcaveFaces;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strFileA, "a", "");
@@ -68,6 +71,7 @@ try {
 		CommandLineBool(fBubble, "bubble");
 		CommandLineString(strMeshFile, "mesh", "");
 		CommandLineString(strOutputFile, "outfile", "");
+		CommandLineBool(fContainsConcaveFaces, "concave");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -271,7 +275,7 @@ try {
 
 	// Use face areas
 	if (!fGLL) {
-		mesh.CalculateFaceAreas();
+		mesh.CalculateFaceAreas(fContainsConcaveFaces);
 
 		for (int i = 0; i < nTotalDataSize; i++) {
 			dNormL1 += dDataA[i] * mesh.vecFaceArea[i];

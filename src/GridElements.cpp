@@ -120,18 +120,47 @@ void Mesh::ConstructReverseNodeArray() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Real Mesh::CalculateFaceAreas() {
+Real Mesh::CalculateFaceAreas(
+	bool fContainsConcaveFaces
+) {
 
 	// Calculate the area of each Face
 	vecFaceArea.Initialize(faces.size());
 
 	int nCount = 0;
-	for (int i = 0; i < faces.size(); i++) {
-		vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
-		if (vecFaceArea[i] < 1.0e-13) {
-			nCount++;
+	if (fContainsConcaveFaces) {
+		for (int i = 0; i < faces.size(); i++) {
+			if (IsFaceConcave(i)) {
+				Mesh meshout;
+				for (int j = 0; j < faces[i].edges.size(); j++) {
+					meshout.nodes.push_back(nodes[faces[i][j]]);
+				}
+				Face faceTemp(faces[i].edges.size());
+				for (int j = 0; j < faceTemp.edges.size(); j++) {
+					faceTemp.SetNode(j, j);
+				}
+				meshout.faces.push_back(faceTemp);
+				ConvexifyMesh(meshout);
+				vecFaceArea[i] = meshout.CalculateFaceAreas(false);
+
+			} else {
+				vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
+			}
+
+			if (vecFaceArea[i] < 1.0e-13) {
+				nCount++;
+			}
+		}
+
+	} else {
+		for (int i = 0; i < faces.size(); i++) {
+			vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
+			if (vecFaceArea[i] < 1.0e-13) {
+				nCount++;
+			}
 		}
 	}
+
 	if (nCount != 0) {
 		Announce("WARNING: %i small elements found", nCount);
 	}
@@ -1848,8 +1877,6 @@ bool ConvexifyFace(
 
 			double dDist = nodeDelta.Magnitude();
 
-			//printf("%i ", face[j]);
-
 			if ((dMinDist < 0.0) || (dDist < dMinDist)) {
 				ixDividingNode = j;
 				dMinDist = dDist;
@@ -1952,7 +1979,7 @@ bool ConvexifyFace(
 			ConvexifyFace(meshout, meshout, nFaces-1, true, fVerbose);
 			ConvexifyFace(meshout, meshout, nFaces-2, true, fVerbose);
 
-		// Divide the mesh
+		// Divide the mesh at the reflex node
 		} else {
 			if (fVerbose) {
 				Announce("Dividing node found %i", face[ixDividingNode]);
@@ -2013,7 +2040,6 @@ void ConvexifyMesh(
 		// Adjust current Face index
 		bool fConcaveFace = ConvexifyFace(mesh, mesh, f, true, fVerbose);
 		if (fConcaveFace) {
-			mesh.faces.erase(mesh.faces.begin() + f);
 			f--;
 			nFaces--;
 		}
@@ -2056,7 +2082,6 @@ void ConvexifyMesh(
 		bool fConcaveFace = ConvexifyFace(mesh, meshout, f, false, fVerbose);
 		if (fConcaveFace) {
 			int nAddedFaces = meshout.faces.size() - nMeshSize;
-
 			for (int i = 0; i < nAddedFaces; i++) {
 				meshout.vecMultiFaceMap.push_back(f);
 			}
