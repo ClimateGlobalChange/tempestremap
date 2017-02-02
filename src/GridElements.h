@@ -686,11 +686,6 @@ public:
 	///		Validate the Mesh.
 	///	</summary>
 	void Validate() const;
-
-	///	<summary>
-	///		Check if the specified Face is concave.
-	///	</summary>
-	bool IsFaceConcave(int iFace) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -834,6 +829,26 @@ int BuildCoincidentNodeVector(
 	const Mesh & meshFirst,
 	const Mesh & meshSecond,
 	std::vector<int> & vecSecondToFirstCoincident
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Check if the specified Face is concave.
+///	</summary>
+bool IsFaceConcave(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a single Face, detecting concave Faces.
+///	</summary>
+Real CalculateFaceArea_Concave(
+	const Face & face,
+	const NodeVector & nodes
 );
 
 ///////////////////////////////////////////////////////////////////////////////

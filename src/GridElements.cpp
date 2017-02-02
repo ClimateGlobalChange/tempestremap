@@ -123,46 +123,35 @@ void Mesh::ConstructReverseNodeArray() {
 Real Mesh::CalculateFaceAreas(
 	bool fContainsConcaveFaces
 ) {
-
-	// Calculate the area of each Face
+	int nCount = 0;
 	vecFaceArea.Initialize(faces.size());
 
-	int nCount = 0;
+	// Calculate the area of each Face
 	if (fContainsConcaveFaces) {
+
 		for (int i = 0; i < faces.size(); i++) {
-			if (IsFaceConcave(i)) {
-				Mesh meshout;
-				for (int j = 0; j < faces[i].edges.size(); j++) {
-					meshout.nodes.push_back(nodes[faces[i][j]]);
-				}
-				Face faceTemp(faces[i].edges.size());
-				for (int j = 0; j < faceTemp.edges.size(); j++) {
-					faceTemp.SetNode(j, j);
-				}
-				meshout.faces.push_back(faceTemp);
-				ConvexifyMesh(meshout);
-				vecFaceArea[i] = meshout.CalculateFaceAreas(false);
-
-			} else {
-				vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
-			}
-
+			vecFaceArea[i] = CalculateFaceArea_Concave(faces[i], nodes);
 			if (vecFaceArea[i] < 1.0e-13) {
 				nCount++;
 			}
 		}
 
+		if (nCount != 0) {
+			Announce("WARNING: %i small elements found", nCount);
+		}
+
 	} else {
+
 		for (int i = 0; i < faces.size(); i++) {
 			vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
 			if (vecFaceArea[i] < 1.0e-13) {
 				nCount++;
 			}
 		}
-	}
 
-	if (nCount != 0) {
-		Announce("WARNING: %i small elements found", nCount);
+		if (nCount != 0) {
+			Announce("WARNING: %i small elements found", nCount);
+		}
 	}
 
 	// Calculate accumulated area carefully
@@ -1319,50 +1308,6 @@ void Mesh::Validate() const {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-bool Mesh::IsFaceConcave(
-	int iFace
-) const {
-	if ((iFace < 0) || (iFace > faces.size())) {
-		_EXCEPTIONT("Face index out of range");
-	}
-
-	const Face & face = faces[iFace];
-
-	const int nEdges = face.edges.size();
-
-	MeshUtilitiesFuzzy meshutils;
-
-	bool fHasReflexNodes = false;
-
-	// Search for reflex nodes on Face
-	for (int i = 0; i < nEdges; i++) {
-		
-		int ixLast = (i + nEdges - 1) % nEdges;
-		int ixCurr = i;
-		int ixNext = (i + 1) % nEdges;
-
-		const Node & nodeLast = nodes[face[ixLast]];
-		const Node & nodeCurr = nodes[face[ixCurr]];
-		const Node & nodeNext = nodes[face[ixNext]];
-
-		int iSide = meshutils.FindNodeEdgeSide(
-			nodeLast,
-			nodeCurr,
-			Edge::Type_GreatCircleArc,
-			nodeNext);
-
-		if (iSide != (-1)) {
-			continue;
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // General purpose functions
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1779,6 +1724,71 @@ Real CalculateFaceAreaKarneysMethod(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool IsFaceConcave(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	const int nEdges = face.edges.size();
+
+	MeshUtilitiesFuzzy meshutils;
+
+	bool fHasReflexNodes = false;
+
+	// Search for reflex nodes on Face
+	for (int i = 0; i < nEdges; i++) {
+		
+		int ixLast = (i + nEdges - 1) % nEdges;
+		int ixCurr = i;
+		int ixNext = (i + 1) % nEdges;
+
+		const Node & nodeLast = nodes[face[ixLast]];
+		const Node & nodeCurr = nodes[face[ixCurr]];
+		const Node & nodeNext = nodes[face[ixNext]];
+
+		int iSide = meshutils.FindNodeEdgeSide(
+			nodeLast,
+			nodeCurr,
+			Edge::Type_GreatCircleArc,
+			nodeNext);
+
+		if (iSide != (-1)) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceArea_Concave(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	Real dArea = 0.0;
+
+	if (IsFaceConcave(face, nodes)) {
+		Mesh meshout;
+		for (int j = 0; j < face.edges.size(); j++) {
+			meshout.nodes.push_back(nodes[face[j]]);
+		}
+		Face faceTemp(face.edges.size());
+		for (int j = 0; j < faceTemp.edges.size(); j++) {
+			faceTemp.SetNode(j, j);
+		}
+		meshout.faces.push_back(faceTemp);
+		ConvexifyMesh(meshout);
+
+		return meshout.CalculateFaceAreas(false);
+	}
+
+	return CalculateFaceArea(face, nodes);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 Real CalculateFaceArea(
 	const Face & face,
 	const NodeVector & nodes
@@ -1851,6 +1861,28 @@ bool ConvexifyFace(
 
 			const Node & nodeCandidate = mesh.nodes[face[j]];
 
+			Node node2;
+			node2.x = nodeCurr.x + (nodeNext.x - nodeLast.x);
+			node2.y = nodeCurr.y + (nodeNext.y - nodeLast.y);
+			node2.z = nodeCurr.z + (nodeNext.z - nodeLast.z);
+
+			double dMag2 = node2.Magnitude();
+			node2.x /= dMag2;
+			node2.y /= dMag2;
+			node2.z /= dMag2;
+/*
+			// Check that this Node is in the range of the reflex node
+			const int iSide0 = meshutils.FindNodeEdgeSide(
+				nodeCurr,
+				node2,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			if (iSide0 == (-1)) {
+				continue;
+			}
+*/
+
 			// Check that this Node is in the range of the reflex node
 			const int iSide0 = meshutils.FindNodeEdgeSide(
 				nodeLast,
@@ -1858,20 +1890,24 @@ bool ConvexifyFace(
 				Edge::Type_GreatCircleArc,
 				nodeCandidate);
 
-			if (iSide0 == (-1)) {
-				continue;
-			}
-
 			const int iSide1 = meshutils.FindNodeEdgeSide(
 				nodeCurr,
 				nodeNext,
 				Edge::Type_GreatCircleArc,
 				nodeCandidate);
 
-			if (iSide1 == (-1)) {
+			if (iSide0 == (-1)) {
 				continue;
 			}
 
+			if (iSide1 == (-1)) {
+				continue;
+			}
+/*
+			if ((iSide0 == (-1)) && (iSide1 == (-1))) {
+				continue;
+			}
+*/
 			// Check that this Node is of minimum distance
 			Node nodeDelta = nodeCandidate - nodeCurr;
 

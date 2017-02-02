@@ -129,6 +129,9 @@ try {
 	// Last polygon
 	int iPolygonLast;
 
+	// Calculate and display area of mesh
+	bool fCalculateArea;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputFile, "in", "");
@@ -137,6 +140,7 @@ try {
 		CommandLineBool(fConvexify, "convexify");
 		CommandLineInt(iPolygonFirst, "polygon_first", (-1));
 		CommandLineInt(iPolygonLast, "polygon_last", (-1));
+		CommandLineBool(fCalculateArea, "calculatearea");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -343,6 +347,16 @@ try {
 		} else {
 			_EXCEPTION1("Invalid units \"%s\"", strXYUnits.c_str());
 		}
+
+		// Calculate Face area
+		if (fCalculateArea) {
+			double dArea =
+				CalculateFaceArea_Concave(
+					mesh.faces[nFaces], mesh.nodes);
+
+			Announce("Area: %1.15e sr", dArea);
+		}
+
 /*
 		Face face5(5);
 		face5.SetNode(0, 37);
