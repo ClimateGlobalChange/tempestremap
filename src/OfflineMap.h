@@ -55,6 +55,13 @@ public:
         const Mesh & sourceMesh
     );
 
+    ///	<summary>
+    ///		Initialize the array of input dimensions from a mesh.
+    ///	</summary>
+    void InitializeSourceDimensionsFromMesh(
+        const int nelemx, const int nelemy
+    );
+
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
 	///	</summary>
@@ -67,6 +74,13 @@ public:
     ///	</summary>
     void InitializeTargetDimensionsFromMesh(
         const Mesh & targetMesh
+    );
+
+    ///	<summary>
+    ///		Initialize the array of output dimensions from a mesh.
+    ///	</summary>
+    void InitializeTargetDimensionsFromMesh(
+        const int nelemx, const int nelemy
     );
 
 private:
@@ -180,14 +194,14 @@ public:
 	///	<summary>
 	///		Read the OfflineMap from a NetCDF file.
 	///	</summary>
-	void Read(
+	virtual void Read(
 		const std::string & strSource
 	);
 
 	///	<summary>
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
-	void Write(
+	virtual void Write(
 		const std::string & strTarget
 	);
 
@@ -195,21 +209,21 @@ public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
 	///	</summary>
-	bool IsConsistent(
+	virtual bool IsConsistent(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is conservative.
 	///	</summary>
-	bool IsConservative(
+	virtual bool IsConservative(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is monotone.
 	///	</summary>
-	bool IsMonotone(
+	virtual bool IsMonotone(
 		double dTolerance
 	);
 

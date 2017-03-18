@@ -221,6 +221,28 @@ void OfflineMap::InitializeSourceDimensionsFromMesh(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void OfflineMap::InitializeSourceDimensionsFromMesh(
+    const int nelemx, const int nelemy
+) {
+    // Push rectilinear attributes into array
+    if (nelemy == 0) {
+        m_vecSourceDimSizes.resize(1);
+        m_vecSourceDimNames.resize(1);
+        m_vecSourceDimSizes[0] = nelemx;
+        m_vecSourceDimNames[0] = "num_elem";
+    }
+    else {
+        m_vecSourceDimSizes.resize(2);
+        m_vecSourceDimNames.resize(2);
+        m_vecSourceDimSizes[0] = nelemx;
+        m_vecSourceDimSizes[1] = nelemy;
+        m_vecSourceDimNames[0] = "lat";
+        m_vecSourceDimNames[1] = "lon";
+    }
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void OfflineMap::InitializeTargetDimensionsFromFile(
 	const std::string & strTargetMesh
 ) {
@@ -415,6 +437,31 @@ void OfflineMap::InitializeTargetDimensionsFromMesh(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void OfflineMap::InitializeTargetDimensionsFromMesh(
+    const int nelemx, const int nelemy
+) {
+    // Push rectilinear attributes into array
+    if (nelemy == 0) {
+        m_vecTargetDimSizes.resize(1);
+        m_vecTargetDimNames.resize(1);
+        // should probably have nxElems * nyELems
+        // That would mean we need to resize(2) and not to 1.
+        m_vecTargetDimSizes[0] = nelemx;
+        m_vecTargetDimNames[0] = "num_elem";
+    }
+    else {
+    	m_vecTargetDimSizes.resize(2);
+        m_vecTargetDimNames.resize(2);
+        m_vecTargetDimSizes[0] = nelemx;
+        m_vecTargetDimSizes[1] = nelemy;
+
+        m_vecTargetDimNames[0] = "lat";
+        m_vecTargetDimNames[1] = "lon";
+    }
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void OfflineMap::InitializeCoordinatesFromMeshFV(
 	const Mesh & mesh,
 	DataVector<double> & dCenterLon,

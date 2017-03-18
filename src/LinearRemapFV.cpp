@@ -1119,7 +1119,7 @@ void LinearRemapFVtoFV(
 
 		// Output every 100 elements
 		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
 
 		// This Face
