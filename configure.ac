@@ -20,6 +20,8 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
+DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
+
 # Enable creation of TempestRemap library
 create_library=no
 AC_ARG_ENABLE(linkable-library,
@@ -30,17 +32,18 @@ AC_ARG_ENABLE(linkable-library,
 
 if (test "x$create_library" != "xyes"); then
   AC_DEFINE(TEMPEST_DRIVER_MODE, 1, [Define this if drivers for TempestRemap are to be created directly.])
+else
+  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --enable-linkable-library"
 fi
 AM_CONDITIONAL([BUILD_DRIVERS], [test "x$create_library" != "xyes"])
 
 # Check how to add C++0x flags
 # TODO: Should we check for partial C++11 support also ?
-#AX_CXX_COMPILE_STDCXX_0X
+AX_CXX_COMPILE_STDCXX_0X
 
 # Checks for FORTRAN.
 AC_PROG_F77([gfortran g77])    
-AC_PROG_FC([gfortran g77])    
-AC_FC_LIBRARY_LDFLAGS
+AC_F77_LIBRARY_LDFLAGS
 LIBS="$LIBS $FCLIBS -lm"
 
 # Checks for BLAS/LAPACK libraries:
@@ -70,6 +73,7 @@ AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset pow sqrt])
 
+AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

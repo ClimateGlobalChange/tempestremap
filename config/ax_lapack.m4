@@ -79,6 +79,7 @@ case $with_lapack in
         -* | */* | *.a | *.so | *.so.* | *.o) LAPACK_LIBS="$with_lapack" ;;
         *) LAPACK_LIBS="-l$with_lapack" ;;
 esac
+DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-lapack=$with_lapack"
 
 # Get fortran linker name of LAPACK function to check for.
 AC_F77_FUNC(cheev)

@@ -84,7 +84,7 @@ _AX_BLAS(gemm_, [ax_blas_ok=yes; ax_blas_underscore=yes],
     [_AX_BLAS(gemm, [ax_blas_ok=yes; ax_blas_underscore=no])])
 
 AC_SUBST(BLAS_LIBS)
-
+DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-blas=$with_blas"
 if test x"$ax_blas_ok" = xyes; then
     ifelse([$1],, [
         AC_DEFINE(HAVE_BLAS,1, [Define if you have a BLAS library.])
