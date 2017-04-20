@@ -4,7 +4,7 @@ TempestRemap
 Author:  Paul Ullrich
 Email:   paullrich@ucdavis.edu
 
-Copyright 2000-2014 Paul Ullrich
+Copyright 2000-2017 Paul Ullrich
 
 This file is distributed as part of the Tempest source code package.
 Permission is granted to use, copy, modify and distribute this
@@ -21,14 +21,55 @@ form.
 If you choose to use this software in your work, please cite our papers:
 
 Paul A. Ullrich and Mark A. Taylor, 2015: Arbitrary-Order Conservative
-and Consistent Remapping and a Theory of Linear Maps: Part I.
-Mon. Wea. Rev., 143, 2419–2440.  doi: http://dx.doi.org/10.1175/MWR-D-14-00343.1
+and Consistent Remapping and a Theory of Linear Maps: Part 1.
+Mon. Wea. Rev., 143, 2419–2440, doi: 10.1175/MWR-D-14-00343.1
+
+Paul A. Ullrich, Darshi Devendran and Hans Johansen, 2016: Arbitrary-Order
+Conservative and Consistent Remapping and a Theory of Linear Maps, Part 2.
+Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1. 
 
 Paul A. Ullrich, Dharshi Devendran and Hans Johansen, 2015:
 Arbitrary-Order Conservative and Consistent Remapping and a Theory of
 Linear Maps: Part II.  Submitted to Mon. Wea. Rev.
 
-Build Instructions
+Librarification for build with MOAB
+-----------------------------------
+
+The original TempestRemap sources available at 
+https://github.com/ClimateGlobalChange/tempestremap have been modified to
+accomodate a robust autotools-based configuration/build system. Additional
+modifications include librarification of the TempestRemap sources to produce
+both a linkable library (enabled with --enable-linkable-library), and in the
+absence of such an option, the original TempestRemap drivers. These changes 
+should be considered more of a refactor of the sources and do not contain any
+functional or algorithmic changes.
+
+If you are working from the repository, please proceed with these new set of
+build instructions
+
+  1. cd $TEMPESTREMAP_SRCDIR && autoreconf -fi
+  2. mkdir -p build && cd build
+  3. To build a linkable library:
+     ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
+                  --with-blas=$BLAS_LIB \ # Path to BLAS libraries
+                  --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
+                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
+                  --with-hdf5=$HDF5_DIR \ # If NetCDF was build with HDF5
+                  --enable-linkable-library # Enable creation of libraries
+  4. To build the TempestRemap drivers:
+     ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
+                  --with-blas=$BLAS_LIB \ # Path to BLAS libraries
+                  --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
+                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
+                  --with-hdf5=$HDF5_DIR # If NetCDF was build with HDF5
+  5. make all
+  6. make install
+
+Additionally, a user can provide the appropriate compilers with the environmental
+flags (CC, CXX, FC, F77 etc) and control the compilation/link flags (CXXFLAGS, 
+CPPFLAGS, LDFLAGS, LIBS) as necessary.
+
+Old Build Instructions
 ------------------
 
 The software can be obtained from the GITHub repository via git:
