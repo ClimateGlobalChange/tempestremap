@@ -41,6 +41,7 @@ EXEC_FILES= ApplyOfflineMap.cpp \
             GenerateOverlapMesh_v1.cpp \
             GenerateRLLMesh.cpp \
             GenerateTestData.cpp \
+			GenerateTransposeMap.cpp \
             GenerateVolumetricMesh.cpp \
 			MeshToTxt.cpp \
 			ShpToMesh.cpp
