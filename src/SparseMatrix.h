@@ -93,7 +93,7 @@ public:
 		DataVector<int> & dataRows,
 		DataVector<int> & dataCols,
 		DataVector<DataType> & dataEntries
-	) {
+	) const {
 		dataRows.Initialize(m_mapEntries.size());
 		dataCols.Initialize(m_mapEntries.size());
 		dataEntries.Initialize(m_mapEntries.size());
