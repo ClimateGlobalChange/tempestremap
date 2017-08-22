@@ -1216,7 +1216,6 @@ void GenerateOverlapMesh_v1(
 	// Loop through all Faces on the first Mesh
 	int ixCurrentSourceFace = 0;
 
-#pragma message "OpenMP here"
 	for (; ixCurrentSourceFace < meshSource.faces.size(); ixCurrentSourceFace++) {
 	//for (int ixCurrentSourceFace = 853; ixCurrentSourceFace < 854; ixCurrentSourceFace++) {
 
@@ -1920,6 +1919,22 @@ void GenerateOverlapMesh_v2(
             verbose);
 	}
 
+	// Replace parent indices if meshSource has a MultiFaceMap
+	if (meshSource.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecSourceFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecSourceFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshTarget has a MultiFaceMap
+	if (meshTarget.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecTargetFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecTargetFaceIx[f]];
+		}
+	}
+
 	// Destroy the KD tree
 	kd_free(kdTarget);
 
@@ -1931,9 +1946,20 @@ void GenerateOverlapMesh_v2(
 		meshOverlap.nodes[iter->second] = iter->first;
 	}
 
+/*
+	// Check concavity of overlap mesh
+	AnnounceStartBlock("Testing concavity of overlap mesh");
+	for (int i = 0; i < meshOverlap.faces.size(); i++) {
+		bool fIsConcave = meshOverlap.IsFaceConcave(i);
+		if (fIsConcave) {
+			_EXCEPTIONT("Concave element detected in overlap mesh");
+		}
+	}
+	AnnounceEndBlock("Done");
+*/
 	// Calculate Face areas
     if (verbose) {
-        double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
+        double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
         Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
     }
 }

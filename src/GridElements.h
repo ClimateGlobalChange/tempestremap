@@ -154,6 +154,18 @@ public:
 	}
 
 	///	<summary>
+	///		Sum of two nodes.
+	///	</summary>
+	Node operator+(const Node & node) const {
+		Node nodeSum;
+		nodeSum.x = x + node.x;
+		nodeSum.y = y + node.y;
+		nodeSum.z = z + node.z;
+
+		return nodeSum;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	Real Magnitude() const {
@@ -610,6 +622,12 @@ public:
 	///	</summary>
 	ReverseNodeArray revnodearray;
 
+	///	<summary>
+	///		Indices of the original Faces for this mesh (for use when
+	///		the original mesh has been subdivided).
+	///	</summary>
+	std::vector<int> vecMultiFaceMap;
+
 public:
 	///	<summary>
 	///		Default constructor.
@@ -643,7 +661,9 @@ public:
 	///	<summary>
 	///		Calculate Face areas.
 	///	</summary>
-	Real CalculateFaceAreas();
+	Real CalculateFaceAreas(
+		bool fContainsConcaveFaces
+	);
 
 	///	<summary>
 	///		Calculate Face areas from an Overlap mesh.
@@ -829,11 +849,72 @@ int BuildCoincidentNodeVector(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Check if the specified Face is concave.
+///	</summary>
+bool IsFaceConcave(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a single Face, detecting concave Faces.
+///	</summary>
+Real CalculateFaceArea_Concave(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Calculate the area of a single Face.
 ///	</summary>
 Real CalculateFaceArea(
 	const Face & face,
 	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Convert a concave Face into a Convex face.  Based on routine by
+///		Mark Bayazit (https://mpen.ca/406/bayazit).
+///	</summary>
+///	<returns>
+///		true if the Face is convex and has been removed from the mesh.faces
+///		vector.
+///	</returns>
+bool ConvexifyFace(
+	Mesh & meshin,
+	Mesh & meshout,
+	int iFace,
+	bool fRemoveConcaveFaces,
+	bool fVerbose = false
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Convert all concave Faces into the Mesh into Concave faces via
+///		subdivision.
+///	</summary>
+void ConvexifyMesh(
+	Mesh & mesh,
+	bool fVerbose = false
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Convert concave Mesh meshin to convex Mesh meshout by dividing
+///		Faces and populating the MultiFaceMap.
+///	</summary>
+void ConvexifyMesh(
+	Mesh & meshin,
+	Mesh & meshout,
+	bool fVerbose = false
 );
 
 ///////////////////////////////////////////////////////////////////////////////

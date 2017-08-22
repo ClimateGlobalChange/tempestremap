@@ -205,6 +205,13 @@ public:
 		const std::string & strTarget
 	);
 
+	///	<summary>
+	///		Initialize a map that is the transverse of the given map.
+	///	</summary>
+	void SetTranspose(
+		const OfflineMap & mapIn
+	);
+
 public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
@@ -313,6 +320,11 @@ protected:
 	///		Vector of areas associated with output degrees of freedom.
 	///	</summary>
 	DataVector<double> m_dTargetAreas;
+
+	///	<summary>
+	///		Vector of partial areas associated with input degrees of freedom.
+	///	</summary>
+	DataVector<double> m_dPartialSourceAreas;
 
 protected:
 	///	<summary>

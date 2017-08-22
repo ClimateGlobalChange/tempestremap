@@ -26,13 +26,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateGLLMetaData(std::string strMesh, int nP, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
+extern "C" Mesh* GenerateGLLMetaData(std::string strMesh, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
 
 	Mesh* meshInput = NULL;
 try {
-
-	// Use of bubble to adjust areas
-	bool fBubble;
 
 	// Check data
 	if (strMesh == "") {
@@ -46,7 +43,7 @@ try {
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating input mesh Face areas");
-	double dTotalAreaInput = meshInput->CalculateFaceAreas();
+	double dTotalAreaInput = meshInput->CalculateFaceAreas(false);
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 
@@ -67,6 +64,7 @@ try {
 
 	// Write to file
 	if (strOutput.size()) {
+
 		// Number of Faces
 		int nElements = static_cast<int>(meshInput->faces.size());
 
@@ -107,6 +105,9 @@ int main(int argc, char** argv) {
 	// Polynomial order
 	int nP;
 
+	// Use of bubble to adjust areas
+	bool fBubble;
+
 	// Output metadata file
 	std::string strOutput;
 
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
 	// Calculate metadata
 	DataMatrix3D<int> dataGLLnodes;
 	DataMatrix3D<double> dataGLLJacobian;
-	Mesh* mesh = GenerateGLLMetaData(strMesh, nP, strOutput, dataGLLnodes, dataGLLJacobian);
+	Mesh* mesh = GenerateGLLMetaData(strMesh, nP, fBubble, strOutput, dataGLLnodes, dataGLLJacobian);
 	if (mesh) delete mesh;
 	else return (-1);
 

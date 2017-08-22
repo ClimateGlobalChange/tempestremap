@@ -207,6 +207,9 @@ try {
 	// Flip rectilinear ordering
 	bool fFlipRectilinear;
 
+	// Contains concave faces
+	bool fContainsConcaveFaces;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshFile, "mesh", "");
@@ -218,6 +221,7 @@ try {
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineString(strTestData, "out", "testdata.nc");
 		CommandLineBool(fFlipRectilinear, "fliprectilinear");
+		CommandLineBool(fContainsConcaveFaces, "concave");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -351,7 +355,7 @@ try {
 	DataVector<double> dNodeArea;
 
 	// Calculate element areas
-	mesh.CalculateFaceAreas();
+	mesh.CalculateFaceAreas(fContainsConcaveFaces);
 
 	// Sample as element averages
 	if ((!fGLLIntegrate) && (!fGLL)) {

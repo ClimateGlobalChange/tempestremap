@@ -24,7 +24,11 @@ libTempestRemap_la_SOURCES = \
 	src/NetCDFUtilities.cpp \
 	src/OfflineMap.cpp \
 	src/TriangularQuadrature.cpp \
-	src/kdtree.c
+	src/GenerateConnectivityFile.cpp \
+	src/CoarsenRectilinearData.cpp \
+	src/GenerateTransposeMap.cpp \
+	src/ShpToMesh.cpp \
+	src/kdtree.cpp
 
 # The list of header files which are to be installed 
 libTempestRemap_la_include_HEADERS = \
@@ -40,6 +44,7 @@ libTempestRemap_la_include_HEADERS = \
 	src/Defines.h \
 	src/GaussLobattoQuadrature.h \
 	src/kdtree.h \
+	src/order32.h \
 	src/MathHelper.h \
 	src/NetCDFUtilities.h \
 	src/PolynomialInterp.h \

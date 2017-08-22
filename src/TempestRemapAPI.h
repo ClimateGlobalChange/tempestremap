@@ -49,7 +49,8 @@ extern "C" {
 									std::string strVariables="", std::string strOutputMap="", 
 									std::string strInputData="", std::string strOutputData="",
 									std::string strNColName="", bool fOutputDouble=false, 
-									std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0 );
+									std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0,
+									bool fInputConcave=false, bool fOutputConcave=false );
 
     OfflineMap* GenerateOfflineMapWithMeshes(  OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                                std::string strInputMeta, std::string strOutputMeta,
@@ -60,7 +61,8 @@ extern "C" {
                                                std::string strVariables="", std::string strOutputMap="",
                                                std::string strInputData="", std::string strOutputData="",
                                                std::string strNColName="", bool fOutputDouble=false,
-                                               std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0 );
+                                               std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0,
+                                               bool fInputConcave=false, bool fOutputConcave=false );
 
 	int ApplyOfflineMap(std::string strInputData, std::string strInputMap, std::string strVariables, std::string strInputData2, 
 						std::string strInputMap2, std::string strVariables2, std::string strOutputData, std::string strNColName, 

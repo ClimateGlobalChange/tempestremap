@@ -129,7 +129,8 @@ extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap_in, Me
                                             std::string strVariables, std::string strOutputMap,
                                             std::string strInputData, std::string strOutputData,
                                             std::string strNColName, bool fOutputDouble,
-                                            std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride )
+                                            std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+                                            bool fInputConcave, bool fOutputConcave )
 {
     NcError error(NcError::silent_nonfatal);
 
@@ -229,7 +230,7 @@ try {
 
     // Calculate Face areas
     AnnounceStartBlock("Calculating input mesh Face areas");
-    double dTotalAreaInput = meshInput.CalculateFaceAreas();
+    double dTotalAreaInput = meshInput.CalculateFaceAreas(fInputConcave);
     Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
     AnnounceEndBlock(NULL);
 
@@ -240,7 +241,7 @@ try {
 
     // Calculate Face areas
     AnnounceStartBlock("Calculating output mesh Face areas");
-    Real dTotalAreaOutput = meshOutput.CalculateFaceAreas();
+    Real dTotalAreaOutput = meshOutput.CalculateFaceAreas(fOutputConcave);
     Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
     AnnounceEndBlock(NULL);
 
@@ -296,7 +297,7 @@ try {
 
     // Calculate Face areas
     AnnounceStartBlock("Calculating overlap mesh Face areas");
-    Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas();
+    Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
     Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
     AnnounceEndBlock(NULL);
 
@@ -696,7 +697,8 @@ extern "C" OfflineMap* GenerateOfflineMap(  std::string strInputMesh, std::strin
 											std::string strVariables, std::string strOutputMap, 
 											std::string strInputData, std::string strOutputData,
 											std::string strNColName, bool fOutputDouble, 
-											std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride )
+											std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+											bool fInputConcave, bool fOutputConcave )
 {
 	NcError error(NcError::silent_nonfatal);
 
@@ -759,7 +761,8 @@ try {
                                             strVariables, strOutputMap,
                                             strInputData, strOutputData,
                                             strNColName, fOutputDouble,
-                                            strPreserveVariables, fPreserveAll, dFillValueOverride );
+                                            strPreserveVariables, fPreserveAll, dFillValueOverride,
+                                            fInputConcave, fOutputConcave );
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
@@ -852,6 +855,12 @@ int main(int argc, char** argv) {
 	// Fill value override
 	double dFillValueOverride;
 
+	// Input mesh contains concave elements
+	bool fInputConcave;
+
+	// Output mesh contains concave elements
+	bool fOutputConcave;
+
 	AnnounceBanner();
 
 	// Parse the command line
@@ -883,9 +892,13 @@ int main(int argc, char** argv) {
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
+		CommandLineBool(fInputConcave, "in_concave");
+		CommandLineBool(fOutputConcave, "out_concave");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
+
+	AnnounceBanner();
 
 	int fMonotoneTypeID=0;
 	if (fMonotoneType1) fMonotoneTypeID=1;
@@ -900,9 +913,8 @@ int main(int argc, char** argv) {
 												fBubble, fMonotoneTypeID, 
 												fVolumetric, fNoConservation, fNoCheck,
 												strVariables, strOutputMap, strInputData, strOutputData,
-												strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride );
-
-	AnnounceBanner();
+												strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride,
+												fInputConcave, fOutputConcave );
 
 	if (mapRemap) delete mapRemap;
 	else return (-1);

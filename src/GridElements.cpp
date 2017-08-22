@@ -21,6 +21,8 @@
 #include "Announce.h"
 #include "FiniteElementTools.h"
 #include "GaussQuadrature.h"
+#include "STLStringHelper.h"
+#include "MeshUtilitiesFuzzy.h"
 
 #include <ctime>
 #include <cmath>
@@ -118,21 +120,38 @@ void Mesh::ConstructReverseNodeArray() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Real Mesh::CalculateFaceAreas() {
-
-	// Calculate the area of each Face
+Real Mesh::CalculateFaceAreas(
+	bool fContainsConcaveFaces
+) {
+	int nCount = 0;
 	vecFaceArea.Initialize(faces.size());
 
-	int nCount = 0;
-	for (int i = 0; i < faces.size(); i++) {
-		vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
-		if (vecFaceArea[i] < 1.0e-13) {
-			Announce("WARNING: %i is a small element with area %14.12f", i, vecFaceArea[i]);
-			nCount++;
+	// Calculate the area of each Face
+	if (fContainsConcaveFaces) {
+
+		for (int i = 0; i < faces.size(); i++) {
+			vecFaceArea[i] = CalculateFaceArea_Concave(faces[i], nodes);
+			if (vecFaceArea[i] < 1.0e-13) {
+				nCount++;
+			}
 		}
-	}
-	if (nCount != 0) {
-		Announce("WARNING: %i small elements found", nCount);
+
+		if (nCount != 0) {
+			Announce("WARNING: %i small elements found", nCount);
+		}
+
+	} else {
+
+		for (int i = 0; i < faces.size(); i++) {
+			vecFaceArea[i] = CalculateFaceArea(faces[i], nodes);
+			if (vecFaceArea[i] < 1.0e-13) {
+				nCount++;
+			}
+		}
+
+		if (nCount != 0) {
+			Announce("WARNING: %i small elements found", nCount);
+		}
 	}
 
 	// Calculate accumulated area carefully
@@ -808,6 +827,29 @@ void Mesh::Read(const std::string & strFile) {
 		faces.resize(nGridSize);
 		nodes.resize(nGridSize * nGridCorners);
 
+		// Check for units attribute; if "degrees" then convert to radians
+		bool fConvertLonToRadians = false;
+		NcAtt * attGridCornerLonUnits = varGridCornerLon->get_att("units");
+
+		if (attGridCornerLonUnits != NULL) {
+			std::string strLonUnits = attGridCornerLonUnits->as_string(0);
+			STLStringHelper::ToLower(strLonUnits);
+			if (strLonUnits == "degrees") {
+				fConvertLonToRadians = true;
+			}
+		}
+
+		bool fConvertLatToRadians = false;
+		NcAtt * attGridCornerLatUnits = varGridCornerLat->get_att("units");
+
+		if (attGridCornerLatUnits != NULL) {
+			std::string strLatUnits = attGridCornerLatUnits->as_string(0);
+			STLStringHelper::ToLower(strLatUnits);
+			if (strLatUnits == "degrees") {
+				fConvertLatToRadians = true;
+			}
+		}
+
 		// Current global node index
 		int ixNode = 0;
 
@@ -822,10 +864,15 @@ void Mesh::Read(const std::string & strFile) {
 
 			// Insert Face corners into node table
 			for (int j = 0; j < nGridCorners; j++) {
-				double dLon = dCornerLon[i][j] / 180.0 * M_PI;
-				double dLat = dCornerLat[i][j] / 180.0 * M_PI;
+				double dLon = dCornerLon[i][j];
+				double dLat = dCornerLat[i][j];
 
-				//printf("%1.5e %1.5e\n", dLon, dLat);
+				if (fConvertLonToRadians) {
+					dLon = dLon / 180.0 * M_PI;
+				}
+				if (fConvertLatToRadians) {
+					dLat = dLat / 180.0 * M_PI;
+				}
 
 				if (dLat > 0.5 * M_PI) {
 					dLat = 0.5 * M_PI;
@@ -1115,12 +1162,9 @@ void Mesh::Validate() const {
 		double dMag = nodes[i].Magnitude();
 
 		if (fabs(dMag - 1.0) > ReferenceTolerance) {
-			Announce("Mesh validation failed: "
+			_EXCEPTION5("Mesh validation failed: "
 				"Node[%i] of non-unit magnitude detected (%1.10e, %1.10e, %1.10e) = %1.10e",
 				i, nodes[i].x, nodes[i].y, nodes[i].z, dMag);
-			_EXCEPTION2("Mesh validation failed: "
-				"Node of non-unit magnitude detected (%i, %1.10e)",
-				i, dMag);
 
 		}
 	}
@@ -1257,7 +1301,7 @@ void Mesh::Validate() const {
 					nodeCross.x, nodeCross.y, nodeCross.z);
 
 				_EXCEPTIONT(
-					"Mesh validation failed: Clockwise element detected");
+					"Mesh validation failed: Clockwise or concave face detected");
 			}
 		}
 	}
@@ -1680,23 +1724,418 @@ Real CalculateFaceAreaKarneysMethod(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Real CalculateFaceArea(
+bool IsFaceConcave(
 	const Face & face,
 	const NodeVector & nodes
 ) {
+	const int nEdges = face.edges.size();
 
-	// double dArea1 = CalculateFaceAreaQuadratureMethod(face, nodes);
+	MeshUtilitiesFuzzy meshutils;
 
-	// double dArea2 = CalculateFaceAreaKarneysMethod(face, nodes);
+	bool fHasReflexNodes = false;
 
-	// printf("%1.15e %1.15e\n", dArea1, dArea2);
+	// Search for reflex nodes on Face
+	for (int i = 0; i < nEdges; i++) {
+		
+		int ixLast = (i + nEdges - 1) % nEdges;
+		int ixCurr = i;
+		int ixNext = (i + 1) % nEdges;
 
-	// return dArea2;
+		const Node & nodeLast = nodes[face[ixLast]];
+		const Node & nodeCurr = nodes[face[ixCurr]];
+		const Node & nodeNext = nodes[face[ixNext]];
 
-	// return CalculateFaceAreaQuadratureMethod(face, nodes);
+		int iSide = meshutils.FindNodeEdgeSide(
+			nodeLast,
+			nodeCurr,
+			Edge::Type_GreatCircleArc,
+			nodeNext);
 
-	return CalculateFaceAreaKarneysMethod(face, nodes);
+		if (iSide != (-1)) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real CalculateFaceArea_Concave(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	Real dArea = 0.0;
+
+	if (IsFaceConcave(face, nodes)) {
+		Mesh meshout;
+		for (int j = 0; j < face.edges.size(); j++) {
+			meshout.nodes.push_back(nodes[face[j]]);
+		}
+		Face faceTemp(face.edges.size());
+		for (int j = 0; j < faceTemp.edges.size(); j++) {
+			faceTemp.SetNode(j, j);
+		}
+		meshout.faces.push_back(faceTemp);
+		ConvexifyMesh(meshout);
+
+		return meshout.CalculateFaceAreas(false);
+	}
+
+	return CalculateFaceArea(face, nodes);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceArea(
+	const Face & face,
+	const NodeVector & nodes
+) {
+/*
+	double dArea1 = CalculateFaceAreaQuadratureMethod(face, nodes);
+
+	double dArea2 = CalculateFaceAreaKarneysMethod(face, nodes);
+
+	printf("%1.15e %1.15e\n", dArea1, dArea2);
+*/
+
+	return CalculateFaceAreaQuadratureMethod(face, nodes);
+
+	// return CalculateFaceAreaKarneysMethod(face, nodes);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool ConvexifyFace(
+	Mesh & mesh,
+	Mesh & meshout,
+	int iFace,
+	bool fRemoveConcaveFaces,
+	bool fVerbose
+) {
+	if ((iFace < 0) || (iFace > mesh.faces.size())) {
+		_EXCEPTIONT("Face index out of range");
+	}
+
+	Face & face = mesh.faces[iFace];
+
+	const int nEdges = face.edges.size();
+
+	MeshUtilitiesFuzzy meshutils;
+
+	bool fHasReflexNodes = false;
+
+	// Search for reflex nodes on Face
+	for (int i = 0; i < nEdges; i++) {
+		
+		int ixLast = (i + nEdges - 1) % nEdges;
+		int ixCurr = i;
+		int ixNext = (i + 1) % nEdges;
+
+		const Node & nodeLast = mesh.nodes[face[ixLast]];
+		const Node & nodeCurr = mesh.nodes[face[ixCurr]];
+		const Node & nodeNext = mesh.nodes[face[ixNext]];
+
+		int iSide = meshutils.FindNodeEdgeSide(
+			nodeLast,
+			nodeCurr,
+			Edge::Type_GreatCircleArc,
+			nodeNext);
+
+		if (iSide != (-1)) {
+			continue;
+		}
+
+		if (fVerbose) {
+			Announce("Reflex node found: %i", face[ixCurr]);
+		}
+
+		// Reflex node found; divide mesh at this node
+		int ixDividingNode = (-1);
+		double dMinDist = (-1.0);
+		for (int j = 0; j < nEdges; j++) {
+			if ((j == ixLast) || (j == ixCurr) || (j == ixNext)) {
+				continue;
+			}
+
+			const Node & nodeCandidate = mesh.nodes[face[j]];
+
+			Node node2;
+			node2.x = nodeCurr.x + (nodeNext.x - nodeLast.x);
+			node2.y = nodeCurr.y + (nodeNext.y - nodeLast.y);
+			node2.z = nodeCurr.z + (nodeNext.z - nodeLast.z);
+
+			double dMag2 = node2.Magnitude();
+			node2.x /= dMag2;
+			node2.y /= dMag2;
+			node2.z /= dMag2;
+/*
+			// Check that this Node is in the range of the reflex node
+			const int iSide0 = meshutils.FindNodeEdgeSide(
+				nodeCurr,
+				node2,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			if (iSide0 == (-1)) {
+				continue;
+			}
+*/
+
+			// Check that this Node is in the range of the reflex node
+			const int iSide0 = meshutils.FindNodeEdgeSide(
+				nodeLast,
+				nodeCurr,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			const int iSide1 = meshutils.FindNodeEdgeSide(
+				nodeCurr,
+				nodeNext,
+				Edge::Type_GreatCircleArc,
+				nodeCandidate);
+
+			if (iSide0 == (-1)) {
+				continue;
+			}
+
+			if (iSide1 == (-1)) {
+				continue;
+			}
+/*
+			if ((iSide0 == (-1)) && (iSide1 == (-1))) {
+				continue;
+			}
+*/
+			// Check that this Node is of minimum distance
+			Node nodeDelta = nodeCandidate - nodeCurr;
+
+			double dDist = nodeDelta.Magnitude();
+
+			if ((dMinDist < 0.0) || (dDist < dMinDist)) {
+				ixDividingNode = j;
+				dMinDist = dDist;
+			}
+		}
+
+		// No dividing node found -- add a Steiner vertex
+		if (ixDividingNode == (-1)) {
+
+			if (fVerbose) {
+				Announce("No dividing node found -- adding a Steiner vertex");
+			}
+
+			// Find a node that bisects the two angles
+			Node nodeBisect;
+			nodeBisect.x = 3.0 * nodeCurr.x - nodeLast.x - nodeNext.x;
+			nodeBisect.y = 3.0 * nodeCurr.y - nodeLast.y - nodeNext.y;
+			nodeBisect.z = 3.0 * nodeCurr.z - nodeLast.z - nodeNext.z;
+
+			double dBisectMag = nodeBisect.Magnitude();
+			nodeBisect.x /= dBisectMag;
+			nodeBisect.y /= dBisectMag;
+			nodeBisect.z /= dBisectMag;
+
+			int ixIntersectEdge;
+			Node nodeClosestIntersect;
+			dMinDist = (-1.0);
+
+			for (int j = 0; j < nEdges; j++) {
+				if ((j == ixCurr) || (j == ixLast)) {
+					continue;
+				}
+
+				std::vector<Node> vecIntersections;
+
+				bool fCoincident = meshutils.CalculateEdgeIntersectionsSemiClip(
+					mesh.nodes[face[j]],
+					mesh.nodes[face[(j+1)%nEdges]],
+					Edge::Type_GreatCircleArc,
+					nodeCurr,
+					nodeBisect,
+					Edge::Type_GreatCircleArc,
+					vecIntersections);
+
+				if (fCoincident) {
+					_EXCEPTIONT("Coincident lines detected");
+				}
+
+				if (vecIntersections.size() > 1) {
+					_EXCEPTIONT("Logic error");
+
+				} else if (vecIntersections.size() == 1) {
+					Node nodeDelta = vecIntersections[0] - nodeCurr;
+					double dDist = nodeDelta.Magnitude();
+
+					if ((dMinDist == -1.0) || (dDist < dMinDist)) {
+						dMinDist = dDist;
+						ixIntersectEdge = j;
+						nodeClosestIntersect = vecIntersections[0];
+					}
+				}
+			}
+
+			Edge edgeIntersect = face.edges[ixIntersectEdge];
+
+			if (dMinDist == -1.0) {
+				_EXCEPTIONT("Logic error: No intersecting lines found");
+			}
+
+			int ixNewIntersectNode = mesh.nodes.size();
+			meshout.nodes.push_back(nodeClosestIntersect);
+
+			int iFaceSize1 = 1;
+			for (int k = (i+1)%nEdges; face[k] != edgeIntersect[0]; k = (k+1)%nEdges) {
+				iFaceSize1++;
+			}
+
+			Face faceNew1(iFaceSize1 + 2);
+			Face faceNew2(nEdges - iFaceSize1 + 1);
+
+			for (int k = 0; k < iFaceSize1 + 1; k++) {
+				faceNew1.SetNode(k, face[(i+k)%nEdges]);
+				//printf("%i\n", (i+k)%nEdges);
+			}
+			faceNew1.SetNode(iFaceSize1 + 1, ixNewIntersectNode);
+			for (int k = 0; k < nEdges - iFaceSize1; k++) {
+				faceNew2.SetNode(k, face[(ixIntersectEdge+k+1)%nEdges]);
+				//printf("%i\n", (ixIntersectEdge+k+1)%nEdges);
+			}
+			faceNew2.SetNode(nEdges - iFaceSize1, ixNewIntersectNode);
+
+			meshout.faces.push_back(faceNew1);
+			meshout.faces.push_back(faceNew2);
+
+			if (fRemoveConcaveFaces) {
+				mesh.faces.erase(mesh.faces.begin() + iFace);
+			}
+
+			int nFaces = meshout.faces.size();
+			ConvexifyFace(meshout, meshout, nFaces-1, true, fVerbose);
+			ConvexifyFace(meshout, meshout, nFaces-2, true, fVerbose);
+
+		// Divide the mesh at the reflex node
+		} else {
+			if (fVerbose) {
+				Announce("Dividing node found %i", face[ixDividingNode]);
+			}
+
+			int iFaceSize1 = 0;
+			for (int k = (i+1)%nEdges; k != ixDividingNode; k = (k+1)%nEdges) {
+				iFaceSize1++;
+			}
+
+			Face faceNew1(iFaceSize1 + 2);
+			Face faceNew2(nEdges - iFaceSize1);
+
+			for (int k = 0; k < iFaceSize1 + 2; k++) {
+				faceNew1.SetNode(k, face[(i+k)%nEdges]);
+				//printf("%i\n", (i+k)%nEdges);
+			}
+			for (int k = 0; k < nEdges - iFaceSize1; k++) {
+				faceNew2.SetNode(k, face[(ixDividingNode+k)%nEdges]);
+				//printf("%i\n", (ixDividingNode+k)%nEdges);
+			}
+
+			meshout.faces.push_back(faceNew1);
+			meshout.faces.push_back(faceNew2);
+
+			if (fRemoveConcaveFaces) {
+				mesh.faces.erase(mesh.faces.begin() + iFace);
+			}
+
+			int nFaces = meshout.faces.size();
+			ConvexifyFace(meshout, meshout, nFaces-1, true, fVerbose);
+			ConvexifyFace(meshout, meshout, nFaces-2, true, fVerbose);
+		}
+
+		fHasReflexNodes = true;
+		break;
+	}
+
+	return fHasReflexNodes;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ConvexifyMesh(
+	Mesh & mesh,
+	bool fVerbose
+) {
+	char szBuffer[256];
+
+	// Loop through all Faces in the Mesh
+	int nFaces = mesh.faces.size();
+	for (int f = 0; f < nFaces; f++) {
+		if (fVerbose) {
+			sprintf(szBuffer, "Face %i", f);
+			AnnounceStartBlock(szBuffer);
+		}
+
+		// Adjust current Face index
+		bool fConcaveFace = ConvexifyFace(mesh, mesh, f, true, fVerbose);
+		if (fConcaveFace) {
+			f--;
+			nFaces--;
+		}
+
+		if (fVerbose) {
+			AnnounceEndBlock("Done");
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ConvexifyMesh(
+	Mesh & mesh,
+	Mesh & meshout,
+	bool fVerbose
+) {
+	char szBuffer[256];
+
+	// Copy all nodes to output mesh
+	meshout.nodes = mesh.nodes;
+
+	// Remove all Faces from output mesh
+	meshout.faces.clear();
+
+	// Clear the MultiFaceMap
+	meshout.vecMultiFaceMap.clear();
+
+	// Loop through all Faces in the input Mesh
+	int nFaces = mesh.faces.size();
+	for (int f = 0; f < nFaces; f++) {
+		if (fVerbose) {
+			sprintf(szBuffer, "Face %i", f);
+			AnnounceStartBlock(szBuffer);
+		}
+
+		// Adjust current Face index
+		int nMeshSize = meshout.faces.size();
+
+		bool fConcaveFace = ConvexifyFace(mesh, meshout, f, false, fVerbose);
+		if (fConcaveFace) {
+			int nAddedFaces = meshout.faces.size() - nMeshSize;
+			for (int i = 0; i < nAddedFaces; i++) {
+				meshout.vecMultiFaceMap.push_back(f);
+			}
+
+		} else {
+			meshout.faces.push_back(mesh.faces[f]);
+			meshout.vecMultiFaceMap.push_back(f);
+		}
+
+		if (fVerbose) {
+			AnnounceEndBlock("Done");
+		}
+	}
+
+	if (meshout.vecMultiFaceMap.size() != meshout.faces.size()) {
+		_EXCEPTIONT("Logic error");
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
