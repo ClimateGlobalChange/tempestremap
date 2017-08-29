@@ -2227,6 +2227,60 @@ void OfflineMap::Write(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void OfflineMap::SetTranspose(
+	const OfflineMap & mapIn
+) {
+	m_dSourceAreas = mapIn.m_dTargetAreas;
+	m_dTargetAreas = mapIn.m_dSourceAreas;
+
+	m_dSourceCenterLon = mapIn.m_dTargetCenterLon;
+	m_dSourceCenterLat = mapIn.m_dTargetCenterLat;
+	m_dTargetCenterLon = mapIn.m_dSourceCenterLon;
+	m_dTargetCenterLat = mapIn.m_dSourceCenterLat;
+
+	m_dSourceVertexLon = mapIn.m_dTargetVertexLon;
+	m_dSourceVertexLat = mapIn.m_dTargetVertexLat;
+	m_dVectorSourceCenterLon = mapIn.m_dVectorTargetCenterLon;
+	m_dVectorSourceCenterLat = mapIn.m_dVectorTargetCenterLat;
+	m_dVectorSourceBoundsLon = mapIn.m_dVectorTargetBoundsLon;
+	m_dVectorSourceBoundsLat = mapIn.m_dVectorTargetBoundsLat;
+
+	m_dTargetVertexLon = mapIn.m_dSourceVertexLon;
+	m_dTargetVertexLat = mapIn.m_dSourceVertexLat;
+	m_dVectorTargetCenterLon = mapIn.m_dVectorSourceCenterLon;
+	m_dVectorTargetCenterLat = mapIn.m_dVectorSourceCenterLat;
+	m_dVectorTargetBoundsLon = mapIn.m_dVectorSourceBoundsLon;
+	m_dVectorTargetBoundsLat = mapIn.m_dVectorSourceBoundsLat;
+
+	m_vecSourceDimSizes = mapIn.m_vecTargetDimSizes;
+	m_vecSourceDimNames = mapIn.m_vecTargetDimNames;
+
+	m_vecTargetDimSizes = mapIn.m_vecSourceDimSizes;
+	m_vecTargetDimNames = mapIn.m_vecSourceDimNames;
+
+	DataVector<int> dataRows;
+	DataVector<int> dataCols;
+	DataVector<double> dataEntries;
+
+	mapIn.m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+/*
+	DataVector<double> dTargetCoverage(mapIn.m_dTargetAreas.GetRows());
+	for (size_t s = 0; s < dataEntries.GetRows(); s++) {
+		dTargetCoverage[dataRows[s]] +=
+			mapIn.m_dTargetAreas[dataRows[s]];
+	}
+*/
+	for (size_t s = 0; s < dataEntries.GetRows(); s++) {
+		dataEntries[s] *=
+			mapIn.m_dTargetAreas[dataRows[s]]
+			/ mapIn.m_dSourceAreas[dataCols[s]];
+	}
+
+	m_mapRemap.SetEntries(dataCols, dataRows, dataEntries);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 bool OfflineMap::IsConsistent(
 	double dTolerance
 ) {

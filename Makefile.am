@@ -25,9 +25,6 @@ libTempestRemap_la_SOURCES = \
 	src/OfflineMap.cpp \
 	src/TriangularQuadrature.cpp \
 	src/GenerateConnectivityFile.cpp \
-	src/CoarsenRectilinearData.cpp \
-	src/GenerateTransposeMap.cpp \
-	src/ShpToMesh.cpp \
 	src/kdtree.cpp
 
 # The list of header files which are to be installed 
@@ -97,13 +94,20 @@ ApplyOfflineMap_SOURCES = src/ApplyOfflineMap.cpp
 ApplyOfflineMap_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
 GenerateOfflineMap_SOURCES = src/GenerateOfflineMap.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp
 GenerateOfflineMap_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
+GenerateConnectivityFile_SOURCES = src/GenerateConnectivityFile.cpp
+GenerateConnectivityFile_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
+CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
+GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
+ShpToMesh_SOURCES = src/ShpToMesh.cpp
 # GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp
 # GenerateOfflineMap_v1_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
 
 bin_PROGRAMS += GenerateCSMesh GenerateRLLMesh GenerateICOMesh \
 								GenerateGLLMetaData GenerateLambertConfConicMesh \
 								ApplyOfflineMap GenerateOfflineMap \
-								GenerateOverlapMesh GenerateOverlapMesh_v1
+								GenerateOverlapMesh GenerateOverlapMesh_v1 \
+								GenerateConnectivityFile CoarsenRectilinearData \
+								GenerateTransposeMap ShpToMesh
 
 else
 
