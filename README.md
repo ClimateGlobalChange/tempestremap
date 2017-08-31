@@ -28,10 +28,6 @@ Paul A. Ullrich, Darshi Devendran and Hans Johansen, 2016: Arbitrary-Order
 Conservative and Consistent Remapping and a Theory of Linear Maps, Part 2.
 Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1. 
 
-Paul A. Ullrich, Dharshi Devendran and Hans Johansen, 2015:
-Arbitrary-Order Conservative and Consistent Remapping and a Theory of
-Linear Maps: Part II.  Submitted to Mon. Wea. Rev.
-
 Build Instructions
 ------------------
 
