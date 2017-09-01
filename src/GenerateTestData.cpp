@@ -434,7 +434,7 @@ try {
 		DataMatrix3D<int> dataGLLNodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
-		GenerateMetaData(mesh, nP, false, dataGLLNodes, dataGLLJacobian);
+		GenerateMetaData(mesh, nP, false, false, dataGLLNodes, dataGLLJacobian);
 
 		// Number of elements
 		int nElements = mesh.faces.size();

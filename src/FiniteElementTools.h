@@ -83,7 +83,8 @@ void ApplyInverseMap(
 double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
-	bool fBubble,
+    bool fBubble_uniform,
+	bool fBubble_interior,
 	DataMatrix3D<int> & dataGLLnodes,
 	DataMatrix3D<double> & dataGLLJacobian
 );

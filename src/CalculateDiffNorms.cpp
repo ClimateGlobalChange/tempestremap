@@ -53,7 +53,8 @@ try {
 	int nP;
 
 	// Use bubble function
-	bool fBubble;
+	bool fBubble_uniform;
+	bool fBubble_interior;
 
 	// Output filename
 	std::string strOutputFile;
@@ -68,7 +69,10 @@ try {
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineBool(fGLL, "gll");
 		CommandLineInt(nP, "np", 4);
-		CommandLineBool(fBubble, "bubble");
+		//fBubble_uniform is for old bubble correction,
+		//fBubble_interior is for homme 'epsilon-bubble correction'
+		CommandLineBool(fBubble_uniform, "bubble-uniform");
+		CommandLineBool(fBubble_interior, "bubble-interior");
 		CommandLineString(strMeshFile, "mesh", "");
 		CommandLineString(strOutputFile, "outfile", "");
 		CommandLineBool(fContainsConcaveFaces, "concave");
@@ -150,7 +154,7 @@ try {
 		DataMatrix3D<int> dataGLLnodes;
 		DataMatrix3D<double> dataGLLJacobian;
 
-		GenerateMetaData(mesh, nP, fBubble, dataGLLnodes, dataGLLJacobian);
+		GenerateMetaData(mesh, nP, fBubble_uniform, fBubble_interior, dataGLLnodes, dataGLLJacobian);
 
 		GenerateUniqueJacobian(
 			dataGLLnodes, dataGLLJacobian, dataUniqueJacobian);

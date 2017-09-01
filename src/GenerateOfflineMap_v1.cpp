@@ -139,9 +139,12 @@ try {
 	// Order of polynomial in each output element
 	int nPout;
 
-	// Use bubble on interior of spectral element nodes
-	bool fBubble;
-
+	// Use bubble on all spectral element nodes
+	bool fBubble_uniform;
+	
+	// Use bubble on only interior of spectral element nodes
+	bool fBubble_interior;
+	
 	// Enforce monotonicity
 	bool fMonotone;
 
@@ -189,7 +192,10 @@ try {
 		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fBubble, "bubble");
+		//fBubble_uniform is for old bubble correction,
+		//fBubble_interior is for homme 'epsilon-bubble correction'
+		CommandLineBool(fBubble_uniform, "bubble-uniform");
+		CommandLineBool(fBubble_interior, "bubble-interior");
 		CommandLineBool(fMonotone, "mono");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
@@ -226,6 +232,10 @@ try {
 		_EXCEPTIONT("out_data specified without in_data");
 	}
 
+	if ( fBubble_interior && fBubble_uniform) {
+		_EXCEPTIONT("Cannot use both bubble-uniform and bubble-interior options, use only one.");
+	}
+	
 	// Check command line parameters (data type arguments)
 	STLStringHelper::ToLower(strInputType);
 	STLStringHelper::ToLower(strOutputType);

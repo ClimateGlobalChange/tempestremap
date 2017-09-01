@@ -37,7 +37,8 @@ try {
 	int nP;
 
 	// Use of bubble to adjust areas
-	bool fBubble;
+	bool fBubble_uniform;
+	bool fBubble_interior;
 
 	// Output metadata file
 	std::string strOutput;
@@ -78,7 +79,8 @@ try {
 		GenerateMetaData(
 			meshInput,
 			nP,
-			fBubble,
+			fBubble_uniform,
+			fBubble_interior,
 			dataGLLnodes,
 			dataGLLJacobian
 		);
