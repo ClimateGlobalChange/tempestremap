@@ -688,7 +688,7 @@ public:
 	void Write(const std::string & strFile) const;
 
 	///	<summary>
-	///		Read the mesh to a NetCDF file.
+	///		Read the mesh from a NetCDF file.
 	///	</summary>
 	void Read(const std::string & strFile);
 

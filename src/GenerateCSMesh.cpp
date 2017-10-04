@@ -137,12 +137,9 @@ void GenerateFacesFromQuad(
 // 
 // Output Parameters: Mesh*
 // 
-extern "C" Mesh* GenerateCSMesh(int nResolution, bool fAlt, std::string strOutputFile) {
+extern "C" int GenerateCSMesh(Mesh& mesh, int nResolution, bool fAlt, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Generate the mesh
-	Mesh *mesh = new Mesh();
 
 try {
 
@@ -152,9 +149,9 @@ try {
 	std::cout << "..Generating mesh with resolution [" << nResolution << "]";
 	std::cout << std::endl;
 
-	NodeVector & nodes = mesh->nodes;
-	FaceVector & faces = mesh->faces;
-    mesh->type = Mesh::MeshType_CubedSphere;
+	NodeVector & nodes = mesh.nodes;
+	FaceVector & faces = mesh.faces;
+    mesh.type = Mesh::MeshType_CubedSphere;
 
 	// Generate corner points
 	Real dInvDeltaX = 1.0 / sqrt(3.0);
@@ -270,7 +267,7 @@ try {
 		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
 		std::cout << std::endl;
 
-		mesh->Write(strOutputFile);
+		mesh.Write(strOutputFile);
 	}
 
 	// Announce
@@ -285,7 +282,7 @@ try {
 } catch(...) {
 	return (0);
 }
-	return mesh;
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -313,9 +310,9 @@ int main(int argc, char** argv) {
 	EndCommandLine(argv)
 
 	// Call the actual mesh generator
-	Mesh* mesh = GenerateCSMesh(nResolution, fAlt, strOutputFile);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh mesh;
+	int err = GenerateCSMesh(mesh, nResolution, fAlt, strOutputFile);
+	if (err) exit(err);
 
 	return 0;
 }

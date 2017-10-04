@@ -26,9 +26,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateGLLMetaData(std::string strMesh, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
+extern "C" int GenerateGLLMetaData(std::string strMesh, Mesh& meshInput, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
 
-	Mesh* meshInput = NULL;
 try {
 
 	// Check data
@@ -38,12 +37,12 @@ try {
 
 	// Load in the input mesh
 	AnnounceStartBlock("Loading Mesh");
-	meshInput = new Mesh(strMesh);
+	meshInput.Read(strMesh);
 	AnnounceEndBlock(NULL);
 
 	// Calculate Face areas
 	AnnounceStartBlock("Calculating input mesh Face areas");
-	double dTotalAreaInput = meshInput->CalculateFaceAreas(false);
+	double dTotalAreaInput = meshInput.CalculateFaceAreas(false);
 	Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
 	AnnounceEndBlock(NULL);
 
@@ -51,7 +50,7 @@ try {
 	AnnounceStartBlock("Calculating Metadata");
 	double dAccumulatedJacobian =
 		GenerateMetaData(
-			*meshInput,
+			meshInput,
 			nP,
 			fBubble,
 			dataGLLnodes,
@@ -66,7 +65,7 @@ try {
 	if (strOutput.size()) {
 
 		// Number of Faces
-		int nElements = static_cast<int>(meshInput->faces.size());
+		int nElements = static_cast<int>(meshInput.faces.size());
 
 		NcFile ncOut(strOutput.c_str(), NcFile::Replace);
 		NcDim * dimElements = ncOut.add_dim("nelem", nElements);
@@ -90,7 +89,7 @@ try {
 } catch(...) {
 	return (0);
 }
-	return meshInput;
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,9 +124,9 @@ int main(int argc, char** argv) {
 	// Calculate metadata
 	DataMatrix3D<int> dataGLLnodes;
 	DataMatrix3D<double> dataGLLJacobian;
-	Mesh* mesh = GenerateGLLMetaData(strMesh, nP, fBubble, strOutput, dataGLLnodes, dataGLLJacobian);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh mesh;
+	int err = GenerateGLLMetaData(strMesh, mesh, nP, fBubble, strOutput, dataGLLnodes, dataGLLJacobian);
+	if (err) exit(err);
 
 	// Done
 	AnnounceBanner();

@@ -43,12 +43,9 @@
 // 
 // Output Parameters: Mesh*
 // 
-extern "C" Mesh* GenerateRLLMesh(int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, std::string strOutputFile) {
+extern "C" int GenerateRLLMesh(Mesh& mesh, int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Generate the mesh
-	Mesh *mesh = new Mesh();
 
 try {
 
@@ -80,16 +77,16 @@ try {
 	// Check parameters
 	if (nLatitudes < 2) {
 		std::cout << "Error: At least 2 latitudes are required." << std::endl;
-		return NULL;
+		return -5; // Argument error
 	}
 	if (nLongitudes < 2) {
 		std::cout << "Error: At least 2 longitudes are required." << std::endl;
-		return NULL;
+		return -5; // Argument error
 	}
 
-	NodeVector & nodes = mesh->nodes;
-	FaceVector & faces = mesh->faces;
-    mesh->type = Mesh::MeshType_RLL;
+	NodeVector & nodes = mesh.nodes;
+	FaceVector & faces = mesh.faces;
+    mesh.type = Mesh::MeshType_RLL;
 
 	// Change in longitude
 	double dDeltaLon = dLonEnd - dLonBegin;
@@ -210,11 +207,11 @@ try {
 
 	// Reorder the faces
 	if (fFlipLatLon) {
-		FaceVector faceTemp = mesh->faces;
-		mesh->faces.clear();
+		FaceVector faceTemp = mesh.faces;
+		mesh.faces.clear();
 		for (int i = 0; i < nLongitudes; i++) {
 		for (int j = 0; j < nLatitudes; j++) {
-			mesh->faces.push_back(faceTemp[j * nLongitudes + i]);
+			mesh.faces.push_back(faceTemp[j * nLongitudes + i]);
 		}
 		}
 	}
@@ -226,7 +223,7 @@ try {
 		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
 		std::cout << std::endl;
 
-		mesh->Write(strOutputFile);
+		mesh.Write(strOutputFile);
 
 		// Add rectilinear properties
 		if (!fIncludeSouthPole) {
@@ -255,6 +252,8 @@ try {
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
+    return 0;
+
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
 	return (0);
@@ -262,7 +261,6 @@ try {
 } catch(...) {
 	return (0);
 }
-	return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -309,9 +307,9 @@ int main(int argc, char** argv) {
 	EndCommandLine(argv)
 
 	// Call the actual mesh generator
-	Mesh* mesh = GenerateRLLMesh(nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, strOutputFile);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh mesh;
+    int err = GenerateRLLMesh(mesh, nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, strOutputFile);
+	if (err) exit(err);
 
 	return 0;
 }

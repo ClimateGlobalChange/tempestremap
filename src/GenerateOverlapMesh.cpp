@@ -27,12 +27,13 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, const bool verbose) {
+extern "C" int GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB,
+                                         Mesh& meshOverlap, std::string strOverlapMesh,
+                                         std::string strMethod,
+                                         const bool verbose
+) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Construct the overlap mesh
-	Mesh *meshOverlap = new Mesh();
 
 try {
 
@@ -49,7 +50,7 @@ try {
 		_EXCEPTIONT("Invalid \"method\" value");
 	}
 
-    meshOverlap->type = Mesh::MeshType_Overlap;
+    meshOverlap.type = Mesh::MeshType_Overlap;
 
 	// Construct the edge map on both meshes
 	AnnounceStartBlock("Constructing edge map on mesh A");
@@ -69,7 +70,7 @@ try {
 		method);
 */
 	AnnounceStartBlock("Construct overlap mesh");
-    GenerateOverlapMesh_v2(meshA, meshB, *meshOverlap, method, verbose);
+    GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method, verbose);
 	AnnounceEndBlock(NULL);
 /*
 	// Construct the reverse node array on both meshes
@@ -96,9 +97,11 @@ try {
 	// Write the overlap mesh
     if (strOverlapMesh.size()) {
         AnnounceStartBlock("Writing overlap mesh");
-        meshOverlap->Write(strOverlapMesh.c_str());
+        meshOverlap.Write(strOverlapMesh.c_str());
         AnnounceEndBlock(NULL);
     }
+
+    return 0;
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
@@ -107,16 +110,17 @@ try {
 } catch(...) {
 	return (0);
 }
-	return meshOverlap;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, const bool fNoValidate, const bool verbose) {
+extern "C" int GenerateOverlapMesh(std::string strMeshA, std::string strMeshB,
+                                   Mesh& meshOverlap, std::string strOverlapMesh,
+                                   std::string strMethod, const bool fNoValidate,
+                                   const bool verbose
+) {
 
     NcError error(NcError::silent_nonfatal);
-
-    Mesh* meshOverlap = NULL;
 
 try {
 
@@ -146,7 +150,8 @@ try {
         AnnounceEndBlock(NULL);
     }
 
-    meshOverlap = GenerateOverlapWithMeshes(meshA, meshB, strOverlapMesh, strMethod, verbose);
+    int err = GenerateOverlapWithMeshes(meshOverlap, meshA, meshB, strOverlapMesh, strMethod, verbose);
+    return err;
 
 } catch(Exception & e) {
     Announce(e.ToString().c_str());
@@ -155,7 +160,6 @@ try {
 } catch(...) {
     return (0);
 }
-    return meshOverlap;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -193,9 +197,9 @@ int main(int argc, char** argv) {
 	AnnounceBanner();
 
 	// Call the actual mesh generator
-    Mesh* mesh = GenerateOverlapMesh(strMeshA, strMeshB, strOverlapMesh, strMethod, fNoValidate, true);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh meshOverlap;
+    int err = GenerateOverlapMesh(strMeshA, strMeshB, meshOverlap, strOverlapMesh, strMethod, fNoValidate, true);
+	if (err) exit(err);
 
 	AnnounceBanner();
 

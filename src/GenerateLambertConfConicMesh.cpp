@@ -26,16 +26,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateLambertConfConicMesh(  int nNCol, int nNRow, 
+extern "C" int GenerateLambertConfConicMesh(  Mesh& mesh, int nNCol, int nNRow,
 												double dLon0, double dLat0, 
 												double dLat1, double dLat2, 
 												double dXLL, double dYLL, double dDX, 
-												std::string strOutputFile) {
+												std::string strOutputFile
+) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Generate the mesh
-	Mesh *mesh = new Mesh();
 
 try {
 
@@ -69,8 +67,8 @@ try {
 
 	double dRho0 = dF * pow(1.0 / tan(0.25 * M_PI + 0.5 * dLat0), dN);
 
-	NodeVector & nodes = mesh->nodes;
-	FaceVector & faces = mesh->faces;
+	NodeVector & nodes = mesh.nodes;
+	FaceVector & faces = mesh.faces;
 
 	// Announce
 	AnnounceStartBlock("Distributing nodes");
@@ -111,7 +109,6 @@ try {
 		nodes.push_back(Node(dX, dY, dZ));
 	}
 	}
-	return NULL;
 
 	// Announce
 	AnnounceEndBlock("Done");
@@ -256,7 +253,7 @@ try {
 		Announce("Writing mesh to file [%s]", strOutputFile.c_str());
 
 		// Output the mesh
-		mesh->Write(strOutputFile);
+		mesh.Write(strOutputFile);
 
 		// Add rectilinear properties
 		NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
@@ -278,7 +275,7 @@ try {
 } catch(...) {
 	return (0);
 }
-	return mesh;
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -337,9 +334,9 @@ int main(int argc, char** argv) {
 	AnnounceBanner();
 
 	// Calculate metadata
-	Mesh* mesh = GenerateLambertConfConicMesh(nNCol, nNRow, dLon0, dLat0, dLat1, dLat2, dXLL, dYLL, dDX, strOutputFile);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh mesh;
+    int err = GenerateLambertConfConicMesh(nNCol, nNRow, dLon0, dLat0, dLat1, dLat2, dXLL, dYLL, dDX, strOutputFile);
+	if (err) exit(err);
 
 	// Done
 	AnnounceBanner();

@@ -10,37 +10,39 @@
 extern "C" {
 
 	// Generate a Cubed-Sphere mesh
-	Mesh* GenerateCSMesh(int nResolution, bool fAlt, std::string strOutputFile);
+	int GenerateCSMesh(Mesh& meshOut, int nResolution, bool fAlt, std::string strOutputFile);
 
 	// Generate a Latitude-Longitude mesh
-	Mesh* GenerateRLLMesh(  int nLongitudes, int nLatitudes, 
-							double dLonBegin, double dLonEnd, 
-							double dLatBegin, double dLatEnd, 
-							bool fFlipLatLon, std::string strOutputFile);
+	int GenerateRLLMesh(  Mesh& meshOut,
+                          int nLongitudes, int nLatitudes,
+						  double dLonBegin, double dLonEnd,
+						  double dLatBegin, double dLatEnd,
+						  bool fFlipLatLon, std::string strOutputFile);
 
 	// Generate a Icosahedral-Sphere mesh
-	Mesh* GenerateICOMesh(int nResolution, bool fDual, std::string strOutputFile);
+	int GenerateICOMesh(Mesh& meshOut, int nResolution, bool fDual, std::string strOutputFile);
 
 	// Generate Lambert-Conic mesh
-	Mesh* GenerateLambertConfConicMesh(  int nNCol, int nNRow, 
-												double dLon0, double dLat0, 
-												double dLat1, double dLat2, 
-												double dXLL, double dYLL, double dDX, 
-												std::string strOutputFile);
+	int GenerateLambertConfConicMesh(Mesh& meshOut,
+                                     int nNCol, int nNRow,
+                                     double dLon0, double dLat0,
+									 double dLat1, double dLat2,
+									 double dXLL, double dYLL, double dDX,
+									 std::string strOutputFile);
 
 	// Compute the overlap mesh given a source and target mesh file names
-    Mesh* GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate, const bool verbose=true);
+    int GenerateOverlapMesh(std::string strMeshA, std::string strMeshB, Mesh& meshOverlap, std::string strOverlapMesh, std::string strMethod, bool fNoValidate, const bool verbose=true);
 
 	// Compute the overlap mesh given a source and target mesh objects
 	// An overload method which takes as arguments the source and target meshes that are pre-loaded into memory
-    Mesh* GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, std::string strOverlapMesh, std::string strMethod, const bool verbose=true);
+    int GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB, Mesh& meshOverlap, std::string strOverlapMesh, std::string strMethod, const bool verbose=true);
 
 	// New version of the implementation to compute the overlap mesh given a source and target mesh file names
-    Mesh* GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, const bool fNoValidate=true);
+    int GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, Mesh& meshOverlap, std::string strMethod, const bool fNoValidate=true);
 
-	Mesh* GenerateGLLMetaData(std::string strMesh, int nP, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian);
+	int GenerateGLLMetaData(std::string strMesh, Mesh& meshOut, int nP, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian);
 
-	OfflineMap* GenerateOfflineMap( std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh, 
+	int GenerateOfflineMap( OfflineMap& offlineMapOut, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
 									std::string strInputMeta, std::string strOutputMeta, 
 									std::string strInputType, std::string strOutputType,
 									int nPin=4, int nPout=4, 
@@ -52,7 +54,7 @@ extern "C" {
 									std::string strPreserveVariables="", bool fPreserveAll=false, double dFillValueOverride=0.0,
 									bool fInputConcave=false, bool fOutputConcave=false );
 
-    OfflineMap* GenerateOfflineMapWithMeshes(  OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+    int GenerateOfflineMapWithMeshes(  OfflineMap& offlineMapOut, OfflineMap* mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                                std::string strInputMeta, std::string strOutputMeta,
                                                std::string strInputType, std::string strOutputType,
                                                int nPin=4, int nPout=4,
@@ -67,6 +69,8 @@ extern "C" {
 	int ApplyOfflineMap(std::string strInputData, std::string strInputMap, std::string strVariables, std::string strInputData2, 
 						std::string strInputMap2, std::string strVariables2, std::string strOutputData, std::string strNColName, 
 						bool fOutputDouble, std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride);
+
+    int GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity);
 
 }
 

@@ -28,7 +28,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" void GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity)
+extern "C" int GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity)
 {
 
     // Number of elements
@@ -56,7 +56,7 @@ extern "C" void GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int
         }
     }
 
-    return;
+    return 0;
 }
 
 #ifdef TEMPEST_DRIVER_MODE
@@ -120,7 +120,8 @@ try {
 	AnnounceStartBlock("Constructing connectivity");
 
     std::vector< std::set<int> > vecConnectivity;
-    GenerateConnectivityData(meshIn, vecConnectivity);
+    int err = GenerateConnectivityData(meshIn, vecConnectivity);
+    if (err) return err;
 
 	AnnounceEndBlock("Done");
 

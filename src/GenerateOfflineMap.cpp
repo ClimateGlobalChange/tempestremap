@@ -120,7 +120,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap_in, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+extern "C" int GenerateOfflineMapWithMeshes( OfflineMap& mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
                                             std::string strInputMeta, std::string strOutputMeta,
                                             std::string strInputType, std::string strOutputType,
                                             int nPin, int nPout,
@@ -135,12 +135,11 @@ extern "C" OfflineMap* GenerateOfflineMapWithMeshes( OfflineMap* mapRemap_in, Me
     NcError error(NcError::silent_nonfatal);
 
     // Create Offline Map
-    OfflineMap* mapRemap = mapRemap_in;
-    bool created_local=false;
-    if(!mapRemap_in) {
-    	mapRemap = new OfflineMap();
-    	created_local = true;
-    }
+//    bool created_local=false;
+//    if(!mapRemap_in) {
+//    	mapRemap = new OfflineMap();
+//    	created_local = true;
+//    }
 
 try {
 
@@ -207,14 +206,14 @@ try {
 */
 
     // // Initialize dimension information from file
-    if (created_local) {
+//    if (created_local) {
     	AnnounceStartBlock("Initializing dimensions of map");
 	    Announce("Input mesh");
-	    mapRemap->InitializeSourceDimensionsFromMesh(meshInput);
+	    mapRemap.InitializeSourceDimensionsFromMesh(meshInput);
 	    Announce("Output mesh");
-	    mapRemap->InitializeTargetDimensionsFromMesh(meshOutput);
+	    mapRemap.InitializeTargetDimensionsFromMesh(meshOutput);
 	    AnnounceEndBlock(NULL);
-    }
+//    }
 
     // Parse variable list
     std::vector< std::string > vecVariableStrings;
@@ -236,7 +235,7 @@ try {
 
     // Input mesh areas
     if (eInputType == DiscretizationType_FV) {
-        mapRemap->SetSourceAreas(meshInput.vecFaceArea);
+        mapRemap.SetSourceAreas(meshInput.vecFaceArea);
     }
 
     // Calculate Face areas
@@ -247,7 +246,7 @@ try {
 
     // Output mesh areas
     if (eOutputType == DiscretizationType_FV) {
-        mapRemap->SetTargetAreas(meshOutput.vecFaceArea);
+        mapRemap.SetTargetAreas(meshOutput.vecFaceArea);
     }
 
     // Verify that overlap mesh is in the correct order
@@ -330,12 +329,12 @@ try {
         meshInput.ConstructEdgeMap();
 
         // Initialize coordinates for map
-        mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
-        mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
+        mapRemap.InitializeSourceCoordinatesFromMeshFV(meshInput);
+        mapRemap.InitializeTargetCoordinatesFromMeshFV(meshOutput);
 
         // Construct OfflineMap
         AnnounceStartBlock("Calculating offline map");
-        LinearRemapFVtoFV(meshInput, meshOutput, meshOverlap, nPin, *mapRemap);
+        LinearRemapFVtoFV(meshInput, meshOutput, meshOverlap, nPin, mapRemap);
 
     // Finite volume input / Finite element output
     } else if (eInputType == DiscretizationType_FV) {
@@ -362,8 +361,8 @@ try {
         }
 
         // Initialize coordinates for map
-        mapRemap->InitializeSourceCoordinatesFromMeshFV(meshInput);
-        mapRemap->InitializeTargetCoordinatesFromMeshFE(
+        mapRemap.InitializeSourceCoordinatesFromMeshFV(meshInput);
+        mapRemap.InitializeTargetCoordinatesFromMeshFE(
             meshOutput, nPout, dataGLLNodes);
 
         // Generate the continuous Jacobian
@@ -373,12 +372,12 @@ try {
             GenerateUniqueJacobian(
                 dataGLLNodes,
                 dataGLLJacobian,
-                mapRemap->GetTargetAreas());
+                mapRemap.GetTargetAreas());
 
         } else {
             GenerateDiscontinuousJacobian(
                 dataGLLJacobian,
-                mapRemap->GetTargetAreas());
+                mapRemap.GetTargetAreas());
         }
 
         // Generate reverse node array and edge map
@@ -395,9 +394,9 @@ try {
                 meshOverlap,
                 dataGLLNodes,
                 dataGLLJacobian,
-                mapRemap->GetTargetAreas(),
+                mapRemap.GetTargetAreas(),
                 nPin,
-                *mapRemap,
+                mapRemap,
                 nMonotoneType,
                 fContinuous,
                 fNoConservation);
@@ -409,9 +408,9 @@ try {
                 meshOverlap,
                 dataGLLNodes,
                 dataGLLJacobian,
-                mapRemap->GetTargetAreas(),
+                mapRemap.GetTargetAreas(),
                 nPin,
-                *mapRemap,
+                mapRemap,
                 nMonotoneType,
                 fContinuous,
                 fNoConservation);
@@ -455,9 +454,9 @@ try {
         }
 
         // Initialize coordinates for map
-        mapRemap->InitializeSourceCoordinatesFromMeshFE(
+        mapRemap.InitializeSourceCoordinatesFromMeshFE(
             meshInput, nPin, dataGLLNodes);
-        mapRemap->InitializeTargetCoordinatesFromMeshFV(meshOutput);
+        mapRemap.InitializeTargetCoordinatesFromMeshFV(meshOutput);
 
         // Generate the continuous Jacobian for input mesh
         bool fContinuousIn = (eInputType == DiscretizationType_CGLL);
@@ -466,12 +465,12 @@ try {
             GenerateUniqueJacobian(
                 dataGLLNodes,
                 dataGLLJacobian,
-                mapRemap->GetSourceAreas());
+                mapRemap.GetSourceAreas());
 
         } else {
             GenerateDiscontinuousJacobian(
                 dataGLLJacobian,
-                mapRemap->GetSourceAreas());
+                mapRemap.GetSourceAreas());
         }
 
         // Generate offline map
@@ -491,7 +490,7 @@ try {
             nMonotoneType,
             fContinuousIn,
             fNoConservation,
-            *mapRemap
+            mapRemap
         );
 
     // Finite element input / Finite element output
@@ -558,9 +557,9 @@ try {
         }
 
         // Initialize coordinates for map
-        mapRemap->InitializeSourceCoordinatesFromMeshFE(
+        mapRemap.InitializeSourceCoordinatesFromMeshFE(
             meshInput, nPin, dataGLLNodesIn);
-        mapRemap->InitializeTargetCoordinatesFromMeshFE(
+        mapRemap.InitializeTargetCoordinatesFromMeshFE(
             meshOutput, nPout, dataGLLNodesOut);
 
         // Generate the continuous Jacobian for input mesh
@@ -570,12 +569,12 @@ try {
             GenerateUniqueJacobian(
                 dataGLLNodesIn,
                 dataGLLJacobianIn,
-                mapRemap->GetSourceAreas());
+                mapRemap.GetSourceAreas());
 
         } else {
             GenerateDiscontinuousJacobian(
                 dataGLLJacobianIn,
-                mapRemap->GetSourceAreas());
+                mapRemap.GetSourceAreas());
         }
 
         // Generate the continuous Jacobian for output mesh
@@ -585,12 +584,12 @@ try {
             GenerateUniqueJacobian(
                 dataGLLNodesOut,
                 dataGLLJacobianOut,
-                mapRemap->GetTargetAreas());
+                mapRemap.GetTargetAreas());
 
         } else {
             GenerateDiscontinuousJacobian(
                 dataGLLJacobianOut,
-                mapRemap->GetTargetAreas());
+                mapRemap.GetTargetAreas());
         }
 
         // Generate offline map
@@ -604,14 +603,14 @@ try {
             dataGLLJacobianIn,
             dataGLLNodesOut,
             dataGLLJacobianOut,
-            mapRemap->GetTargetAreas(),
+            mapRemap.GetTargetAreas(),
             nPin,
             nPout,
             nMonotoneType,
             fContinuousIn,
             fContinuousOut,
             fNoConservation,
-            *mapRemap
+            mapRemap
         );
 
     } else {
@@ -623,11 +622,11 @@ try {
     // Verify consistency, conservation and monotonicity
     if (!fNoCheck) {
         AnnounceStartBlock("Verifying map");
-        mapRemap->IsConsistent(1.0e-8);
-        mapRemap->IsConservative(1.0e-8);
+        mapRemap.IsConsistent(1.0e-8);
+        mapRemap.IsConservative(1.0e-8);
 
         if (nMonotoneType != 0) {
-            mapRemap->IsMonotone(1.0e-12);
+            mapRemap.IsMonotone(1.0e-12);
         }
         AnnounceEndBlock(NULL);
     }
@@ -640,7 +639,7 @@ try {
     // Output the Offline Map
     if (strOutputMap != "") {
         AnnounceStartBlock("Writing offline map");
-        mapRemap->Write(strOutputMap);
+        mapRemap.Write(strOutputMap);
         AnnounceEndBlock(NULL);
     }
 
@@ -648,8 +647,8 @@ try {
     if (strInputData != "") {
         AnnounceStartBlock("Applying offline map to data");
 
-        mapRemap->SetFillValueOverride(static_cast<float>(dFillValueOverride));
-        mapRemap->Apply(
+        mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
+        mapRemap.Apply(
             strInputData,
             strOutputData,
             vecVariableStrings,
@@ -664,18 +663,20 @@ try {
     if ((strInputData != "") && (strOutputData != "")) {
         if (fPreserveAll) {
             AnnounceStartBlock("Preserving variables");
-            mapRemap->PreserveAllVariables(strInputData, strOutputData);
+            mapRemap.PreserveAllVariables(strInputData, strOutputData);
             AnnounceEndBlock(NULL);
 
         } else if (vecPreserveVariableStrings.size() != 0) {
             AnnounceStartBlock("Preserving variables");
-            mapRemap->PreserveVariables(
+            mapRemap.PreserveVariables(
                 strInputData,
                 strOutputData,
                 vecPreserveVariableStrings);
             AnnounceEndBlock(NULL);
         }
     }
+
+    return (0);
 
 } catch(Exception & e) {
     Announce(e.ToString().c_str());
@@ -684,26 +685,22 @@ try {
 } catch(...) {
     return (0);
 }
-    return mapRemap;
 }
 
 
-extern "C" OfflineMap* GenerateOfflineMap(  std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh, 
-											std::string strInputMeta, std::string strOutputMeta, 
-											std::string strInputType, std::string strOutputType,
-											int nPin, int nPout, 
-											bool fBubble, int fMonotoneTypeID, 
-											bool fVolumetric, bool fNoConservation, bool fNoCheck,
-											std::string strVariables, std::string strOutputMap, 
-											std::string strInputData, std::string strOutputData,
-											std::string strNColName, bool fOutputDouble, 
-											std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-											bool fInputConcave, bool fOutputConcave )
+extern "C" int GenerateOfflineMap(  OfflineMap& mapRemap, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
+                                    std::string strInputMeta, std::string strOutputMeta,
+                                    std::string strInputType, std::string strOutputType,
+                                    int nPin, int nPout,
+                                    bool fBubble, int fMonotoneTypeID,
+                                    bool fVolumetric, bool fNoConservation, bool fNoCheck,
+                                    std::string strVariables, std::string strOutputMap,
+                                    std::string strInputData, std::string strOutputData,
+                                    std::string strNColName, bool fOutputDouble,
+                                    std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+                                    bool fInputConcave, bool fOutputConcave )
 {
 	NcError error(NcError::silent_nonfatal);
-
-	// Create Offline Map
-    OfflineMap* mapRemap = new OfflineMap();
 
 try {
 
@@ -730,9 +727,9 @@ try {
 	// Initialize dimension information from file
 	AnnounceStartBlock("Initializing dimensions of map");
 	Announce("Input mesh");
-	mapRemap->InitializeSourceDimensionsFromFile(strInputMesh);
+	mapRemap.InitializeSourceDimensionsFromFile(strInputMesh);
 	Announce("Output mesh");
-	mapRemap->InitializeTargetDimensionsFromFile(strOutputMesh);
+	mapRemap.InitializeTargetDimensionsFromFile(strOutputMesh);
 	AnnounceEndBlock(NULL);
 
 	// Load input mesh
@@ -752,7 +749,7 @@ try {
 	Mesh meshOverlap(strOverlapMesh);
 	meshOverlap.RemoveZeroEdges();
 
-    mapRemap = GenerateOfflineMapWithMeshes(mapRemap, meshInput, meshOutput, meshOverlap,
+    int err = GenerateOfflineMapWithMeshes(mapRemap, meshInput, meshOutput, meshOverlap,
                                             strInputMeta, strOutputMeta,
                                             strInputType, strOutputType,
                                             nPin, nPout,
@@ -764,6 +761,8 @@ try {
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
                                             fInputConcave, fOutputConcave );
 
+    return err;
+
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
 	return (0);
@@ -771,7 +770,6 @@ try {
 } catch(...) {
 	return (0);
 }
-	return mapRemap;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -906,18 +904,18 @@ int main(int argc, char** argv) {
 	if (fMonotoneType3) fMonotoneTypeID=3;
 
 	// Call the actual mesh generator
-	OfflineMap* mapRemap = GenerateOfflineMap(  strInputMesh, strOutputMesh, strOverlapMesh, 
-												strInputMeta, strOutputMeta, 
-												strInputType, strOutputType, 
-												nPin, nPout,
-												fBubble, fMonotoneTypeID, 
-												fVolumetric, fNoConservation, fNoCheck,
-												strVariables, strOutputMap, strInputData, strOutputData,
-												strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride,
-												fInputConcave, fOutputConcave );
+    OfflineMap mapRemap;
+	int err = GenerateOfflineMap(  mapRemap, strInputMesh, strOutputMesh, strOverlapMesh,
+                                    strInputMeta, strOutputMeta,
+                                    strInputType, strOutputType,
+                                    nPin, nPout,
+                                    fBubble, fMonotoneTypeID,
+                                    fVolumetric, fNoConservation, fNoCheck,
+                                    strVariables, strOutputMap, strInputData, strOutputData,
+                                    strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride,
+                                    fInputConcave, fOutputConcave );
 
-	if (mapRemap) delete mapRemap;
-	else return (-1);
+	if (err) exit(err);
 
 	return 0;
 }

@@ -459,12 +459,9 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateICOMesh(int nResolution, bool fDual, std::string strOutputFile) {
+extern "C" int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Generate the mesh
-	Mesh *mesh = new Mesh();
 
 try {
 
@@ -472,23 +469,23 @@ try {
 	// Generate Mesh
 	AnnounceBanner();
 	AnnounceStartBlock("Generating Mesh");
-	GenerateIcosahedralQuadGrid(nResolution, mesh->nodes, mesh->faces);
+	GenerateIcosahedralQuadGrid(nResolution, mesh.nodes, mesh.faces);
 	AnnounceEndBlock("Done");
 
 	// Generate the dual grid
 	if (fDual) {
-		Dual(*mesh);
-        mesh->type = Mesh::MeshType_IcosaHedralDual;
+		Dual(mesh);
+        mesh.type = Mesh::MeshType_IcosaHedralDual;
 	}
-    else mesh->type = Mesh::MeshType_IcosaHedral;
+    else mesh.type = Mesh::MeshType_IcosaHedral;
 
 	// Output the mesh
 	if (strOutputFile.size()) {
 		AnnounceStartBlock("Writing Mesh to file");
 		Announce("Mesh size: Nodes [%i] Elements [%i]",
-			mesh->nodes.size(), mesh->faces.size());
+			mesh.nodes.size(), mesh.faces.size());
 
-		mesh->Write(strOutputFile);
+		mesh.Write(strOutputFile);
 		
 		AnnounceEndBlock("Done");
 	}
@@ -496,7 +493,7 @@ try {
 } catch(Exception & e) {
 	std::cout << e.ToString() << std::endl;
 }
-	return mesh;
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -524,9 +521,9 @@ int main(int argc, char** argv) {
 	EndCommandLine(argv)
 
 	// Call the actual mesh generator
-	Mesh* mesh = GenerateICOMesh(nResolution, fDual, strOutputFile);
-	if (mesh) delete mesh;
-	else return (-1);
+    Mesh mesh;
+	int err = GenerateICOMesh(mesh, nResolution, fDual, strOutputFile);
+	if (err) exit(err);
 
 	return 0;
 }
