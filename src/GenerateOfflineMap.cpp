@@ -859,8 +859,6 @@ int main(int argc, char** argv) {
 	// Output mesh contains concave elements
 	bool fOutputConcave;
 
-	AnnounceBanner();
-
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputMesh, "in_mesh", "");

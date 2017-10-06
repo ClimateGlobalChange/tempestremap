@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
 
 	// Calculate metadata
     Mesh mesh;
-    int err = GenerateLambertConfConicMesh(nNCol, nNRow, dLon0, dLat0, dLat1, dLat2, dXLL, dYLL, dDX, strOutputFile);
+    int err = GenerateLambertConfConicMesh(mesh, nNCol, nNRow, dLon0, dLat0, dLat1, dLat2, dXLL, dYLL, dDX, strOutputFile);
 	if (err) exit(err);
 
 	// Done

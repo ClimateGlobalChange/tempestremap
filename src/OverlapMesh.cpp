@@ -1935,6 +1935,22 @@ void GenerateOverlapMesh_v2(
 		}
 	}
 
+	// Replace parent indices if meshSource has a MultiFaceMap
+	if (meshSource.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecSourceFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecSourceFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshTarget has a MultiFaceMap
+	if (meshTarget.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecTargetFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecTargetFaceIx[f]];
+		}
+	}
+
 	// Destroy the KD tree
 	kd_free(kdTarget);
 
@@ -1958,10 +1974,11 @@ void GenerateOverlapMesh_v2(
 	AnnounceEndBlock("Done");
 */
 	// Calculate Face areas
-    if (verbose) {
-        double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
-        Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
-    }
+  if (verbose) {
+      double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+      Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+

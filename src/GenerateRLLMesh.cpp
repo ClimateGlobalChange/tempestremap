@@ -43,23 +43,182 @@
 // 
 // Output Parameters: Mesh*
 // 
-extern "C" int GenerateRLLMesh(Mesh& mesh, int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, std::string strOutputFile) {
+extern "C" int GenerateRLLMesh(Mesh& mesh, int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, bool fForceGlobal, std::string strInputFile, std::string strOutputFile, bool fVerbose
+) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
 
-	// Verify latitude box is increasing
-	if (dLatBegin >= dLatEnd) {
-		_EXCEPTIONT("--lat_begin and --lat_end must specify a positive interval");
-	}
-	if (dLonBegin >= dLonEnd) {
-		_EXCEPTIONT("--lon_begin and --lon_end must specify a positive interval");
+	// Longitude and latitude arrays
+	DataVector<double> dLonEdge;
+	DataVector<double> dLatEdge;
+
+	// Generate mesh from input datafile
+	if (strInputFile != "") {
+
+		std::cout << "Generating mesh from input datafile ";
+		std::cout << "\"" << strInputFile << "\"" << std::endl;
+
+		NcFile ncfileInput(strInputFile.c_str(), NcFile::ReadOnly);
+		if (!ncfileInput.is_valid()) {
+			_EXCEPTION1("Unable to load input file \"%s\"", strInputFile.c_str());
+		}
+
+		NcDim * dimLon = ncfileInput.get_dim("lon");
+		if (dimLon == NULL) {
+			_EXCEPTIONT("Input file missing dimension \"lon\"");
+		}
+
+		NcDim * dimLat = ncfileInput.get_dim("lat");
+		if (dimLat == NULL) {
+			_EXCEPTIONT("Input file missing dimension \"lat\"");
+		}
+
+		NcVar * varLon = ncfileInput.get_var("lon");
+		if (varLon == NULL) {
+			_EXCEPTIONT("Input file missing variable \"lon\"");
+		}
+
+		NcVar * varLat = ncfileInput.get_var("lat");
+		if (varLon == NULL) {
+			_EXCEPTIONT("Input file missing variable \"lat\"");
+		}
+
+		nLongitudes = dimLon->size();
+		nLatitudes = dimLat->size();
+
+		if (nLongitudes < 2) {
+			_EXCEPTIONT("At least two longitudes required in input file");
+		}
+		if (nLatitudes < 2) {
+			_EXCEPTIONT("At least two latitudes required in input file");
+		}
+
+		DataVector<double> dLonNode(nLongitudes);
+		varLon->set_cur((long)0);
+		varLon->get(&(dLonNode[0]), nLongitudes);
+
+		DataVector<double> dLatNode(nLatitudes);
+		varLat->set_cur((long)0);
+		varLat->get(&(dLatNode[0]), nLatitudes);
+
+		for (int i = 0; i < nLongitudes-1; i++) {
+			if (dLonNode[i] > dLonNode[i+1]) {
+				_EXCEPTIONT("Longitudes must be monotone increasing");
+			}
+		}
+
+		for (int j = 0; j < nLatitudes-1; j++) {
+			if (dLatNode[j] > dLatNode[j+1]) {
+				_EXCEPTIONT("Latitudes must be monotone increasing");
+			}
+		}
+
+		double dFirstDeltaLon = dLonNode[1] - dLonNode[0];
+		double dSecondLastDeltaLon = dLonNode[nLongitudes-1] - dLonNode[nLongitudes-2];
+		double dLastDeltaLon = dLonNode[0] - (dLonNode[nLongitudes-1] - 360.0);
+
+		if (fabs(dFirstDeltaLon - dLastDeltaLon) < 1.0e-12) {
+			std::cout << "Mesh assumed periodic in longitude" << std::endl;
+			fForceGlobal = true;
+		}
+
+		// Initialize longitude edges
+		dLonEdge.Initialize(nLongitudes+1);
+
+		if (fForceGlobal) {
+			dLonEdge[0] = 0.5 * (dLonNode[0] + dLonNode[nLongitudes-1] - 360.0);
+			dLonEdge[nLongitudes] = dLonEdge[0];
+		} else {
+			dLonEdge[0] = dLonNode[0] - 0.5 * dFirstDeltaLon;
+			dLonEdge[nLongitudes] = dLonNode[nLongitudes-1] + 0.5 * dSecondLastDeltaLon;
+		}
+
+		for (int i = 1; i < nLongitudes; i++) {
+			dLonEdge[i] = 0.5 * (dLonNode[i-1] + dLonNode[i]);
+		}
+
+		// Initialize latitude edges
+		dLatEdge.Initialize(nLatitudes+1);
+
+		dLatEdge[0] =
+			dLatNode[0]
+			- 0.5 * (dLatNode[1] - dLatNode[0]);
+
+		if (dLatEdge[0] < -90.0) {
+			dLatEdge[0] = -90.0;
+		}
+
+		dLatEdge[nLatitudes] =
+			dLatNode[nLatitudes-1]
+			+ 0.5 * (dLatNode[nLatitudes-1] - dLatNode[nLatitudes-2]);
+
+		if (dLatEdge[nLatitudes] > 90.0) {
+			dLatEdge[nLatitudes] = 90.0;
+		}
+
+		for (int j = 1; j < nLatitudes; j++) {
+			dLatEdge[j] = 0.5 * (dLatNode[j-1] + dLatNode[j]);
+		}
+
+		// Convert all longitudes and latitudes to radians
+		if (fVerbose) {
+			std::cout << "Longitudes: ";
+		}
+		for (int i = 0; i <= nLongitudes; i++) {
+			if (fVerbose) {
+				std::cout << dLonEdge[i] << ", ";
+			}
+			dLonEdge[i] *= M_PI / 180.0;
+		}
+		if (fVerbose) {
+			std::cout << std::endl;
+			std::cout << "Latitudes: ";
+		}
+		for (int j = 0; j <= nLatitudes; j++) {
+			if (fVerbose) {
+				std::cout << dLatEdge[j] << ", ";
+			}
+			dLatEdge[j] *= M_PI / 180.0;
+		}
+		if (fVerbose) {
+			std::cout << std::endl;
+		}
+
+	// Generate mesh from parameters
+	} else {
+		// Convert latitude and longitude interval to radians
+		dLonBegin *= M_PI / 180.0;
+		dLonEnd   *= M_PI / 180.0;
+		dLatBegin *= M_PI / 180.0;
+		dLatEnd   *= M_PI / 180.0;
+
+		// Deltas in longitude and latitude directions
+		double dDeltaLon = dLonEnd - dLonBegin;
+		double dDeltaLat = dLatEnd - dLatBegin;
+
+		// Create longitude arrays
+		dLonEdge.Initialize(nLongitudes+1);
+		for (int i = 0; i <= nLongitudes; i++) {
+			double dLambdaFrac =
+				  static_cast<double>(i)
+				/ static_cast<double>(nLongitudes);
+
+			dLonEdge[i] = dDeltaLon * dLambdaFrac + dLonBegin;
+		}
+
+		// Create latitude arrays
+		dLatEdge.Initialize(nLatitudes+1);
+		for (int j = 0; j <= nLatitudes; j++) {
+			double dPhiFrac =
+				  static_cast<double>(j)
+				/ static_cast<double>(nLatitudes);
+
+			dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+		}
 	}
 
-	// Announce
-	std::cout << "=========================================================";
-	std::cout << std::endl;
 	std::cout << "..Generating mesh with resolution [";
 	std::cout << nLongitudes << ", " << nLatitudes << "]" << std::endl;
 	std::cout << "..Longitudes in range [";
@@ -88,13 +247,9 @@ try {
 	FaceVector & faces = mesh.faces;
     mesh.type = Mesh::MeshType_RLL;
 
-	// Change in longitude
-	double dDeltaLon = dLonEnd - dLonBegin;
-	double dDeltaLat = dLatEnd - dLatBegin;
-
 	// Check if longitudes wrap
 	bool fWrapLongitudes = false;
-	if (fmod(dDeltaLon, 2.0 * M_PI) < 1.0e-12) {
+	if (fmod(dLonEnd - dLonBegin, 2.0 * M_PI) < 1.0e-12) {
 		fWrapLongitudes = true;
 	}
 	bool fIncludeSouthPole = (fabs(dLatBegin + 0.5 * M_PI) < 1.0e-12);
@@ -118,20 +273,13 @@ try {
 	}
 	for (int j = iInteriorLatBegin; j < iInteriorLatEnd+1; j++) {
 		for (int i = 0; i < nLongitudeNodes; i++) {
-			Real dPhiFrac =
-				  static_cast<Real>(j)
-				/ static_cast<Real>(nLatitudes);
 
-			Real dLambdaFrac =
-				  static_cast<Real>(i)
-				/ static_cast<Real>(nLongitudes);
+			double dLambda = dLonEdge[i];
+			double dPhi = dLatEdge[j];
 
-			Real dPhi = dDeltaLat * dPhiFrac + dLatBegin;
-			Real dLambda = dDeltaLon * dLambdaFrac + dLonBegin;
-
-			Real dX = cos(dPhi) * cos(dLambda);
-			Real dY = cos(dPhi) * sin(dLambda);
-			Real dZ = sin(dPhi);
+			double dX = cos(dPhi) * cos(dLambda);
+			double dY = cos(dPhi) * sin(dLambda);
+			double dZ = sin(dPhi);
 
 			nodes.push_back(Node(dX, dY, dZ));
 		}
@@ -289,26 +437,49 @@ int main(int argc, char** argv) {
 	// Flip latitude and longitude dimension in FaceVector ordering
 	bool fFlipLatLon;
 
-	// Output filename
-	std::string strOutputFile;
+    // Input filename
+    std::string strInputFile;
 
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nLongitudes, "lon", 128);
-		CommandLineInt(nLatitudes, "lat", 64);
-		CommandLineDouble(dLonBegin, "lon_begin", 0.0);
-		CommandLineDouble(dLonEnd, "lon_end", 360.0);
-		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
-		CommandLineDouble(dLatEnd, "lat_end", 90.0);
-		CommandLineBool(fFlipLatLon, "flip");
-		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
+    // Input mesh is global
+    bool fForceGlobal;
 
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
+    // Verbose output
+    bool fVerbose;
+
+    // Output filename
+    std::string strOutputFile;
+
+    // Parse the command line
+    BeginCommandLine()
+    CommandLineInt(nLongitudes, "lon", 128);
+    CommandLineInt(nLatitudes, "lat", 64);
+    CommandLineDouble(dLonBegin, "lon_begin", 0.0);
+    CommandLineDouble(dLonEnd, "lon_end", 360.0);
+    CommandLineDouble(dLatBegin, "lat_begin", -90.0);
+    CommandLineDouble(dLatEnd, "lat_end", 90.0);
+    CommandLineBool(fFlipLatLon, "flip");
+    CommandLineString(strInputFile, "in_file", "");
+    CommandLineBool(fForceGlobal, "in_global");
+    CommandLineBool(fVerbose, "verbose");
+    CommandLineString(strOutputFile, "file", "outRLLMesh.g");
+
+    ParseCommandLine(argc, argv);
+    EndCommandLine(argv)
+
+    // Verify latitude box is increasing
+    if (dLatBegin >= dLatEnd) {
+        _EXCEPTIONT("--lat_begin and --lat_end must specify a positive interval");
+    }
+    if (dLonBegin >= dLonEnd) {
+        _EXCEPTIONT("--lon_begin and --lon_end must specify a positive interval");
+    }
+    
+    std::cout << "=========================================================";
+    std::cout << std::endl;
 
 	// Call the actual mesh generator
     Mesh mesh;
-    int err = GenerateRLLMesh(mesh, nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, strOutputFile);
+    int err = GenerateRLLMesh(mesh, nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, fForceGlobal, strInputFile, strOutputFile, fVerbose);
 	if (err) exit(err);
 
 	return 0;

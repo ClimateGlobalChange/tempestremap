@@ -30,6 +30,7 @@
 extern "C" int GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB,
                                          Mesh& meshOverlap, std::string strOverlapMesh,
                                          std::string strMethod,
+                                         const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
                                          const bool verbose
 ) {
 
@@ -50,7 +51,7 @@ try {
 		_EXCEPTIONT("Invalid \"method\" value");
 	}
 
-    meshOverlap.type = Mesh::MeshType_Overlap;
+  meshOverlap.type = Mesh::MeshType_Overlap;
 
 	// Construct the edge map on both meshes
 	AnnounceStartBlock("Constructing edge map on mesh A");
@@ -70,7 +71,7 @@ try {
 		method);
 */
 	AnnounceStartBlock("Construct overlap mesh");
-    GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method, verbose);
+  GenerateOverlapMesh_v2(meshA, meshB, meshOverlap, method, verbose);
 	AnnounceEndBlock(NULL);
 /*
 	// Construct the reverse node array on both meshes
@@ -117,6 +118,7 @@ try {
 extern "C" int GenerateOverlapMesh(std::string strMeshA, std::string strMeshB,
                                    Mesh& meshOverlap, std::string strOverlapMesh,
                                    std::string strMethod, const bool fNoValidate,
+                                   const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
                                    const bool verbose
 ) {
 
@@ -129,6 +131,12 @@ try {
     Mesh meshA(strMeshA);
     meshA.RemoveZeroEdges();
     AnnounceEndBlock(NULL);
+
+		// Convexify Mesh
+		if (fHasConcaveFacesA) {
+				Mesh meshTemp = meshA;
+				ConvexifyMesh(meshTemp, meshA);
+		}
 
     // Validate mesh
     if (!fNoValidate) {
@@ -143,6 +151,12 @@ try {
     meshB.RemoveZeroEdges();
     AnnounceEndBlock(NULL);
 
+		// Convexify Mesh
+		if (fHasConcaveFacesB) {
+				Mesh meshTemp = meshB;
+				ConvexifyMesh(meshTemp, meshB);
+		}
+
     // Validate mesh
     if (!fNoValidate) {
         AnnounceStartBlock("Validate mesh B");
@@ -150,7 +164,11 @@ try {
         AnnounceEndBlock(NULL);
     }
 
-    int err = GenerateOverlapWithMeshes(meshOverlap, meshA, meshB, strOverlapMesh, strMethod, verbose);
+    int err = GenerateOverlapWithMeshes(meshA, meshB,
+                                        meshOverlap, strOverlapMesh, 
+                                        strMethod, 
+                                        fHasConcaveFacesA, fHasConcaveFacesB, 
+                                        verbose);
     return err;
 
 } catch(Exception & e) {
@@ -183,6 +201,12 @@ int main(int argc, char** argv) {
 	// No validation of the meshes
 	bool fNoValidate;
 
+	// Concave elements may be present in mesh A
+	bool fHasConcaveFacesA;
+
+	// Concave elements may be present in mesh B
+	bool fHasConcaveFacesB;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshA, "a", "");
@@ -190,6 +214,8 @@ int main(int argc, char** argv) {
 		CommandLineString(strOverlapMesh, "out", "overlap.g");
 		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
 		CommandLineBool(fNoValidate, "novalidate");
+		CommandLineBool(fHasConcaveFacesA, "concavea");
+		CommandLineBool(fHasConcaveFacesB, "concaveb");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -198,7 +224,11 @@ int main(int argc, char** argv) {
 
 	// Call the actual mesh generator
     Mesh meshOverlap;
-    int err = GenerateOverlapMesh(strMeshA, strMeshB, meshOverlap, strOverlapMesh, strMethod, fNoValidate, true);
+    int err = GenerateOverlapMesh(strMeshA, strMeshB,
+                                  meshOverlap, strOverlapMesh,
+                                  strMethod, fNoValidate,
+                                  fHasConcaveFacesA, fHasConcaveFacesB,
+                                  true);
 	if (err) exit(err);
 
 	AnnounceBanner();

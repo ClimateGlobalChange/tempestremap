@@ -923,23 +923,24 @@ void LinearRemapSE4(
 
 		// Force consistency and conservation
 		if (!fNoConservation) {
+			double dTargetArea = 0.0;
+			for (int j = 0; j < nOverlapFaces; j++) {
+				dTargetArea += meshOverlap.vecFaceArea[ixOverlap + j];
+			}
+
 			for (int p = 0; p < nP; p++) {
 			for (int q = 0; q < nP; q++) {
 				vecSourceArea[p * nP + q] = dataGLLJacobian[p][q][ixFirst];
 			}
 			}
 
-			double dTargetArea = 0.0;
-			vecTargetArea.Initialize(nOverlapFaces);
-			for (int j = 0; j < nOverlapFaces; j++) {
-				vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
-				dTargetArea += meshOverlap.vecFaceArea[ixOverlap + j];
-			}
+			// Source elements are completely covered by target volumes
+			if (fabs(meshInput.vecFaceArea[ixFirst] - dTargetArea) <= 1.0e-10) {
+				vecTargetArea.Initialize(nOverlapFaces);
+				for (int j = 0; j < nOverlapFaces; j++) {
+					vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
+				}
 
-			if (fabs(dTargetArea - meshInput.vecFaceArea[ixFirst]) > 1.0e-10) {
-				Announce("Partial element: %i", ixFirst);
-
-			} else {
 				dCoeff.Initialize(nOverlapFaces, nP * nP);
 
 				for (int j = 0; j < nOverlapFaces; j++) {
@@ -950,19 +951,70 @@ void LinearRemapSE4(
 				}
 				}
 
-				ForceConsistencyConservation3(
-					vecSourceArea,
-					vecTargetArea,
-					dCoeff,
-					(nMonotoneType != 0));
+			// Target volumes only partially cover source elements
+			} else if (meshInput.vecFaceArea[ixFirst] - dTargetArea > 1.0e-10) {
+				double dExtraneousArea = meshInput.vecFaceArea[ixFirst] - dTargetArea;
+
+				vecTargetArea.Initialize(nOverlapFaces+1);
+				for (int j = 0; j < nOverlapFaces; j++) {
+					vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
+				}
+				vecTargetArea[nOverlapFaces] = dExtraneousArea;
+
+				Announce("Partial volume: %i (%1.10e / %1.10e)",
+					ixFirst, dTargetArea, meshInput.vecFaceArea[ixFirst]);
+
+				if (dTargetArea > meshInput.vecFaceArea[ixFirst]) {
+					_EXCEPTIONT("Partial element area exceeds total element area");
+				}
+
+				dCoeff.Initialize(nOverlapFaces+1, nP * nP);
 
 				for (int j = 0; j < nOverlapFaces; j++) {
 				for (int p = 0; p < nP; p++) {
 				for (int q = 0; q < nP; q++) {
-					dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
+					dCoeff[j][p * nP + q] = dRemapCoeff[p][q][j];
 				}
 				}
 				}
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					dCoeff[nOverlapFaces][p * nP + q] =
+						dataGLLJacobian[p][q][ixFirst];
+				}
+				}
+				for (int j = 0; j < nOverlapFaces; j++) {
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					dCoeff[nOverlapFaces][p * nP + q] -=
+						dRemapCoeff[p][q][j]
+						* meshOverlap.vecFaceArea[ixOverlap + j];
+				}
+				}
+				}
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					dCoeff[nOverlapFaces][p * nP + q] /= dExtraneousArea;
+				}
+				}
+
+			// Source elements only partially cover target volumes
+			} else {
+				_EXCEPTIONT("Target grid must be a subset of source grid");
+			}
+
+			ForceConsistencyConservation3(
+				vecSourceArea,
+				vecTargetArea,
+				dCoeff,
+				(nMonotoneType != 0));
+
+			for (int j = 0; j < nOverlapFaces; j++) {
+			for (int p = 0; p < nP; p++) {
+			for (int q = 0; q < nP; q++) {
+				dRemapCoeff[p][q][j] = dCoeff[j][p * nP + q];
+			}
+			}
 			}
 		}
 
