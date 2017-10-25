@@ -27,7 +27,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB,
+extern "C" 
+int GenerateOverlapWithMeshes(Mesh& meshA, Mesh& meshB,
                                          Mesh& meshOverlap, std::string strOverlapMesh,
                                          std::string strMethod,
                                          const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
@@ -115,7 +116,8 @@ try {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateOverlapMesh(std::string strMeshA, std::string strMeshB,
+extern "C"
+int GenerateOverlapMesh(std::string strMeshA, std::string strMeshB,
                                    Mesh& meshOverlap, std::string strOverlapMesh,
                                    std::string strMethod, const bool fNoValidate,
                                    const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
@@ -179,63 +181,5 @@ try {
     return (0);
 }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef TEMPEST_DRIVER_MODE
-
-int main(int argc, char** argv) {
-
-	// Input mesh A
-	std::string strMeshA;
-
-	// Input mesh B
-	std::string strMeshB;
-
-	// Output mesh file
-	std::string strOverlapMesh;
-
-	// Overlap grid generation method
-	std::string strMethod;
-
-	// No validation of the meshes
-	bool fNoValidate;
-
-	// Concave elements may be present in mesh A
-	bool fHasConcaveFacesA;
-
-	// Concave elements may be present in mesh B
-	bool fHasConcaveFacesB;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMeshA, "a", "");
-		CommandLineString(strMeshB, "b", "");
-		CommandLineString(strOverlapMesh, "out", "overlap.g");
-		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
-		CommandLineBool(fNoValidate, "novalidate");
-		CommandLineBool(fHasConcaveFacesA, "concavea");
-		CommandLineBool(fHasConcaveFacesB, "concaveb");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
-
-	// Call the actual mesh generator
-    Mesh meshOverlap;
-    int err = GenerateOverlapMesh(strMeshA, strMeshB,
-                                  meshOverlap, strOverlapMesh,
-                                  strMethod, fNoValidate,
-                                  fHasConcaveFacesA, fHasConcaveFacesB,
-                                  true);
-	if (err) exit(err);
-
-	AnnounceBanner();
-
-	return 0;
-}
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////

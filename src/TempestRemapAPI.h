@@ -55,12 +55,12 @@ extern "C" {
 
     // New version of the implementation to compute the overlap mesh given a source and target mesh file names
     int GenerateOverlapMesh_v1 ( std::string strMeshA, std::string strMeshB,
-                                 std::string strOverlapMesh, Mesh& meshOverlap,
+                                 Mesh& meshOverlap, std::string strOverlapMesh,
                                  std::string strMethod,
                                  const bool fNoValidate = true );
 
     int GenerateGLLMetaData ( std::string strMesh, Mesh& meshOut,
-                              int nP, std::string strOutput,
+                              int nP, bool fBubble, std::string strOutput,
                               DataMatrix3D<int>& dataGLLnodes,
                               DataMatrix3D<double>& dataGLLJacobian );
 

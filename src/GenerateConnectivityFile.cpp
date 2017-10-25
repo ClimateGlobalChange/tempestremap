@@ -28,38 +28,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity)
-{
-
-    // Number of elements
-    int nElements = meshIn.faces.size();
-
-    vecConnectivity.resize(nElements);
-
-    EdgeMapConstIterator iter = meshIn.edgemap.begin();
-    for (; iter != meshIn.edgemap.end(); iter++) {
-
-        if ((iter->second[0] != InvalidFace) &&
-            (iter->second[1] != InvalidFace)
-            ) {
-            if ((iter->second[0] < 0) || (iter->second[0] >= nElements)) {
-                _EXCEPTION1("Face index (%i) out of range",
-                            iter->second[0]);
-            }
-            if ((iter->second[1] < 0) || (iter->second[1] >= nElements)) {
-                _EXCEPTION1("Face index (%i) out of range",
-                            iter->second[1]);
-            }
-            
-            vecConnectivity[iter->second[0]].insert(iter->second[1]+1);
-            vecConnectivity[iter->second[1]].insert(iter->second[0]+1);
-        }
-    }
-
-    return 0;
-}
-
-#ifdef TEMPEST_DRIVER_MODE
+extern "C"
+int GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity);
 
 int main(int argc, char** argv) {
 
@@ -242,8 +212,6 @@ try {
 	return (-2);
 }
 }
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 

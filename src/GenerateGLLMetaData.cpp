@@ -26,7 +26,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateGLLMetaData(std::string strMesh, Mesh& meshInput, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
+extern "C" 
+int GenerateGLLMetaData(std::string strMesh, Mesh& meshInput, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
 
 try {
 
@@ -93,48 +94,3 @@ try {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-#ifdef TEMPEST_DRIVER_MODE
-
-int main(int argc, char** argv) {
-
-	// Input mesh
-	std::string strMesh;
-
-	// Polynomial order
-	int nP;
-
-	// Use of bubble to adjust areas
-	bool fBubble;
-
-	// Output metadata file
-	std::string strOutput;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMesh, "mesh", "");
-		CommandLineInt(nP, "np", 4);
-		CommandLineString(strOutput, "out", "gllmeta.nc");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
-
-	// Calculate metadata
-	DataMatrix3D<int> dataGLLnodes;
-	DataMatrix3D<double> dataGLLJacobian;
-    Mesh mesh;
-	int err = GenerateGLLMetaData(strMesh, mesh, nP, fBubble, strOutput, dataGLLnodes, dataGLLJacobian);
-	if (err) exit(err);
-
-	// Done
-	AnnounceBanner();
-
-	return 0;
-}
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-

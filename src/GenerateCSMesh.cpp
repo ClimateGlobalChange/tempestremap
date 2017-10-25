@@ -14,7 +14,6 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#include "CommandLine.h"
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -137,7 +136,8 @@ void GenerateFacesFromQuad(
 // 
 // Output Parameters: Mesh*
 // 
-extern "C" int GenerateCSMesh(Mesh& mesh, int nResolution, bool fAlt, std::string strOutputFile) {
+extern "C" 
+int GenerateCSMesh(Mesh& mesh, int nResolution, bool fAlt, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -284,39 +284,5 @@ try {
 }
     return 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef TEMPEST_DRIVER_MODE
-
-int main(int argc, char** argv) {
-
-   // Number of elements in mesh
-   int nResolution;
-
-   // Alternate arrangement
-   bool fAlt;
-
-   // Output filename
-   std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nResolution, "res", 10);
-		CommandLineBool(fAlt, "alt");
-		CommandLineString(strOutputFile, "file", "outCSMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	// Call the actual mesh generator
-    Mesh mesh;
-	int err = GenerateCSMesh(mesh, nResolution, fAlt, strOutputFile);
-	if (err) exit(err);
-
-	return 0;
-}
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////

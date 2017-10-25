@@ -22,21 +22,6 @@ AC_PROG_MAKE_SET
 
 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 
-# Enable creation of TempestRemap library
-create_library=no
-AC_ARG_ENABLE(linkable-library,
- [  --enable-linkable-library  Build TempestRemap as a linkable library \
-  and disable creation of native drivers. This is a feature that should be \
-  enabled generally only by advanced users.],
- [ create_library=yes ])
-
-if (test "x$create_library" != "xyes"); then
-  AC_DEFINE(TEMPEST_DRIVER_MODE, 1, [Define this if drivers for TempestRemap are to be created directly.])
-else
-  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --enable-linkable-library"
-fi
-AM_CONDITIONAL([BUILD_DRIVERS], [test "x$create_library" != "xyes"])
-
 # Check how to add C++0x flags
 # TODO: Should we check for partial C++11 support also ?
 AX_CXX_COMPILE_STDCXX_0X

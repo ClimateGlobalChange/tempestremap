@@ -27,12 +27,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" Mesh* GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+extern "C"
+int GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, Mesh& meshOverlap, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
 
 	NcError error(NcError::silent_nonfatal);
-
-	// Construct the overlap mesh
-	Mesh *meshOverlap = new Mesh();
 
 try {
 
@@ -99,12 +97,12 @@ try {
 	AnnounceEndBlock(NULL);
 
 	AnnounceStartBlock("Construct overlap mesh");
-	GenerateOverlapMesh_v1(meshA, meshB, *meshOverlap, method);
+	GenerateOverlapMesh_v1(meshA, meshB, meshOverlap, method);
 	AnnounceEndBlock(NULL);
 
 	// Write the overlap mesh
 	AnnounceStartBlock("Writing overlap mesh");
-	meshOverlap->Write(strOverlapMesh.c_str());
+	meshOverlap.Write(strOverlapMesh.c_str());
 	AnnounceEndBlock(NULL);
 
 } catch(Exception & e) {
@@ -114,53 +112,7 @@ try {
 } catch(...) {
 	return (0);
 }
-	return meshOverlap;
+	return (0);
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef TEMPEST_DRIVER_MODE
-
-int main(int argc, char** argv) {
-
-	// Input mesh A
-	std::string strMeshA;
-
-	// Input mesh B
-	std::string strMeshB;
-
-	// Output mesh file
-	std::string strOverlapMesh;
-
-	// Overlap grid generation method
-	std::string strMethod;
-
-	// No validation of the meshes
-	bool fNoValidate;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMeshA, "a", "");
-		CommandLineString(strMeshB, "b", "");
-		CommandLineString(strOverlapMesh, "out", "overlap.g");
-		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
-		CommandLineBool(fNoValidate, "novalidate");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
-
-	// Call the actual mesh generator
-	Mesh* mesh = GenerateOverlapMesh_v1(strMeshA, strMeshB, strOverlapMesh, strMethod, fNoValidate);
-	if (mesh) delete mesh;
-	else return (-1);
-
-	AnnounceBanner();
-
-	return 0;
-}
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////

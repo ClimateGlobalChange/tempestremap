@@ -14,7 +14,6 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#include "CommandLine.h"
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -459,7 +458,9 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile) {
+extern "C" 
+int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile)
+{
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -495,39 +496,5 @@ try {
 }
 	return 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef TEMPEST_DRIVER_MODE
-
-int main(int argc, char** argv) {
-    
-	// Resolution
-	int nResolution;
-
-	// Dual mesh
-	bool fDual;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nResolution, "res", 10);
-		CommandLineBool(fDual, "dual");
-		CommandLineString(strOutputFile, "file", "outICOMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	// Call the actual mesh generator
-    Mesh mesh;
-	int err = GenerateICOMesh(mesh, nResolution, fDual, strOutputFile);
-	if (err) exit(err);
-
-	return 0;
-}
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////

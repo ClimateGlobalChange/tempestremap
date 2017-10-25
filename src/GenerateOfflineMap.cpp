@@ -120,26 +120,20 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern "C" int GenerateOfflineMapWithMeshes( OfflineMap& mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
-                                            std::string strInputMeta, std::string strOutputMeta,
-                                            std::string strInputType, std::string strOutputType,
-                                            int nPin, int nPout,
-                                            bool fBubble, int fMonotoneTypeID,
-                                            bool fVolumetric, bool fNoConservation, bool fNoCheck,
-                                            std::string strVariables, std::string strOutputMap,
-                                            std::string strInputData, std::string strOutputData,
-                                            std::string strNColName, bool fOutputDouble,
-                                            std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-                                            bool fInputConcave, bool fOutputConcave )
+extern "C"
+int GenerateOfflineMapWithMeshes( OfflineMap& mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
+									std::string strInputMeta, std::string strOutputMeta,
+									std::string strInputType, std::string strOutputType,
+									int nPin, int nPout,
+									bool fBubble, int fMonotoneTypeID,
+									bool fVolumetric, bool fNoConservation, bool fNoCheck,
+									std::string strVariables, std::string strOutputMap,
+									std::string strInputData, std::string strOutputData,
+									std::string strNColName, bool fOutputDouble,
+									std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+									bool fInputConcave, bool fOutputConcave )
 {
     NcError error(NcError::silent_nonfatal);
-
-    // Create Offline Map
-//    bool created_local=false;
-//    if(!mapRemap_in) {
-//    	mapRemap = new OfflineMap();
-//    	created_local = true;
-//    }
 
 try {
 
@@ -688,17 +682,18 @@ try {
 }
 
 
-extern "C" int GenerateOfflineMap(  OfflineMap& mapRemap, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
-                                    std::string strInputMeta, std::string strOutputMeta,
-                                    std::string strInputType, std::string strOutputType,
-                                    int nPin, int nPout,
-                                    bool fBubble, int fMonotoneTypeID,
-                                    bool fVolumetric, bool fNoConservation, bool fNoCheck,
-                                    std::string strVariables, std::string strOutputMap,
-                                    std::string strInputData, std::string strOutputData,
-                                    std::string strNColName, bool fOutputDouble,
-                                    std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-                                    bool fInputConcave, bool fOutputConcave )
+extern "C" 
+int GenerateOfflineMap( OfflineMap& mapRemap, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
+						std::string strInputMeta, std::string strOutputMeta,
+						std::string strInputType, std::string strOutputType,
+						int nPin, int nPout,
+						bool fBubble, int fMonotoneTypeID,
+						bool fVolumetric, bool fNoConservation, bool fNoCheck,
+						std::string strVariables, std::string strOutputMap,
+						std::string strInputData, std::string strOutputData,
+						std::string strNColName, bool fOutputDouble,
+						std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+						bool fInputConcave, bool fOutputConcave )
 {
 	NcError error(NcError::silent_nonfatal);
 

@@ -9,24 +9,6 @@ lib_LTLIBRARIES = libTempestRemap.la
 
 libTempestRemap_la_includedir = $(includedir)
 
-# The list of source files, and any header files that do not need to be installed
-libTempestRemap_la_SOURCES = \
-	src/Announce.cpp \
-	src/PolynomialInterp.cpp \
-	src/GridElements.cpp \
-	src/MeshUtilities.cpp \
-	src/MeshUtilitiesFuzzy.cpp \
-	src/MeshUtilitiesExact.cpp \
-	src/GaussQuadrature.cpp \
-	src/GaussLobattoQuadrature.cpp \
-	src/LegendrePolynomial.cpp \
-	src/FiniteElementTools.cpp \
-	src/NetCDFUtilities.cpp \
-	src/OfflineMap.cpp \
-	src/TriangularQuadrature.cpp \
-	src/GenerateConnectivityFile.cpp \
-	src/kdtree.cpp
-
 # The list of header files which are to be installed 
 libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
@@ -62,67 +44,75 @@ libTempestRemap_la_include_HEADERS = \
 	src/TempestRemapAPI.h \
 	src/TempestConfig.h
 
+# The list of source files, and any header files that do not need to be installed
+libTempestRemap_la_SOURCES = \
+	src/Announce.cpp \
+	src/PolynomialInterp.cpp \
+	src/GridElements.cpp \
+	src/MeshUtilities.cpp \
+	src/MeshUtilitiesFuzzy.cpp \
+	src/MeshUtilitiesExact.cpp \
+	src/GenerateCSMesh.cpp \
+	src/GenerateICOMesh.cpp \
+	src/GenerateRLLMesh.cpp \
+	src/GenerateGLLMetaData.cpp \
+	src/GenerateLambertConfConicMesh.cpp \
+	src/GenerateOverlapMesh.cpp \
+	src/GenerateOverlapMesh_v1.cpp \
+	src/GaussQuadrature.cpp \
+	src/GaussLobattoQuadrature.cpp \
+	src/LegendrePolynomial.cpp \
+	src/FiniteElementTools.cpp \
+	src/NetCDFUtilities.cpp \
+	src/OverlapMesh.cpp \
+	src/OfflineMap.cpp \
+	src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp \
+	src/TriangularQuadrature.cpp \
+	src/ApplyOfflineMap.cpp \
+	src/GenerateOfflineMap.cpp \
+	src/GenerateConnectivityData.cpp \
+	src/kdtree.cpp
+
 # Load system-specific defaults
 AM_CPPFLAGS = -I$(srcdir)/src -I$(builddir)/src ${NETCDF_CPPFLAGS}
 AM_LDFLAGS = ${LDFLAGS} ${NETCDF_LDFLAGS}
 LDADD = libTempestRemap.la ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
 
-MeshToTxt_SOURCES = src/MeshToTxt.cpp
+# Mesh generation drivers
 GenerateTestData_SOURCES = src/GenerateTestData.cpp
+GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
+GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
+GenerateICOMesh_SOURCES = src/GenerateICOMeshExe.cpp
+GenerateLambertConfConicMesh_SOURCES = src/GenerateLambertConfConicMeshExe.cpp
+GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
+
+# Overlap mesh generators
+GenerateOverlapMesh_SOURCES = src/GenerateOverlapMeshExe.cpp
+GenerateOverlapMesh_v1_SOURCES = src/GenerateOverlapMeshExe_v1.cpp
+
+# Compute and apply the offline mapping weights
+ApplyOfflineMap_SOURCES = src/ApplyOfflineMapExe.cpp
+GenerateOfflineMap_SOURCES = src/GenerateOfflineMapExe.cpp 
+# GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp
+
+GenerateGLLMetaData_SOURCES = src/GenerateGLLMetaDataExe.cpp
+GenerateConnectivityFile_SOURCES = src/GenerateConnectivityFile.cpp
+GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
+CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
 CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
 
-bin_PROGRAMS = MeshToTxt GenerateTestData CalculateDiffNorms
-
-if BUILD_DRIVERS
-
-#AM_CPPFLAGS += -DTEMPEST_DRIVER_MODE
-GenerateRLLMesh_SOURCES = src/GenerateRLLMesh.cpp
-GenerateRLLMesh_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateCSMesh_SOURCES = src/GenerateCSMesh.cpp
-GenerateCSMesh_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateICOMesh_SOURCES = src/GenerateICOMesh.cpp
-GenerateICOMesh_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateLambertConfConicMesh_SOURCES = src/GenerateLambertConfConicMesh.cpp
-GenerateLambertConfConicMesh_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateOverlapMesh_SOURCES = src/GenerateOverlapMesh.cpp src/OverlapMesh.cpp
-GenerateOverlapMesh_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateOverlapMesh_v1_SOURCES = src/GenerateOverlapMesh_v1.cpp src/OverlapMesh.cpp
-GenerateOverlapMesh_v1_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateGLLMetaData_SOURCES = src/GenerateGLLMetaData.cpp
-GenerateGLLMetaData_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-ApplyOfflineMap_SOURCES = src/ApplyOfflineMap.cpp
-ApplyOfflineMap_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateOfflineMap_SOURCES = src/GenerateOfflineMap.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp
-GenerateOfflineMap_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-GenerateConnectivityFile_SOURCES = src/GenerateConnectivityFile.cpp
-GenerateConnectivityFile_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
-CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
-GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
+MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
-# GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp
-# GenerateOfflineMap_v1_CXXFLAGS = $(AM_CPPFLAGS) -DTEMPEST_DRIVER_MODE
 
-bin_PROGRAMS += GenerateCSMesh GenerateRLLMesh GenerateICOMesh \
-								GenerateGLLMetaData GenerateLambertConfConicMesh \
-								ApplyOfflineMap GenerateOfflineMap \
-								GenerateOverlapMesh GenerateOverlapMesh_v1 \
-								GenerateConnectivityFile CoarsenRectilinearData \
-								GenerateTransposeMap ShpToMesh
+bin_PROGRAMS = GenerateTestData \
+				GenerateCSMesh GenerateRLLMesh GenerateICOMesh \
+				GenerateVolumetricMesh GenerateLambertConfConicMesh \
+				GenerateOverlapMesh GenerateOverlapMesh_v1 \
+				ApplyOfflineMap GenerateOfflineMap \
+				CalculateDiffNorms GenerateGLLMetaData GenerateConnectivityFile \
+				GenerateTransposeMap CoarsenRectilinearData \
+				MeshToTxt ShpToMesh
 
-else
-
-EXTRA_LIB_SRCS = \
-	src/GenerateRLLMesh.cpp \
-	src/GenerateCSMesh.cpp \
-	src/GenerateICOMesh.cpp src/GenerateLambertConfConicMesh.cpp \
-	src/GenerateGLLMetaData.cpp \
-	src/GenerateOfflineMap.cpp src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp \
-	src/GenerateOverlapMesh.cpp src/GenerateOverlapMesh_v1.cpp \
-	src/ApplyOfflineMap.cpp
-
-libTempestRemap_la_SOURCES += $(EXTRA_LIB_SRCS)
-
-endif
 
 # Utility target: build but don't run tests
 build-check:
@@ -161,4 +151,3 @@ nobase_dist_bin_SCRIPTS = \
 EXTRA_DIST = $(doc_DATA)
 
 CLEANFILES = configs.sed
-
