@@ -66,7 +66,8 @@ libTempestRemap_la_SOURCES = \
 	src/NetCDFUtilities.cpp \
 	src/OverlapMesh.cpp \
 	src/OfflineMap.cpp \
-	src/LinearRemapSE0.cpp src/LinearRemapFV.cpp src/OverlapMesh.cpp \
+	src/LinearRemapSE0.cpp \
+	src/LinearRemapFV.cpp \
 	src/TriangularQuadrature.cpp \
 	src/ApplyOfflineMap.cpp \
 	src/GenerateOfflineMap.cpp \
