@@ -167,6 +167,13 @@ if test $ax_blas_ok = no; then
   AC_CHECK_LIB(mkl, $sgemm, [ax_blas_ok=yes;BLAS_LIBS="-lmkl"])
 fi
 
+# BLAS in Intel MKL library?
+if test $ax_blas_ok = no; then
+  save_LDFLAGS="$LDFLAGS"; LDFLAGS="-L$MKLROOT/lib/intel64 $LDFLAGS"
+  AC_CHECK_LIB(mkl_core, $sgemm, [ax_blas_ok=yes;BLAS_LIBS="-L$MKLROOT/lib/intel64 -lmkl_core"])
+  LDFLAGS="$save_LDFLAGS"
+fi
+
 # BLAS in Apple vecLib library?
 if test $ax_blas_ok = no; then
   save_LIBS="$LIBS"; LIBS="-framework vecLib $LIBS"
