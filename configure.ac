@@ -11,6 +11,7 @@ AC_CONFIG_HEADERS([src/TempestConfig.h])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_LIBTOOL
+AM_SILENT_RULES([yes])
 
 LT_INIT([disable-shared])
 LT_LANG([C++])
