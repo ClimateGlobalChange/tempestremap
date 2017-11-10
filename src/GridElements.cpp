@@ -1140,6 +1140,9 @@ void Mesh::Read(const std::string & strFile) {
 
 			dNodeCoords.Deinitialize();
 		}
+
+    // Remove coincident nodes.
+    RemoveCoincidentNodes();
 	}
 }
 

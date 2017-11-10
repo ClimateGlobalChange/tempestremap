@@ -43,7 +43,13 @@
 // Output Parameters: Mesh*
 // 
 extern "C" 
-int GenerateRLLMesh(Mesh& mesh, int nLongitudes, int nLatitudes, double dLonBegin, double dLonEnd, double dLatBegin, double dLatEnd, bool fFlipLatLon, bool fForceGlobal, std::string strInputFile, std::string strOutputFile, bool fVerbose
+int GenerateRLLMesh(Mesh& mesh, 
+                    int nLongitudes, int nLatitudes, 
+                    double dLonBegin, double dLonEnd, 
+                    double dLatBegin, double dLatEnd, 
+                    bool fFlipLatLon, bool fForceGlobal, 
+                    std::string strInputFile, std::string strOutputFile, 
+                    bool fVerbose
 ) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -400,7 +406,7 @@ try {
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
-    return 0;
+  return 0;
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
