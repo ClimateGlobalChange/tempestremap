@@ -27,39 +27,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+extern "C"
+int GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, Mesh& meshOverlap, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
-
-	// Input mesh A
-	std::string strMeshA;
-
-	// Input mesh B
-	std::string strMeshB;
-
-	// Output mesh file
-	std::string strOverlapMesh;
-
-	// Overlap grid generation method
-	std::string strMethod;
-
-	// No validation of the meshes
-	bool fNoValidate;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMeshA, "a", "");
-		CommandLineString(strMeshB, "b", "");
-		CommandLineString(strOverlapMesh, "out", "overlap.g");
-		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
-		CommandLineBool(fNoValidate, "novalidate");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
 
 	// Method string
 	OverlapMeshMethod method;
@@ -123,9 +96,6 @@ try {
 	EqualizeCoincidentNodes(meshA, meshB);
 	AnnounceEndBlock(NULL);
 
-	// Construct the overlap mesh
-	Mesh meshOverlap;
-
 	AnnounceStartBlock("Construct overlap mesh");
 	GenerateOverlapMesh_v1(meshA, meshB, meshOverlap, method);
 	AnnounceEndBlock(NULL);
@@ -135,18 +105,14 @@ try {
 	meshOverlap.Write(strOverlapMesh.c_str());
 	AnnounceEndBlock(NULL);
 
-	AnnounceBanner();
-
-	return (0);
-
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
+	return (0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-

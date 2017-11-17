@@ -572,6 +572,21 @@ typedef std::vector< std::set<int> > ReverseNodeArray;
 class Mesh {
 
 public:
+    ///	<summary>
+    ///		Type of standard mesh
+    ///	</summary>
+    enum MeshType {
+        MeshType_Unknown = -1,
+        MeshType_CubedSphere = 0,
+        MeshType_RLL = 1,
+        MeshType_IcosaHedral = 2,
+        MeshType_IcosaHedralDual = 3,
+        MeshType_Overlap = 4
+    };
+
+    MeshType type;
+
+public:
 	///	<summary>
 	///		Vector of Nodes for this mesh.
 	///	</summary>
@@ -617,7 +632,7 @@ public:
 	///	<summary>
 	///		Default constructor.
 	///	</summary>
-	Mesh() {
+    Mesh() : type(MeshType_Unknown) {
 	}
 
 	///	<summary>
@@ -673,7 +688,7 @@ public:
 	void Write(const std::string & strFile) const;
 
 	///	<summary>
-	///		Read the mesh to a NetCDF file.
+	///		Read the mesh from a NetCDF file.
 	///	</summary>
 	void Read(const std::string & strFile);
 

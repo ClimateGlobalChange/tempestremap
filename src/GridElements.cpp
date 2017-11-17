@@ -1140,6 +1140,9 @@ void Mesh::Read(const std::string & strFile) {
 
 			dNodeCoords.Deinitialize();
 		}
+
+    // Remove coincident nodes.
+    RemoveCoincidentNodes();
 	}
 }
 
@@ -1162,9 +1165,9 @@ void Mesh::Validate() const {
 		double dMag = nodes[i].Magnitude();
 
 		if (fabs(dMag - 1.0) > ReferenceTolerance) {
-			_EXCEPTION2("Mesh validation failed: "
-				"Node of non-unit magnitude detected (%i, %1.10e)",
-				i, dMag);
+			_EXCEPTION5("Mesh validation failed: "
+				"Node[%i] of non-unit magnitude detected (%1.10e, %1.10e, %1.10e) = %1.10e",
+				i, nodes[i].x, nodes[i].y, nodes[i].z, dMag);
 
 		}
 	}
@@ -1800,9 +1803,10 @@ Real CalculateFaceArea(
 
 	printf("%1.15e %1.15e\n", dArea1, dArea2);
 */
+
 	return CalculateFaceAreaQuadratureMethod(face, nodes);
 
-	//return CalculateFaceAreaKarneysMethod(face, nodes);
+	// return CalculateFaceAreaKarneysMethod(face, nodes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

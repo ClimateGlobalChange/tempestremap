@@ -14,7 +14,6 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#include "CommandLine.h"
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -127,30 +126,22 @@ void GenerateFacesFromQuad(
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Input Parameters:
+// Number of elements in mesh: int nResolution;
+// Alternate arrangement: bool fAlt;
+// Output filename:  std::string strOutputFile;
+// 
+// Output Parameters: Mesh*
+// 
+extern "C" 
+int GenerateCSMesh(Mesh& mesh, int nResolution, bool fAlt, std::string strOutputFile) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
-	// Number of elements in mesh
-	int nResolution;
-
-	// Alternate arrangement
-	bool fAlt;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nResolution, "res", 10);
-		CommandLineBool(fAlt, "alt");
-		CommandLineString(strOutputFile, "file", "outCSMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
 
 	// Announce
 	std::cout << "=========================================================";
@@ -158,11 +149,9 @@ try {
 	std::cout << "..Generating mesh with resolution [" << nResolution << "]";
 	std::cout << std::endl;
 
-	// Generate the mesh
-	Mesh mesh;
-
 	NodeVector & nodes = mesh.nodes;
 	FaceVector & faces = mesh.faces;
+    mesh.type = Mesh::MeshType_CubedSphere;
 
 	// Generate corner points
 	Real dInvDeltaX = 1.0 / sqrt(3.0);
@@ -271,28 +260,29 @@ try {
 		}
 	}
 
-	// Announce
-	std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
-	std::cout << std::endl;
-
 	// Output the mesh
-	mesh.Write(strOutputFile);
+	if (strOutputFile.size()) {
+
+		// Announce
+		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
+		std::cout << std::endl;
+
+		mesh.Write(strOutputFile);
+	}
 
 	// Announce
 	std::cout << "..Mesh generator exited successfully" << std::endl;
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
-	return (0);
-
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-

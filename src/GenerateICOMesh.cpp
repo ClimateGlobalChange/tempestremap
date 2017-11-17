@@ -14,7 +14,6 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#include "CommandLine.h"
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -459,54 +458,43 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+extern "C" 
+int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile)
+{
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
 
-	// Resolution
-	int nResolution;
-
-	// Dual mesh
-	bool fDual;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nResolution, "res", 10);
-		CommandLineBool(fDual, "dual");
-		CommandLineString(strOutputFile, "file", "outICOMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
 
 	// Generate Mesh
 	AnnounceBanner();
 	AnnounceStartBlock("Generating Mesh");
-	Mesh mesh;
 	GenerateIcosahedralQuadGrid(nResolution, mesh.nodes, mesh.faces);
 	AnnounceEndBlock("Done");
 
 	// Generate the dual grid
 	if (fDual) {
 		Dual(mesh);
+        mesh.type = Mesh::MeshType_IcosaHedralDual;
 	}
+    else mesh.type = Mesh::MeshType_IcosaHedral;
 
 	// Output the mesh
-	AnnounceStartBlock("Writing Mesh to file");
-	Announce("Mesh size: Nodes [%i] Elements [%i]",
-		mesh.nodes.size(), mesh.faces.size());
-	mesh.Write(strOutputFile);
-	AnnounceEndBlock("Done");
+	if (strOutputFile.size()) {
+		AnnounceStartBlock("Writing Mesh to file");
+		Announce("Mesh size: Nodes [%i] Elements [%i]",
+			mesh.nodes.size(), mesh.faces.size());
+
+		mesh.Write(strOutputFile);
+		
+		AnnounceEndBlock("Done");
+	}
 
 } catch(Exception & e) {
 	std::cout << e.ToString() << std::endl;
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-

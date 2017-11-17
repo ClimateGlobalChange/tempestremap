@@ -26,32 +26,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+extern "C" 
+int GenerateGLLMetaData(std::string strMesh, Mesh& meshInput, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
 
 try {
-
-	// Input mesh
-	std::string strMesh;
-
-	// Polynomial order
-	int nP;
-
-	// Use of bubble to adjust areas
-	bool fBubble;
-
-	// Output metadata file
-	std::string strOutput;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineString(strMesh, "mesh", "");
-		CommandLineInt(nP, "np", 4);
-		CommandLineString(strOutput, "out", "gllmeta.nc");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	AnnounceBanner();
 
 	// Check data
 	if (strMesh == "") {
@@ -60,7 +38,7 @@ try {
 
 	// Load in the input mesh
 	AnnounceStartBlock("Loading Mesh");
-	Mesh meshInput(strMesh);
+	meshInput.Read(strMesh);
 	AnnounceEndBlock(NULL);
 
 	// Calculate Face areas
@@ -70,9 +48,6 @@ try {
 	AnnounceEndBlock(NULL);
 
 	// Calculate metadata
-	DataMatrix3D<int> dataGLLnodes;
-	DataMatrix3D<double> dataGLLJacobian;
-
 	AnnounceStartBlock("Calculating Metadata");
 	double dAccumulatedJacobian =
 		GenerateMetaData(
@@ -87,37 +62,35 @@ try {
 		dAccumulatedJacobian, dAccumulatedJacobian - 4.0 * M_PI);
 	AnnounceEndBlock(NULL);
 
-	// Number of Faces
-	int nElements = static_cast<int>(meshInput.faces.size());
-
 	// Write to file
-	NcFile ncOut(strOutput.c_str(), NcFile::Replace);
-	NcDim * dimElements = ncOut.add_dim("nelem", nElements);
-	NcDim * dimNp = ncOut.add_dim("np", nP);
+	if (strOutput.size()) {
 
-	NcVar * varGLLnodes =
-		ncOut.add_var("GLLnodes", ncInt, dimNp, dimNp, dimElements);
+		// Number of Faces
+		int nElements = static_cast<int>(meshInput.faces.size());
 
-	NcVar * varJacobian =
-		ncOut.add_var("J", ncDouble, dimNp, dimNp, dimElements);
+		NcFile ncOut(strOutput.c_str(), NcFile::Replace);
+		NcDim * dimElements = ncOut.add_dim("nelem", nElements);
+		NcDim * dimNp = ncOut.add_dim("np", nP);
 
-	varGLLnodes->put(&(dataGLLnodes[0][0][0]), nP, nP, nElements);
+		NcVar * varGLLnodes =
+			ncOut.add_var("GLLnodes", ncInt, dimNp, dimNp, dimElements);
 
-	varJacobian->put(&(dataGLLJacobian[0][0][0]), nP, nP, nElements);
+		NcVar * varJacobian =
+			ncOut.add_var("J", ncDouble, dimNp, dimNp, dimElements);
 
-	// Done
-	AnnounceBanner();
+		varGLLnodes->put(&(dataGLLnodes[0][0][0]), nP, nP, nElements);
 
-	return (0);
+		varJacobian->put(&(dataGLLJacobian[0][0][0]), nP, nP, nElements);
+	}
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-

@@ -35,11 +35,32 @@ class OfflineMap {
 
 public:
 	///	<summary>
+	///		An empty virtual destructor.
+	///	</summary>
+	virtual ~OfflineMap()
+	{ }
+
+public:
+	///	<summary>
 	///		Initialize the array of input dimensions from a file.
 	///	</summary>
 	void InitializeSourceDimensionsFromFile(
 		const std::string & strSourceMesh
 	);
+
+    ///	<summary>
+    ///		Initialize the array of input dimensions from a mesh.
+    ///	</summary>
+    void InitializeSourceDimensionsFromMesh(
+        const Mesh & sourceMesh
+    );
+
+    ///	<summary>
+    ///		Initialize the array of input dimensions from a mesh.
+    ///	</summary>
+    void InitializeSourceDimensionsFromMesh(
+        const int nelemx, const int nelemy
+    );
 
 	///	<summary>
 	///		Initialize the array of output dimensions from a file.
@@ -47,6 +68,20 @@ public:
 	void InitializeTargetDimensionsFromFile(
 		const std::string & strTargetMesh
 	);
+
+    ///	<summary>
+    ///		Initialize the array of output dimensions from a mesh.
+    ///	</summary>
+    void InitializeTargetDimensionsFromMesh(
+        const Mesh & targetMesh
+    );
+
+    ///	<summary>
+    ///		Initialize the array of output dimensions from a mesh.
+    ///	</summary>
+    void InitializeTargetDimensionsFromMesh(
+        const int nelemx, const int nelemy
+    );
 
 private:
 	///	<summary>
@@ -159,14 +194,14 @@ public:
 	///	<summary>
 	///		Read the OfflineMap from a NetCDF file.
 	///	</summary>
-	void Read(
+	virtual void Read(
 		const std::string & strSource
 	);
 
 	///	<summary>
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
-	void Write(
+	virtual void Write(
 		const std::string & strTarget
 	);
 
@@ -181,21 +216,21 @@ public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
 	///	</summary>
-	bool IsConsistent(
+	virtual bool IsConsistent(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is conservative.
 	///	</summary>
-	bool IsConservative(
+	virtual bool IsConservative(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is monotone.
 	///	</summary>
-	bool IsMonotone(
+	virtual bool IsMonotone(
 		double dTolerance
 	);
 

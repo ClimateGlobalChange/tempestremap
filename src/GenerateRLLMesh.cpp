@@ -14,7 +14,6 @@
 ///		or implied warranty.
 ///	</remarks>
 
-#include "CommandLine.h"
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
@@ -28,73 +27,34 @@
 
 #define ONLY_GREAT_CIRCLES
 
-///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Input Parameters:
+// Number of longitudes in mesh: int nLongitudes;
+// Number of latitudes in mesh: int nLatitudes;
+// First longitude line on mesh: double dLonBegin;
+// Last longitude line on mesh: double dLonEnd;
+// First latitude line on mesh: double dLatBegin;
+// Last latitude line on mesh: double dLatEnd;
+// Flip latitude and longitude dimension in FaceVector ordering: bool fFlipLatLon;
+// Output filename:  std::string strOutputFile;
+// 
+// Output Parameters: Mesh*
+// 
+extern "C" 
+int GenerateRLLMesh(Mesh& mesh, 
+                    int nLongitudes, int nLatitudes, 
+                    double dLonBegin, double dLonEnd, 
+                    double dLatBegin, double dLatEnd, 
+                    bool fFlipLatLon, bool fForceGlobal, 
+                    std::string strInputFile, std::string strOutputFile, 
+                    bool fVerbose
+) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
-	// Number of longitudes in mesh
-	int nLongitudes;
-
-	// Number of latitudes in mesh
-	int nLatitudes;
-
-	// First longitude line on mesh
-	double dLonBegin;
-
-	// Last longitude line on mesh
-	double dLonEnd;
-
-	// First latitude line on mesh
-	double dLatBegin;
-
-	// Last latitude line on mesh
-	double dLatEnd;
-
-	// Flip latitude and longitude dimension in FaceVector ordering
-	bool fFlipLatLon;
-
-	// Input filename
-	std::string strInputFile;
-
-	// Input mesh is global
-	bool fForceGlobal;
-
-	// Verbose output
-	bool fVerbose;
-
-	// Output filename
-	std::string strOutputFile;
-
-	// Parse the command line
-	BeginCommandLine()
-		CommandLineInt(nLongitudes, "lon", 128);
-		CommandLineInt(nLatitudes, "lat", 64);
-		CommandLineDouble(dLonBegin, "lon_begin", 0.0);
-		CommandLineDouble(dLonEnd, "lon_end", 360.0);
-		CommandLineDouble(dLatBegin, "lat_begin", -90.0);
-		CommandLineDouble(dLatEnd, "lat_end", 90.0);
-		CommandLineBool(fFlipLatLon, "flip");
-		CommandLineString(strInputFile, "in_file", "");
-		CommandLineBool(fForceGlobal, "in_global");
-		CommandLineBool(fVerbose, "verbose");
-		CommandLineString(strOutputFile, "file", "outRLLMesh.g");
-
-		ParseCommandLine(argc, argv);
-	EndCommandLine(argv)
-
-	// Verify latitude box is increasing
-	if (dLatBegin >= dLatEnd) {
-		_EXCEPTIONT("--lat_begin and --lat_end must specify a positive interval");
-	}
-	if (dLonBegin >= dLonEnd) {
-		_EXCEPTIONT("--lon_begin and --lon_end must specify a positive interval");
-	}
-
-	std::cout << "=========================================================";
-	std::cout << std::endl;
 
 	// Longitude and latitude arrays
 	DataVector<double> dLonEdge;
@@ -273,25 +233,25 @@ try {
 	std::cout << dLatBegin << ", " << dLatEnd << "]" << std::endl;
 	std::cout << std::endl;
 
-	// Verify arrays have been created successfully
-	if (dLatEdge.GetRows() < 2) {
-		_EXCEPTIONT("Invalid array of latitudes");
-	}
-	if (dLonEdge.GetRows() < 2) {
-		_EXCEPTIONT("Invalid array of longitudes");
-	}
+	// Convert latitude and longitude interval to radians
+	dLonBegin *= M_PI / 180.0;
+	dLonEnd   *= M_PI / 180.0;
+	dLatBegin *= M_PI / 180.0;
+	dLatEnd   *= M_PI / 180.0;
 
-	// Set bounds
-	dLatBegin = dLatEdge[0];
-	dLatEnd = dLatEdge[dLatEdge.GetRows()-1];
-	dLonBegin = dLonEdge[0];
-	dLonEnd = dLatEdge[dLonEdge.GetRows()-1];
-
-	// Generate the mesh
-	Mesh mesh;
+	// Check parameters
+	if (nLatitudes < 2) {
+		std::cout << "Error: At least 2 latitudes are required." << std::endl;
+		return -5; // Argument error
+	}
+	if (nLongitudes < 2) {
+		std::cout << "Error: At least 2 longitudes are required." << std::endl;
+		return -5; // Argument error
+	}
 
 	NodeVector & nodes = mesh.nodes;
 	FaceVector & faces = mesh.faces;
+    mesh.type = Mesh::MeshType_RLL;
 
 	// Check if longitudes wrap
 	bool fWrapLongitudes = false;
@@ -410,45 +370,51 @@ try {
 		}
 	}
 
-	// Announce
-	std::cout << "Writing mesh to file [" << strOutputFile.c_str() << "] ";
-	std::cout << std::endl;
-
 	// Output the mesh
-	mesh.Write(strOutputFile);
+	if (strOutputFile.size()) {
 
-	// Add rectilinear properties
-	NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
-	ncOutput.add_att("rectilinear", "true");
+		// Announce
+		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
+		std::cout << std::endl;
 
-	if (fFlipLatLon) {
-		ncOutput.add_att("rectilinear_dim0_size", nLongitudes);
-		ncOutput.add_att("rectilinear_dim1_size", nLatitudes);
-		ncOutput.add_att("rectilinear_dim0_name", "lon");
-		ncOutput.add_att("rectilinear_dim1_name", "lat");
-	} else {
-		ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
-		ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
-		ncOutput.add_att("rectilinear_dim0_name", "lat");
-		ncOutput.add_att("rectilinear_dim1_name", "lon");
+		mesh.Write(strOutputFile);
+
+		// Add rectilinear properties
+		if (!fIncludeSouthPole) {
+			nLatitudes--;
+		}
+
+		NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
+		ncOutput.add_att("rectilinear", "true");
+
+		if (fFlipLatLon) {
+			ncOutput.add_att("rectilinear_dim0_size", nLongitudes);
+			ncOutput.add_att("rectilinear_dim1_size", nLatitudes);
+			ncOutput.add_att("rectilinear_dim0_name", "lon");
+			ncOutput.add_att("rectilinear_dim1_name", "lat");
+		} else {
+			ncOutput.add_att("rectilinear_dim0_size", nLatitudes);
+			ncOutput.add_att("rectilinear_dim1_size", nLongitudes);
+			ncOutput.add_att("rectilinear_dim0_name", "lat");
+			ncOutput.add_att("rectilinear_dim1_name", "lon");
+		}
+		ncOutput.close();
 	}
-	ncOutput.close();
 
 	// Announce
 	std::cout << "..Mesh generator exited successfully" << std::endl;
 	std::cout << "=========================================================";
 	std::cout << std::endl;
 
-	return (0);
+  return 0;
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
-	return (-1);
+	return (0);
 
 } catch(...) {
-	return (-2);
+	return (0);
 }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-

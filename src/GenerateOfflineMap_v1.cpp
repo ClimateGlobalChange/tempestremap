@@ -33,7 +33,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void ParseVariableList(
+static void ParseVariableList(
 	const std::string & strVariables,
 	std::vector< std::string > & vecVariableStrings
 ) {
@@ -105,7 +105,7 @@ void LoadMetaDataFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+extern "C" int GenerateOfflineMap_v1(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
 
@@ -699,7 +699,19 @@ try {
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
 }
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef TEMPEST_DRIVER_MODE
+
+int main(int argc, char** argv) {
+
+	// For now, this is just a placeholder; need to refactor
+	return GenerateOfflineMap_v1(argc, argv);
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////

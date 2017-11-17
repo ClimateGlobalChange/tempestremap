@@ -28,6 +28,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+extern "C"
+int GenerateConnectivityData(Mesh& meshIn, std::vector< std::set<int> >& vecConnectivity);
+
 int main(int argc, char** argv) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -83,36 +86,14 @@ try {
 
 	AnnounceEndBlock("Done");
 
-	// Number of elements
-	int nElements = meshIn.faces.size();
-
 	// Build connectivity vector using edge map
 	AnnounceStartBlock("Constructing connectivity");
 
-	std::vector< std::set<int> > vecConnectivity;
-	vecConnectivity.resize(nElements);
+    std::vector< std::set<int> > vecConnectivity;
+    int err = GenerateConnectivityData(meshIn, vecConnectivity);
+    if (err) return err;
 
-	EdgeMapConstIterator iter = meshIn.edgemap.begin();
-	for (; iter != meshIn.edgemap.end(); iter++) {
-
-		if ((iter->second[0] != InvalidFace) &&
-		    (iter->second[1] != InvalidFace)
-		) {
-			if ((iter->second[0] < 0) || (iter->second[0] >= nElements)) {
-				_EXCEPTION1("Face index (%i) out of range",
-					iter->second[0]);
-			}
-			if ((iter->second[1] < 0) || (iter->second[1] >= nElements)) {
-				_EXCEPTION1("Face index (%i) out of range",
-					iter->second[1]);
-			}
-
-			vecConnectivity[iter->second[0]].insert(iter->second[1]+1);
-			vecConnectivity[iter->second[1]].insert(iter->second[0]+1);
-		}
-	}
-
-	AnnounceEndBlock("Done");	
+	AnnounceEndBlock("Done");
 
 	// Open output file
 	AnnounceStartBlock("Writing connectivity file");
@@ -233,5 +214,4 @@ try {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
 
