@@ -1,7 +1,6 @@
 #ifndef TEMPESTREMAP_API_H
 #define TEMPESTREMAP_API_H
 
-#include "TempestConfig.h"
 #include "DataMatrix3D.h"
 #include "GridElements.h"
 #include "OfflineMap.h"
