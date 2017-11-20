@@ -99,7 +99,12 @@ You will likely need to edit the first couple lines of the Makefile to
 customize the NetCDF paths and change any compiler flags.  Once you have
 modified the Makefile, build the code:
 
-make all
+`make -f Makefile.gmake all`
+
+To clean out the object file and return the sources to pristine condition,
+you can execute the following:
+
+`make -f Makefile.gmake clean`
 
 Mesh Generation
 ---------------
