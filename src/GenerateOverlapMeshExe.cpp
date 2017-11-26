@@ -45,6 +45,10 @@ int main(int argc, char** argv) {
 	// Concave elements may be present in mesh B
 	bool fHasConcaveFacesB;
 
+	// Allow for the case of no overlap element found (enabling this may
+	// cause the mesh generator to generate an incomplete overlap mesh)
+	bool fAllowNoOverlap;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshA, "a", "");
@@ -54,6 +58,7 @@ int main(int argc, char** argv) {
 		CommandLineBool(fNoValidate, "novalidate");
 		CommandLineBool(fHasConcaveFacesA, "concavea");
 		CommandLineBool(fHasConcaveFacesB, "concaveb");
+		CommandLineBool(fAllowNoOverlap, "allow_no_overlap");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -62,11 +67,15 @@ int main(int argc, char** argv) {
 
 	// Call the actual mesh generator
     Mesh meshOverlap;
-    int err = GenerateOverlapMesh(strMeshA, strMeshB,
-                                  meshOverlap, strOverlapMesh,
-                                  strMethod, fNoValidate,
-                                  fHasConcaveFacesA, fHasConcaveFacesB,
-                                  true);
+    int err =
+		GenerateOverlapMesh(
+			strMeshA, strMeshB,
+ 			meshOverlap, strOverlapMesh,
+			strMethod, fNoValidate,
+			fHasConcaveFacesA, fHasConcaveFacesB,
+			fAllowNoOverlap,
+			true);
+
 	if (err) exit(err);
 
 	AnnounceBanner();

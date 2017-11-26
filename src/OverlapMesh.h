@@ -43,23 +43,8 @@ void GenerateOverlapMesh_v1(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-    const bool verbose=true
+    const bool verbose = true
 );
-
-///////////////////////////////////////////////////////////////////////////////
-/*
-///	<summary>
-///		Generate the mesh obtained by overlapping Face iSourceFace in
-///		meshSource with meshTarget.
-///	</summary>
-void GenerateOverlapMeshFromFace(
-	const Mesh & meshSource,
-	const Mesh & meshTarget,
-	int iSourceFace,
-	Mesh & meshOverlap,
-	OverlapMeshMethod method
-);
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -89,7 +74,8 @@ void GenerateOverlapMesh_v2(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-    const bool verbose=true
+	const bool fAllowNoOverlap,
+    const bool verbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////

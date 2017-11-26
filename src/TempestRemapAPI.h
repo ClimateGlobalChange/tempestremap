@@ -41,7 +41,9 @@ extern "C" {
     int GenerateOverlapMesh ( std::string strMeshA, std::string strMeshB,
                               Mesh& meshOverlap, std::string strOverlapMesh,
                               std::string strMethod, bool fNoValidate,
-                              bool fHasConcaveFacesA = false, bool fHasConcaveFacesB = false,
+                              bool fHasConcaveFacesA = false,
+							  bool fHasConcaveFacesB = false,
+							  bool fAllowNoOverlap = false,
                               bool verbose = true );
 
     // Compute the overlap mesh given a source and target mesh objects
@@ -49,7 +51,9 @@ extern "C" {
     int GenerateOverlapWithMeshes ( Mesh& meshA, Mesh& meshB,
                                     Mesh& meshOverlap, std::string strOverlapMesh,
                                     std::string strMethod,
-                                    bool fHasConcaveFacesA = false, bool fHasConcaveFacesB = false,
+                                    bool fHasConcaveFacesA = false,
+									bool fHasConcaveFacesB = false,
+									bool fAllowNoOverlap = false,
                                     bool verbose = true );
 
     // New version of the implementation to compute the overlap mesh given a source and target mesh file names

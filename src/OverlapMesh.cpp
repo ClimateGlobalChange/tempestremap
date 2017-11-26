@@ -1682,7 +1682,8 @@ void GenerateOverlapMeshFromFace(
 	Mesh & meshOverlap,
 	NodeMap & nodemapOverlap,
 	OverlapMeshMethod method,
-    int ixTargetFaceSeed = 0,
+    int ixTargetFaceSeed,
+	bool fAllowNoOverlap,
     const bool verbose = true
 ) {
 	// Verify the EdgeMap exists in both meshSource and meshTarget
@@ -1727,11 +1728,19 @@ void GenerateOverlapMeshFromFace(
 			ixTargetFaceSeed);
 
 	if (ixCurrentTargetFace == InvalidFace) {
-		std::cout << "\tNo overlapping face found" << std::endl;
-		return;
+		if (fAllowNoOverlap) {
+			Announce("WARNING: No overlapping face found");
+			return;
+		}
+		Announce("ERROR: No overlapping face found");
+		Announce("This may be caused by mesh B being a subset of mesh A");
+		Announce("Try swapping order of mesh A and B, or override with --allow_no_overlap");
+		_EXCEPTIONT("Exiting");
 	}
 
-    if (verbose) std::cout << "\tFirst overlap match " << ixCurrentTargetFace << std::endl;
+    if (verbose) {
+		Announce("First overlap match %i", ixCurrentTargetFace);
+	}
 /*
 	// Verify starting Node is not on the Exterior
 	if (aFindFaceStruct.loc == Face::NodeLocation_Exterior) {
@@ -1820,7 +1829,9 @@ void GenerateOverlapMeshFromFace(
 				}
 			}
 
-            if (verbose) std::cout << "\tOverlap with Face " << ixCurrentTargetFace << std::endl;
+            if (verbose) {
+				Announce("Overlap with Face %i", ixCurrentTargetFace);
+			}
 
 			// Calculate face area
 			Face faceTemp(nodevecOutput.size());
@@ -1870,6 +1881,7 @@ void GenerateOverlapMesh_v2(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
+	const bool fAllowNoOverlap,
     const bool verbose
 ) {
 	NodeMap nodemapOverlap;
@@ -1889,7 +1901,10 @@ void GenerateOverlapMesh_v2(
 
 	// Generate Overlap mesh for each Face
 	for (int i = 0; i < meshSource.faces.size(); i++) {
-        if (verbose) std::cout << "Source Face " << i << std::endl;
+        if (verbose) {
+			std::string strAnnounce = "Source Face " + std::to_string((long long)i);
+			AnnounceStartBlock(strAnnounce.c_str());
+		}
 
 		// Find a Target face near this source face
 		int ixNodeCorner = meshSource.faces[i][0];
@@ -1905,7 +1920,9 @@ void GenerateOverlapMesh_v2(
 
 		int iTargetFaceSeed = pFace - &(meshTarget.faces[0]);
 
-        if (verbose) std::cout << "\tNearest target face " << iTargetFaceSeed << std::endl;
+        if (verbose) {
+			Announce("Nearest target face %i", iTargetFaceSeed);
+		}
 
 		// Generate the overlap mesh associated with this source face
 		GenerateOverlapMeshFromFace(
@@ -1916,7 +1933,12 @@ void GenerateOverlapMesh_v2(
 			nodemapOverlap,
 			method,
             iTargetFaceSeed,
+			fAllowNoOverlap,
             verbose);
+
+		if (verbose) {
+			AnnounceEndBlock( NULL );
+		}
 	}
 
 	// Replace parent indices if meshSource has a MultiFaceMap

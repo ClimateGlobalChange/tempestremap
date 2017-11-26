@@ -28,13 +28,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOverlapWithMeshes ( Mesh& meshA, Mesh& meshB,
-                                Mesh& meshOverlap, std::string strOverlapMesh,
-                                std::string strMethod,
-                                const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
-                                const bool verbose
-                              )
-{
+int GenerateOverlapWithMeshes (
+	Mesh & meshA,
+	Mesh & meshB,
+	Mesh & meshOverlap,
+	std::string strOverlapMesh,
+	std::string strMethod,
+	const bool fHasConcaveFacesA,
+	const bool fHasConcaveFacesB,
+	const bool fAllowNoOverlap,
+	const bool verbose
+) {
 
     NcError error ( NcError::silent_nonfatal );
 
@@ -65,7 +69,12 @@ int GenerateOverlapWithMeshes ( Mesh& meshA, Mesh& meshB,
         meshOverlap.type = Mesh::MeshType_Overlap;
 
         AnnounceStartBlock ( "Construct overlap mesh" );
-        GenerateOverlapMesh_v2 ( meshA, meshB, meshOverlap, method, verbose );
+        GenerateOverlapMesh_v2 (
+			meshA, meshB,
+			meshOverlap,
+			method,
+			fAllowNoOverlap,
+			verbose );
         AnnounceEndBlock ( NULL );
 
         /*
@@ -124,13 +133,18 @@ int GenerateOverlapWithMeshes ( Mesh& meshA, Mesh& meshB,
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOverlapMesh ( std::string strMeshA, std::string strMeshB,
-                          Mesh& meshOverlap, std::string strOverlapMesh,
-                          std::string strMethod, const bool fNoValidate,
-                          const bool fHasConcaveFacesA, const bool fHasConcaveFacesB,
-                          const bool verbose
-                        )
-{
+int GenerateOverlapMesh(
+	std::string strMeshA,
+	std::string strMeshB,
+	Mesh & meshOverlap,
+	std::string strOverlapMesh,
+	std::string strMethod,
+	const bool fNoValidate,
+	const bool fHasConcaveFacesA,
+	const bool fHasConcaveFacesB,
+	const bool fAllowNoOverlap,
+	const bool verbose
+) {
 
     NcError error ( NcError::silent_nonfatal );
 
@@ -188,11 +202,17 @@ int GenerateOverlapMesh ( std::string strMeshA, std::string strMeshB,
         meshB.ConstructEdgeMap();
         AnnounceEndBlock ( NULL );
 
-        int err = GenerateOverlapWithMeshes ( meshA, meshB,
-                                              meshOverlap, strOverlapMesh,
-                                              strMethod,
-                                              fHasConcaveFacesA, fHasConcaveFacesB,
-                                              verbose );
+        int err =
+			GenerateOverlapWithMeshes (
+				meshA, meshB,
+				meshOverlap,
+				strOverlapMesh,
+				strMethod,
+				fHasConcaveFacesA,
+				fHasConcaveFacesB,
+				fAllowNoOverlap,
+				verbose);
+
         return err;
 
     }
