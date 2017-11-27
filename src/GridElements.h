@@ -588,6 +588,11 @@ public:
 
 public:
 	///	<summary>
+	///		Filename for this mesh.
+	///	</summary>
+	std::string strFileName;
+
+	///	<summary>
 	///		Vector of Nodes for this mesh.
 	///	</summary>
 	NodeVector nodes;

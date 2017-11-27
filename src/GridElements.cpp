@@ -766,6 +766,9 @@ void Mesh::Read(const std::string & strFile) {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
 
+	// Store the file name
+	strFileName = strFile;
+
 	// Open the NetCDF file
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
 	if (!ncFile.is_valid()) {

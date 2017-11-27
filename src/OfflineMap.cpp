@@ -2007,7 +2007,8 @@ void OfflineMap::Read(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Write(
-	const std::string & strTarget
+	const std::string & strTarget,
+	const std::map<std::string, std::string> & mapAttributes
 ) {
 	NcFile ncMap(strTarget.c_str(), NcFile::Replace);
 	if (!ncMap.is_valid()) {
@@ -2223,6 +2224,24 @@ void OfflineMap::Write(
 
 	varS->set_cur((long)0);
 	varS->put(&(vecS[0]), nS);
+
+	// Add global attributes
+	std::map<std::string, std::string>::const_iterator iterAttributes =
+		mapAttributes.begin();
+	for (; iterAttributes != mapAttributes.end(); iterAttributes++) {
+		ncMap.add_att(
+			iterAttributes->first.c_str(),
+			iterAttributes->second.c_str());
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::Write(
+	const std::string & strTarget
+) {
+	std::map<std::string, std::string> mapNoAttributes;
+	return Write(strTarget, mapNoAttributes);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

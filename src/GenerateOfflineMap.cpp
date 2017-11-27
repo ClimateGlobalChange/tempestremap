@@ -121,18 +121,23 @@ void LoadMetaDataFile(
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOfflineMapWithMeshes( OfflineMap& mapRemap, Mesh& meshInput, Mesh& meshOutput, Mesh& meshOverlap,
-									std::string strInputMeta, std::string strOutputMeta,
-									std::string strInputType, std::string strOutputType,
-									int nPin, int nPout,
-									bool fBubble, int fMonotoneTypeID,
-									bool fVolumetric, bool fNoConservation, bool fNoCheck,
-									std::string strVariables, std::string strOutputMap,
-									std::string strInputData, std::string strOutputData,
-									std::string strNColName, bool fOutputDouble,
-									std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-									bool fInputConcave, bool fOutputConcave )
-{
+int GenerateOfflineMapWithMeshes(
+	OfflineMap& mapRemap,
+	Mesh& meshInput,
+	Mesh& meshOutput,
+	Mesh& meshOverlap,
+	std::string strInputMeta,
+	std::string strOutputMeta,
+	std::string strInputType, std::string strOutputType,
+	int nPin, int nPout,
+	bool fBubble, int fMonotoneTypeID,
+	bool fVolumetric, bool fNoConservation, bool fNoCheck,
+	std::string strVariables, std::string strOutputMap,
+	std::string strInputData, std::string strOutputData,
+	std::string strNColName, bool fOutputDouble,
+	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
+	bool fInputConcave, bool fOutputConcave
+) {
     NcError error(NcError::silent_nonfatal);
 
 try {
@@ -633,7 +638,39 @@ try {
     // Output the Offline Map
     if (strOutputMap != "") {
         AnnounceStartBlock("Writing offline map");
-        mapRemap.Write(strOutputMap);
+
+		typedef std::map<std::string, std::string> AttributeMap;
+		typedef AttributeMap::value_type AttributePair;
+
+		AttributeMap mapAttributes;
+
+		mapAttributes.insert(AttributePair("domain_a", meshInput.strFileName));
+		mapAttributes.insert(AttributePair("domain_b", meshOutput.strFileName));
+		mapAttributes.insert(AttributePair("grid_file_src", meshInput.strFileName));
+		mapAttributes.insert(AttributePair("grid_file_dst", meshOutput.strFileName));
+		mapAttributes.insert(AttributePair("grid_file_ovr", meshOverlap.strFileName));
+		if (strInputMeta != "") {
+			mapAttributes.insert(AttributePair("meta_src", strInputMeta));
+		}
+		if (strOutputMeta != "") {
+			mapAttributes.insert(AttributePair("meta_dst", strOutputMeta));
+		}
+		mapAttributes.insert(AttributePair("type_src", strInputType));
+		mapAttributes.insert(AttributePair("type_dst", strOutputType));
+		mapAttributes.insert(AttributePair("np_src", std::to_string((long long)nPin)));
+		mapAttributes.insert(AttributePair("np_dst", std::to_string((long long)nPout)));
+		mapAttributes.insert(AttributePair("bubble", (fBubble)?("true"):("false")));
+		mapAttributes.insert(AttributePair("mono_type", std::to_string((long long)fMonotoneTypeID)));
+		if (fVolumetric) {
+			mapAttributes.insert(AttributePair("volumetric", "true"));
+		}
+		if (fNoConservation) {
+			mapAttributes.insert(AttributePair("no_conserve", "true"));
+		}
+		mapAttributes.insert(AttributePair("concave_src", (fInputConcave)?("true"):("false")));
+		mapAttributes.insert(AttributePair("concave_dst", (fOutputConcave)?("true"):("false")));
+
+        mapRemap.Write(strOutputMap, mapAttributes);
         AnnounceEndBlock(NULL);
     }
 

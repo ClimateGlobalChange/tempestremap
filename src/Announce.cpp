@@ -149,7 +149,10 @@ void AnnounceEndBlock(const char * szText) {
 		} else {
 			Announce(szText);
 		}
+	} else if (s_fBlockFlag) {
+		printf("\n");
 	}
+
 
 	s_nIndentationLevel--;
 

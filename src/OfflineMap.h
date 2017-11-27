@@ -199,6 +199,14 @@ public:
 	);
 
 	///	<summary>
+	///		Write the OfflineMap to a NetCDF file, with attribute map.
+	///	</summary>
+	virtual void Write(
+		const std::string & strTarget,
+		const std::map<std::string, std::string> & mapAttributes
+	);
+
+	///	<summary>
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
 	virtual void Write(
