@@ -10,6 +10,8 @@ TEMPESTREMAPDIR=..
 # Load Makefile framework. 
 include $(TEMPESTREMAPDIR)/mk/framework.make
 
+########################################################################
+
 UTIL_FILES= Announce.cpp \
             FiniteElementTools.cpp \
 			GaussLobattoQuadrature.cpp \
@@ -38,34 +40,81 @@ UTIL_FILES= Announce.cpp \
 			GenerateOverlapMesh_v1.cpp \
 			GenerateRLLMesh.cpp
 
-EXEC_FILES= ApplyOfflineMapExe.cpp \
-            CalculateDiffNorms.cpp \
-            CoarsenRectilinearData.cpp \
-            GenerateConnectivityFile.cpp \
-            GenerateCSMeshExe.cpp \
-            GenerateGLLMetaDataExe.cpp \
-            GenerateICOMeshExe.cpp \
-            GenerateLambertConfConicMeshExe.cpp \
-            GenerateOfflineMapExe.cpp \
-            GenerateOverlapMeshExe.cpp \
-            GenerateOverlapMeshExe_v1.cpp \
-            GenerateRLLMeshExe.cpp \
-            GenerateTestData.cpp \
-            GenerateVolumetricMesh.cpp \
-			MeshToTxt.cpp \
-			ShpToMesh.cpp
+# Mesh generation drivers
+GenerateTestData_FILES= GenerateTestData.cpp
+GenerateRLLMesh_FILES= GenerateRLLMeshExe.cpp
+GenerateCSMesh_FILES= GenerateCSMeshExe.cpp
+GenerateICOMesh_FILES= GenerateICOMeshExe.cpp
+GenerateLambertConfConicMesh_FILES= GenerateLambertConfConicMeshExe.cpp
+GenerateVolumetricMesh_FILES= GenerateVolumetricMesh.cpp
 
-EXEC_TARGETS= $(EXEC_FILES:%.cpp=%)
+# Overlap mesh generators
+GenerateOverlapMesh_FILES= GenerateOverlapMeshExe.cpp
+GenerateOverlapMesh_v1_FILES= GenerateOverlapMeshExe_v1.cpp
 
-FILES= $(UTIL_FILES) $(EXEC_FILES)
+# Compute and apply the offline mapping weights
+ApplyOfflineMap_FILES= ApplyOfflineMapExe.cpp
+GenerateOfflineMap_FILES= GenerateOfflineMapExe.cpp 
+# GenerateOfflineMap_v1_FILES= src/GenerateOfflineMap_v1.cpp
+
+# Additional utilities
+GenerateGLLMetaData_FILES= GenerateGLLMetaDataExe.cpp
+GenerateConnectivityFile_FILES= GenerateConnectivityFile.cpp
+GenerateTransposeMap_FILES= GenerateTransposeMap.cpp
+CoarsenRectilinearData_FILES= CoarsenRectilinearData.cpp
+CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
+
+MeshToTxt_FILES= MeshToTxt.cpp
+ShpToMesh_FILES= ShpToMesh.cpp
+
+########################################################################
+# All executables
+
+EXEC_TARGETS= ApplyOfflineMap \
+              CalculateDiffNorms \
+              CoarsenRectilinearData \
+              GenerateConnectivityFile \
+              GenerateCSMesh \
+              GenerateGLLMetaData \
+              GenerateICOMesh \
+              GenerateLambertConfConicMesh \
+              GenerateOfflineMap \
+              GenerateOverlapMesh \
+              GenerateOverlapMesh_v1 \
+              GenerateRLLMesh \
+              GenerateTestData \
+              GenerateVolumetricMesh \
+              MeshToTxt \
+              ShpToMesh
+
+########################################################################
+# Build rules. 
 
 .PHONY: all clean
 
-# Build rules. 
 all: $(EXEC_TARGETS)
 
-$(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $(BUILDDIR)/%.o $(TEMPESTREMAPBASELIB)
-	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $(BUILDDIR)/$*.o $(TEMPESTREMAPBASELIB) $(LIBRARIES)
+GenerateTestData_EXE: $(GenerateTestData_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateRLLMesh_EXE:$(GenerateRLLMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateCSMesh_EXE: $(GenerateCSMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateICOMesh_EXE: $(GenerateICOMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateLambertConfConicMesh_EXE: $(GenerateLambertConfConicMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateVolumetricMesh_EXE: $(GenerateVolumetricMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateOverlapMesh_EXE: $(GenerateOverlapMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateOverlapMesh_v1_EXE: $(GenerateOverlapMesh_v1_FILES:%.cpp=$(BUILDDIR)/%.o)
+ApplyOfflineMap_EXE: $(ApplyOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateOfflineMap_EXE: $(GenerateOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o) 
+GenerateGLLMetaData_EXE: $(GenerateGLLMetaData_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateConnectivityFile_EXE: $(GenerateConnectivityFile_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateTransposeMap_EXE: $(GenerateTransposeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
+CoarsenRectilinearData_EXE: $(CoarsenRectilinearData_FILES:%.cpp=$(BUILDDIR)/%.o)
+CalculateDiffNorms_EXE: $(CalculateDiffNorms_FILES:%.cpp=$(BUILDDIR)/%.o)
+MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
+ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+
+$(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
+	echo $($*_FILES:%.cpp=$(BUILDDIR)/%.o)
+	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)
 	@mv $@ $(TEMPESTREMAPDIR)/bin
 
 $(TEMPESTREMAPBASELIB): %:
@@ -78,5 +127,7 @@ clean:
 
 # Include dependencies.
 -include $(FILES:%.cpp=$(DEPDIR)/%.d)
+
+########################################################################
 
 # DO NOT DELETE
