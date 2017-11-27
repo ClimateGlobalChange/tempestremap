@@ -2,10 +2,10 @@
 ///
 ///	\file    GenerateOfflineMap.cpp
 ///	\author  Paul Ullrich
-///	\version June 29, 2015
+///	\version November 26, 2017
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2000-2017 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -31,6 +31,10 @@
 
 #include "netcdfcpp.h"
 #include <cmath>
+
+///////////////////////////////////////////////////////////////////////////////
+
+std::string g_strVersion = "GenerateOfflineMap 2.0 : 2017-11-26";
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -669,6 +673,7 @@ try {
 		}
 		mapAttributes.insert(AttributePair("concave_src", (fInputConcave)?("true"):("false")));
 		mapAttributes.insert(AttributePair("concave_dst", (fOutputConcave)?("true"):("false")));
+		mapAttributes.insert(AttributePair("version", g_strVersion));
 
         mapRemap.Write(strOutputMap, mapAttributes);
         AnnounceEndBlock(NULL);
