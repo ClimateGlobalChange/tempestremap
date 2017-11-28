@@ -423,15 +423,56 @@ double GenerateMetaData(
 
 		// Apply bubble adjustment to area
 		if (fBubble && (dFaceNumericalArea != mesh.vecFaceArea[k])) {
-			double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
-			for (int j = 0; j < nP; j++) {
-			for (int i = 0; i < nP; i++) {
-				dataGLLJacobian[j][i][k] +=
-					dMassDifference * dW[i] * dW[j];
- 			}
-			}
 
-			dFaceNumericalArea += dMassDifference;
+			// Use uniform bubble for linear elements
+			if (nP < 3) {
+				double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
+				for (int j = 0; j < nP; j++) {
+				for (int i = 0; i < nP; i++) {
+					dataGLLJacobian[j][i][k] +=
+						dMassDifference * dW[i] * dW[j];
+ 				}
+				}
+
+				dFaceNumericalArea += dMassDifference;
+
+			// Use HOMME bubble for higher order elements
+			} else {
+			    double dMassDifference = mesh.vecFaceArea[k] - dFaceNumericalArea;
+
+			    double dInteriorMassSum = 0;
+				for (int i = 1; i < nP-1; i++) {
+				for (int j = 1; j < nP-1; j++) {
+						dInteriorMassSum += dataGLLJacobian[i][j][k];
+				}
+				}
+
+				// Check that dInteriorMassSum is not too small
+				if (std::abs(dInteriorMassSum) < 1e-15) {
+					_EXCEPTIONT("--bubble correction cannot be performed, "
+						"sum of inner weights is too small");
+				}
+
+				dInteriorMassSum = dMassDifference / dInteriorMassSum;
+				for (int j = 1; j < nP-1; j++) {
+				for (int i = 1; i < nP-1; i++) {
+					dataGLLJacobian[j][i][k] *= 1.0 + dInteriorMassSum;
+				}
+				}
+/*
+				double dNewMassSum = 0;
+				for (int j = 0; j < nP; j++) {
+				for (int i = 0; i < nP; i++) {
+					dNewMassSum += dataGLLJacobian[j][i][k];
+				}
+				}
+
+				std::cout << "New mass  -  true mass " << dNewMassSum - mesh.vecFaceArea[k] << "\n";
+
+				std::cout << "New mass = " << dNewMassSum << ", true mass = " << mesh.vecFaceArea[k] << "\n";
+*/
+				dFaceNumericalArea += dMassDifference;
+			}
 		}
 
 		// Accumulate area from element

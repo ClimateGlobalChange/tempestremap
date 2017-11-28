@@ -113,7 +113,6 @@ MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
-	echo $($*_FILES:%.cpp=$(BUILDDIR)/%.o)
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)
 	@mv $@ $(TEMPESTREMAPDIR)/bin
 
