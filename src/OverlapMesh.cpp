@@ -1624,7 +1624,7 @@ int FindFaceContainingNode(
 		if (loc != Face::NodeLocation_Exterior) {
 			NodeVector nodevecOverlap;
 
-			GenerateOverlapFace<MeshUtilitiesFuzzy, Node>(
+			GenerateOverlapFace<MeshUtilities, Node>(
 				meshSource,
 				meshTarget,
 				ixSourceFaceSeed,
