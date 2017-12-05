@@ -149,6 +149,6 @@ nobase_dist_bin_SCRIPTS = \
 	test/run_glltofv_rll.sh \
 	test/run_glltogll_cs_diffnorms.sh
 
-EXTRA_DIST = $(doc_DATA)
+EXTRA_DIST = $(doc_DATA) Makefile.gmake src/Makefile.gmake
 
 CLEANFILES = configs.sed
