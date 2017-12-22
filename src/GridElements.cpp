@@ -1827,14 +1827,49 @@ bool ConvexifyFace(
 )
 {
 	Face & face = mesh.faces[iFace];
-	const int nEdges = face.edges.size();
-	Announce("ConvexifyFace dummy method. just copy face to meshout");
-	Announce("iFace=%i	nEdges: %i", iFace, nEdges);
+	const int nNodes = face.edges.size();
+	Announce("ConvexifyFace via Triangles package");
+	Announce("iFace=%i	nNodes: %i", iFace, nNodes);
 
-	meshout = mesh;
+	// print coords of face's nodes
+	for (int i=0; i<nNodes; ++i) {
+		int  ixNode = face[i];
+		const Node & node = mesh.nodes[ixNode];
+		Announce("node(%i) = (%f,%f,%f)",ixNode, node.x,node.y,node.z);
+		Announce("node.Magnitude = %f",node.Magnitude());
+	}
 
-	// TODO: project 3d node coordinates to 2d
+	// get center of face and local up vector
+	Node center(0,0,0);
+	for (int i=0; i<nNodes; ++i) center = center + mesh.nodes[face[i]];
+	center = center / nNodes;
+	Node localZ = center.Normalized();
+	localZ.Print("localZ");
+	
+	// get local tangent space coordinate system
+	Node node0 =(mesh.nodes[face[0]]- center).Normalized();
+	Node localY = CrossProduct(localZ,node0);
+	Node localX = CrossProduct(localY,localZ);
 
+	// get orthographic projection of nodes on tangent plane
+	NodeVector planarNodes;
+	for (int i=0; i<nNodes; ++i) {
+		Node node3D = mesh.nodes[face[i]];
+		Node node2D( DotProduct(node3D,localX), DotProduct(node3D,localY), 0);
+		node2D.Print("node2D");
+		planarNodes.push_back(node2D);
+	}
+	
+	// project nodes back onto the unit sphere as a check
+	for (int i=0; i<nNodes; ++i) {
+		Node n = planarNodes[i];
+		Real z = sqrt(1.0 - n.x*n.x - n.y*n.y);
+		Node node3D = localZ * z + (localX * n.x) + (localY * n.y);
+		Announce("node(%i) = (%f,%f,%f)",i, node3D.x,node3D.y,node3D.z);
+		Announce("node3D.Magnitude = %f",node3D.Magnitude());
+	}
+
+#if 0
 	// TODO: fill triangleio data structure
 	struct triangulateio in, mid, out, vorout;
 
@@ -1906,6 +1941,7 @@ bool ConvexifyFace(
 	char options[8] ="pczAevn";
 	triangulate(options, &in, &mid, &vorout);
 
+#endif
 
 
 
