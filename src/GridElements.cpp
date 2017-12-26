@@ -1828,8 +1828,10 @@ bool ConvexifyFace(
 {
 	Face & face = mesh.faces[iFace];
 	const int nNodes = face.edges.size()-1;
-	Announce("ConvexifyFace via Triangle package");
-	Announce("iFace=%i	nNodes: %i", iFace, nNodes);
+	if(fVerbose) {
+		Announce("ConvexifyFace via Triangle package");
+		Announce("iFace=%i	nNodes: %i", iFace, nNodes);
+	}
 
 	// get center of this face and the local up vector, Z
 	Node center(0,0,0);
@@ -1925,6 +1927,7 @@ bool ConvexifyFace(
 		Node n(out.pointlist[2*i], out.pointlist[2*i+1],0.0);
 		Real z = sqrt(1.0 - n.x*n.x - n.y*n.y);
 		Node node3D = localZ * z + (localX * n.x) + (localY * n.y);
+		node3D = node3D.Normalized();
 		newNodes.push_back(node3D);
 	}
 
