@@ -1818,95 +1818,6 @@ Real CalculateFaceArea(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void report(struct triangulateio* io, int markers, int reporttriangles, int reportneighbors, int reportsegments,int reportedges, int reportnorms)
-{
-	int i, j;
-
-	for (i = 0; i < io->numberofpoints; i++) {
-		printf("Point %4d:", i);
-		for (j = 0; j < 2; j++) {
-			printf("  %.6g", io->pointlist[i * 2 + j]);
-		}
-		if (io->numberofpointattributes > 0) {
-			printf("   attributes");
-		}
-		for (j = 0; j < io->numberofpointattributes; j++) {
-			printf("  %.6g",
-						 io->pointattributelist[i * io->numberofpointattributes + j]);
-		}
-		if (markers) {
-			printf("   marker %d\n", io->pointmarkerlist[i]);
-		} else {
-			printf("\n");
-		}
-	}
-	printf("\n");
-
-	if (reporttriangles || reportneighbors) {
-		for (i = 0; i < io->numberoftriangles; i++) {
-			if (reporttriangles) {
-				printf("Triangle %4d points:", i);
-				for (j = 0; j < io->numberofcorners; j++) {
-					printf("  %4d", io->trianglelist[i * io->numberofcorners + j]);
-				}
-				if (io->numberoftriangleattributes > 0) {
-					printf("   attributes");
-				}
-				for (j = 0; j < io->numberoftriangleattributes; j++) {
-					printf("  %.6g", io->triangleattributelist[i *
-																										 io->numberoftriangleattributes + j]);
-				}
-				printf("\n");
-			}
-			if (reportneighbors) {
-				printf("Triangle %4d neighbors:", i);
-				for (j = 0; j < 3; j++) {
-					printf("  %4d", io->neighborlist[i * 3 + j]);
-				}
-				printf("\n");
-			}
-		}
-		printf("\n");
-	}
-
-	if (reportsegments) {
-		for (i = 0; i < io->numberofsegments; i++) {
-			printf("Segment %4d points:", i);
-			for (j = 0; j < 2; j++) {
-				printf("  %4d", io->segmentlist[i * 2 + j]);
-			}
-			if (markers) {
-				printf("   marker %d\n", io->segmentmarkerlist[i]);
-			} else {
-				printf("\n");
-			}
-		}
-		printf("\n");
-	}
-
-	if (reportedges) {
-		for (i = 0; i < io->numberofedges; i++) {
-			printf("Edge %4d points:", i);
-			for (j = 0; j < 2; j++) {
-				printf("  %4d", io->edgelist[i * 2 + j]);
-			}
-			if (reportnorms && (io->edgelist[i * 2 + 1] == -1)) {
-				for (j = 0; j < 2; j++) {
-					printf("  %.6g", io->normlist[i * 2 + j]);
-				}
-			}
-			if (markers) {
-				printf("   marker %d\n", io->edgemarkerlist[i]);
-			} else {
-				printf("\n");
-			}
-		}
-		printf("\n");
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 bool ConvexifyFace(
 	Mesh & mesh,
 	Mesh & meshout,
@@ -1917,68 +1828,49 @@ bool ConvexifyFace(
 {
 	Face & face = mesh.faces[iFace];
 	const int nNodes = face.edges.size()-1;
-	Announce("ConvexifyFace via Triangles package");
+	Announce("ConvexifyFace via Triangle package");
 	Announce("iFace=%i	nNodes: %i", iFace, nNodes);
 
-	// TEMP: print coords of face's nodes
-	for (int i=0; i<nNodes; ++i) {
-		int  ixNode = face[i];
-		const Node & node = mesh.nodes[ixNode];
-		Announce("node(%i) = (%f,%f,%f)",ixNode, node.x,node.y,node.z);
-		Announce("node.Magnitude = %f",node.Magnitude());
-	}
-
-	// get center of this face and the local up vector
+	// get center of this face and the local up vector, Z
 	Node center(0,0,0);
 	for (int i=0; i<nNodes; ++i) center = center + mesh.nodes[face[i]];
 	center = center / nNodes;
 	Node localZ = center.Normalized();
-	localZ.Print("localZ");
-	
-	// get local tangent space X and Y unit vectors
+
+	// construct tangent space X and Y unit vectors
 	Node node0 =(mesh.nodes[face[0]]- center).Normalized();
 	Node localY = CrossProduct(localZ,node0);
 	Node localX = CrossProduct(localY,localZ);
 
-	// get orthographic projection of nodes on tangent plane
+	// get orthographic projection of nodes onto the tangent plane
 	NodeVector planarNodes;
 	for (int i=0; i<nNodes; ++i) {
 		Node node3D = mesh.nodes[face[i]];
 		Node node2D( DotProduct(node3D,localX), DotProduct(node3D,localY), 0);
-		node2D.Print("node2D");
 		planarNodes.push_back(node2D);
-	}
-	
-	// TEMP: project nodes back onto the unit sphere as a check
-	for (int i=0; i<nNodes; ++i) {
-		Node n = planarNodes[i];
-		Real z = sqrt(1.0 - n.x*n.x - n.y*n.y);
-		Node node3D = localZ * z + (localX * n.x) + (localY * n.y);
-		Announce("node(%i) = (%f,%f,%f)",i, node3D.x,node3D.y,node3D.z);
-		Announce("node3D.Magnitude = %f",node3D.Magnitude());
 	}
 
 	// fill in triangleio data structures
 	struct triangulateio in, out, vorout;
 
-	// initialize data struct for input planar straight-line graph (PSLG)
+	// initialize data structure for input planar straight-line graph (PSLG)
 	in.numberofpoints 					= nNodes;
 	in.numberofpointattributes 	= 0;
 	in.numberofsegments 				= nNodes;
 	in.numberofholes		  			= 0;
 	in.numberofregions 					= 0;
-	in.pointlist      			= (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-	in.segmentlist 					= (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
-	in.pointattributelist 	= (REAL *) NULL;
-	in.pointmarkerlist    	= (int  *) NULL;
-	in.trianglelist       	= (int  *) NULL;
-	in.triangleattributelist= (REAL *) NULL;
-	in.neighborlist 				= (int  *) NULL;
-	in.segmentmarkerlist 		= (int  *) NULL;
-	in.edgelist 						= (int  *) NULL;
-	in.edgemarkerlist 			= (int  *) NULL;
+	in.pointlist      					= (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+	in.segmentlist 							= (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
+	in.pointattributelist 			= (REAL *) NULL;
+	in.pointmarkerlist    			= (int  *) NULL;
+	in.trianglelist       			= (int  *) NULL;
+	in.triangleattributelist		= (REAL *) NULL;
+	in.neighborlist 						= (int  *) NULL;
+	in.segmentmarkerlist 				= (int  *) NULL;
+	in.edgelist 								= (int  *) NULL;
+	in.edgemarkerlist 					= (int  *) NULL;
 
-	// initialize data struct for output triangulation
+	// initialize data structure for output triangulation
 	out.pointlist							= (REAL *) NULL;
 	out.pointattributelist		= (REAL *) NULL;
 	out.pointmarkerlist 			= (int  *) NULL;
@@ -1990,7 +1882,7 @@ bool ConvexifyFace(
 	out.edgelist 							= (int  *) NULL;
 	out.edgemarkerlist 				= (int  *) NULL;
 
-	// initialize data struct for output Voronoi diagram (unused)
+	// initialize data structure for output Voronoi diagram (unused)
 	vorout.pointlist 					= (REAL *) NULL;
 	vorout.pointattributelist = (REAL *) NULL;
 	vorout.edgelist 					= (int  *) NULL;
@@ -2010,24 +1902,22 @@ bool ConvexifyFace(
 		in.segmentlist[i*2+1] = (i+1)%nNodes;
 	}
 
-	// display input points
-	printf("Input point set:\n\n");
-	report(&in, 0, 0, 0, 0, 0, 0);
-
 	// set options for triangulate function call:
-	//  p   -> use PSLG
-	//  q32 -> set min angle `quality' to 32 degrees
-	//  z   -> number nodes starting from zero
-	char options[6] ="pq32z";
+	// p   -> triangulate area in the boundary (PSLG)
+	// q5  -> set min triangle angle to 5dg
+	// j   -> jettison unused nodes
+	// z   -> number nodes starting from zero
+	// Y   -> no new nodes on the boundary (so it remains conforming)
+	// Q,V -> quiet or verbose output
 
-	triangulate(options, &in, &out, &vorout);
-
-	// display output triangulation
-	printf("Output triangulation:\n\n");
-	report(&out, 0, 1, 0, 1, 0, 1);
-
-
-//mesh.nodes.clear();
+	if (fVerbose) {
+		char options[256] ="pq5jzYV";
+		triangulate(options, &in, &out, &vorout);
+	}
+	else {
+		char options[256] ="pq5jzYQ";
+		triangulate(options, &in, &out, &vorout);
+	}
 
 	// project new planar nodes onto the unit sphere
 	NodeVector newNodes;
@@ -2035,36 +1925,31 @@ bool ConvexifyFace(
 		Node n(out.pointlist[2*i], out.pointlist[2*i+1],0.0);
 		Real z = sqrt(1.0 - n.x*n.x - n.y*n.y);
 		Node node3D = localZ * z + (localX * n.x) + (localY * n.y);
-		Announce("output node(%i) = (%f,%f,%f)",i, node3D.x,node3D.y,node3D.z);
-		Announce("output node.Magnitude = %f",node3D.Magnitude());
 		newNodes.push_back(node3D);
 	}
 
 	// delete concave face from the mesh
-	mesh.faces.erase(mesh.faces.begin() + iFace);
+	if (fRemoveConcaveFaces) {
+		mesh.faces.erase(mesh.faces.begin() + iFace);
+	}
 
-	// append new nodes to end of mesh's node vector
+	// append new nodes to end of node vector
 	int size = mesh.nodes.size();
 	mesh.nodes.insert(mesh.nodes.end(), newNodes.begin(), newNodes.end());
 
-	// add new triangular faces to the mesh
+	// add new triangles to the mesh
 	for (int i=0; i<out.numberoftriangles; ++i) {
-		int i0 = size+out.trianglelist[i*3+0];
-		int i1 = size+out.trianglelist[i*3+1];
-		int i2 = size+out.trianglelist[i*3+2];
-
-		Announce("add triangle %i with nodes %i,%i,%i:",i, i0,i1,i2);
 		Face newFace(3);
-		newFace.SetNode(0,i0);
-		newFace.SetNode(1,i1);
-		newFace.SetNode(2,i2);
-
+		newFace.SetNode(0, size+out.trianglelist[i*3+0]);
+		newFace.SetNode(1, size+out.trianglelist[i*3+1]);
+		newFace.SetNode(2, size+out.trianglelist[i*3+2]);
 		meshout.faces.push_back(newFace);
 	}
 
+	// clean up duplicate nodes created on the boundary
 	meshout.RemoveCoincidentNodes();
 
-	return false; // has no reflex nodes
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
