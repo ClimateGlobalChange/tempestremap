@@ -1856,39 +1856,39 @@ bool ConvexifyFace(
 	struct triangulateio in, out, vorout;
 
 	// initialize data structure for input planar straight-line graph (PSLG)
-	in.numberofpoints 					= nNodes;
-	in.numberofpointattributes 	= 0;
-	in.numberofsegments 				= nNodes;
-	in.numberofholes		  			= 0;
-	in.numberofregions 					= 0;
-	in.pointlist      					= (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-	in.segmentlist 							= (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
-	in.pointattributelist 			= (REAL *) NULL;
-	in.pointmarkerlist    			= (int  *) NULL;
-	in.trianglelist       			= (int  *) NULL;
-	in.triangleattributelist		= (REAL *) NULL;
-	in.neighborlist 						= (int  *) NULL;
-	in.segmentmarkerlist 				= (int  *) NULL;
-	in.edgelist 								= (int  *) NULL;
-	in.edgemarkerlist 					= (int  *) NULL;
+	in.numberofpoints           = nNodes;
+	in.numberofpointattributes  = 0;
+	in.numberofsegments         = nNodes;
+	in.numberofholes            = 0;
+	in.numberofregions          = 0;
+	in.pointlist                = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+	in.segmentlist              = (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
+	in.pointattributelist       = (REAL *) NULL;
+	in.pointmarkerlist          = (int  *) NULL;
+	in.trianglelist             = (int  *) NULL;
+	in.triangleattributelist    = (REAL *) NULL;
+	in.neighborlist             = (int  *) NULL;
+	in.segmentmarkerlist        = (int  *) NULL;
+	in.edgelist                 = (int  *) NULL;
+	in.edgemarkerlist           = (int  *) NULL;
 
 	// initialize data structure for output triangulation
-	out.pointlist							= (REAL *) NULL;
-	out.pointattributelist		= (REAL *) NULL;
-	out.pointmarkerlist 			= (int  *) NULL;
-	out.trianglelist 					= (int  *) NULL;
-	out.triangleattributelist	= (REAL *) NULL;
-	out.neighborlist				 	= (int  *) NULL;
-	out.segmentlist 					= (int  *) NULL;
-	out.segmentmarkerlist 		= (int  *) NULL;
-	out.edgelist 							= (int  *) NULL;
-	out.edgemarkerlist 				= (int  *) NULL;
+	out.pointlist               = (REAL *) NULL;
+	out.pointattributelist      = (REAL *) NULL;
+	out.pointmarkerlist         = (int  *) NULL;
+	out.trianglelist            = (int  *) NULL;
+	out.triangleattributelist   = (REAL *) NULL;
+	out.neighborlist            = (int  *) NULL;
+	out.segmentlist             = (int  *) NULL;
+	out.segmentmarkerlist       = (int  *) NULL;
+	out.edgelist                = (int  *) NULL;
+	out.edgemarkerlist          = (int  *) NULL;
 
 	// initialize data structure for output Voronoi diagram (unused)
-	vorout.pointlist 					= (REAL *) NULL;
-	vorout.pointattributelist = (REAL *) NULL;
-	vorout.edgelist 					= (int  *) NULL;
-	vorout.normlist 					= (REAL *) NULL;
+	vorout.pointlist            = (REAL *) NULL;
+	vorout.pointattributelist   = (REAL *) NULL;
+	vorout.edgelist             = (int  *) NULL;
+	vorout.normlist             = (REAL *) NULL;
 
 	// fill in 2d point list
 	for(int i=0; i<nNodes; ++i) {
