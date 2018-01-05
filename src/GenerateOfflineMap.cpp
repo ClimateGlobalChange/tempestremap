@@ -208,15 +208,15 @@ try {
     }
 */
 
-    // // Initialize dimension information from file
-//    if (created_local) {
+    // Initialize dimension information from file
+	if (!mapRemap.AreDimensionsInitialized()) {
     	AnnounceStartBlock("Initializing dimensions of map");
 	    Announce("Input mesh");
 	    mapRemap.InitializeSourceDimensionsFromMesh(meshInput);
 	    Announce("Output mesh");
 	    mapRemap.InitializeTargetDimensionsFromMesh(meshOutput);
 	    AnnounceEndBlock(NULL);
-//    }
+	}
 
     // Parse variable list
     std::vector< std::string > vecVariableStrings;

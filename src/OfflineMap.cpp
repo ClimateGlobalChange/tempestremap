@@ -196,6 +196,7 @@ void OfflineMap::InitializeSourceDimensionsFromMesh(
             m_vecSourceDimNames[0] = "num_elem";
             break;
         case Mesh::MeshType_RLL:
+			_EXCEPTIONT("MeshType_RLL not implemented");
             m_vecSourceDimSizes.resize(2);
             m_vecSourceDimNames.resize(2);
             m_vecSourceDimSizes[0] = std::sqrt(nElems/2);
@@ -230,8 +231,8 @@ void OfflineMap::InitializeSourceDimensionsFromMesh(
         m_vecSourceDimNames.resize(1);
         m_vecSourceDimSizes[0] = nelemx;
         m_vecSourceDimNames[0] = "num_elem";
-    }
-    else {
+
+    } else {
         m_vecSourceDimSizes.resize(2);
         m_vecSourceDimNames.resize(2);
         m_vecSourceDimSizes[0] = nelemx;
@@ -243,6 +244,7 @@ void OfflineMap::InitializeSourceDimensionsFromMesh(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::InitializeTargetDimensionsFromFile(
 	const std::string & strTargetMesh
 ) {
@@ -256,10 +258,14 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 	NcVar * varGridDims = ncTargetMesh.get_var("grid_dims");
 	if (varGridDims != NULL) {
 		NcDim * dimGridRank = varGridDims->get_dim(0);
+		if (dimGridRank == NULL) {
+			_EXCEPTIONT("Variable \"grid_dims\" has no dimensions");
+		}
 
 		m_vecTargetDimSizes.resize(dimGridRank->size());
 		varGridDims->get(&(m_vecTargetDimSizes[0]), dimGridRank->size());
 
+		//std::cout << "TEST " << dimGridRank->size() << std::endl;
 		if (dimGridRank->size() == 1) {
 			m_vecTargetDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
@@ -273,6 +279,8 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
+
+		std::cout << "TEST " << m_vecTargetDimSizes.size() << std::endl;
 
 		// Number of faces
 		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
@@ -411,6 +419,7 @@ void OfflineMap::InitializeTargetDimensionsFromMesh(
             m_vecTargetDimNames[0] = "num_elem";
             break;
         case Mesh::MeshType_RLL:
+			_EXCEPTIONT("MeshType_RLL not implemented");
             m_vecTargetDimSizes.resize(2);
             m_vecTargetDimNames.resize(2);
             m_vecTargetDimSizes[0] = std::sqrt(nElems/2);
@@ -462,6 +471,7 @@ void OfflineMap::InitializeTargetDimensionsFromMesh(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::InitializeCoordinatesFromMeshFV(
 	const Mesh & mesh,
 	DataVector<double> & dCenterLon,
@@ -2053,7 +2063,7 @@ void OfflineMap::Write(
 		}
 	}
 
-	if ((nDstGridDims == 1) && (m_vecSourceDimSizes[0] != nB)) {
+	if ((nDstGridDims == 1) && (m_vecTargetDimSizes[0] != nB)) {
 		varDstGridDims->put(&nB, 1);
 		varDstGridDims->add_att("name0", "num_dof");
 

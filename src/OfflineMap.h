@@ -305,6 +305,25 @@ public:
 		return m_mapRemap;
 	}
 
+	/// <summary>
+	///		Determine if dimension information has been initialized.
+	///	</summary>
+	bool AreDimensionsInitialized() const {
+		if (m_vecSourceDimSizes.size() == 0) {
+			return false;
+		}
+		if (m_vecTargetDimSizes.size() == 0) {
+			return false;
+		}
+		if (m_vecSourceDimNames.size() != m_vecSourceDimSizes.size()) {
+			_EXCEPTIONT("Invalid dimension initialization");
+		}
+		if (m_vecTargetDimNames.size() != m_vecTargetDimSizes.size()) {
+			_EXCEPTIONT("Invalid dimension initialization");
+		}
+		return true;
+	}
+
 public:
 	///	<summary>
 	///		Set the fill value override.
