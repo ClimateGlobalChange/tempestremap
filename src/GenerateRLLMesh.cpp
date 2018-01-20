@@ -192,8 +192,15 @@ try {
 			std::cout << std::endl;
 		}
 
+		// Convert latitude and longitude interval to radians
+		dLonBegin *= M_PI / 180.0;
+		dLonEnd   *= M_PI / 180.0;
+		dLatBegin *= M_PI / 180.0;
+		dLatEnd   *= M_PI / 180.0;
+
 	// Generate mesh from parameters
 	} else {
+
 		// Convert latitude and longitude interval to radians
 		dLonBegin *= M_PI / 180.0;
 		dLonEnd   *= M_PI / 180.0;
@@ -223,21 +230,17 @@ try {
 
 			dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
 		}
+
+
 	}
 
 	std::cout << "..Generating mesh with resolution [";
 	std::cout << nLongitudes << ", " << nLatitudes << "]" << std::endl;
 	std::cout << "..Longitudes in range [";
-	std::cout << dLonBegin << ", " << dLonEnd << "]" << std::endl;
+	std::cout << dLonBegin * 180.0 / M_PI << ", " << dLonEnd * 180.0 / M_PI << "]" << std::endl;
 	std::cout << "..Latitudes in range [";
-	std::cout << dLatBegin << ", " << dLatEnd << "]" << std::endl;
+	std::cout << dLatBegin * 180.0 / M_PI << ", " << dLatEnd * 180.0 / M_PI << "]" << std::endl;
 	std::cout << std::endl;
-
-	// Convert latitude and longitude interval to radians
-	dLonBegin *= M_PI / 180.0;
-	dLonEnd   *= M_PI / 180.0;
-	dLatBegin *= M_PI / 180.0;
-	dLatEnd   *= M_PI / 180.0;
 
 	// Check parameters
 	if (nLatitudes < 2) {
