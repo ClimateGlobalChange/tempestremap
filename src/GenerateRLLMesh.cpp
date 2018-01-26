@@ -383,9 +383,9 @@ try {
 		mesh.Write(strOutputFile);
 
 		// Add rectilinear properties
-		if (!fIncludeSouthPole) {
-			nLatitudes--;
-		}
+		//if (!fIncludeSouthPole) {
+		//	nLatitudes--;
+		//}
 
 		NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
 		ncOutput.add_att("rectilinear", "true");
