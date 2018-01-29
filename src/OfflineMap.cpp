@@ -1191,6 +1191,17 @@ void OfflineMap::Apply(
 	bool fTargetDouble,
 	bool fAppend
 ) {
+
+	// Check variable list for "lat" and "lon"
+	for (int v = 0; v < vecVariables.size(); v++) {
+		if (vecVariables[v] == "lat") {
+			_EXCEPTIONT("Latitude variable \"lat\" in variable list will be overwritten on output");
+		}
+		if (vecVariables[v] == "lon") {
+			_EXCEPTIONT("Longitude variable \"lon\" in variable list will be overwritten on output");
+		}
+	}
+
 	// Open source data file
 	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
 	if (!ncSource.is_valid()) {
@@ -1438,6 +1449,60 @@ void OfflineMap::Apply(
 
 			varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
 				m_dVectorTargetBoundsLat.GetRows(), 2);
+		}
+
+	// Add lat/lon to unstructured data
+	} else {
+		NcVar * varLon = ncTarget.get_var("lon");
+		if (varLon == NULL) {
+			varLon = ncTarget.add_var("lon", ncDouble, dim0);
+			if (m_dTargetCenterLon.GetRows() != dim0->size()) {
+				_EXCEPTIONT("TargetCenterLon / NCol dimension size mismatch");
+			}
+			if (varLon == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lon\" in target file");
+			}
+
+			varLon->put(
+				&(m_dTargetCenterLon[0]),
+				m_dTargetCenterLon.GetRows());
+
+			//varLon->add_att("bounds", "lon_bnds");
+			varLon->add_att("units", "degrees_east");
+			varLon->add_att("axis", "X");
+			varLon->add_att("long_name", "longitude");
+			varLon->add_att("standard_name", "longitude");
+
+		} else {
+			if (varLon->get_dim(0)->size() != dim0->size()) {
+				_EXCEPTIONT("\"lon\" variable mismatch");
+			}
+		}
+
+		NcVar * varLat = ncTarget.get_var("lat");
+		if (varLat == NULL) {
+			varLat = ncTarget.add_var("lat", ncDouble, dim0);
+			if (m_dTargetCenterLat.GetRows() != dim0->size()) {
+				_EXCEPTIONT("TargetCenterLat / NCol dimension size mismatch");
+			}
+			if (varLat == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lat\" in target file");
+			}
+
+			varLat->put(
+				&(m_dTargetCenterLat[0]),
+				m_dTargetCenterLat.GetRows());
+
+			//varLat->add_att("bounds", "lat_bnds");
+			varLat->add_att("units", "degrees_north");
+			varLat->add_att("axis", "Y");
+			varLat->add_att("long_name", "latitude");
+			varLat->add_att("standard_name", "latitude");
+
+		} else {
+			if (varLat->get_dim(0)->size() != dim0->size()) {
+				_EXCEPTIONT("\"lat\" variable mismatch");
+			}
 		}
 	}
 
