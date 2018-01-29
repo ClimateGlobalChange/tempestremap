@@ -74,7 +74,7 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateOfflineMap.cpp \
 	src/GenerateConnectivityData.cpp \
 	src/kdtree.cpp \
-	src/triangle.c
+	src/triangle.cpp
 
 # Load system-specific defaults
 AM_CPPFLAGS = -I$(srcdir)/src -I$(builddir)/src ${NETCDF_CPPFLAGS}
