@@ -1,3 +1,7 @@
+extern "C" {
+
+#include "Defines.h"
+
 /*****************************************************************************/
 /*                                                                           */
 /*      888888888        ,o,                          / 888                  */
@@ -16003,4 +16007,6 @@ char **argv;
 #ifndef TRILIBRARY
   return 0;
 #endif /* not TRILIBRARY */
+}
+
 }

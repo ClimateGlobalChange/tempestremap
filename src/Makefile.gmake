@@ -38,7 +38,8 @@ UTIL_FILES= Announce.cpp \
 			GenerateOfflineMap.cpp \
 			GenerateOverlapMesh.cpp \
 			GenerateOverlapMesh_v1.cpp \
-			GenerateRLLMesh.cpp
+			GenerateRLLMesh.cpp \
+			triangle.cpp
 
 # Mesh generation drivers
 GenerateTestData_FILES= GenerateTestData.cpp

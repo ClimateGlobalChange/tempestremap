@@ -1,3 +1,5 @@
+extern "C" {
+
 /*****************************************************************************/
 /*                                                                           */
 /*  (triangle.h)                                                             */
@@ -287,3 +289,5 @@ void trifree(VOID *memptr);
 void triangulate();
 void trifree();
 #endif /* not ANSI_DECLARATORS */
+
+}
