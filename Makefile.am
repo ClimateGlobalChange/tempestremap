@@ -42,7 +42,8 @@ libTempestRemap_la_include_HEADERS = \
 	src/OverlapFace.h \
 	src/STLStringHelper.h \
 	src/TempestRemapAPI.h \
-	src/TempestConfig.h
+	src/TempestConfig.h \
+	src/triangle.h
 
 # The list of source files, and any header files that do not need to be installed
 libTempestRemap_la_SOURCES = \
@@ -72,7 +73,8 @@ libTempestRemap_la_SOURCES = \
 	src/ApplyOfflineMap.cpp \
 	src/GenerateOfflineMap.cpp \
 	src/GenerateConnectivityData.cpp \
-	src/kdtree.cpp
+	src/kdtree.cpp \
+	src/triangle.c
 
 # Load system-specific defaults
 AM_CPPFLAGS = -I$(srcdir)/src -I$(builddir)/src ${NETCDF_CPPFLAGS}

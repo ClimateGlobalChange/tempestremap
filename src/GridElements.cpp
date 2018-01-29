@@ -29,6 +29,10 @@
 #include <cstring>
 #include <netcdfcpp.h>
 
+extern "C" {
+#include "triangle.h"
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// Face
 ///////////////////////////////////////////////////////////////////////////////
@@ -1815,6 +1819,145 @@ Real CalculateFaceArea(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool ConvexifyFace(
+	Mesh & mesh,
+	Mesh & meshout,
+	int iFace,
+	bool fRemoveConcaveFaces,
+	bool fVerbose
+)
+{
+	Face & face = mesh.faces[iFace];
+	const int nNodes = face.edges.size()-1;
+	if(fVerbose) {
+		Announce("ConvexifyFace via Triangle package");
+		Announce("iFace=%i	nNodes: %i", iFace, nNodes);
+	}
+
+	// get center of this face and the local up vector, Z
+	Node center(0,0,0);
+	for (int i=0; i<nNodes; ++i) center = center + mesh.nodes[face[i]];
+	center = center / nNodes;
+	Node localZ = center.Normalized();
+
+	// construct tangent space X and Y unit vectors
+	Node node0 =(mesh.nodes[face[0]]- center).Normalized();
+	Node localY = CrossProduct(localZ,node0);
+	Node localX = CrossProduct(localY,localZ);
+
+	// get orthographic projection of nodes onto the tangent plane
+	NodeVector planarNodes;
+	for (int i=0; i<nNodes; ++i) {
+		Node node3D = mesh.nodes[face[i]];
+		Node node2D( DotProduct(node3D,localX), DotProduct(node3D,localY), 0);
+		planarNodes.push_back(node2D);
+	}
+
+	// fill in triangleio data structures
+	struct triangulateio in, out, vorout;
+
+	// initialize data structure for input planar straight-line graph (PSLG)
+	in.numberofpoints           = nNodes;
+	in.numberofpointattributes  = 0;
+	in.numberofsegments         = nNodes;
+	in.numberofholes            = 0;
+	in.numberofregions          = 0;
+	in.pointlist                = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+	in.segmentlist              = (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
+	in.pointattributelist       = (REAL *) NULL;
+	in.pointmarkerlist          = (int  *) NULL;
+	in.trianglelist             = (int  *) NULL;
+	in.triangleattributelist    = (REAL *) NULL;
+	in.neighborlist             = (int  *) NULL;
+	in.segmentmarkerlist        = (int  *) NULL;
+	in.edgelist                 = (int  *) NULL;
+	in.edgemarkerlist           = (int  *) NULL;
+
+	// initialize data structure for output triangulation
+	out.pointlist               = (REAL *) NULL;
+	out.pointattributelist      = (REAL *) NULL;
+	out.pointmarkerlist         = (int  *) NULL;
+	out.trianglelist            = (int  *) NULL;
+	out.triangleattributelist   = (REAL *) NULL;
+	out.neighborlist            = (int  *) NULL;
+	out.segmentlist             = (int  *) NULL;
+	out.segmentmarkerlist       = (int  *) NULL;
+	out.edgelist                = (int  *) NULL;
+	out.edgemarkerlist          = (int  *) NULL;
+
+	// initialize data structure for output Voronoi diagram (unused)
+	vorout.pointlist            = (REAL *) NULL;
+	vorout.pointattributelist   = (REAL *) NULL;
+	vorout.edgelist             = (int  *) NULL;
+	vorout.normlist             = (REAL *) NULL;
+
+	// fill in 2d point list
+	for(int i=0; i<nNodes; ++i) {
+		Node n = planarNodes[i];
+		in.pointlist[i*2+0] = n.x;
+		in.pointlist[i*2+1] = n.y;
+	}
+
+	// fill in segment list
+	for(int i=0; i<nNodes; ++i) {
+		Node n = planarNodes[i];
+		in.segmentlist[i*2+0] = i;
+		in.segmentlist[i*2+1] = (i+1)%nNodes;
+	}
+
+	// set options for triangulate function call:
+	// p   -> triangulate area in the boundary (PSLG)
+	// q5  -> set min triangle angle to 5dg
+	// j   -> jettison unused nodes
+	// z   -> number nodes starting from zero
+	// Y   -> no new nodes on the boundary (so it remains conforming)
+	// Q,V -> quiet or verbose output
+
+	if (fVerbose) {
+		char options[256] ="pq5jzYV";
+		triangulate(options, &in, &out, &vorout);
+	}
+	else {
+		char options[256] ="pq5jzYQ";
+		triangulate(options, &in, &out, &vorout);
+	}
+
+	// project new planar nodes onto the unit sphere
+	NodeVector newNodes;
+	for (int i=0; i<out.numberofpoints; ++i) {
+		Node n(out.pointlist[2*i], out.pointlist[2*i+1],0.0);
+		Real z = sqrt(1.0 - n.x*n.x - n.y*n.y);
+		Node node3D = localZ * z + (localX * n.x) + (localY * n.y);
+		node3D = node3D.Normalized();
+		newNodes.push_back(node3D);
+	}
+
+	// delete concave face from the mesh
+	if (fRemoveConcaveFaces) {
+		mesh.faces.erase(mesh.faces.begin() + iFace);
+	}
+
+	// append new nodes to end of node vector
+	int size = mesh.nodes.size();
+	mesh.nodes.insert(mesh.nodes.end(), newNodes.begin(), newNodes.end());
+
+	// add new triangles to the mesh
+	for (int i=0; i<out.numberoftriangles; ++i) {
+		Face newFace(3);
+		newFace.SetNode(0, size+out.trianglelist[i*3+0]);
+		newFace.SetNode(1, size+out.trianglelist[i*3+1]);
+		newFace.SetNode(2, size+out.trianglelist[i*3+2]);
+		meshout.faces.push_back(newFace);
+	}
+
+	// clean up duplicate nodes created on the boundary
+	meshout.RemoveCoincidentNodes();
+
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool ConvexifyFaceBayazit(
 	Mesh & mesh,
 	Mesh & meshout,
 	int iFace,

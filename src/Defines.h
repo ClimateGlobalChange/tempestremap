@@ -21,12 +21,16 @@
 
 #define USE_EXACT_ARITHMETIC
 
+// defines required by Triangle package
+#define ANSI_DECLARATORS
+#define VOID int
+
 ///////////////////////////////////////////////////////////////////////////////
 
 typedef double Real;
+typedef Real   REAL;  // for use with triangles.h
 
-static const Real HighTolerance = 1.0e-10;
-
+static const Real HighTolerance      = 1.0e-10;
 static const Real ReferenceTolerance = 1.0e-12;
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -166,6 +166,35 @@ public:
 	}
 
 	///	<summary>
+	///		muiltiple node position-vector by a constant
+	///	</summary>
+	Node operator*(const double c) const {
+		Node result;
+		result.x = x*c;
+		result.y = y*c;
+		result.z = z*c;
+		return result;
+	}
+
+	///	<summary>
+	///		divide node position-vector by a constant
+	///	</summary>
+	Node operator/(const double c) const {
+		Node result;
+		result.x = x/c;
+		result.y = y/c;
+		result.z = z/c;
+		return result;
+	}
+
+	///	<summary>
+	///		Project node onto the unit sphere
+	///	</summary>
+	Node Normalized() const {
+		return (*this)/Magnitude();;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	Real Magnitude() const {
