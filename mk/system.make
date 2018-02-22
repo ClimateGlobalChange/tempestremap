@@ -20,29 +20,9 @@ else ifeq ($(UNAME),Linux)
     SYSTEM= CORI
     SYSTEM_MAKEFILE= cori.make
   endif
-  ifeq ($(HOSTNAME),yslogin1)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
-  endif
-  ifeq ($(HOSTNAME),yslogin2)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
-  endif
-  ifeq ($(HOSTNAME),yslogin3)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
-  endif
-  ifeq ($(HOSTNAME),yslogin4)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
-  endif
-  ifeq ($(HOSTNAME),yslogin5)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
-  endif
-  ifeq ($(HOSTNAME),yslogin6)
-    SYSTEM= YELLOWSTONE
-    SYSTEM_MAKEFILE= yellowstone.make
+  ifeq ($(GROUP),ncar)
+    SYSTEM= CHEYENNE
+    SYSTEM_MAKEFILE= cheyenne.make
   endif
   ifeq ($(SYSTEM),)
     SYSTEM= AGRI
