@@ -19,7 +19,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <cstdint>
+#include <stdint.h>
 #include <vector>
 #include <iostream>
 #include <cstring>
