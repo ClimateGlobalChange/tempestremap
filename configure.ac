@@ -27,20 +27,20 @@ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 # TODO: Should we check for partial C++11 support also ?
 AX_CXX_COMPILE_STDCXX_0X
 
-# Checks for FORTRAN.
+# Checks for FORTRAN - required for BLAS/LAPACK symbol name mangling
 AC_PROG_F77([ifort gfortran g77 f77])    
 AC_F77_LIBRARY_LDFLAGS
 LIBS="$LIBS $FCLIBS -lm"
+
+# Checks for libraries.
 
 # Checks for BLAS/LAPACK libraries:
 AX_BLAS([], [AC_MSG_ERROR([BLAS library not found])])
 AX_LAPACK([], [AC_MSG_ERROR([LAPACK library not found])])
 
-# Checks for libraries.
-# FIXME: Replace `main' with a function in `-lnetcdf':
 # checking for netCDF
 AC_LANG_PUSH([C++])
-ACX_NETCDF([],[AC_MSG_ERROR(cannot find netCDF fortran library)])
+ACX_NETCDF([],[AC_MSG_ERROR(cannot find NetCDF library. Please specify the directory using --with-netcdf=DIR configure option.)])
 AC_LANG_POP([C++])
 
 # Checks for header files.
