@@ -183,64 +183,19 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void OfflineMap::InitializeSourceDimensionsFromMesh(
-    const Mesh & sourceMesh
+void OfflineMap::InitializeSourceDimensions(
+  const std::vector<std::string>& p_srcDimNames,
+  const std::vector<int>& p_srcDimSizes
 ) {
-    // Push rectilinear attributes into array
-    const int nElems = sourceMesh.faces.size();
-    switch(sourceMesh.type) {
-        case Mesh::MeshType_CubedSphere:
-            m_vecSourceDimSizes.resize(1);
-            m_vecSourceDimNames.resize(1);
-            m_vecSourceDimSizes[0] = nElems;
-            m_vecSourceDimNames[0] = "num_elem";
-            break;
-        case Mesh::MeshType_RLL:
-			_EXCEPTIONT("MeshType_RLL not implemented");
-            m_vecSourceDimSizes.resize(2);
-            m_vecSourceDimNames.resize(2);
-            m_vecSourceDimSizes[0] = std::sqrt(nElems/2);
-            m_vecSourceDimSizes[1] = 2*m_vecSourceDimSizes[0];
-            m_vecSourceDimNames[0] = "lat";
-            m_vecSourceDimNames[1] = "lon";
-            break;
-        case Mesh::MeshType_IcosaHedral:
-            m_vecSourceDimSizes.resize(1);
-            m_vecSourceDimNames.resize(1);
-            m_vecSourceDimSizes[0] = nElems;
-            m_vecSourceDimNames[0] = "num_elem";
-            break;
-        default:
-            m_vecSourceDimSizes.resize(1);
-            m_vecSourceDimNames.resize(1);
-            m_vecSourceDimSizes[0] = 0;
-            m_vecSourceDimNames[0] = "";
-            break;
-    }
-    return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void OfflineMap::InitializeSourceDimensionsFromMesh(
-    const int nelemx, const int nelemy
-) {
-    // Push rectilinear attributes into array
-    if (nelemy == 0) {
-        m_vecSourceDimSizes.resize(1);
-        m_vecSourceDimNames.resize(1);
-        m_vecSourceDimSizes[0] = nelemx;
-        m_vecSourceDimNames[0] = "num_elem";
-
-    } else {
-        m_vecSourceDimSizes.resize(2);
-        m_vecSourceDimNames.resize(2);
-        m_vecSourceDimSizes[0] = nelemx;
-        m_vecSourceDimSizes[1] = nelemy;
-        m_vecSourceDimNames[0] = "lat";
-        m_vecSourceDimNames[1] = "lon";
-    }
-    return;
+  m_vecSourceDimNames.clear();
+  m_vecSourceDimNames.resize(p_srcDimNames.size());
+  std::copy(p_srcDimNames.begin(), p_srcDimNames.end(), m_vecSourceDimNames.begin());
+  
+  m_vecSourceDimSizes.clear();
+  m_vecSourceDimSizes.resize(p_srcDimSizes.size());
+  std::copy(p_srcDimSizes.begin(), p_srcDimSizes.end(), m_vecSourceDimSizes.begin());
+  
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -404,70 +359,19 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void OfflineMap::InitializeTargetDimensionsFromMesh(
-    const Mesh & targetMesh
+void OfflineMap::InitializeTargetDimensions(
+  const std::vector<std::string>& p_tgtDimNames,
+  const std::vector<int>& p_tgtDimSizes
 ) {
-    // Push rectilinear attributes into array
-    const int nElems = targetMesh.faces.size();
-    switch(targetMesh.type) {
-        case Mesh::MeshType_CubedSphere:
-            m_vecTargetDimSizes.resize(1);
-            m_vecTargetDimNames.resize(1);
-            // should probably have nxElems * nyELems
-            // That would mean we need to resize(2) and not to 1.
-            m_vecTargetDimSizes[0] = nElems;
-            m_vecTargetDimNames[0] = "num_elem";
-            break;
-        case Mesh::MeshType_RLL:
-			_EXCEPTIONT("MeshType_RLL not implemented");
-            m_vecTargetDimSizes.resize(2);
-            m_vecTargetDimNames.resize(2);
-            m_vecTargetDimSizes[0] = std::sqrt(nElems/2);
-            m_vecTargetDimSizes[1] = 2*m_vecTargetDimSizes[0];
+  m_vecTargetDimNames.clear();
+  m_vecTargetDimNames.resize(p_tgtDimNames.size());
+  std::copy(p_tgtDimNames.begin(), p_tgtDimNames.end(), m_vecTargetDimNames.begin());
+  
+  m_vecTargetDimSizes.clear();
+  m_vecTargetDimSizes.resize(p_tgtDimSizes.size());
+  std::copy(p_tgtDimSizes.begin(), p_tgtDimSizes.end(), m_vecTargetDimSizes.begin());
 
-            m_vecTargetDimNames[0] = "lat";
-            m_vecTargetDimNames[1] = "lon";
-            break;
-        case Mesh::MeshType_IcosaHedral:
-            m_vecTargetDimSizes.resize(1);
-            m_vecTargetDimNames.resize(1);
-            m_vecTargetDimSizes[0] = nElems;
-            m_vecTargetDimNames[0] = "num_elem";
-            break;
-        default:
-            m_vecTargetDimSizes.resize(1);
-            m_vecTargetDimNames.resize(1);
-            m_vecTargetDimSizes[0] = 0;
-            m_vecTargetDimNames[0] = "";
-            break;
-    }
-    return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void OfflineMap::InitializeTargetDimensionsFromMesh(
-    const int nelemx, const int nelemy
-) {
-    // Push rectilinear attributes into array
-    if (nelemy == 0) {
-        m_vecTargetDimSizes.resize(1);
-        m_vecTargetDimNames.resize(1);
-        // should probably have nxElems * nyELems
-        // That would mean we need to resize(2) and not to 1.
-        m_vecTargetDimSizes[0] = nelemx;
-        m_vecTargetDimNames[0] = "num_elem";
-    }
-    else {
-    	m_vecTargetDimSizes.resize(2);
-        m_vecTargetDimNames.resize(2);
-        m_vecTargetDimSizes[0] = nelemx;
-        m_vecTargetDimSizes[1] = nelemy;
-
-        m_vecTargetDimNames[0] = "lat";
-        m_vecTargetDimNames[1] = "lon";
-    }
-    return;
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
