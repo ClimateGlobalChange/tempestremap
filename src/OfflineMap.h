@@ -51,15 +51,9 @@ public:
     ///	<summary>
     ///		Initialize the array of input dimensions from a mesh.
     ///	</summary>
-    void InitializeSourceDimensionsFromMesh(
-        const Mesh & sourceMesh
-    );
-
-    ///	<summary>
-    ///		Initialize the array of input dimensions from a mesh.
-    ///	</summary>
-    void InitializeSourceDimensionsFromMesh(
-        const int nelemx, const int nelemy
+    void InitializeSourceDimensions(
+        const std::vector<std::string>& p_srcDimNames,
+        const std::vector<int>& p_srcDimSizes
     );
 
 	///	<summary>
@@ -72,15 +66,9 @@ public:
     ///	<summary>
     ///		Initialize the array of output dimensions from a mesh.
     ///	</summary>
-    void InitializeTargetDimensionsFromMesh(
-        const Mesh & targetMesh
-    );
-
-    ///	<summary>
-    ///		Initialize the array of output dimensions from a mesh.
-    ///	</summary>
-    void InitializeTargetDimensionsFromMesh(
-        const int nelemx, const int nelemy
+    void InitializeTargetDimensions(
+        const std::vector<std::string>& p_tgtDimNames,
+        const std::vector<int>& p_tgtDimSizes
     );
 
 private:

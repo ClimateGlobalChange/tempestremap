@@ -211,10 +211,16 @@ try {
     // Initialize dimension information from file
 	if (!mapRemap.AreDimensionsInitialized()) {
     	AnnounceStartBlock("Initializing dimensions of map");
+      std::vector<std::string> srcDimNames, tgtDimNames;
+      std::vector<int> srcDimSizes, tgtDimSizes;
 	    Announce("Input mesh");
-	    mapRemap.InitializeSourceDimensionsFromMesh(meshInput);
+	    srcDimNames.push_back("num_elem");
+	    srcDimSizes.push_back(meshInput.faces.size());
+	    mapRemap.InitializeSourceDimensions(srcDimNames, srcDimSizes);
 	    Announce("Output mesh");
-	    mapRemap.InitializeTargetDimensionsFromMesh(meshOutput);
+	    tgtDimNames.push_back("num_elem");
+	    tgtDimSizes.push_back(meshOutput.faces.size());
+	    mapRemap.InitializeTargetDimensions(tgtDimNames, tgtDimSizes);
 	    AnnounceEndBlock(NULL);
 	}
 
