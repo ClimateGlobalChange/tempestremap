@@ -56,6 +56,7 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateCSMesh.cpp \
 	src/GenerateICOMesh.cpp \
 	src/GenerateRLLMesh.cpp \
+	src/GenerateUTMMesh.cpp \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
 	src/GenerateOverlapMesh.cpp \
@@ -84,6 +85,7 @@ LDADD = libTempestRemap.la ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
 # Mesh generation drivers
 GenerateTestData_SOURCES = src/GenerateTestData.cpp
 GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
+GenerateUTMMesh_SOURCES = src/GenerateUTMMeshExe.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
 GenerateICOMesh_SOURCES = src/GenerateICOMeshExe.cpp
 GenerateLambertConfConicMesh_SOURCES = src/GenerateLambertConfConicMeshExe.cpp
@@ -108,7 +110,7 @@ MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
 
 bin_PROGRAMS = GenerateTestData \
-				GenerateCSMesh GenerateRLLMesh GenerateICOMesh \
+				GenerateCSMesh GenerateRLLMesh GenerateUTMMesh GenerateICOMesh \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
 				ApplyOfflineMap GenerateOfflineMap \

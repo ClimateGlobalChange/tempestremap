@@ -39,11 +39,13 @@ UTIL_FILES= Announce.cpp \
 			GenerateOverlapMesh.cpp \
 			GenerateOverlapMesh_v1.cpp \
 			GenerateRLLMesh.cpp \
+			GenerateUTMMesh.cpp \
 			triangle.cpp
 
 # Mesh generation drivers
 GenerateTestData_FILES= GenerateTestData.cpp
 GenerateRLLMesh_FILES= GenerateRLLMeshExe.cpp
+GenerateUTMMesh_FILES= GenerateUTMMeshExe.cpp
 GenerateCSMesh_FILES= GenerateCSMeshExe.cpp
 GenerateICOMesh_FILES= GenerateICOMeshExe.cpp
 GenerateLambertConfConicMesh_FILES= GenerateLambertConfConicMeshExe.cpp
@@ -83,6 +85,7 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateOverlapMesh \
               GenerateOverlapMesh_v1 \
               GenerateRLLMesh \
+              GenerateUTMMesh \
               GenerateTestData \
               GenerateVolumetricMesh \
               MeshToTxt \
@@ -97,6 +100,7 @@ all: $(EXEC_TARGETS)
 
 GenerateTestData_EXE: $(GenerateTestData_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateRLLMesh_EXE:$(GenerateRLLMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateUTMMesh_EXE:$(GenerateUTMMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateCSMesh_EXE: $(GenerateCSMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateICOMesh_EXE: $(GenerateICOMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateLambertConfConicMesh_EXE: $(GenerateLambertConfConicMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
