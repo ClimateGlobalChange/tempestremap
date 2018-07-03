@@ -241,6 +241,9 @@ void ConvertUTMtoRLL(
 		dp = pow(2.0 * atan((1.0 + dES) / (1.0 - dES)), dE1/2.0) * exp(dL) - M_PI/2.0;
 		i++;
 	}
+	if (i == nMaxIter) {
+		_EXCEPTIONT("Convergence failure");
+	}
 
 	dLat = dp;
 	dLon = dl;
@@ -334,8 +337,8 @@ try {
 	FaceVector & faces = mesh.faces;
 
 	// Loop through all nodes
-	for (int i = 0; i < nRows+1; i++) {
-	for (int j = 0; j < nCols+1; j++) {
+	for (int j = 0; j < nRows+1; j++) {
+	for (int i = 0; i < nCols+1; i++) {
 		double dXLL = dXLLCorner + static_cast<double>(i) * dCellSize;
 		double dYLL = dYLLCorner + static_cast<double>(j) * dCellSize;
 
@@ -343,6 +346,8 @@ try {
 		double dLat;
 
 		ConvertUTMtoRLL(nZone, dXLL, dYLL, dLon, dLat);
+
+		//printf("%i %1.5e %1.5e\n", nodes.size(), dLon, dLat);
 
 		double dX = cos(dLat) * cos(dLon);
 		double dY = cos(dLat) * sin(dLon);
@@ -360,10 +365,10 @@ try {
 
 		for (int i = 0; i < nCols; i++) {
 			Face face(4);
-			face.SetNode(0, iThisLatNodeIx + (i + 1) % nCols);
-			face.SetNode(1, iNextLatNodeIx + (i + 1) % nCols);
-			face.SetNode(2, iNextLatNodeIx + i);
-			face.SetNode(3, iThisLatNodeIx + i);
+			face.SetNode(0, iThisLatNodeIx + i);
+			face.SetNode(1, iThisLatNodeIx + (i + 1) % (nCols + 1));
+			face.SetNode(2, iNextLatNodeIx + (i + 1) % (nCols + 1));
+			face.SetNode(3, iNextLatNodeIx + i);
 
 			faces.push_back(face);
 		}
