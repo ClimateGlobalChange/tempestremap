@@ -1410,6 +1410,76 @@ void OfflineMap::Apply(
 				_EXCEPTIONT("\"lat\" variable mismatch");
 			}
 		}
+
+	// Non-latitude-longitude rectilinear mesh target
+	} else {
+		NcVar * varLon = ncTarget.get_var("lon");
+		if (varLon == NULL) {
+			varLon = ncTarget.add_var("lon", ncDouble, dim0, dim1);
+			if (m_dTargetCenterLon.GetRows() != dim0->size() * dim1->size()) {
+				_EXCEPTION3("TargetCenterLon / NCol dimension size mismatch (%i, %i x %i)",
+					m_dTargetCenterLon.GetRows(), dim0->size(), dim1->size());
+			}
+			if (varLon == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lon\" in target file");
+			}
+
+			varLon->put(
+				&(m_dTargetCenterLon[0]),
+				dim0->size(),
+				dim1->size());
+
+			//varLon->add_att("bounds", "lon_bnds");
+			varLon->add_att("units", "degrees_east");
+			varLon->add_att("axis", "X");
+			varLon->add_att("long_name", "longitude");
+			varLon->add_att("standard_name", "longitude");
+
+		} else {
+			if (varLon->num_dims() != 2) {
+				_EXCEPTIONT("\"lon\" variable mismatch");
+			}
+			if (varLon->get_dim(0)->size() != dim0->size()) {
+				_EXCEPTIONT("\"lon\" variable mismatch");
+			}
+			if (varLon->get_dim(1)->size() != dim1->size()) {
+				_EXCEPTIONT("\"lon\" variable mismatch");
+			}
+		}
+
+		NcVar * varLat = ncTarget.get_var("lat");
+		if (varLat == NULL) {
+			varLat = ncTarget.add_var("lat", ncDouble, dim0, dim1);
+			if (m_dTargetCenterLat.GetRows() != dim0->size() * dim1->size()) {
+				_EXCEPTION3("TargetCenterLat / NCol dimension size mismatch (%i, %i x %i)",
+					m_dTargetCenterLat.GetRows(), dim0->size(), dim1->size());
+			}
+			if (varLat == NULL) {
+				_EXCEPTIONT("Cannot create variable \"lat\" in target file");
+			}
+
+			varLat->put(
+				&(m_dTargetCenterLat[0]),
+				dim0->size(),
+				dim1->size());
+
+			//varLat->add_att("bounds", "lat_bnds");
+			varLat->add_att("units", "degrees_north");
+			varLat->add_att("axis", "Y");
+			varLat->add_att("long_name", "latitude");
+			varLat->add_att("standard_name", "latitude");
+
+		} else {
+			if (varLat->num_dims() != 2) {
+				_EXCEPTIONT("\"lat\" variable mismatch");
+			}
+			if (varLat->get_dim(0)->size() != dim0->size()) {
+				_EXCEPTIONT("\"lat\" variable mismatch");
+			}
+			if (varLat->get_dim(1)->size() != dim1->size()) {
+				_EXCEPTIONT("\"lat\" variable mismatch");
+			}
+		}
 	}
 
 	// Loop through all variables
