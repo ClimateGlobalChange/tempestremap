@@ -1356,12 +1356,13 @@ void OfflineMap::Apply(
 		}
 
 	// Add lat/lon to unstructured data
-	} else {
+	} else if (!fTargetRectilinear) {
 		NcVar * varLon = ncTarget.get_var("lon");
 		if (varLon == NULL) {
 			varLon = ncTarget.add_var("lon", ncDouble, dim0);
 			if (m_dTargetCenterLon.GetRows() != dim0->size()) {
-				_EXCEPTIONT("TargetCenterLon / NCol dimension size mismatch");
+				_EXCEPTION2("TargetCenterLon / NCol dimension size mismatch (%i, %i)",
+					m_dTargetCenterLon.GetRows(), dim0->size());
 			}
 			if (varLon == NULL) {
 				_EXCEPTIONT("Cannot create variable \"lon\" in target file");
@@ -1387,7 +1388,8 @@ void OfflineMap::Apply(
 		if (varLat == NULL) {
 			varLat = ncTarget.add_var("lat", ncDouble, dim0);
 			if (m_dTargetCenterLat.GetRows() != dim0->size()) {
-				_EXCEPTIONT("TargetCenterLat / NCol dimension size mismatch");
+				_EXCEPTION2("TargetCenterLat / NCol dimension size mismatch (%i, %i)",
+					m_dTargetCenterLat.GetRows(), dim0->size());
 			}
 			if (varLat == NULL) {
 				_EXCEPTIONT("Cannot create variable \"lat\" in target file");
