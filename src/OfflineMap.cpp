@@ -530,11 +530,11 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 		ApplyLocalMap(
 			face,
 			mesh.nodes,
-			dG[i],
 			dG[j],
+			dG[i],
 			node);
 
-		int iNode = dataGLLnodes[j][i][k] - 1;
+		int iNode = dataGLLnodes[i][j][k] - 1;
 
 		XYZtoRLL_Deg(
 			node.x,
