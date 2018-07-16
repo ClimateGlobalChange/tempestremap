@@ -26,6 +26,7 @@
 #include <map>
 #include <string>
 #include <cmath>
+#include <cassert>
 
 #include "Exception.h"
 #include "DataVector.h"
