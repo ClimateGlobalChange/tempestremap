@@ -770,6 +770,40 @@ struct FindFaceStruct {
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Calculate latitude and longitude from normalized 3D Cartesian
+///		coordinates, in degrees.
+///	</summary>
+inline void XYZtoRLL_Deg(
+	const double & dX,
+	const double & dY,
+	const double & dZ,
+	double & dLon,
+	double & dLat
+) {
+	assert(fabs(dX * dX + dY * dY + dZ * dZ - 1.0) < HighTolerance);
+
+	if (fabs(dZ) < 1.0 - ReferenceTolerance) {
+		dLon = atan2(dY, dX);
+		dLat = asin(dZ);
+
+		if (dLon < 0.0) {
+			dLon += 2.0 * M_PI;
+		}
+
+		dLon = dLon / M_PI * 180.0;
+		dLat = dLat / M_PI * 180.0;
+
+	} else if (dZ > 0.0) {
+		dLon = 0.0;
+		dLat = 90.0;
+
+	} else {
+		dLon = 0.0;
+		dLat = -90.0;
+	}
+}
+
+///	<summary>
 ///		Calculate the dot product between two Nodes.
 ///	</summary>
 inline Real DotProduct(

@@ -431,15 +431,10 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 			dYc += dY;
 			dZc += dZ;
 
-			double dLonV = atan2(dY, dX) / M_PI * 180.0;
-			double dLatV = asin(dZ) / M_PI * 180.0;
-
-			if (dLonV < 0.0) {
-				dLonV += 360.0;
-			}
-
-			dVertexLon[i][j] = dLonV;
-			dVertexLat[i][j] = dLatV;
+			XYZtoRLL_Deg(
+				dX, dY, dZ,
+				dVertexLon[i][j],
+				dVertexLat[i][j]);
 		}
 
 		if ((fLatLon) && (nNodes == 3)) {
@@ -457,15 +452,12 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 		dYc /= dMag;
 		dZc /= dMag;
 
-		double dLonC = atan2(dYc, dXc) / M_PI * 180.0;
-		double dLatC = asin(dZc) / M_PI * 180.0;
-
-		if (dLonC < 0.0) {
-			dLonC += 360.0;
-		}
-
-		dCenterLon[i] = dLonC;
-		dCenterLat[i] = dLatC;
+		XYZtoRLL_Deg(
+			dXc,
+			dYc,
+			dZc,
+			dCenterLon[i],
+			dCenterLat[i]);
 
 		// Modify vertex coordinates of polar volumes on latlon grid
 		if (fLatLon) {
@@ -544,15 +536,12 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 
 		int iNode = dataGLLnodes[j][i][k] - 1;
 
-		double dLon = atan2(node.y, node.x);
-		double dLat = asin(node.z);
-
-		if (dLon < 0.0) {
-			dLon += 2.0 * M_PI;
-		}
-
-		dCenterLon[iNode] = dLon / M_PI * 180.0;
-		dCenterLat[iNode] = dLat / M_PI * 180.0;
+		XYZtoRLL_Deg(
+			node.x,
+			node.y,
+			node.z,
+			dCenterLon[iNode],
+			dCenterLat[iNode]);
 	}
 	}
 	}
