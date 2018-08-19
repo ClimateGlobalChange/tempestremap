@@ -148,6 +148,89 @@ public:
 	);
 
 public:
+
+	///	<summary>
+	///		Provide the getter method for source/target element center longitude vector.
+	///	</summary>
+	DataVector<double>& GetCenterLon(
+		bool isSource
+	)
+	{
+		return (isSource ? m_dSourceCenterLon : m_dTargetCenterLon);
+	}
+
+	///	<summary>
+	///		Provide the const getter method for source/target element center longitude vector.
+	///	</summary>
+	const DataVector<double>& GetCenterLon(
+		bool isSource
+	) const
+	{
+		return (isSource ? m_dSourceCenterLon : m_dTargetCenterLon);
+	}
+
+	///	<summary>
+	///		Provide the getter method for source/target element center latitude vector.
+	///	</summary>
+	DataVector<double>& GetCenterLat(
+		bool isSource
+	)
+	{
+		return (isSource ? m_dSourceCenterLat : m_dTargetCenterLat);
+	}
+
+	///	<summary>
+	///		Provide the getter method for source/target element center latitude vector.
+	///	</summary>
+	const DataVector<double>& GetCenterLat(
+		bool isSource
+	) const
+	{
+		return (isSource ? m_dSourceCenterLat : m_dTargetCenterLat);
+	}
+
+	///	<summary>
+	///		Provide the getter method for source/target vertex center longitude vector.
+	///	</summary>
+	DataMatrix<double>& GetVertexLon(
+		bool isSource
+	)
+	{
+		return (isSource ? m_dSourceVertexLon : m_dTargetVertexLon);
+	}
+
+	///	<summary>
+	///		Provide the const getter method for source/target vertex center longitude vector.
+	///	</summary>
+	const DataMatrix<double>& GetVertexLon(
+		bool isSource
+	) const
+	{
+		return (isSource ? m_dSourceVertexLon : m_dTargetVertexLon);
+	}
+
+	///	<summary>
+	///		Provide the getter method for source/target vertex center latitude vector.
+	///	</summary>
+	DataMatrix<double>& GetVertexLat(
+		bool isSource
+	)
+	{
+		return (isSource ? m_dSourceVertexLat : m_dTargetVertexLat);
+	}
+
+	///	<summary>
+	///		Provide the getter method for source/target vertex center latitude vector.
+	///	</summary>
+	const DataMatrix<double>& GetVertexLat(
+		bool isSource
+	) const
+	{
+		return (isSource ? m_dSourceVertexLat : m_dTargetVertexLat);
+	}
+
+
+public:
 	///	<summary>
 	///		Copy a list of variables from a source file to target file.
 	///	</summary>
