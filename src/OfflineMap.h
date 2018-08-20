@@ -150,83 +150,131 @@ public:
 public:
 
 	///	<summary>
-	///		Provide the getter method for source/target element center longitude vector.
+	///		Get the writable reference to the source element center longitude vector.
 	///	</summary>
-	DataVector<double>& GetCenterLon(
-		bool isSource
-	)
+	DataVector<double>& GetSourceCenterLon()
 	{
-		return (isSource ? m_dSourceCenterLon : m_dTargetCenterLon);
+		return m_dSourceCenterLon;
 	}
 
 	///	<summary>
-	///		Provide the const getter method for source/target element center longitude vector.
+	///		Get the const reference to the source element center longitude vector.
 	///	</summary>
-	const DataVector<double>& GetCenterLon(
-		bool isSource
-	) const
+	const DataVector<double>& GetSourceCenterLon() const
 	{
-		return (isSource ? m_dSourceCenterLon : m_dTargetCenterLon);
+		return m_dSourceCenterLon;
 	}
 
 	///	<summary>
-	///		Provide the getter method for source/target element center latitude vector.
+	///		Get the writable reference to the source element center latitude vector.
 	///	</summary>
-	DataVector<double>& GetCenterLat(
-		bool isSource
-	)
+	DataVector<double>& GetSourceCenterLat()
 	{
-		return (isSource ? m_dSourceCenterLat : m_dTargetCenterLat);
+		return m_dSourceCenterLat;
 	}
 
 	///	<summary>
-	///		Provide the getter method for source/target element center latitude vector.
+	///		Get the const reference to the source element center latitude vector.
 	///	</summary>
-	const DataVector<double>& GetCenterLat(
-		bool isSource
-	) const
+	const DataVector<double>& GetSourceCenterLat() const
 	{
-		return (isSource ? m_dSourceCenterLat : m_dTargetCenterLat);
+		return m_dSourceCenterLat;
 	}
 
 	///	<summary>
-	///		Provide the getter method for source/target vertex center longitude vector.
+	///		Get the writable reference to the target element center longitude vector.
 	///	</summary>
-	DataMatrix<double>& GetVertexLon(
-		bool isSource
-	)
+	DataVector<double>& GetTargetCenterLon()
 	{
-		return (isSource ? m_dSourceVertexLon : m_dTargetVertexLon);
+		return m_dTargetCenterLon;
 	}
 
 	///	<summary>
-	///		Provide the const getter method for source/target vertex center longitude vector.
+	///		Get the const reference to the target element center longitude vector.
 	///	</summary>
-	const DataMatrix<double>& GetVertexLon(
-		bool isSource
-	) const
+	const DataVector<double>& GetTargetCenterLon() const
 	{
-		return (isSource ? m_dSourceVertexLon : m_dTargetVertexLon);
+		return m_dTargetCenterLon;
 	}
 
 	///	<summary>
-	///		Provide the getter method for source/target vertex center latitude vector.
+	///		Get the writable reference to the target element center latitude vector.
 	///	</summary>
-	DataMatrix<double>& GetVertexLat(
-		bool isSource
-	)
+	DataVector<double>& GetTargetCenterLat()
 	{
-		return (isSource ? m_dSourceVertexLat : m_dTargetVertexLat);
+		return m_dTargetCenterLat;
 	}
 
 	///	<summary>
-	///		Provide the getter method for source/target vertex center latitude vector.
+	///		Get the const reference to the target element center latitude vector.
 	///	</summary>
-	const DataMatrix<double>& GetVertexLat(
-		bool isSource
-	) const
+	const DataVector<double>& GetTargetCenterLat() const
 	{
-		return (isSource ? m_dSourceVertexLat : m_dTargetVertexLat);
+		return m_dTargetCenterLat;
+	}
+
+	///	<summary>
+	///		Get the writable reference to the source vertex longitude matrix.
+	///	</summary>
+	DataMatrix<double>& GetSourceVertexLon()
+	{
+		return m_dSourceVertexLon;
+	}
+
+	///	<summary>
+	///		Get the const reference to the source vertex longitude matrix.
+	///	</summary>
+	const DataMatrix<double>& GetSourceVertexLon() const
+	{
+		return m_dSourceVertexLon;
+	}
+
+	///	<summary>
+	///		Get the writable reference to the target vertex longitude matrix.
+	///	</summary>
+	DataMatrix<double>& GetTargetVertexLon()
+	{
+		return m_dTargetVertexLon;
+	}
+
+	///	<summary>
+	///		Get the const reference to the target vertex longitude matrix.
+	///	</summary>
+	const DataMatrix<double>& GetTargetVertexLon() const
+	{
+		return m_dTargetVertexLon;
+	}
+
+	///	<summary>
+	///		Get the writable reference to the source vertex latitude matrix.
+	///	</summary>
+	DataMatrix<double>& GetSourceVertexLat()
+	{
+		return m_dSourceVertexLat;
+	}
+
+	///	<summary>
+	///		Get the const reference to the source vertex latitude matrix.
+	///	</summary>
+	const DataMatrix<double>& GetSourceVertexLat() const
+	{
+		return m_dSourceVertexLat;
+	}
+
+	///	<summary>
+	///		Get the writable reference to the target vertex latitude natrix.
+	///	</summary>
+	DataMatrix<double>& GetTargetVertexLat()
+	{
+		return m_dTargetVertexLat;
+	}
+
+	///	<summary>
+	///		Get the const reference to the target vertex latitude matrix.
+	///	</summary>
+	const DataMatrix<double>& GetTargetVertexLat() const
+	{
+		return m_dTargetVertexLat;
 	}
 
 
