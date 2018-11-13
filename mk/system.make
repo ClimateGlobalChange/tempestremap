@@ -20,6 +20,10 @@ else ifeq ($(UNAME),Linux)
     SYSTEM= CORI
     SYSTEM_MAKEFILE= cori.make
   endif
+  ifeq ($(NERSC_HOST),edison)
+    SYSTEM= EDISON
+    SYSTEM_MAKEFILE= cori.make
+  endif
   ifeq ($(GROUP),ncar)
     SYSTEM= CHEYENNE
     SYSTEM_MAKEFILE= cheyenne.make
