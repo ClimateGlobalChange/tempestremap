@@ -87,6 +87,7 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateRLLMesh \
               GenerateUTMMesh \
               GenerateTestData \
+			  GenerateTransposeMap \
               GenerateVolumetricMesh \
               MeshToTxt \
               ShpToMesh
