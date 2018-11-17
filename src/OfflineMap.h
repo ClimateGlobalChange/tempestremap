@@ -314,7 +314,8 @@ public:
 	///		Read the OfflineMap from a NetCDF file.
 	///	</summary>
 	virtual void Read(
-		const std::string & strSource
+		const std::string & strSource,
+		std::map<std::string, std::string> * pmapAttributes = NULL
 	);
 
 	///	<summary>

@@ -2,10 +2,10 @@
 ///
 ///	\file    GenerateTransposeMap.cpp
 ///	\author  Paul Ullrich
-///	\version June 19th, 2017
+///	\version November 16, 2018
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2000-2018 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -22,6 +22,65 @@
 
 #include <cmath>
 #include <iostream>
+
+///////////////////////////////////////////////////////////////////////////////
+
+typedef std::map<std::string, std::string> AttributeMap;
+typedef AttributeMap::value_type AttributePair;
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SwapAttributeNames(
+	AttributeMap & mapAttributes,
+	const std::string & strFirst,
+	const std::string & strSecond
+) {
+	const int nExt = strFirst.length();
+	if (nExt != strSecond.length()) {
+		_EXCEPTIONT("Attribute extensions must have identical length");
+	}
+
+	// Swap src and dst attributes
+	AttributeMap::iterator iterAtt = mapAttributes.begin();
+	for (; iterAtt != mapAttributes.end(); iterAtt++) {
+		const std::string & strName = iterAtt->first;
+		if (strName.length() > nExt) {
+			if (strName.substr(strName.length()-nExt) == strFirst) {
+				const std::string strDstName =
+					strName.substr(0, strName.length()-nExt) + strSecond;
+
+				AttributeMap::iterator iterAttDst =
+					mapAttributes.find(strDstName);
+
+				if (iterAttDst == mapAttributes.end()) {
+					mapAttributes.insert(
+						AttributePair(
+							strDstName,
+							iterAtt->second));
+
+				} else {
+					const std::string strValue = iterAttDst->second;
+					iterAttDst->second = iterAtt->second;
+					iterAtt->second = strValue;
+				}
+
+			} else if (strName.substr(strName.length()-nExt) == strSecond) {
+				const std::string strSrcName =
+					strName.substr(0, strName.length()-nExt) + strFirst;
+
+				AttributeMap::iterator iterAttSrc =
+					mapAttributes.find(strSrcName);
+
+				if (iterAttSrc == mapAttributes.end()) {
+					mapAttributes.insert(
+						AttributePair(
+							strSrcName,
+							iterAtt->second));
+				}
+			}
+		}
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -67,10 +126,13 @@ try {
 		_EXCEPTIONT("Output map file (--out) must be specified");
 	}
 
+	// Atribute map
+	AttributeMap mapAttributes;
+
 	// Load map from file
 	AnnounceStartBlock("Loading input map");
 	OfflineMap mapIn;
-	mapIn.Read(strInputMapFile);
+	mapIn.Read(strInputMapFile, &mapAttributes);
 	AnnounceEndBlock("Done");
 
 	// Generate transpose map
@@ -91,9 +153,23 @@ try {
 		AnnounceEndBlock("Done");
 	}
 
+	// Swap attribute names
+	SwapAttributeNames(mapAttributes, "_src", "_dst");
+	SwapAttributeNames(mapAttributes, "_a", "_b");
+
+	// Find version name
+	AttributeMap::iterator iterVersion = mapAttributes.find("version");
+	if (iterVersion == mapAttributes.end()) {
+		mapAttributes.insert(
+			AttributePair("version", "GenerateTransposeMap 2.0 : 2018-11-16"));
+	} else {
+		iterVersion->second =
+			"GenerateTransposeMap 2.0 : 2018-11-16 :: " + iterVersion->second;
+	}
+
 	// Write map to file
 	AnnounceStartBlock("Writing transpose map");
-	mapOut.Write(strOutputMapFile);
+	mapOut.Write(strOutputMapFile, mapAttributes);
 	AnnounceEndBlock("Done");
 
 	return (0);

@@ -1759,7 +1759,8 @@ void OfflineMap::Apply(
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::Read(
-	const std::string & strSource
+	const std::string & strSource,
+	std::map<std::string, std::string> * pmapAttributes
 ) {
 	NcFile ncMap(strSource.c_str(), NcFile::ReadOnly);
 	if (!ncMap.is_valid()) {
@@ -2042,6 +2043,22 @@ void OfflineMap::Read(
 
 	// Set the entries of the map
 	m_mapRemap.SetEntries(vecRow, vecCol, vecS);
+
+	// Load file attributes
+	if (pmapAttributes != NULL) {
+		for (int a = 0; a < ncMap.num_atts(); a++) {
+			NcAtt * attGlobal = ncMap.get_att(a);
+			if (attGlobal == NULL) {
+				_EXCEPTIONT("Logic error");
+			}
+
+			std::pair<std::string, std::string> prAttribute(
+				attGlobal->name(),
+				attGlobal->as_string(0));
+
+			pmapAttributes->insert(prAttribute);
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
