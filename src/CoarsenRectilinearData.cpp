@@ -354,8 +354,8 @@ try {
 		_EXCEPTION1("Unable to find variable \"%s\" in input file",
 			strVarNameX.c_str());
 	}
-	if (varX->type() != ncDouble) {
-		_EXCEPTIONT("Only double type supported for dimension variables");
+	if ((varX->type() != ncDouble) && (varX->type() != ncFloat)) {
+		_EXCEPTIONT("Only double or float type supported for dimension variables");
 	}
 
 	NcVar * varY = ncfilein.get_var(strVarNameY.c_str());
@@ -363,8 +363,8 @@ try {
 		_EXCEPTION1("Unable to find variable \"%s\" in input file",
 			strVarNameY.c_str());
 	}
-	if (varY->type() != ncDouble) {
-		_EXCEPTIONT("Only double type supported for dimension variables");
+	if ((varY->type() != ncDouble) && (varY->type() != ncFloat)) {
+		_EXCEPTIONT("Only double or float type supported for dimension variables");
 	}
 
 	// Load variable
