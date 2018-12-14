@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 
     ParseCommandLine(argc, argv);
     EndCommandLine(argv)
-
+/*
     // Verify latitude box is increasing
     if (dLatBegin >= dLatEnd) {
         _EXCEPTIONT("--lat_begin and --lat_end must specify a positive interval");
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     if (dLonBegin >= dLonEnd) {
         _EXCEPTIONT("--lon_begin and --lon_end must specify a positive interval");
     }
-    
+ */
     std::cout << "=========================================================";
     std::cout << std::endl;
 

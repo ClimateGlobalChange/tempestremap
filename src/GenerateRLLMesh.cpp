@@ -155,6 +155,9 @@ try {
 		if (dLatEdge[0] < -90.0) {
 			dLatEdge[0] = -90.0;
 		}
+		if (dLatEdge[0] > 90.0) {
+			dLatEdge[0] = 90.0;
+		}
 
 		dLatEdge[nLatitudes] =
 			dLatNode[nLatitudes-1]
@@ -162,6 +165,9 @@ try {
 
 		if (dLatEdge[nLatitudes] > 90.0) {
 			dLatEdge[nLatitudes] = 90.0;
+		}
+		if (dLatEdge[nLatitudes] < -90.0) {
+			dLatEdge[nLatitudes] = -90.0;
 		}
 
 		for (int j = 1; j < nLatitudes; j++) {
@@ -297,14 +303,29 @@ try {
 		nodes.push_back(Node(0.0, 0.0, +1.0));
 	}
 
+	// Flip orientation
+	bool fFlipOrientation = false;
+
+	if (dLatEdge[1] < dLatEdge[0]) {
+		fFlipOrientation = !fFlipOrientation;
+	}
+	if (dLonEdge[1] < dLonEdge[0]) {
+		fFlipOrientation = !fFlipOrientation;
+	}
+
 	// Generate south polar faces
 	if (fIncludeSouthPole) {
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
 			face.SetNode(0, 0);
-			face.SetNode(1, (i+1) % nLongitudeNodes + 1);
 			face.SetNode(2, i + 1);
-			face.SetNode(3, 0);
+			if (!fFlipOrientation) {
+				face.SetNode(1, (i+1) % nLongitudeNodes + 1);
+				face.SetNode(3, 0);
+			} else {
+				face.SetNode(1, 0);
+				face.SetNode(3, (i+1) % nLongitudeNodes + 1);
+			}
 
 #ifndef ONLY_GREAT_CIRCLES
 			face.edges[1].type = Edge::Type_ConstantLatitude;
@@ -325,10 +346,15 @@ try {
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
 			face.SetNode(0, iThisLatNodeIx + (i + 1) % nLongitudeNodes);
-			face.SetNode(1, iNextLatNodeIx + (i + 1) % nLongitudeNodes);
 			face.SetNode(2, iNextLatNodeIx + i);
-			face.SetNode(3, iThisLatNodeIx + i);
 
+			if (!fFlipOrientation) {
+				face.SetNode(1, iNextLatNodeIx + (i + 1) % nLongitudeNodes);
+				face.SetNode(3, iThisLatNodeIx + i);
+			} else {
+				face.SetNode(1, iThisLatNodeIx + i);
+				face.SetNode(3, iNextLatNodeIx + (i + 1) % nLongitudeNodes);
+			}
 #ifndef ONLY_GREAT_CIRCLES
 			face.edges[1].type = Edge::Type_ConstantLatitude;
 			face.edges[3].type = Edge::Type_ConstantLatitude;
@@ -349,9 +375,15 @@ try {
 		for (int i = 0; i < nLongitudes; i++) {
 			Face face(4);
 			face.SetNode(0, iNorthPolarNodeIx);
-			face.SetNode(1, iThisLatNodeIx + i);
 			face.SetNode(2, iThisLatNodeIx + (i + 1) % nLongitudeNodes);
-			face.SetNode(3, iNorthPolarNodeIx);
+
+			if (!fFlipOrientation) {
+				face.SetNode(1, iThisLatNodeIx + i);
+				face.SetNode(3, iNorthPolarNodeIx);
+			} else {
+				face.SetNode(1, iNorthPolarNodeIx);
+				face.SetNode(3, iThisLatNodeIx + i);
+			}
 
 #ifndef ONLY_GREAT_CIRCLES
 			face.edges[1].type = Edge::Type_ConstantLatitude;
