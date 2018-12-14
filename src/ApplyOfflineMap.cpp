@@ -55,9 +55,19 @@ static void ParseVariableList(
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C" 
-int ApplyOfflineMap( std::string strInputData, std::string strInputMap, std::string strVariables, std::string strInputData2, 
-					 std::string strInputMap2, std::string strVariables2, std::string strOutputData, std::string strNColName, 
-					 bool fOutputDouble, std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride
+int ApplyOfflineMap(
+	std::string strInputData,
+	std::string strInputMap,
+	std::string strVariables,
+	std::string strInputData2, 
+	std::string strInputMap2,
+	std::string strVariables2,
+	std::string strOutputData,
+	std::string strNColName, 
+	bool fOutputDouble,
+	std::string strPreserveVariables,
+	bool fPreserveAll,
+	double dFillValueOverride
 ) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -165,6 +175,7 @@ try {
 			vecPreserveVariableStrings);
 		AnnounceEndBlock(NULL);
 	}
+
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
