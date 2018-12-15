@@ -27,12 +27,9 @@ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 # TODO: Should we check for partial C++11 support also ?
 AX_CXX_COMPILE_STDCXX_0X
 
-# Checks for FORTRAN - required for BLAS/LAPACK symbol name mangling
-AC_PROG_F77([ifort gfortran g77 f77])    
-AC_F77_LIBRARY_LDFLAGS
-LIBS="$LIBS $FCLIBS -lm"
-
-# Checks for libraries.
+# Checks for some standard libraries.
+AC_CHECK_LIB(dl, dlopen, LIBS="$LIBS -ldl")
+AC_CHECK_LIB(m, pow, LIBS="$LIBS -lm")
 
 # Checks for BLAS/LAPACK libraries:
 AX_BLAS([], [AC_MSG_ERROR([BLAS library not found])])

@@ -82,7 +82,15 @@ esac
 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-lapack=$with_lapack"
 
 # Get fortran linker name of LAPACK function to check for.
-AC_F77_FUNC(cheev)
+if (test "x$ax_blas_underscore" != "xyes"); then
+  cheev="cheev"
+else
+  if (test "x$ax_blas_underscore" != "xyes2"); then
+    cheev="cheev_"
+  else
+    cheev="cheev__"
+  fi
+fi
 
 # We cannot use LAPACK if BLAS is not found
 if test "x$ax_blas_ok" != xyes; then
