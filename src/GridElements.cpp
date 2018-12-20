@@ -27,7 +27,7 @@
 #include <ctime>
 #include <cmath>
 #include <cstring>
-#include <netcdfcpp.h>
+#include "netcdfcpp.h"
 
 #include "triangle.h"
 
