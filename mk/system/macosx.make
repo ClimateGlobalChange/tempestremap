@@ -16,7 +16,7 @@ F90_RUNTIME=       -lgfortran
 # NetCDF
 NETCDF_ROOT=       /opt/local
 NETCDF_CXXFLAGS=   -I$(NETCDF_ROOT)/include
-NETCDF_LIBRARIES=  -lnetcdf -lnetcdf_c++
+NETCDF_LIBRARIES=  -lnetcdf
 NETCDF_LDFLAGS=    -L$(NETCDF_ROOT)/lib
 
 # LAPACK (Mac OS X Accelerate Framework)

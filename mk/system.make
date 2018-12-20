@@ -12,10 +12,6 @@ ifeq ($(UNAME),Darwin)
   SYSTEM= MACOSX
   SYSTEM_MAKEFILE= macosx.make
 else ifeq ($(UNAME),Linux)
-  ifeq ($(NERSC_HOST),babbage)
-    SYSTEM= BABBAGE
-    SYSTEM_MAKEFILE= babbage.make
-  endif
   ifeq ($(NERSC_HOST),cori)
     SYSTEM= CORI
     SYSTEM_MAKEFILE= cori.make

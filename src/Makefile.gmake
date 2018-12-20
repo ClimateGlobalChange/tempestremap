@@ -40,7 +40,9 @@ UTIL_FILES= Announce.cpp \
 			GenerateOverlapMesh_v1.cpp \
 			GenerateRLLMesh.cpp \
 			GenerateUTMMesh.cpp \
-			triangle.cpp
+			triangle.cpp \
+			netcdf.cpp \
+			ncvalues.cpp
 
 # Mesh generation drivers
 GenerateTestData_FILES= GenerateTestData.cpp
