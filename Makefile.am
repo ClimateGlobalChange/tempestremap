@@ -26,6 +26,9 @@ libTempestRemap_la_include_HEADERS = \
 	src/order32.h \
 	src/MathHelper.h \
 	src/NetCDFUtilities.h \
+	src/ncvalues.h \
+	src/netcdf.hh \
+	src/netcdfcpp.h \
 	src/PolynomialInterp.h \
 	src/DataMatrix3D.h \
 	src/Exception.h \
@@ -66,6 +69,8 @@ libTempestRemap_la_SOURCES = \
 	src/LegendrePolynomial.cpp \
 	src/FiniteElementTools.cpp \
 	src/NetCDFUtilities.cpp \
+	src/ncvalues.cpp \
+	src/netcdf.cpp \
 	src/OverlapMesh.cpp \
 	src/OfflineMap.cpp \
 	src/LinearRemapSE0.cpp \
