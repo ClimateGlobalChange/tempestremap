@@ -1977,6 +1977,19 @@ void OfflineMap::Read(
 	}
 	varAreaB->get(&(m_dTargetAreas[0]), nB);
 
+	// Read masks
+	NcVar * varMaskA = ncMap.get_var("mask_a");
+	if (varMaskA != NULL) {
+		m_iSourceMask.Allocate(nA);
+		varMaskA->get(&(m_iSourceMask[0]), nA);
+	}
+
+	NcVar * varMaskB = ncMap.get_var("mask_b");
+	if (varMaskB != NULL) {
+		m_iTargetMask.Allocate(nB);
+		varMaskB->get(&(m_iTargetMask[0]), nB);
+	}
+
 	// Read SparseMatrix entries
 	NcDim * dimNS = ncMap.get_dim("n_s");
 	if (dimNS == NULL) {
@@ -2213,9 +2226,44 @@ void OfflineMap::Write(
 	// Write areas
 	NcVar * varAreaA = ncMap.add_var("area_a", ncDouble, dimNA);
 	varAreaA->put(&(m_dSourceAreas[0]), nA);
+	varAreaA->add_att("units", "steradians");
 
 	NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
 	varAreaB->put(&(m_dTargetAreas[0]), nB);
+	varAreaB->add_att("units", "steradians");
+
+	// Write masks
+	if (m_iSourceMask.IsAttached()) {
+		NcVar * varMaskA = ncMap.add_var("mask_a", ncInt, dimNA);
+		varMaskA->put(&(m_iSourceMask[0]), nA);
+		varMaskA->add_att("units", "unitless");
+
+		if (!m_iTargetMask.IsAttached()) {
+			NcVar * varMaskB = ncMap.add_var("mask_b", ncInt, dimNB);
+			DataArray1D<int> iTargetMaskTemp(nB);
+			for (int i = 0; i < nB; i++) {
+				iTargetMaskTemp[i] = 1;
+			}
+			varMaskB->put(&(iTargetMaskTemp[0]), nB);
+			varMaskB->add_att("units", "unitless");
+		}
+	}
+
+	if (m_iTargetMask.IsAttached()) {
+		if (!m_iSourceMask.IsAttached()) {
+			NcVar * varMaskA = ncMap.add_var("mask_a", ncInt, dimNA);
+			DataArray1D<int> iSourceMaskTemp(nA);
+			for (int i = 0; i < nA; i++) {
+				iSourceMaskTemp[i] = 1;
+			}
+			varMaskA->put(&(iSourceMaskTemp[0]), nA);
+			varMaskA->add_att("units", "unitless");
+		}
+
+		NcVar * varMaskB = ncMap.add_var("mask_b", ncInt, dimNB);
+		varMaskB->put(&(m_iTargetMask[0]), nB);
+		varMaskB->add_att("units", "unitless");
+	}
 
 	// Write SparseMatrix entries
 	DataArray1D<int> vecRow;
@@ -2236,9 +2284,13 @@ void OfflineMap::Write(
 
 		NcVar * varFracA = ncMap.add_var("frac_a", ncDouble, dimNA);
 		varFracA->put(&(dFracA[0]), nA);
+		varFracA->add_att("name", "fraction of target coverage of source dof");
+		varFracA->add_att("units", "unitless");
 
 		NcVar * varFracB = ncMap.add_var("frac_b", ncDouble, dimNB);
 		varFracB->put(&(dFracB[0]), nB);
+		varFracB->add_att("name", "fraction of source coverage of target dof");
+		varFracB->add_att("units", "unitless");
 	}
 
 	// Increment vecRow and vecCol
@@ -2252,8 +2304,15 @@ void OfflineMap::Write(
 	NcDim * dimNS = ncMap.add_dim("n_s", nS);
 
 	NcVar * varRow = ncMap.add_var("row", ncInt, dimNS);
+	varRow->add_att("name", "sparse matrix target dof index");
+	varRow->add_att("first_index", "1");
+
 	NcVar * varCol = ncMap.add_var("col", ncInt, dimNS);
+	varCol->add_att("name", "sparse matrix source dof index");
+	varCol->add_att("first_index", "1");
+
 	NcVar * varS = ncMap.add_var("S", ncDouble, dimNS);
+	varS->add_att("name", "sparse matrix coefficient");
 
 	varRow->set_cur((long)0);
 	varRow->put(&(vecRow[0]), nS);
@@ -2290,6 +2349,9 @@ void OfflineMap::SetTranspose(
 ) {
 	m_dSourceAreas = mapIn.m_dTargetAreas;
 	m_dTargetAreas = mapIn.m_dSourceAreas;
+
+	m_iSourceMask = mapIn.m_iTargetMask;
+	m_iTargetMask = mapIn.m_iSourceMask;
 
 	m_dSourceCenterLon = mapIn.m_dTargetCenterLon;
 	m_dSourceCenterLat = mapIn.m_dTargetCenterLat;

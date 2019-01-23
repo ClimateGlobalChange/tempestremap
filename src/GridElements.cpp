@@ -854,6 +854,26 @@ void Mesh::Read(const std::string & strFile) {
 			}
 		}
 
+		// Load mask variable
+		NcVar * varMask = ncFile.get_var("grid_imask");
+		if (varMask != NULL) {
+			if (varMask->num_dims() != 1) {
+				_EXCEPTIONT("Unknown format of variable \"grid_imask\": "
+					"More than one dimension");
+			}
+			if (varMask->get_dim(0)->size() != nGridSize) {
+				_EXCEPTIONT("Unknown format of variable \"grid_imask\": "
+					"Incorrect first dimension size");
+			}
+			if (varMask->type() != ncInt) {
+				_EXCEPTIONT("Unknown format of variable \"grid_imask\": "
+					"Expected int type");
+			}
+
+			vecMask.Allocate(nGridSize);
+			varMask->get(&(vecMask[0]), nGridSize);
+		}
+
 		// Current global node index
 		int ixNode = 0;
 

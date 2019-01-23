@@ -649,6 +649,11 @@ public:
 	DataArray1D<double> vecFaceArea;
 
 	///	<summary>
+	///		Vector storing mask variable for this mesh.
+	///	</summary>
+	DataArray1D<int> vecMask;
+
+	///	<summary>
 	///		EdgeMap for this mesh.
 	///	</summary>
 	EdgeMap edgemap;

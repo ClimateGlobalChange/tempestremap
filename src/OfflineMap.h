@@ -364,53 +364,77 @@ public:
 
 public:
 	///	<summary>
-	///		Get the vector of areas associated with degrees of freedom on
-	///		the input Mesh.
+	///		Get the vector of areas associated with the source mesh.
 	///	</summary>
 	DataArray1D<double> & GetSourceAreas() {
 		return m_dSourceAreas;
 	}
 
 	///	<summary>
-	///		Get the vector of areas associated with degrees of freedom on
-	///		the input Mesh.
+	///		Get the vector of areas associated with the source mesh.
 	///	</summary>
 	const DataArray1D<double> & GetSourceAreas() const {
 		return m_dSourceAreas;
 	}
 
 	///	<summary>
-	///		Get the vector of areas associated with degrees of freedom on
-	///		the output Mesh.
+	///		Get the vector of areas associated with the target mesh.
 	///	</summary>
 	DataArray1D<double> & GetTargetAreas() {
 		return m_dTargetAreas;
 	}
 
 	///	<summary>
-	///		Get the vector of areas associated with degrees of freedom on
-	///		the output Mesh.
+	///		Get the vector of areas associated with the target mesh.
 	///	</summary>
 	const DataArray1D<double> & GetTargetAreas() const {
 		return m_dTargetAreas;
 	}
 
 	///	<summary>
-	///		Set the vector of areas associated with degrees of freedom on
-	///		the input Mesh.
+	///		Set the vector of areas associated with the source mesh.
 	///	</summary>
 	void SetSourceAreas(const DataArray1D<double> & dSourceAreas) {
 		m_dSourceAreas = dSourceAreas;
 	}
 
 	///	<summary>
-	///		Set the vector of areas associated with degrees of freedom on
-	///		the output Mesh.
+	///		Set the vector of areas associated with the target mesh.
 	///	</summary>
 	void SetTargetAreas(const DataArray1D<double> & dTargetAreas) {
 		m_dTargetAreas = dTargetAreas;
 	}
 
+public:
+	///	<summary>
+	///		Get the mask vector associated with the source grid.
+	///	</summary>
+	const DataArray1D<int> & GetSourceMask() const {
+		return m_iSourceMask;
+	}
+
+	///	<summary>
+	///		Get the mask vector associated with the target grid.
+	///	</summary>
+	const DataArray1D<int> & GetTargetMask() const {
+		return m_iTargetMask;
+	}
+
+	///	<summary>
+	///		Set the mask vector associated with the source grid.
+	///	</summary>
+	void SetSourceMask(const DataArray1D<int> & iSourceMask) {
+		m_iSourceMask = iSourceMask;
+	}
+
+	///	<summary>
+	///		Set the mask vector associated with the target grid.
+	///	</summary>
+	void SetTargetMask(const DataArray1D<int> & iTargetMask) {
+		m_iTargetMask = iTargetMask;
+	}
+
+public:
 	///	<summary>
 	///		Get the SparseMatrix representation of the OfflineMap.
 	///	</summary>
@@ -459,19 +483,24 @@ protected:
 	SparseMatrix<double> m_mapRemap;
 
 	///	<summary>
-	///		Vector of areas associated with input degrees of freedom.
+	///		Vector of areas associated with source mesh.
 	///	</summary>
 	DataArray1D<double> m_dSourceAreas;
 
 	///	<summary>
-	///		Vector of areas associated with output degrees of freedom.
+	///		Vector of areas associated with target mesh.
 	///	</summary>
 	DataArray1D<double> m_dTargetAreas;
 
 	///	<summary>
-	///		Vector of partial areas associated with input degrees of freedom.
+	///		Vector containing grid mask associated with source mesh.
 	///	</summary>
-	DataArray1D<double> m_dPartialSourceAreas;
+	DataArray1D<int> m_iSourceMask;
+
+	///	<summary>
+	///		Vector containing grid mask associated with target mesh.
+	///	</summary>
+	DataArray1D<int> m_iTargetMask;
 
 protected:
 	///	<summary>

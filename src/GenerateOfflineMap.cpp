@@ -245,6 +245,9 @@ try {
     // Input mesh areas
     if (eInputType == DiscretizationType_FV) {
         mapRemap.SetSourceAreas(meshInput.vecFaceArea);
+		if (meshInput.vecMask.IsAttached()) {
+			mapRemap.SetSourceMask(meshInput.vecMask);
+		}
     }
 
     // Calculate Face areas
@@ -256,6 +259,9 @@ try {
     // Output mesh areas
     if (eOutputType == DiscretizationType_FV) {
         mapRemap.SetTargetAreas(meshOutput.vecFaceArea);
+		if (meshOutput.vecMask.IsAttached()) {
+			mapRemap.SetTargetMask(meshOutput.vecMask);
+		}
     }
 
     // Verify that overlap mesh is in the correct order
