@@ -51,7 +51,7 @@ public:
 		m_data(NULL)
 	{
 		if (fAllocate) {
-			Allocate();
+			Allocate(sSize);
 		}
 	}
 
@@ -91,29 +91,26 @@ public:
 	///		Allocate data in this DataArray1D.
 	///	</summary>
 	void Allocate(
-		size_t sSize = 0
+		size_t sSize
 	) {
 		if (!m_fOwnsData) {
 			_EXCEPTIONT("Attempting to Allocate() on attached DataArray1D");
 		}
 
+		Detach();
+
 		if (sSize == 0) {
-			sSize = m_sSize;
-		}
-		if (sSize == 0) {
-			_EXCEPTIONT("Attempting to Allocate() zero-size DataArray1D");
+			m_sSize = 0;
+
+			return;
 		}
 		if ((m_data == NULL) || (m_sSize != sSize)) {
-			Detach();
-
 			m_sSize = sSize;
 
 			m_data = reinterpret_cast<T *>(malloc(GetByteSize()));
 		}
 
 		Zero();
-
-		m_fOwnsData = true;
 	}
 
 	///	<summary>

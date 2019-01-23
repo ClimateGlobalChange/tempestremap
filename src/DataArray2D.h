@@ -57,7 +57,7 @@ public:
 		m_sSize[1] = sSize1;
 
 		if (fAllocate) {
-			Allocate();
+			Allocate(sSize0, sSize1);
 		}
 	}
 
@@ -108,38 +108,32 @@ public:
 	///		Allocate data in this DataArray2D.
 	///	</summary>
 	void Allocate(
-		size_t sSize0 = 0,
-		size_t sSize1 = 0
+		size_t sSize0,
+		size_t sSize1
 	) {
 		if (!m_fOwnsData) {
 			_EXCEPTIONT("Attempting to Allocate() on attached DataArray2D");
 		}
 
-		if (sSize0 == 0) {
-			sSize0 = m_sSize[0];
-		}
-		if (sSize1 == 0) {
-			sSize1 = m_sSize[1];
-		}
+		Detach();
+
 		if ((sSize0 == 0) || (sSize1 == 0)) {
-			_EXCEPTIONT("Attempting to Allocate() zero-size DataArray2D");
+			m_sSize[0] = 0;
+			m_sSize[1] = 0;
+
+			return;
 		}
 		if ((m_data1D == NULL) ||
-		    (m_sSize[0] != sSize0) ||
+			(m_sSize[0] != sSize0) ||
 		    (m_sSize[1] != sSize1)
 		) {
-			Detach();
-
 			m_sSize[0] = sSize0;
 			m_sSize[1] = sSize1;
 
 			m_data1D = reinterpret_cast<T *>(malloc(GetByteSize()));
-
 		}
 
 		Zero();
-
-		m_fOwnsData = true;
 	}
 
 	///	<summary>
