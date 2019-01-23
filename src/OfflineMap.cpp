@@ -220,7 +220,6 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		m_vecTargetDimSizes.resize(dimGridRank->size());
 		varGridDims->get(&(m_vecTargetDimSizes[0]), dimGridRank->size());
 
-		//std::cout << "TEST " << dimGridRank->size() << std::endl;
 		if (dimGridRank->size() == 1) {
 			m_vecTargetDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
@@ -234,8 +233,6 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 		} else {
 			_EXCEPTIONT("Target grid grid_rank must be < 3");
 		}
-
-		std::cout << "TEST " << m_vecTargetDimSizes.size() << std::endl;
 
 		// Number of faces
 		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
@@ -2220,23 +2217,6 @@ void OfflineMap::Write(
 	NcVar * varAreaB = ncMap.add_var("area_b", ncDouble, dimNB);
 	varAreaB->put(&(m_dTargetAreas[0]), nB);
 
-	// Write frac
-	DataArray1D<double> dFrac;
-	
-	dFrac.Allocate(nA);
-	for (int i = 0; i < nA; i++) {
-		dFrac[i] = 1.0;
-	}
-	NcVar * varFracA = ncMap.add_var("frac_a", ncDouble, dimNA);
-	varFracA->put(&(dFrac[0]), nA);
-
-	dFrac.Allocate(nB);
-	for (int i = 0; i < nB; i++) {
-		dFrac[i] = 1.0;
-	}
-	NcVar * varFracB = ncMap.add_var("frac_b", ncDouble, dimNB);
-	varFracB->put(&(dFrac[0]), nB);
-
 	// Write SparseMatrix entries
 	DataArray1D<int> vecRow;
 	DataArray1D<int> vecCol;
@@ -2244,13 +2224,30 @@ void OfflineMap::Write(
 
 	m_mapRemap.GetEntries(vecRow, vecCol, vecS);
 
+	// Calculate and write fractional coverage arrays
+	{
+		DataArray1D<double> dFracA(nA);
+		DataArray1D<double> dFracB(nB);
+	
+		for (int i = 0; i < vecS.GetRows(); i++) {
+			dFracA[vecCol[i]] += vecS[i] / m_dSourceAreas[vecCol[i]] * m_dTargetAreas[vecRow[i]];
+			dFracB[vecRow[i]] += vecS[i];
+		}
+
+		NcVar * varFracA = ncMap.add_var("frac_a", ncDouble, dimNA);
+		varFracA->put(&(dFracA[0]), nA);
+
+		NcVar * varFracB = ncMap.add_var("frac_b", ncDouble, dimNB);
+		varFracB->put(&(dFracB[0]), nB);
+	}
+
 	// Increment vecRow and vecCol
 	for (int i = 0; i < vecRow.GetRows(); i++) {
 		vecRow[i]++;
 		vecCol[i]++;
 	}
 
-	// Load in data
+	// Write out data
 	int nS = vecRow.GetRows();
 	NcDim * dimNS = ncMap.add_dim("n_s", nS);
 
