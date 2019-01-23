@@ -17,8 +17,8 @@
 #ifndef _TRIANGULARQUADRATURE_H_
 #define _TRIANGULARQUADRATURE_H_
 
-#include "DataVector.h"
-#include "DataMatrix.h"
+#include "DataArray1D.h"
+#include "DataArray2D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -48,16 +48,16 @@ public:
 	}
 
 	///	<summary>
-	///		Get the DataMatrix of coordinates.
+	///		Get the DataArray2D of coordinates.
 	///	</summary>
-	const DataMatrix<double> & GetG() const {
+	const DataArray2D<double> & GetG() const {
 		return m_dG;
 	}
 
 	///	<summary>
-	///		Get the DataVector of weights.
+	///		Get the DataArray1D of weights.
 	///	</summary>
-	const DataVector<double> & GetW() const {
+	const DataArray1D<double> & GetW() const {
 		return m_dW;
 	}
 
@@ -70,12 +70,12 @@ protected:
 	///	<summary>
 	///		Coordinates of triangular quadrature rule.
 	///	</summary>
-	DataMatrix<double> m_dG;
+	DataArray2D<double> m_dG;
 
 	///	<summary>
 	///		Weights of triangular quadrature rule.
 	///	</summary>
-	DataVector<double> m_dW;
+	DataArray1D<double> m_dW;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

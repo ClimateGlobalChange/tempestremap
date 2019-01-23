@@ -18,7 +18,7 @@
 #include "CommandLine.h"
 #include "Exception.h"
 #include "GridElements.h"
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 #include "GaussLobattoQuadrature.h"
 #include "FiniteElementTools.h"
 
@@ -27,7 +27,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C" 
-int GenerateGLLMetaData(std::string strMesh, Mesh& meshInput, int nP, bool fBubble, std::string strOutput, DataMatrix3D<int>& dataGLLnodes, DataMatrix3D<double>& dataGLLJacobian) {
+int GenerateGLLMetaData(
+	std::string strMesh,
+	Mesh & meshInput,
+	int nP,
+	bool fBubble,
+	std::string strOutput,
+	DataArray3D<int>& dataGLLnodes,
+	DataArray3D<double>& dataGLLJacobian
+) {
 
 try {
 

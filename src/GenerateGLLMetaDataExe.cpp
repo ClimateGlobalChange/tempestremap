@@ -18,7 +18,7 @@
 #include "CommandLine.h"
 #include "Exception.h"
 #include "GridElements.h"
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 
 #include "TempestRemapAPI.h"
 
@@ -50,10 +50,20 @@ int main(int argc, char** argv) {
 	AnnounceBanner();
 
 	// Calculate metadata
-	DataMatrix3D<int> dataGLLnodes;
-	DataMatrix3D<double> dataGLLJacobian;
+	DataArray3D<int> dataGLLnodes;
+	DataArray3D<double> dataGLLJacobian;
     Mesh mesh;
-	int err = GenerateGLLMetaData(strMesh, mesh, nP, fBubble, strOutput, dataGLLnodes, dataGLLJacobian);
+
+	int err =
+		GenerateGLLMetaData(
+			strMesh,
+			mesh,
+			nP,
+			fBubble,
+			strOutput,
+			dataGLLnodes,
+			dataGLLJacobian);
+
 	if (err) exit(err);
 
 	// Done

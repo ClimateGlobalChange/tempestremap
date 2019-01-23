@@ -25,10 +25,10 @@
 
 void GetDefaultNodalLocations(
 	int nP,
-	DataVector<double> & dG
+	DataArray1D<double> & dG
 ) {
 	// GLL Quadrature nodes on [0,1]
-	DataVector<double> dW;
+	DataArray1D<double> dW;
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 }
 
@@ -256,22 +256,22 @@ double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
 	bool fBubble,
-	DataMatrix3D<int> & dataGLLnodes,
-	DataMatrix3D<double> & dataGLLJacobian
+	DataArray3D<int> & dataGLLnodes,
+	DataArray3D<double> & dataGLLJacobian
 ) {
 
 	// Number of Faces
 	int nElements = static_cast<int>(mesh.faces.size());
 
 	// Initialize data structures
-	dataGLLnodes.Initialize(nP, nP, nElements);
-	dataGLLJacobian.Initialize(nP, nP, nElements);
+	dataGLLnodes.Allocate(nP, nP, nElements);
+	dataGLLJacobian.Allocate(nP, nP, nElements);
 
 	std::map<Node, int> mapNodes;
 
 	// GLL Quadrature nodes
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 	// Accumulated Jacobian
@@ -485,9 +485,9 @@ double GenerateMetaData(
 ///////////////////////////////////////////////////////////////////////////////
 
 void GenerateUniqueJacobian(
-	const DataMatrix3D<int> & dataGLLnodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	DataVector<double> & dataUniqueJacobian
+	const DataArray3D<int> & dataGLLnodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	DataArray1D<double> & dataUniqueJacobian
 ) {
 	// Verify correct array sizes
 	if ((dataGLLnodes.GetRows() != dataGLLJacobian.GetRows()) ||
@@ -511,7 +511,7 @@ void GenerateUniqueJacobian(
 	}
 
 	// Resize unique Jacobian array
-	dataUniqueJacobian.Initialize(iMaximumIndex);
+	dataUniqueJacobian.Allocate(iMaximumIndex);
 
 	for (int i = 0; i < dataGLLnodes.GetRows(); i++) {
 	for (int j = 0; j < dataGLLnodes.GetColumns(); j++) {
@@ -526,12 +526,12 @@ void GenerateUniqueJacobian(
 ///////////////////////////////////////////////////////////////////////////////
 
 void GenerateDiscontinuousJacobian(
-	const DataMatrix3D<double> & dataGLLJacobian,
-	DataVector<double> & dataDiscontinuousJacobian
+	const DataArray3D<double> & dataGLLJacobian,
+	DataArray1D<double> & dataDiscontinuousJacobian
 ) {
 
 	// Resize unique Jacobian array
-	dataDiscontinuousJacobian.Initialize(
+	dataDiscontinuousJacobian.Allocate(
 		  dataGLLJacobian.GetRows()
 		* dataGLLJacobian.GetColumns()
 		* dataGLLJacobian.GetSubColumns());
@@ -554,28 +554,28 @@ void GenerateDiscontinuousJacobian(
 ///	<summary>
 ///		Global coefficient arrays (kept global to minimize reallocation)
 ///	</summary>
-DataVector<double> g_dCoeffAlpha;
-DataVector<double> g_dCoeffBeta;
+DataArray1D<double> g_dCoeffAlpha;
+DataArray1D<double> g_dCoeffBeta;
 
 void SampleGLLFiniteElement(
 	int nMonotoneType,
 	int nP,
 	double dAlpha,
 	double dBeta,
-	DataMatrix<double> & dCoeff
+	DataArray2D<double> & dCoeff
 ) {
 	// Interpolation coefficients
-	g_dCoeffAlpha.Initialize(nP);
-	g_dCoeffBeta.Initialize(nP);
+	g_dCoeffAlpha.Allocate(nP);
+	g_dCoeffBeta.Allocate(nP);
 
 	// Non-monotone interpolation
 	if (nMonotoneType == 0) {
 
 		if (nP > 4) {
 			// GLL Quadrature nodes on [0,1]
-			DataVector<double> dG;
+			DataArray1D<double> dG;
 			GetDefaultNodalLocations(nP, dG);
-			//DataVector<double> dW;
+			//DataArray1D<double> dW;
 			//GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 			// Get interpolation coefficients in each direction
@@ -879,7 +879,7 @@ void SampleGLLFiniteElement(
 	}
 
 	// Combine coefficients
-	dCoeff.Initialize(nP, nP);
+	dCoeff.Allocate(nP, nP);
 
 	for (int i = 0; i < nP; i++) {
 	for (int j = 0; j < nP; j++) {

@@ -286,14 +286,14 @@ try {
 			//	" in Exodus format");
 		}
 
-		DataVector<int32_t> iParts(shppolyhead.nNumParts);
+		DataArray1D<int32_t> iParts(shppolyhead.nNumParts);
 		shpfile.read((char*)&(iParts[0]),
 			shppolyhead.nNumParts * sizeof(int32_t));
 		if (shpfile.eof()) {
 			break;
 		}
 
-		DataVector<double> dPoints(shppolyhead.nNumPoints * 2);
+		DataArray1D<double> dPoints(shppolyhead.nNumPoints * 2);
 		shpfile.read((char*)&(dPoints[0]),
 			shppolyhead.nNumPoints * 2 * sizeof(double));
 		if (shpfile.eof()) {

@@ -45,7 +45,10 @@ try {
 	// Number of elements in mesh
 	int nP;
 
-	// Merge faces
+	// Do not merge faces
+	bool fNoMergeFaces;
+
+	// Nodes appear at GLL nodes
 	bool fCGLL = true;
 
 	// Parse the command line
@@ -54,22 +57,25 @@ try {
 		CommandLineString(strOutputMesh, "out_mesh", "");
 		CommandLineString(strOutputConnectivity, "out_connect", "");
 		CommandLineInt(nP, "np", 2);
+		CommandLineBool(fNoMergeFaces, "no-merge-face");
 		//CommandLineBool(fCGLL, "cgll");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
+	AnnounceBanner();
+
 	// Check file names
 	if (strInputFile == "") {
-		std::cout << "ERROR: No input file specified" << std::endl;
-		return (-1);
+		_EXCEPTIONT("No input file specified");
 	}
 	if (nP < 1) {
-		std::cout << "ERROR: --np must be >= 2" << std::endl;
-		return (-1);
+		_EXCEPTIONT("--np must be >= 2");
 	}
 
-	std::cout << "=========================================================";
+	if ((fNoMergeFaces) && (strOutputConnectivity != "")) {
+		_EXCEPTIONT("--out_connect and --no-merge-face not implemented");
+	}
 
 	// Load input mesh
 	std::cout << std::endl;
@@ -83,13 +89,13 @@ try {
 
 	// Gauss-Lobatto quadrature nodes and weights
 	std::cout << "..Computing sub-volume boundaries" << std::endl;
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 	// Accumulated weight vector
-	DataVector<double> dAccumW(nP+1);
+	DataArray1D<double> dAccumW(nP+1);
 	dAccumW[0] = 0.0;
 	for (int i = 1; i < nP+1; i++) {
 		dAccumW[i] = dAccumW[i-1] + dW[i-1];
@@ -98,10 +104,15 @@ try {
 		_EXCEPTIONT("Logic error in accumulated weight");
 	}
 
-	// Merge face map
-	DataMatrix3D<int> dataGLLnodes(nP, nP, nElements);
+	// Data structures used for generating connectivity
+	DataArray3D<int> dataGLLnodes(nP, nP, nElements);
 	std::vector<Node> vecNodes;
 	std::map<Node, int> mapFaces;
+
+	// Data structure for 
+
+	// Data structure used for avoiding coincident nodes on the fly
+	std::map<Node, int> mapNewNodes;
 
 	// Generate new mesh
 	std::cout << "..Generating sub-volumes" << std::endl;
@@ -122,6 +133,8 @@ try {
 
 		for (int q = 0; q < nP; q++) {
 		for (int p = 0; p < nP; p++) {
+
+			bool fNewFace = true;
 
 			// Build unique node array if CGLL
 			if (fCGLL) {
@@ -154,6 +167,8 @@ try {
 
 				} else {
 					dataGLLnodes[q][p][f] = iter->second + 1;
+
+					fNewFace = false;
 				}
 
 			// Non-unique node array if DGLL
@@ -162,42 +177,43 @@ try {
 			}
 
 			// Get volumetric region
-			Node nodeOut0 =
-				InterpolateQuadrilateralNode(
-					node0, node1, node2, node3,
-					dAccumW[p], dAccumW[q]);
-
-			Node nodeOut1 =
-				InterpolateQuadrilateralNode(
-					node0, node1, node2, node3,
-					dAccumW[p+1], dAccumW[q]);
-
-			Node nodeOut2 =
-				InterpolateQuadrilateralNode(
-					node0, node1, node2, node3,
-					dAccumW[p+1], dAccumW[q+1]);
-
-			Node nodeOut3 =
-				InterpolateQuadrilateralNode(
-					node0, node1, node2, node3,
-					dAccumW[p], dAccumW[q+1]);
-
-			int nNodeStart = meshOut.nodes.size();
-			meshOut.nodes.push_back(nodeOut0);
-			meshOut.nodes.push_back(nodeOut1);
-			meshOut.nodes.push_back(nodeOut2);
-			meshOut.nodes.push_back(nodeOut3);
-
 			Face faceNew(4);
-			faceNew.SetNode(0, nNodeStart);
-			faceNew.SetNode(1, nNodeStart+1);
-			faceNew.SetNode(2, nNodeStart+2);
-			faceNew.SetNode(3, nNodeStart+3);
 
+			for (int i = 0; i < 4; i++) {
+				int px = p+((i+1)/2)%2; // p,p+1,p+1,p
+				int qx = q+(i/2);       // q,q,q+1,q+1
+
+				Node nodeOut =
+					InterpolateQuadrilateralNode(
+						node0, node1, node2, node3,
+						dAccumW[px], dAccumW[qx]);
+	
+				std::map<Node, int>::const_iterator iterNode =
+					mapNewNodes.find(nodeOut);
+				if (iterNode == mapNewNodes.end()) {
+					mapNewNodes.insert(
+						std::pair<Node, int>(nodeOut, meshOut.nodes.size()));
+					faceNew.SetNode(i, meshOut.nodes.size());
+					meshOut.nodes.push_back(nodeOut);
+				} else {
+					faceNew.SetNode(i, iterNode->second);
+				}
+			}
+
+			// Insert new Face or merge with existing Face
 			meshOut.faces.push_back(faceNew);
+/*
+			if ((fNoMergeFaces) || (fNewFace)) {
+			} else {
+				std::cout << dataGLLnodes[q][p][f]-1 << " " << mapFaces.size()-1 << std::endl;
+				meshOut.faces[dataGLLnodes[q][p][f]-1].Merge(faceNew);
+			}
+*/
 		}
 		}
 	}
+
+	meshOut.RemoveCoincidentNodes();
 
 	// Build connectivity and write to file
 	if (strOutputConnectivity != "") {
@@ -264,9 +280,9 @@ try {
 		fclose(fp);
 	}
 
-	// Equalize coincident nodes
-	std::cout << "..Equalizing coincident nodes" << std::endl;
-	EqualizeCoincidentNodes(meshOut);
+	// Remove coincident nodes
+	//std::cout << "..Removing coincident nodes" << std::endl;
+	//meshOut.RemoveCoincidentNodes();
 
 	// Write the mesh
 	if (strOutputMesh != "") {

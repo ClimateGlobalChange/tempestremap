@@ -12,7 +12,8 @@ libTempestRemap_la_includedir = $(includedir)
 # The list of header files which are to be installed 
 libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
-	src/DataVector.h \
+	src/Subscript.h \
+	src/DataArray1D.h \
 	src/FixedPoint.h \
 	src/GridElements.h \
 	src/LinearRemapSE0.h \
@@ -30,14 +31,14 @@ libTempestRemap_la_include_HEADERS = \
 	src/netcdf.hh \
 	src/netcdfcpp.h \
 	src/PolynomialInterp.h \
-	src/DataMatrix3D.h \
+	src/DataArray3D.h \
 	src/Exception.h \
 	src/GaussQuadrature.h \
 	src/LegendrePolynomial.h \
 	src/MeshUtilitiesExact.h \
 	src/OfflineMap.h \
 	src/SparseMatrix.h \
-	src/DataMatrix.h \
+	src/DataArray2D.h \
 	src/FiniteElementTools.h \
 	src/GridElementsExact.h \
 	src/LinearRemapFV.h \

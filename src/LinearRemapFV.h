@@ -17,7 +17,9 @@
 #ifndef _LINEARREMAPFV_H_
 #define _LINEARREMAPFV_H_
 
-#include "DataMatrix3D.h"
+#include "DataArray1D.h"
+#include "DataArray2D.h"
+#include "DataArray3D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -48,9 +50,9 @@ void LinearRemapFVtoGLL_Simple(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -68,9 +70,9 @@ void LinearRemapFVtoGLL_Volumetric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -88,9 +90,9 @@ void LinearRemapFVtoGLL(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -108,11 +110,11 @@ void LinearRemapGLLtoGLL2(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,
@@ -132,11 +134,11 @@ void LinearRemapGLLtoGLL2_Pointwise(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,

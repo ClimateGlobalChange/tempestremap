@@ -16,7 +16,7 @@
 
 #include "NetCDFUtilities.h"
 #include "Exception.h"
-#include "DataVector.h"
+#include "DataArray1D.h"
 #include "netcdfcpp.h"
 
 #include <vector>
@@ -168,8 +168,7 @@ void CopyNcVar(
 
 	// ncByte / ncChar type
 	if ((var->type() == ncByte) || (var->type() == ncChar)) {
-		DataVector<char> data;
-		data.Initialize(nDataSize);
+		DataArray1D<char> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(
@@ -186,8 +185,7 @@ void CopyNcVar(
 
 	// ncShort type
 	if (var->type() == ncShort) {
-		DataVector<short> data;
-		data.Initialize(nDataSize);
+		DataArray1D<short> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(
@@ -204,8 +202,7 @@ void CopyNcVar(
 
 	// ncInt type
 	if (var->type() == ncInt) {
-		DataVector<int> data;
-		data.Initialize(nDataSize);
+		DataArray1D<int> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(
@@ -222,8 +219,7 @@ void CopyNcVar(
 
 	// ncFloat type
 	if (var->type() == ncFloat) {
-		DataVector<float> data;
-		data.Initialize(nDataSize);
+		DataArray1D<float> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(
@@ -241,8 +237,7 @@ void CopyNcVar(
 
 	// ncDouble type
 	if (var->type() == ncDouble) {
-		DataVector<double> data;
-		data.Initialize(nDataSize);
+		DataArray1D<double> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(

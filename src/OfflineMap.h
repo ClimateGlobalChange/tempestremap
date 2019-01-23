@@ -18,9 +18,9 @@
 #define _OFFLINEMAP_H_
 
 #include "SparseMatrix.h"
-#include "DataVector.h"
-#include "DataMatrix.h"
-#include "DataMatrix3D.h"
+#include "DataArray1D.h"
+#include "DataArray2D.h"
+#include "DataArray3D.h"
 #include <string>
 #include <vector>
 
@@ -77,10 +77,10 @@ private:
 	///	</summary>
 	void InitializeCoordinatesFromMeshFV(
 		const Mesh & mesh,
-		DataVector<double> & dCenterLon,
-		DataVector<double> & dCenterLat,
-		DataMatrix<double> & dVertexLon,
-		DataMatrix<double> & dVertexLat,
+		DataArray1D<double> & dCenterLon,
+		DataArray1D<double> & dCenterLat,
+		DataArray2D<double> & dVertexLon,
+		DataArray2D<double> & dVertexLat,
 		bool fLatLon
 	);
 
@@ -90,11 +90,11 @@ private:
 	void InitializeCoordinatesFromMeshFE(
 		const Mesh & mesh,
 		int nP,
-		const DataMatrix3D<int> & dataGLLnodes,
-		DataVector<double> & dCenterLon,
-		DataVector<double> & dCenterLat,
-		DataMatrix<double> & dVertexLon,
-		DataMatrix<double> & dVertexLat
+		const DataArray3D<int> & dataGLLnodes,
+		DataArray1D<double> & dCenterLon,
+		DataArray1D<double> & dCenterLat,
+		DataArray2D<double> & dVertexLon,
+		DataArray2D<double> & dVertexLat
 	);
 
 	///	<summary>
@@ -103,15 +103,15 @@ private:
 	void InitializeRectilinearCoordinateVector(
 		int nLon,
 		int nLat,
-		const DataMatrix<double> & dVertexLon,
-		const DataMatrix<double> & dVertexLat,
+		const DataArray2D<double> & dVertexLon,
+		const DataArray2D<double> & dVertexLat,
 		bool fLonFirst,
-		DataVector<double> & dCenterLon,
-		DataVector<double> & dCenterLat,
-		DataVector<double> & dVectorCenterLon,
-		DataVector<double> & dVectorCenterLat,
-		DataMatrix<double> & dVectorBoundsLon,
-		DataMatrix<double> & dVectorBoundsLat
+		DataArray1D<double> & dCenterLon,
+		DataArray1D<double> & dCenterLat,
+		DataArray1D<double> & dVectorCenterLon,
+		DataArray1D<double> & dVectorCenterLat,
+		DataArray2D<double> & dVectorBoundsLon,
+		DataArray2D<double> & dVectorBoundsLat
 	);
 
 public:
@@ -135,7 +135,7 @@ public:
 	void InitializeSourceCoordinatesFromMeshFE(
 		const Mesh & meshSource,
 		int nP,
-		const DataMatrix3D<int> & dataGLLnodesSource
+		const DataArray3D<int> & dataGLLnodesSource
 	);
 
 	///	<summary>
@@ -144,7 +144,7 @@ public:
 	void InitializeTargetCoordinatesFromMeshFE(
 		const Mesh & meshTarget,
 		int nP,
-		const DataMatrix3D<int> & dataGLLnodesTarget
+		const DataArray3D<int> & dataGLLnodesTarget
 	);
 
 public:
@@ -152,7 +152,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the source element center longitude vector.
 	///	</summary>
-	DataVector<double>& GetSourceCenterLon()
+	DataArray1D<double>& GetSourceCenterLon()
 	{
 		return m_dSourceCenterLon;
 	}
@@ -160,7 +160,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the source element center longitude vector.
 	///	</summary>
-	const DataVector<double>& GetSourceCenterLon() const
+	const DataArray1D<double>& GetSourceCenterLon() const
 	{
 		return m_dSourceCenterLon;
 	}
@@ -168,7 +168,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the source element center latitude vector.
 	///	</summary>
-	DataVector<double>& GetSourceCenterLat()
+	DataArray1D<double>& GetSourceCenterLat()
 	{
 		return m_dSourceCenterLat;
 	}
@@ -176,7 +176,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the source element center latitude vector.
 	///	</summary>
-	const DataVector<double>& GetSourceCenterLat() const
+	const DataArray1D<double>& GetSourceCenterLat() const
 	{
 		return m_dSourceCenterLat;
 	}
@@ -184,7 +184,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the target element center longitude vector.
 	///	</summary>
-	DataVector<double>& GetTargetCenterLon()
+	DataArray1D<double>& GetTargetCenterLon()
 	{
 		return m_dTargetCenterLon;
 	}
@@ -192,7 +192,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the target element center longitude vector.
 	///	</summary>
-	const DataVector<double>& GetTargetCenterLon() const
+	const DataArray1D<double>& GetTargetCenterLon() const
 	{
 		return m_dTargetCenterLon;
 	}
@@ -200,7 +200,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the target element center latitude vector.
 	///	</summary>
-	DataVector<double>& GetTargetCenterLat()
+	DataArray1D<double>& GetTargetCenterLat()
 	{
 		return m_dTargetCenterLat;
 	}
@@ -208,7 +208,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the target element center latitude vector.
 	///	</summary>
-	const DataVector<double>& GetTargetCenterLat() const
+	const DataArray1D<double>& GetTargetCenterLat() const
 	{
 		return m_dTargetCenterLat;
 	}
@@ -216,7 +216,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the source vertex longitude matrix.
 	///	</summary>
-	DataMatrix<double>& GetSourceVertexLon()
+	DataArray2D<double>& GetSourceVertexLon()
 	{
 		return m_dSourceVertexLon;
 	}
@@ -224,7 +224,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the source vertex longitude matrix.
 	///	</summary>
-	const DataMatrix<double>& GetSourceVertexLon() const
+	const DataArray2D<double>& GetSourceVertexLon() const
 	{
 		return m_dSourceVertexLon;
 	}
@@ -232,7 +232,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the target vertex longitude matrix.
 	///	</summary>
-	DataMatrix<double>& GetTargetVertexLon()
+	DataArray2D<double>& GetTargetVertexLon()
 	{
 		return m_dTargetVertexLon;
 	}
@@ -240,7 +240,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the target vertex longitude matrix.
 	///	</summary>
-	const DataMatrix<double>& GetTargetVertexLon() const
+	const DataArray2D<double>& GetTargetVertexLon() const
 	{
 		return m_dTargetVertexLon;
 	}
@@ -248,7 +248,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the source vertex latitude matrix.
 	///	</summary>
-	DataMatrix<double>& GetSourceVertexLat()
+	DataArray2D<double>& GetSourceVertexLat()
 	{
 		return m_dSourceVertexLat;
 	}
@@ -256,7 +256,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the source vertex latitude matrix.
 	///	</summary>
-	const DataMatrix<double>& GetSourceVertexLat() const
+	const DataArray2D<double>& GetSourceVertexLat() const
 	{
 		return m_dSourceVertexLat;
 	}
@@ -264,7 +264,7 @@ public:
 	///	<summary>
 	///		Get the writable reference to the target vertex latitude natrix.
 	///	</summary>
-	DataMatrix<double>& GetTargetVertexLat()
+	DataArray2D<double>& GetTargetVertexLat()
 	{
 		return m_dTargetVertexLat;
 	}
@@ -272,7 +272,7 @@ public:
 	///	<summary>
 	///		Get the const reference to the target vertex latitude matrix.
 	///	</summary>
-	const DataMatrix<double>& GetTargetVertexLat() const
+	const DataArray2D<double>& GetTargetVertexLat() const
 	{
 		return m_dTargetVertexLat;
 	}
@@ -367,7 +367,7 @@ public:
 	///		Get the vector of areas associated with degrees of freedom on
 	///		the input Mesh.
 	///	</summary>
-	DataVector<double> & GetSourceAreas() {
+	DataArray1D<double> & GetSourceAreas() {
 		return m_dSourceAreas;
 	}
 
@@ -375,7 +375,7 @@ public:
 	///		Get the vector of areas associated with degrees of freedom on
 	///		the input Mesh.
 	///	</summary>
-	const DataVector<double> & GetSourceAreas() const {
+	const DataArray1D<double> & GetSourceAreas() const {
 		return m_dSourceAreas;
 	}
 
@@ -383,7 +383,7 @@ public:
 	///		Get the vector of areas associated with degrees of freedom on
 	///		the output Mesh.
 	///	</summary>
-	DataVector<double> & GetTargetAreas() {
+	DataArray1D<double> & GetTargetAreas() {
 		return m_dTargetAreas;
 	}
 
@@ -391,7 +391,7 @@ public:
 	///		Get the vector of areas associated with degrees of freedom on
 	///		the output Mesh.
 	///	</summary>
-	const DataVector<double> & GetTargetAreas() const {
+	const DataArray1D<double> & GetTargetAreas() const {
 		return m_dTargetAreas;
 	}
 
@@ -399,7 +399,7 @@ public:
 	///		Set the vector of areas associated with degrees of freedom on
 	///		the input Mesh.
 	///	</summary>
-	void SetSourceAreas(const DataVector<double> & dSourceAreas) {
+	void SetSourceAreas(const DataArray1D<double> & dSourceAreas) {
 		m_dSourceAreas = dSourceAreas;
 	}
 
@@ -407,7 +407,7 @@ public:
 	///		Set the vector of areas associated with degrees of freedom on
 	///		the output Mesh.
 	///	</summary>
-	void SetTargetAreas(const DataVector<double> & dTargetAreas) {
+	void SetTargetAreas(const DataArray1D<double> & dTargetAreas) {
 		m_dTargetAreas = dTargetAreas;
 	}
 
@@ -461,98 +461,98 @@ protected:
 	///	<summary>
 	///		Vector of areas associated with input degrees of freedom.
 	///	</summary>
-	DataVector<double> m_dSourceAreas;
+	DataArray1D<double> m_dSourceAreas;
 
 	///	<summary>
 	///		Vector of areas associated with output degrees of freedom.
 	///	</summary>
-	DataVector<double> m_dTargetAreas;
+	DataArray1D<double> m_dTargetAreas;
 
 	///	<summary>
 	///		Vector of partial areas associated with input degrees of freedom.
 	///	</summary>
-	DataVector<double> m_dPartialSourceAreas;
+	DataArray1D<double> m_dPartialSourceAreas;
 
 protected:
 	///	<summary>
 	///		Vector of cell center longitudes on source grid.
 	///	</summary>
-	DataVector<double> m_dSourceCenterLon;
+	DataArray1D<double> m_dSourceCenterLon;
 
 	///	<summary>
 	///		Vector of cell center latitudes on source grid.
 	///	</summary>
-	DataVector<double> m_dSourceCenterLat;
+	DataArray1D<double> m_dSourceCenterLat;
 
 	///	<summary>
 	///		Vector of cell center longitudes on target grid.
 	///	</summary>
-	DataVector<double> m_dTargetCenterLon;
+	DataArray1D<double> m_dTargetCenterLon;
 
 	///	<summary>
 	///		Vector of cell center latitudes on target grid.
 	///	</summary>
-	DataVector<double> m_dTargetCenterLat;
+	DataArray1D<double> m_dTargetCenterLat;
 
 	///	<summary>
 	///		Matrix of vertex longitudes on source grid.
 	///	</summary>
-	DataMatrix<double> m_dSourceVertexLon;
+	DataArray2D<double> m_dSourceVertexLon;
 
 	///	<summary>
 	///		Matrix of vertex latitudes on source grid.
 	///	</summary>
-	DataMatrix<double> m_dSourceVertexLat;
+	DataArray2D<double> m_dSourceVertexLat;
 
 	///	<summary>
 	///		Vector containing cell center longitude along "lon" dimension.
 	///	</sumamry>
-	DataVector<double> m_dVectorSourceCenterLon;
+	DataArray1D<double> m_dVectorSourceCenterLon;
 
 	///	<summary>
 	///		Vector containing cell center latitude along "lat" dimension.
 	///	</sumamry>
-	DataVector<double> m_dVectorSourceCenterLat;
+	DataArray1D<double> m_dVectorSourceCenterLat;
 
 	///	<summary>
 	///		Vector containing bounds for longitude along "lon" dimension.
 	///	</summary>
-	DataMatrix<double> m_dVectorSourceBoundsLon;
+	DataArray2D<double> m_dVectorSourceBoundsLon;
 
 	///	<summary>
 	///		Vector containing bounds for latitude along "lat" dimension.
 	///	</summary>
-	DataMatrix<double> m_dVectorSourceBoundsLat;
+	DataArray2D<double> m_dVectorSourceBoundsLat;
 
 	///	<summary>
 	///		Matrix of vertex longitudes on source grid.
 	///	</summary>
-	DataMatrix<double> m_dTargetVertexLon;
+	DataArray2D<double> m_dTargetVertexLon;
 
 	///	<summary>
 	///		Matrix of vertex latitudes on source grid.
 	///	</summary>
-	DataMatrix<double> m_dTargetVertexLat;
+	DataArray2D<double> m_dTargetVertexLat;
 
 	///	<summary>
 	///		Vector containing cell center longitude along "lon" dimension.
 	///	</sumamry>
-	DataVector<double> m_dVectorTargetCenterLon;
+	DataArray1D<double> m_dVectorTargetCenterLon;
 
 	///	<summary>
 	///		Vector containing cell center latitude along "lat" dimension.
 	///	</sumamry>
-	DataVector<double> m_dVectorTargetCenterLat;
+	DataArray1D<double> m_dVectorTargetCenterLat;
 
 	///	<summary>
 	///		Vector containing bounds for longitude along "lon" dimension.
 	///	</summary>
-	DataMatrix<double> m_dVectorTargetBoundsLon;
+	DataArray2D<double> m_dVectorTargetBoundsLon;
 
 	///	<summary>
 	///		Vector containing bounds for latitude along "lat" dimension.
 	///	</summary>
-	DataMatrix<double> m_dVectorTargetBoundsLat;
+	DataArray2D<double> m_dVectorTargetBoundsLat;
 
 protected:
 	///	<summary>

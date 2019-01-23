@@ -29,7 +29,7 @@
 #include <cassert>
 
 #include "Exception.h"
-#include "DataVector.h"
+#include "DataArray1D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -646,7 +646,7 @@ public:
 	///	<summary>
 	///		Vector of Face areas.
 	///	</summary>
-	DataVector<double> vecFaceArea;
+	DataArray1D<double> vecFaceArea;
 
 	///	<summary>
 	///		EdgeMap for this mesh.
@@ -893,14 +893,14 @@ void EqualizeCoincidentNodes(
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-
+/*
 ///	<summary>
 ///		Equate coincident nodes on mesh.
 ///	</summary>
 void EqualizeCoincidentNodes(
 	Mesh & mesh
 );
-
+*/
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>

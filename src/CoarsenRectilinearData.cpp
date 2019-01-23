@@ -18,7 +18,7 @@
 #include "SparseMatrix.h"
 #include "Exception.h"
 #include "Announce.h"
-#include "DataMatrix.h"
+#include "DataArray2D.h"
 #include "NetCDFUtilities.h"
 
 #include <cmath>
@@ -36,8 +36,8 @@ typedef std::vector< std::vector<IndexCoefficientPair> > ConservativeMap1D;
 
 void Generate1DOverlapMap(
 	bool fFlipped,
-	const DataVector<double> dXedge,
-	const DataVector<double> dXedgeout,
+	const DataArray1D<double> dXedge,
+	const DataArray1D<double> dXedgeout,
 	ConservativeMap1D & matX1D
 ) {
 
@@ -138,7 +138,7 @@ void Generate1DOverlapMap(
 	}
 
 	// Validate the map
-	DataVector<double> dTotals(nX);
+	DataArray1D<double> dTotals(nX);
 	for (io = 0; io < nXout; io++) {
 		double dDeltaXo = fabs(dXedgeout[io+1] - dXedgeout[io]);
 		for (int i = 0; i < matX1D[io].size(); i++) {
@@ -165,7 +165,7 @@ void Generate1DOverlapMap(
 
 template<typename T>
 inline void FindReplace(
-	DataMatrix<T> & data,
+	DataArray2D<T> & data,
 	const T & find,
 	const T & replace
 ) {
@@ -185,9 +185,9 @@ inline void FindReplace(
 
 template<typename T>
 inline double TotalMatrix(
-	const DataMatrix<T> & data,
-	const DataVector<double> & dXEdge,
-	const DataVector<double> & dYEdge
+	const DataArray2D<T> & data,
+	const DataArray1D<double> & dXEdge,
+	const DataArray1D<double> & dYEdge
 ) {
 	double dTotal = 0.0;
 	for (int i = 0; i < data.GetRows(); i++) {
@@ -205,10 +205,10 @@ inline double TotalMatrix(
 
 template<typename T, typename Tout = T>
 inline void ApplyMap(
-	const DataMatrix<T> & dataIn,
+	const DataArray2D<T> & dataIn,
 	const ConservativeMap1D & mapX,
 	const ConservativeMap1D & mapY,
-	DataMatrix<Tout> & dataOut
+	DataArray2D<Tout> & dataOut
 ) {
 	const int nX = dataIn.GetRows();
 	const int nY = dataIn.GetColumns();
@@ -400,8 +400,8 @@ try {
 	int iDimX = 0;
 	int iDimY = 0;
 
-	DataVector<long> lSizeX(varX->num_dims());
-	DataVector<long> lSizeY(varY->num_dims());
+	DataArray1D<long> lSizeX(varX->num_dims());
+	DataArray1D<long> lSizeY(varY->num_dims());
 
 	if (varX->num_dims() != 1) {
 		Announce("Multiple dimensions detected in X");
@@ -452,8 +452,8 @@ try {
 	// Load in data from dimension
 	AnnounceStartBlock("Load dimension data");
 
-	DataVector<double> dX(dimX->size());
-	DataVector<double> dY(dimY->size());
+	DataArray1D<double> dX(dimX->size());
+	DataArray1D<double> dY(dimY->size());
 
 	varX->get(dX, (long*)(lSizeX));
 	varY->get(dY, (long*)(lSizeY));
@@ -472,8 +472,8 @@ try {
 
 	// Identify volume boundaries
 	Announce("Identifying volume boundaries");
-	DataVector<double> dXedge(nX+1);
-	DataVector<double> dYedge(nY+1);
+	DataArray1D<double> dXedge(nX+1);
+	DataArray1D<double> dYedge(nY+1);
 
 	dXedge[0] = dX[0] - 0.5 * (dX[1] - dX[0]);
 	for (int i = 1; i < nX; i++) {
@@ -495,11 +495,11 @@ try {
 	// Generating output mesh
 	AnnounceStartBlock("Generating output mesh");
 
-	DataVector<double> dXout(nXout);
-	DataVector<double> dYout(nYout);
+	DataArray1D<double> dXout(nXout);
+	DataArray1D<double> dYout(nYout);
 
-	DataVector<double> dXedgeout(nXout+1);
-	DataVector<double> dYedgeout(nYout+1);
+	DataArray1D<double> dXedgeout(nXout+1);
+	DataArray1D<double> dYedgeout(nYout+1);
 
 	if (dXEnd == dXBegin) {
 		dXBegin = dXedge[0];
@@ -542,7 +542,7 @@ try {
 	CopyNcVarAttributes(varY, varYout);
 
 	// Data size of one input instance
-	DataVector<long> lDataSize(varData->num_dims());
+	DataArray1D<long> lDataSize(varData->num_dims());
 	int nData = 1;
 	for (int d = 0; d < varData->num_dims()-2; d++) {
 		nData *= varData->get_dim(d)->size();
@@ -552,14 +552,14 @@ try {
 	lDataSize[varData->num_dims()-1] = nY;
 
 	// Data size of one output instance
-	DataVector<long> lDataSizeOut = lDataSize;
+	DataArray1D<long> lDataSizeOut = lDataSize;
 	lDataSizeOut[varData->num_dims()-2] = nXout;
 	lDataSizeOut[varData->num_dims()-1] = nYout;
 
 	Announce("%i data instance(s) found", nData);
 
 	// Pointer to output dimensions
-	DataVector<NcDim*> vecDimOut(varData->num_dims());
+	DataArray1D<NcDim*> vecDimOut(varData->num_dims());
 	for (int d = 0; d < varData->num_dims()-2; d++) {
 		vecDimOut[d] =
 			ncfileout.add_dim(
@@ -587,17 +587,17 @@ try {
 	// Load data
 	AnnounceStartBlock("Begin remapping");
 
-	DataMatrix<char> dByteData;
-	DataMatrix<short> dShortData;
-	DataMatrix<int> dIntData;
-	DataMatrix<float> dFloatData;
-	DataMatrix<double> dDoubleData;
+	DataArray2D<char> dByteData;
+	DataArray2D<short> dShortData;
+	DataArray2D<int> dIntData;
+	DataArray2D<float> dFloatData;
+	DataArray2D<double> dDoubleData;
 
-	DataMatrix<char> dByteDataOut;
-	DataMatrix<short> dShortDataOut;
-	DataMatrix<int> dIntDataOut;
-	DataMatrix<float> dFloatDataOut;
-	DataMatrix<double> dDoubleDataOut;
+	DataArray2D<char> dByteDataOut;
+	DataArray2D<short> dShortDataOut;
+	DataArray2D<int> dIntDataOut;
+	DataArray2D<float> dFloatDataOut;
+	DataArray2D<double> dDoubleDataOut;
 
 	char bFindByte = 0;
 	char bReplaceByte = 0;
@@ -617,8 +617,8 @@ try {
 	NcVar * varDataOut = NULL;
 
 	if (varData->type() == ncByte) {
-		dByteData.Initialize(nX, nY);
-		dByteDataOut.Initialize(nXout, nYout);
+		dByteData.Allocate(nX, nY);
+		dByteDataOut.Allocate(nXout, nYout);
 
 		if (strFind != "") {
 			bFindByte = (char)atoi(strFind.c_str());
@@ -628,8 +628,8 @@ try {
 		}
 
 	} else if (varData->type() == ncShort) {
-		dShortData.Initialize(nX, nY);
-		dShortDataOut.Initialize(nXout, nYout);
+		dShortData.Allocate(nX, nY);
+		dShortDataOut.Allocate(nXout, nYout);
 
 		if (strFind != "") {
 			sFindShort = (short)atoi(strFind.c_str());
@@ -639,8 +639,8 @@ try {
 		}
 
 	} else if (varData->type() == ncInt) {
-		dIntData.Initialize(nX, nY);
-		dIntDataOut.Initialize(nXout, nYout);
+		dIntData.Allocate(nX, nY);
+		dIntDataOut.Allocate(nXout, nYout);
 
 		if (strFind != "") {
 			iFindInt = (int)atoi(strFind.c_str());
@@ -650,8 +650,8 @@ try {
 		}
 
 	} else if (varData->type() == ncFloat) {
-		dFloatData.Initialize(nX, nY);
-		dFloatDataOut.Initialize(nXout, nYout);
+		dFloatData.Allocate(nX, nY);
+		dFloatDataOut.Allocate(nXout, nYout);
 
 		if (strFind != "") {
 			dFindFloat = (float)atof(strFind.c_str());
@@ -661,8 +661,8 @@ try {
 		}
 
 	} else if (varData->type() == ncDouble) {
-		dDoubleData.Initialize(nX, nY);
-		dDoubleDataOut.Initialize(nXout, nYout);
+		dDoubleData.Allocate(nX, nY);
+		dDoubleDataOut.Allocate(nXout, nYout);
 
 		if (strFind != "") {
 			dFindDouble = (double)atof(strFind.c_str());
@@ -676,7 +676,7 @@ try {
 	}
 
 	if (fOutputDouble) {
-		dDoubleDataOut.Initialize(nXout, nYout);
+		dDoubleDataOut.Allocate(nXout, nYout);
 	}
 
 	NcType vartype = varData->type();
@@ -697,7 +697,7 @@ try {
 		sprintf(szBuffer, "Remapping data instance %i", i);
 		AnnounceStartBlock(szBuffer);
 
-		DataVector<long> lDataIx(varData->num_dims());
+		DataArray1D<long> lDataIx(varData->num_dims());
 		lDataIx[varData->num_dims()-1] = 0;
 		lDataIx[varData->num_dims()-2] = 0;
 

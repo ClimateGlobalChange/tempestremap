@@ -383,7 +383,7 @@ void BuildIntegrationArray(
 	int ixOverlapBegin,
 	int ixOverlapEnd,
 	int nOrder,
-	DataMatrix<double> & dIntArray
+	DataArray2D<double> & dIntArray
 ) {
 	// Number of coefficients needed at this order
 #ifdef RECTANGULAR_TRUNCATION
@@ -394,8 +394,8 @@ void BuildIntegrationArray(
 #endif
 
 	// Triangular quadrature rule
-	const DataMatrix<double> & dG = triquadrule.GetG();
-	const DataVector<double> & dW = triquadrule.GetW();
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
 
 	// This Face
 	const Face & faceFirst = meshInput.faces[ixFirstFace];
@@ -423,12 +423,13 @@ void BuildIntegrationArray(
 	Node nodeC = CrossProduct(nodeA1, nodeA2);
 
 	// Fit matrix
-	DataMatrix<double> dFit;
-	dFit.Initialize(3,3);
+	DataArray2D<double> dFit(3,3);
 
-	dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
-	dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
-	dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
+	dFit(0,0) = nodeA1.x; dFit(0,1) = nodeA1.y; dFit(0,2) = nodeA1.z;
+	dFit(1,0) = nodeA2.x; dFit(1,1) = nodeA2.y; dFit(1,2) = nodeA2.z;
+	dFit(2,0) = nodeC.x;  dFit(2,1) = nodeC.y;  dFit(2,2) = nodeC.z;
+
+	DataArray2D<double> dFitTemp;
 /*
 	// Number of overlapping Faces and triangles
 	int nOverlapFaces = 0;
@@ -461,7 +462,7 @@ void BuildIntegrationArray(
 	}
 
 	// Build integration array
-	dIntArray.Initialize(nCoefficients, nOverlapFaces);
+	dIntArray.Allocate(nCoefficients, nOverlapFaces);
 
 	// Loop through all overlap Faces
 	for (int i = 0; i < nOverlapFaces; i++) {
@@ -489,14 +490,13 @@ void BuildIntegrationArray(
 				CalculateFaceArea(faceTri, nodesOverlap);
 
 			for (int k = 0; k < triquadrule.GetPoints(); k++) {
-				double * dGL = dG[k];
 
 				// Get the nodal location of this point
 				double dX[3];
 
-				dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
-				dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
-				dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
+				dX[0] = dG(k,0) * node0.x + dG(k,1) * node1.x + dG(k,2) * node2.x;
+				dX[1] = dG(k,0) * node0.y + dG(k,1) * node1.y + dG(k,2) * node2.y;
+				dX[2] = dG(k,0) * node0.z + dG(k,1) * node1.z + dG(k,2) * node2.z;
 
 				double dMag =
 					sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
@@ -517,10 +517,9 @@ void BuildIntegrationArray(
 				int ldb = 3;
 				int info;
 
-				DataMatrix<double> dFitTemp;
 				dFitTemp = dFit;
 				dgesv_(
-					&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
+					&n, &nrhs, &(dFitTemp(0,0)), &lda, ipiv, dX, &ldb, &info);
 
 				// Sample this point
 				int ixp = 0;
@@ -533,7 +532,7 @@ void BuildIntegrationArray(
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder - p; q++) {
 #endif
-					dIntArray[ixp][i] +=
+					dIntArray(ixp,i) +=
 						  IPow(dX[0], p)
 						* IPow(dX[1], q)
 						* dW[k]
@@ -556,9 +555,9 @@ void BuildFitArray(
 	const AdjacentFaceVector & vecAdjFaces,
 	int nOrder,
 	int nFitWeightsExponent,
-	const DataVector<double> & dConstraint,
-	DataMatrix<double> & dFitArray,
-	DataVector<double> & dFitWeights
+	const DataArray1D<double> & dConstraint,
+	DataArray2D<double> & dFitArray,
+	DataArray1D<double> & dFitWeights
 ) {
 
 	// Reference to active Face
@@ -576,12 +575,12 @@ void BuildFitArray(
 	int nAdjFaces = vecAdjFaces.size();
 
 	// Initialize arrays,
-	dFitArray.Initialize(nCoefficients, nAdjFaces);
-	dFitWeights.Initialize(nAdjFaces);
+	dFitArray.Allocate(nCoefficients, nAdjFaces);
+	dFitWeights.Allocate(nAdjFaces);
 
 	// Triangular quadrature rule
-	const DataMatrix<double> & dG = triquadrule.GetG();
-	const DataVector<double> & dW = triquadrule.GetW();
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
 
 	// Coordinate axes
 	Node nodeRef = GetReferenceNode(faceFirst, mesh.nodes);
@@ -606,12 +605,11 @@ void BuildFitArray(
 	Node nodeC = CrossProduct(nodeA1, nodeA2);
 
 	// Fit matrix
-	DataMatrix<double> dFit;
-	dFit.Initialize(3,3);
+	DataArray2D<double> dFit(3,3);
 
-	dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
-	dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
-	dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
+	dFit(0,0) = nodeA1.x; dFit(0,1) = nodeA1.y; dFit(0,2) = nodeA1.z;
+	dFit(1,0) = nodeA2.x; dFit(1,1) = nodeA2.y; dFit(1,2) = nodeA2.z;
+	dFit(2,0) = nodeC.x;  dFit(2,1) = nodeC.y;  dFit(2,2) = nodeC.z;
 
 	// Loop through all adjacent Faces
 	for (int iAdjFace = 0; iAdjFace < vecAdjFaces.size(); iAdjFace++) {
@@ -641,14 +639,12 @@ void BuildFitArray(
 			// Loop through all triangular quadrature nodes
 			for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
-				double * dGL = dG[k];
-
 				// Get the nodal location of this point
 				double dX[3];
 
-				dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
-				dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
-				dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
+				dX[0] = dG(k,0) * node0.x + dG(k,1) * node1.x + dG(k,2) * node2.x;
+				dX[1] = dG(k,0) * node0.y + dG(k,1) * node1.y + dG(k,2) * node2.y;
+				dX[2] = dG(k,0) * node0.z + dG(k,1) * node1.z + dG(k,2) * node2.z;
 
 				double dMag =
 					sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
@@ -670,10 +666,10 @@ void BuildFitArray(
 				int info;
 
 #pragma message "Pre-triangularize this matrix for efficiency"
-				DataMatrix<double> dFitTemp;
+				DataArray2D<double> dFitTemp;
 				dFitTemp = dFit;
 				dgesv_(
-					&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
+					&n, &nrhs, &(dFitTemp(0,0)), &lda, ipiv, dX, &ldb, &info);
 
 				if (info != 0) {
 					_EXCEPTIONT("Solve failure in dgesv");
@@ -690,7 +686,7 @@ void BuildFitArray(
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder - p; q++) {
 #endif
-					dFitArray[ixp][iAdjFace] +=
+					dFitArray(ixp,iAdjFace) +=
 						  IPow(dX[0], p)
 						* IPow(dX[1], q)
 						* dW[k]
@@ -706,7 +702,7 @@ void BuildFitArray(
 		// Integrate locally using the constraint
 		if ((dConstraint.GetRows() != 0) && (iAdjFace == 0)) {
 			for (int p = 0; p < nCoefficients; p++) {
-				dFitArray[p][0] = dConstraint[p];
+				dFitArray(p,0) = dConstraint[p];
 			}
 		}
 
@@ -716,7 +712,7 @@ void BuildFitArray(
 			    - static_cast<double>(nFitWeightsExponent));
 
 		for (int j = 0; j < dFitArray.GetRows(); j++) {
-			dFitArray[j][iAdjFace] *= dFitWeights[iAdjFace];
+			dFitArray(j,iAdjFace) *= dFitWeights[iAdjFace];
 		}
 	}
 }
@@ -724,10 +720,10 @@ void BuildFitArray(
 ///////////////////////////////////////////////////////////////////////////////
 
 void InvertFitArray_Corrected(
-	const DataVector<double> & dConstraint,
-	DataMatrix<double> & dFitArray,
-	DataVector<double> & dFitWeights,
-	DataMatrix<double> & dFitArrayPlus
+	const DataArray1D<double> & dConstraint,
+	DataArray2D<double> & dFitArray,
+	DataArray1D<double> & dFitWeights,
+	DataArray2D<double> & dFitArrayPlus
 ) {
 	// Dimensions of the fit operator
 	int nCoefficients = dFitArray.GetRows();
@@ -745,7 +741,7 @@ void InvertFitArray_Corrected(
 	}
 
 	// Allocate inverse
-	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
+	dFitArrayPlus.Allocate(nAdjFaces, nCoefficients);
 
 /*
 	// Invert the fit array using Moore-Penrose pseudoinverse
@@ -759,29 +755,29 @@ void InvertFitArray_Corrected(
 	int lwork = -1;
 	int info = 0;
 
-	DataVector<double> dS(nAdjFaces);
+	DataArray1D<double> dS(nAdjFaces);
 
-	DataVector<double> dWork(1);
+	DataArray1D<double> dWork(1);
 
-	DataMatrix<double> dA(nAdjFaces, nCoefficients);
+	DataArray2D<double> dA(nAdjFaces, nCoefficients);
 	for (int i = 0; i < nAdjFaces; i++) {
 	for (int j = 0; j < nCoefficients; j++) {
-		dA[i][j] = dFitArray[j][i];
+		dA(i,j) = dFitArray(j,i);
 	}
 	}
 
-	DataMatrix<double> dB(nCoefficients, nAdjFaces);
+	DataArray2D<double> dB(nCoefficients, nAdjFaces);
 	for (int i = 0; i < nCoefficients; i++) {
-		dB[i][i] = 1.0;
+		dB(i,i) = 1.0;
 	}
 
 	dgelss_(
 		&m,
 		&n,
 		&nrhs,
-		&(dA[0][0]),
+		&(dA(0,0)),
 		&lda,
-		&(dB[0][0]),
+		&(dB(0,0)),
 		&ldb,
 		&(dS[0]),
 		&rcond,
@@ -801,9 +797,9 @@ void InvertFitArray_Corrected(
 		&m,
 		&n,
 		&nrhs,
-		&(dA[0][0]),
+		&(dA(0,0)),
 		&lda,
-		&(dB[0][0]),
+		&(dB(0,0)),
 		&ldb,
 		&(dS[0]),
 		&rcond,
@@ -818,19 +814,18 @@ void InvertFitArray_Corrected(
 
 	for (int i = 0; i < nAdjFaces; i++) {
 	for (int j = 0; j < nCoefficients; j++) {
-		dFitArrayPlus[i][j] = dB[j][i];
+		dFitArrayPlus(i,j) = dB(j,i);
 	}
 	}
 */
 
 	// Compute Moore-Penrose pseudoinverse via QR method
-	DataMatrix<double> dFit2;
-	dFit2.Initialize(nCoefficients, nCoefficients);
+	DataArray2D<double> dFit2(nCoefficients, nCoefficients);
 
 	for (int j = 0; j < nCoefficients; j++) {
 	for (int k = 0; k < nCoefficients; k++) {
 	for (int l = 0; l < nAdjFaces; l++) {
-		dFit2[j][k] += dFitArray[j][l] * dFitArray[k][l];
+		dFit2(j,k) += dFitArray(j,l) * dFitArray(k,l);
 	}
 	}
 	}
@@ -841,30 +836,28 @@ void InvertFitArray_Corrected(
 	int lda = nCoefficients;
 	int info;
 
-	DataVector<int> iPIV;
-	iPIV.Initialize(nCoefficients);
+	DataArray1D<int> iPIV(nCoefficients);
 
-	DataVector<double> dWork;
-	dWork.Initialize(nCoefficients);
+	DataArray1D<double> dWork(nCoefficients);
 
 	int lWork = nCoefficients;
 
-	dgetrf_(&m, &n, &(dFit2[0][0]), &lda, &(iPIV[0]), &info);
+	dgetrf_(&m, &n, &(dFit2(0,0)), &lda, &(iPIV[0]), &info);
 
-	dgetri_(&n, &(dFit2[0][0]), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+	dgetri_(&n, &(dFit2(0,0)), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 
 	// Calculate pseudoinverse
 	for (int j = 0; j < nAdjFaces; j++) {
 	for (int k = 0; k < nCoefficients; k++) {
 	for (int l = 0; l < nCoefficients; l++) {
-		dFitArrayPlus[j][k] += dFitArray[l][j] * dFit2[l][k];
+		dFitArrayPlus(j,k) += dFitArray(l,j) * dFit2(l,k);
 	}
 	}
 	}
 
 	for (int j = 0; j < nAdjFaces; j++) {
 	for (int k = 0; k < nCoefficients; k++) {
-		dFitArrayPlus[j][k] *= dFitWeights[j];
+		dFitArrayPlus(j,k) *= dFitWeights[j];
 	}
 	}
 
@@ -873,12 +866,12 @@ void InvertFitArray_Corrected(
 		for (int i = 0; i < nAdjFaces; i++) {
 			double dSum = 0.0;
 			for (int p = 1; p < nCoefficients; p++) {
-				dSum += dConstraint[p] * dFitArrayPlus[i][p];
+				dSum += dConstraint[p] * dFitArrayPlus(i,p);
 			}
 			if (i == 0) {
-				dFitArrayPlus[i][0] = 1.0 - dSum;
+				dFitArrayPlus(i,0) = 1.0 - dSum;
 			} else {
-				dFitArrayPlus[i][0] = - dSum;
+				dFitArrayPlus(i,0) = - dSum;
 			}
 		}
 	}
@@ -888,13 +881,13 @@ void InvertFitArray_Corrected(
 	for (int i = 0; i < nAdjFaces; i++) {
 		double dSum = 0.0;
 		for (int p = 0; p < nCoefficients-1; p++) {
-			dSum += dConstraint[p] * dFitArrayPlus[i][p];
+			dSum += dConstraint[p] * dFitArrayPlus(i,p);
 		}
 		if (i == 0) {
-			dFitArrayPlus[i][nCoefficients-1] =
+			dFitArrayPlus(i,nCoefficients-1) =
 				(1.0 - dSum) / dConstraint[nCoefficients-1];
 		} else {
-			dFitArrayPlus[i][nCoefficients-1] =
+			dFitArrayPlus(i,nCoefficients-1) =
 				- dSum / dConstraint[nCoefficients-1];
 		}
 	}
@@ -905,10 +898,10 @@ void InvertFitArray_Corrected(
 ///////////////////////////////////////////////////////////////////////////////
 
 void InvertFitArray_LeastSquares(
-	const DataVector<double> & dConstraint,
-	DataMatrix<double> & dFitArray,
-	DataVector<double> & dFitWeights,
-	DataMatrix<double> & dFitArrayPlus
+	const DataArray1D<double> & dConstraint,
+	DataArray2D<double> & dFitArray,
+	DataArray1D<double> & dFitWeights,
+	DataArray2D<double> & dFitArrayPlus
 ) {
 	// Dimensions of the fit operator
 	int nCoefficients = dFitArray.GetRows();
@@ -923,17 +916,16 @@ void InvertFitArray_LeastSquares(
 	}
 
 	// Allocate inverse
-	dFitArrayPlus.Initialize(nAdjFaces, nCoefficients);
+	dFitArrayPlus.Allocate(nAdjFaces, nCoefficients);
 
 	// Special case: First order
 	if (nCoefficients == 1) {
-		dFitArrayPlus[0][0] = 1.0;
+		dFitArrayPlus(0,0) = 1.0;
 		return;
 	}
 
 	// Compute QR factorization of the constraint
-	DataMatrix<double> dQ;
-	dQ.Initialize(nCoefficients, nCoefficients);
+	DataArray2D<double> dQ(nCoefficients, nCoefficients);
 
 	double dR;
 
@@ -944,54 +936,50 @@ void InvertFitArray_LeastSquares(
 
 		double tau;
 
-		DataVector<double> dWork;
+		DataArray1D<double> dWork(nCoefficients);
 		int lwork = nCoefficients;
-		dWork.Initialize(nCoefficients);
 
 		int info;
 
-		memcpy(&(dQ[0][0]), &(dConstraint[0]), nCoefficients * sizeof(double));
+		memcpy(&(dQ(0,0)), &(dConstraint[0]), nCoefficients * sizeof(double));
 
-		dgeqrf_(&m, &n, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
+		dgeqrf_(&m, &n, &(dQ(0,0)), &lda, &tau, &(dWork[0]), &lwork, &info);
 		if (info != 0) {
 			_EXCEPTION1("Error in dgeqrf: %i", info);
 		}
 
-		dR = dQ[0][0];
+		dR = dQ(0,0);
 
 		int k = 1;
 		n = nCoefficients;
-		dorgqr_(&m, &n, &k, &(dQ[0][0]), &lda, &tau, &(dWork[0]), &lwork, &info);
+		dorgqr_(&m, &n, &k, &(dQ(0,0)), &lda, &tau, &(dWork[0]), &lwork, &info);
 		if (info != 0) {
 			_EXCEPTION1("Error in dorgqr: %i", info);
 		}
 	}
 
 	// Calculate G = F * Q 
-	DataMatrix<double> dGG;
-	dGG.Initialize(nCoefficients, nAdjFaces);
+	DataArray2D<double> dGG(nCoefficients, nAdjFaces);
 
 	for (int i = 0; i < nCoefficients; i++) {
 	for (int j = 0; j < nAdjFaces; j++) {
 		for (int k = 0; k < nCoefficients; k++) {
-			dGG[i][j] += dFitArray[k][j] * dQ[i][k];
+			dGG(i,j) += dFitArray(k,j) * dQ(i,k);
 		}
 	}
 	}
 
 	// Calculate Moore-Penrose pseudoinverse of G(:,2:p)
-	DataMatrix<double> dGxPlus;
-	dGxPlus.Initialize(nAdjFaces, nCoefficients-1);
+	DataArray2D<double> dGxPlus(nAdjFaces, nCoefficients-1);
 
 	{
 		// Gx2 = G(:, 2:p)^T * G(:,2:p)
-		DataMatrix<double> dGx2;
-		dGx2.Initialize(nCoefficients-1, nCoefficients-1);
+		DataArray2D<double> dGx2(nCoefficients-1, nCoefficients-1);
 
 		for (int i = 0; i < nCoefficients-1; i++) {
 		for (int j = 0; j < nCoefficients-1; j++) {
 			for (int k = 0; k < nAdjFaces; k++) {
-				dGx2[i][j] += dGG[i+1][k] * dGG[j+1][k];
+				dGx2(i,j) += dGG(i+1,k) * dGG(j+1,k);
 			}
 		}
 		}
@@ -1001,48 +989,44 @@ void InvertFitArray_LeastSquares(
 		int lda = nCoefficients-1;
 		int info;
 
-		DataVector<int> iPIV;
-		iPIV.Initialize(nCoefficients-1);
+		DataArray1D<int> iPIV(nCoefficients-1);
 
-		DataVector<double> dWork;
-		dWork.Initialize(nCoefficients-1);
+		DataArray1D<double> dWork(nCoefficients-1);
 
 		int lWork = nCoefficients-1;
 
-		dgetrf_(&m, &n, &(dGx2[0][0]), &lda, &(iPIV[0]), &info);
+		dgetrf_(&m, &n, &(dGx2(0,0)), &lda, &(iPIV[0]), &info);
 
-		dgetri_(&n, &(dGx2[0][0]), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+		dgetri_(&n, &(dGx2(0,0)), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 
 		// Calculate pseudoinverse
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < nCoefficients-1; j++) {
 			for (int k = 0; k < nCoefficients-1; k++) {
-				dGxPlus[i][j] += dGG[k+1][i] * dGx2[k][j];
+				dGxPlus(i,j) += dGG(k+1,i) * dGx2(k,j);
 			}
 		}
 		}
 	}
 
 	// Z = G+ * (I - G(:,1) * R^{-1} * e0T)
-	DataMatrix<double> dZ;
-	dZ.Initialize(nAdjFaces, nCoefficients-1);
+	DataArray2D<double> dZ(nAdjFaces, nCoefficients-1);
 
 	{
-		DataMatrix<double> dSubZ;
-		dSubZ.Initialize(nAdjFaces, nAdjFaces);
+		DataArray2D<double> dSubZ(nAdjFaces, nAdjFaces);
 
 		for (int i = 0; i < nAdjFaces; i++) {
-			dSubZ[i][i] = 1.0;
+			dSubZ(i,i) = 1.0;
 		}
 
 		for (int i = 0; i < nAdjFaces; i++) {
-			dSubZ[0][i] -= dGG[0][i] / dR;
+			dSubZ(0,i) -= dGG(0,i) / dR;
 		}
 
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < nCoefficients-1; j++) {
 			for (int k = 0; k < nAdjFaces; k++) {
-				dZ[i][j] += dGxPlus[k][j] * dSubZ[i][k];
+				dZ(i,j) += dGxPlus(k,j) * dSubZ(i,k);
 			}
 		}
 		}
@@ -1050,19 +1034,19 @@ void InvertFitArray_LeastSquares(
 
 	// Fhat = Q(:,1) * R^{-1} * e0T + Q(:,2:p) * Z
 	for (int i = 0; i < nCoefficients; i++) {
-		dFitArrayPlus[0][i] += dQ[0][i] / dR;
+		dFitArrayPlus(0,i) += dQ(0,i) / dR;
 	}
 	for (int i = 0; i < nAdjFaces; i++) {
 	for (int j = 0; j < nCoefficients; j++) {
 		for (int k = 0; k < nCoefficients-1; k++) {
-			dFitArrayPlus[i][j] += dQ[k+1][j] * dZ[i][k];
+			dFitArrayPlus(i,j) += dQ(k+1,j) * dZ(i,k);
 		}
 	}
 	}
 
 	for (int i = 0; i < nAdjFaces; i++) {
 	for (int j = 0; j < nCoefficients; j++) {
-		dFitArrayPlus[i][j] *= dFitWeights[i];
+		dFitArrayPlus(i,j) *= dFitWeights[i];
 	}
 	}
 }
@@ -1098,7 +1082,7 @@ void LinearRemapFVtoFV(
 	const int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
-#pragma message "This should be a command-line parameter"
+//#pragma message "This should be a command-line parameter"
 	// Number of faces you need
 	const int nRequiredFaceSetSize = nCoefficients;
 
@@ -1139,7 +1123,7 @@ void LinearRemapFVtoFV(
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
 		// Build integration array
-		DataMatrix<double> dIntArray;
+		DataArray2D<double> dIntArray;
 
 		BuildIntegrationArray(
 			meshInput,
@@ -1165,23 +1149,21 @@ void LinearRemapFVtoFV(
 		int nAdjFaces = vecAdjFaces.size();
 
 		// Determine the conservative constraint equation
-		DataVector<double> dConstraint;
-
-		dConstraint.Initialize(nCoefficients);
+		DataArray1D<double> dConstraint(nCoefficients);
 
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
 		for (int p = 0; p < nCoefficients; p++) {
 			for (int j = 0; j < nOverlapFaces; j++) {
-				dConstraint[p] += dIntArray[p][j];
+				dConstraint[p] += dIntArray(p,j);
 			}
 			dConstraint[p] /= dFirstArea;
 		}
 
 		// Build the fit array from the integration operator
-		DataMatrix<double> dFitArray;
-		DataVector<double> dFitWeights;
-		DataMatrix<double> dFitArrayPlus;
+		DataArray2D<double> dFitArray;
+		DataArray1D<double> dFitWeights;
+		DataArray2D<double> dFitArrayPlus;
 
 		BuildFitArray(
 			meshInput,
@@ -1204,20 +1186,19 @@ void LinearRemapFVtoFV(
 		);
 
 		// Multiply integration array and fit array
-		DataMatrix<double> dComposedArray;
-		dComposedArray.Initialize(nAdjFaces, nOverlapFaces);
+		DataArray2D<double> dComposedArray(nAdjFaces, nOverlapFaces);
 
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < nOverlapFaces; j++) {
 		for (int k = 0; k < nCoefficients; k++) {
-			dComposedArray[i][j] += dIntArray[k][j] * dFitArrayPlus[i][k];
+			dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
 		}
 		}
 		}
 
 /*
 		for (int j = 0; j < nOverlapFaces; j++) {
-			dComposedArray[0][j] = meshOverlap.vecFaceArea[ixOverlap + j];
+			dComposedArray(0,j) = meshOverlap.vecFaceArea[ixOverlap + j];
 		}
 
 		for (int i = 0; i < nAdjFaces; i++) {
@@ -1226,9 +1207,9 @@ void LinearRemapFVtoFV(
 			double dOverlapArea =
 				meshOverlap.vecFaceArea[ixOverlap + j];
 
-			dComposedArray[i][j] +=
-				(dIntArray[k][j] - dConstraint[k] * dOverlapArea)
-					* dFitArrayPlus[i][k];
+			dComposedArray(i,j) +=
+				(dIntArray(k,j) - dConstraint[k] * dOverlapArea)
+					* dFitArrayPlus(i,k);
 		}
 		}
 		}
@@ -1241,7 +1222,7 @@ void LinearRemapFVtoFV(
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			smatMap(ixSecondFace, ixFirstFace) +=
-				dComposedArray[i][j]
+				dComposedArray(i,j)
 				/ meshOutput.vecFaceArea[ixSecondFace];
 		}
 		}
@@ -1254,9 +1235,9 @@ void LinearRemapFVtoFV(
 ///////////////////////////////////////////////////////////////////////////////
 
 void ForceIntArrayConsistencyConservation(
-	const DataVector<double> & vecSourceArea,
-	const DataVector<double> & vecTargetArea,
-	DataMatrix<double> & dCoeff,
+	const DataArray1D<double> & vecSourceArea,
+	const DataArray1D<double> & vecTargetArea,
+	DataArray2D<double> & dCoeff,
 	bool fMonotone
 ) {
 
@@ -1271,20 +1252,15 @@ void ForceIntArrayConsistencyConservation(
 	int nCond = nCondConservation + nCondConsistency - 1;
 
 	// Product matrix
-	DataMatrix<double> dCCt;
-	dCCt.Initialize(nCond, nCond);
-
-	DataMatrix<double> dC;
-	dC.Initialize(nCoeff, nCond);
-
-	DataVector<double> dRHS;
-	dRHS.Initialize(nCoeff + nCond);
+	DataArray2D<double> dCCt(nCond, nCond);
+	DataArray2D<double> dC(nCoeff, nCond);
+	DataArray1D<double> dRHS(nCoeff + nCond);
 
 	// RHS
 	int ix = 0;
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
 	for (int j = 0; j < dCoeff.GetColumns(); j++) {
-		dRHS[ix] = dCoeff[i][j];
+		dRHS[ix] = dCoeff(i,j);
 		ix++;
 	}
 	}
@@ -1293,7 +1269,7 @@ void ForceIntArrayConsistencyConservation(
 	ix = 0;
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
 		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = 1.0;
+			dC(i * dCoeff.GetColumns() + j,ix) = 1.0;
 		}
 		dRHS[nCoeff + ix] = 1.0;
 		ix++;
@@ -1302,7 +1278,7 @@ void ForceIntArrayConsistencyConservation(
 	// Conservation
 	for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = vecTargetArea[i];
+			dC(i * dCoeff.GetColumns() + j,ix) = vecTargetArea[i];
 		}
 		dRHS[nCoeff + ix] = vecSourceArea[j];
 		ix++;
@@ -1315,22 +1291,22 @@ void ForceIntArrayConsistencyConservation(
 	}
 
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
-		dCCt[i][i] = static_cast<double>(dCoeff.GetColumns());
+		dCCt(i,i) = static_cast<double>(dCoeff.GetColumns());
 		for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
-			dCCt[i][dCoeff.GetRows() + j] = vecTargetArea[i];
-			dCCt[dCoeff.GetRows() + j][i] = vecTargetArea[i];
+			dCCt(i,dCoeff.GetRows() + j) = vecTargetArea[i];
+			dCCt(dCoeff.GetRows() + j,i) = vecTargetArea[i];
 		}
 	}
 
 	for (int i = 0; i < dCoeff.GetColumns()-1; i++) {
 		int ix = dCoeff.GetRows() + i;
-		dCCt[ix][ix] = dP;
+		dCCt(ix,ix) = dP;
 	}
 /*
 	for (int i = 0; i < nCond; i++) {
 	for (int j = 0; j < nCond; j++) {
 		for (int k = 0; k < nCoeff; k++) {
-			dCCt[i][j] += dC[k][i] * dC[k][j];
+			dCCt(i,j) += dC(k,i) * dC(k,j);
 		}
 	}
 	}
@@ -1339,7 +1315,7 @@ void ForceIntArrayConsistencyConservation(
 	FILE * fp = fopen("cct.dat", "w");
 	for (int i = 0; i < nCond; i++) {
 		for (int j = 0; j < nCond; j++) {
-			fprintf(fp, "%1.15e\t", dCCt[i][j]);
+			fprintf(fp, "%1.15e\t", dCCt(i,j));
 		}
 		fprintf(fp, "\n");
 	}
@@ -1360,7 +1336,7 @@ void ForceIntArrayConsistencyConservation(
 		&m,
 		&n,
 		&posone,
-		&(dC[0][0]),
+		&(dC(0,0)),
 		&lda,
 		&(dRHS[0]),
 		&incx,
@@ -1374,13 +1350,12 @@ void ForceIntArrayConsistencyConservation(
 
 	int nInfo;
 /*
-	DataVector<int> iPIV;
-	iPIV.Initialize(nCond);
+	DataArray1D<int> iPIV(nCond);
 
 	dgesv_(
 		&m,
 		&nrhs,
-		&(dCCt[0][0]),
+		&(dCCt(0,0)),
 		&lda,
 		&(iPIV[0]),
 		&(dRHS[nCoeff]),
@@ -1392,7 +1367,7 @@ void ForceIntArrayConsistencyConservation(
 		&uplo,
 		&m,
 		&nrhs,
-		&(dCCt[0][0]),
+		&(dCCt(0,0)),
 		&lda,
 		&(dRHS[nCoeff]),
 		&ldb,
@@ -1409,7 +1384,7 @@ void ForceIntArrayConsistencyConservation(
 		&m,
 		&n,
 		&negone,
-		&(dC[0][0]),
+		&(dC(0,0)),
 		&lda,
 		&(dRHS[nCoeff]),
 		&incx,
@@ -1421,7 +1396,7 @@ void ForceIntArrayConsistencyConservation(
 	ix = 0;
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
 	for (int j = 0; j < dCoeff.GetColumns(); j++) {
-		dCoeff[i][j] = dRHS[ix];
+		dCoeff(i,j) = dRHS[ix];
 		ix++;
 	}
 	}
@@ -1436,12 +1411,11 @@ void ForceIntArrayConsistencyConservation(
 		}
 
 		// Determine low-order remap coefficients
-		DataMatrix<double> dMonoCoeff;
-		dMonoCoeff.Initialize(dCoeff.GetRows(), dCoeff.GetColumns());
+		DataArray2D<double> dMonoCoeff(dCoeff.GetRows(), dCoeff.GetColumns());
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			dMonoCoeff[i][j] =
+			dMonoCoeff(i,j) =
 				vecSourceArea[j]
 				/ dTotalJacobian;
 		}
@@ -1451,9 +1425,9 @@ void ForceIntArrayConsistencyConservation(
 		double dA = 0.0;
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			if (dCoeff[i][j] < 0.0) {
+			if (dCoeff(i,j) < 0.0) {
 				double dNewA =
-					- dCoeff[i][j] / fabs(dMonoCoeff[i][j] - dCoeff[i][j]);
+					- dCoeff(i,j) / fabs(dMonoCoeff(i,j) - dCoeff(i,j));
 
 				if (dNewA > dA) {
 					dA = dNewA;
@@ -1464,7 +1438,7 @@ void ForceIntArrayConsistencyConservation(
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			dCoeff[i][j] = (1.0 - dA) * dCoeff[i][j] + dA * dMonoCoeff[i][j];
+			dCoeff(i,j) = (1.0 - dA) * dCoeff(i,j) + dA * dMonoCoeff(i,j);
 		}
 		}
 	}
@@ -1476,9 +1450,9 @@ void LinearRemapFVtoGLL_Simple(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -1509,8 +1483,8 @@ void LinearRemapFVtoGLL_Simple(
 	MeshUtilitiesFuzzy meshutil;
 
 	// GLL nodes
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
@@ -1555,12 +1529,11 @@ void LinearRemapFVtoGLL_Simple(
 		Node nodeC = CrossProduct(nodeA1, nodeA2);
 
 		// Fit matrix
-		DataMatrix<double> dFit;
-		dFit.Initialize(3,3);
+		DataArray2D<double> dFit(3,3);
 
-		dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
-		dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
-		dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
+		dFit(0,0) = nodeA1.x; dFit(0,1) = nodeA1.y; dFit(0,2) = nodeA1.z;
+		dFit(1,0) = nodeA2.x; dFit(1,1) = nodeA2.y; dFit(1,2) = nodeA2.z;
+		dFit(2,0) = nodeC.x;  dFit(2,1) = nodeC.y;  dFit(2,2) = nodeC.z;
 
 		// Set of Faces to use in building the reconstruction and associated
 		// distance metric.
@@ -1576,12 +1549,12 @@ void LinearRemapFVtoGLL_Simple(
 		int nAdjFaces = vecAdjFaces.size();
 
 		// Blank constraint
-		DataVector<double> dConstraint;
+		DataArray1D<double> dConstraint;
 
 		// Least squares arrays
-		DataMatrix<double> dFitArray;
-		DataVector<double> dFitWeights;
-		DataMatrix<double> dFitArrayPlus;
+		DataArray2D<double> dFitArray;
+		DataArray1D<double> dFitWeights;
+		DataArray2D<double> dFitArrayPlus;
 
 		BuildFitArray(
 			meshInput,
@@ -1665,7 +1638,7 @@ void LinearRemapFVtoGLL_Simple(
 				int ixSecondNode;
 
 				if (fContinuous) {
-					ixSecondNode = dataGLLNodes[t][s][ixSecondFace] - 1;
+					ixSecondNode = dataGLLNodes(t,s,ixSecondFace) - 1;
 				} else {
 					ixSecondNode = ixSecondFace * nP * nP + s * nP + t;
 				}
@@ -1704,10 +1677,10 @@ void LinearRemapFVtoGLL_Simple(
 				int ldb = 3;
 				int info;
 
-				DataMatrix<double> dFitTemp;
+				DataArray2D<double> dFitTemp;
 				dFitTemp = dFit;
 				dgesv_(
-					&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
+					&n, &nrhs, &(dFitTemp(0,0)), &lda, ipiv, dX, &ldb, &info);
 
 				// Sample the reconstruction at this point
 				int ixp = 0;
@@ -1727,7 +1700,7 @@ void LinearRemapFVtoGLL_Simple(
 						smatMap(ixSecondNode, ixAdjFace) +=
 							  IPow(dX[0], p)
 							* IPow(dX[1], q)
-							* dFitArrayPlus[n][ixp];
+							* dFitArrayPlus(n,ixp);
 					}
 
 					ixp++;
@@ -1749,9 +1722,9 @@ void LinearRemapFVtoGLL_Volumetric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -1776,8 +1749,8 @@ void LinearRemapFVtoGLL_Volumetric(
 	int nP = dataGLLNodes.GetRows();
 
 	// Gauss-Lobatto quadrature nodes and weights
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 
 	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
@@ -1792,11 +1765,11 @@ void LinearRemapFVtoGLL_Volumetric(
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
-#pragma message "This should be a command-line parameter"
+//#pragma message "This should be a command-line parameter"
 	int nRequiredFaceSetSize = nCoefficients;
 
 	// Accumulated weight vector
-	DataVector<double> dAccumW(nP+1);
+	DataArray1D<double> dAccumW(nP+1);
 	dAccumW[0] = 0.0;
 	for (int i = 1; i < nP+1; i++) {
 		dAccumW[i] = dAccumW[i-1] + dW[i-1];
@@ -1809,9 +1782,9 @@ void LinearRemapFVtoGLL_Volumetric(
 	Announce("Generating sub-element mesh");
 	Mesh meshTargetSubElement;
 
-	DataVector<double> dFiniteVolumeArea(nP * nP);
-	DataVector<double> dQuadratureArea(nP * nP);
-	std::vector< DataMatrix<double> > dRedistributionMaps;
+	DataArray1D<double> dFiniteVolumeArea(nP * nP);
+	DataArray1D<double> dQuadratureArea(nP * nP);
+	std::vector< DataArray2D<double> > dRedistributionMaps;
 	dRedistributionMaps.resize(meshOutput.faces.size());
 
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
@@ -1865,13 +1838,13 @@ void LinearRemapFVtoGLL_Volumetric(
 					faceNew, meshTargetSubElement.nodes);
 
 			dQuadratureArea[q * nP + p] =
-				dataGLLJacobian[q][p][ixSecond];
+				dataGLLJacobian(q,p,ixSecond);
 		}
 		}
 
-		dRedistributionMaps[ixSecond].Initialize(nP * nP, nP * nP);
+		dRedistributionMaps[ixSecond].Allocate(nP * nP, nP * nP);
 		for (int i = 0; i < nP * nP; i++) {
-			dRedistributionMaps[ixSecond][i][i] = 1.0;
+			dRedistributionMaps[ixSecond](i,i) = 1.0;
 		}
 
 		if (!fNoConservation) {
@@ -1895,7 +1868,7 @@ void LinearRemapFVtoGLL_Volumetric(
 */
 		for (int i = 0; i < nP * nP; i++) {
 		for (int j = 0; j < nP * nP; j++) {
-			dRedistributionMaps[ixSecond][i][j] *=
+			dRedistributionMaps[ixSecond](i,j) *=
 				dQuadratureArea[i] / dFiniteVolumeArea[j];
 		}
 		}
@@ -1903,7 +1876,7 @@ void LinearRemapFVtoGLL_Volumetric(
 		for (int i = 0; i < nP * nP; i++) {
 			double dSum = 0.0;
 			for (int j = 0; j < nP * nP; j++) {
-				dSum += dRedistributionMaps[ixSecond][i][j] * dFiniteVolumeArea[j];
+				dSum += dRedistributionMaps(ixSecond,i,j) * dFiniteVolumeArea[j];
 			}
 			printf("%i %1.15e %1.15e\n", i, dSum, dQuadratureArea[i]);
 		}
@@ -1912,7 +1885,7 @@ void LinearRemapFVtoGLL_Volumetric(
 /*
 		for (int i = 0; i < nP * nP; i++) {
 		for (int j = 0; j < nP * nP; j++) {
-			printf("%i %i %1.15e\n", i, j, dRedistributionMaps[ixSecond][i][j]);
+			printf("%i %i %1.15e\n", i, j, dRedistributionMaps(ixSecond,i,j));
 		}
 		}
 		_EXCEPTION();
@@ -2002,7 +1975,7 @@ void LinearRemapFVtoGLL_Volumetric(
 				meshThisElement.faces.push_back(faceNew);
 
 				meshThisElement.vecTargetFaceIx.push_back(
-					dataGLLNodes[p][q][iTargetFace] - 1);
+					dataGLLNodes(p,q,iTargetFace) - 1);
 
 				iSubElement++;
 			}
@@ -2014,7 +1987,7 @@ void LinearRemapFVtoGLL_Volumetric(
 		}
 
 		// Build integration array
-		DataMatrix<double> dIntArray;
+		DataArray2D<double> dIntArray;
 
 		BuildIntegrationArray(
 			meshInput,
@@ -2040,23 +2013,21 @@ void LinearRemapFVtoGLL_Volumetric(
 		int nAdjFaces = vecAdjFaces.size();
 
 		// Determine the conservative constraint equation
-		DataVector<double> dConstraint;
-
-		dConstraint.Initialize(nCoefficients);
+		DataArray1D<double> dConstraint(nCoefficients);
 
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
 		for (int p = 0; p < nCoefficients; p++) {
 			for (int j = 0; j < meshThisElement.faces.size(); j++) {
-				dConstraint[p] += dIntArray[p][j];
+				dConstraint[p] += dIntArray(p,j);
 			}
 			dConstraint[p] /= dFirstArea;
 		}
 
 		// Least squares arrays
-		DataMatrix<double> dFitArray;
-		DataVector<double> dFitWeights;
-		DataMatrix<double> dFitArrayPlus;
+		DataArray2D<double> dFitArray;
+		DataArray1D<double> dFitWeights;
+		DataArray2D<double> dFitArrayPlus;
 
 		BuildFitArray(
 			meshInput,
@@ -2079,20 +2050,18 @@ void LinearRemapFVtoGLL_Volumetric(
 		);
 
 		// Multiply integration array and fit array
-		DataMatrix<double> dComposedArray;
-		dComposedArray.Initialize(nAdjFaces, meshThisElement.faces.size());
+		DataArray2D<double> dComposedArray(nAdjFaces, meshThisElement.faces.size());
 
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < meshThisElement.faces.size(); j++) {
 		for (int k = 0; k < nCoefficients; k++) {
-			dComposedArray[i][j] += dIntArray[k][j] * dFitArrayPlus[i][k];
+			dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
 		}
 		}
 		}
 
 		// Apply redistribution operator
-		DataMatrix<double> dRedistributedArray;
-		dRedistributedArray.Initialize(nAdjFaces, meshThisElement.faces.size());
+		DataArray2D<double> dRedistributedArray(nAdjFaces, meshThisElement.faces.size());
 
 		for (int i = 0; i < nAdjFaces; i++) {
 		for (int j = 0; j < meshThisElement.faces.size(); j++) {
@@ -2103,9 +2072,9 @@ void LinearRemapFVtoGLL_Volumetric(
 				meshOverlap.vecTargetFaceIx[ixOverlap + ixElement];
 
 			for (int k = 0; k < nP * nP; k++) {
-				dRedistributedArray[i][j] +=
-					dComposedArray[i][ixElement * nP * nP + k]
-					* dRedistributionMaps[ixSecondFace][ixSubElement][k];
+				dRedistributedArray(i,j) +=
+					dComposedArray(i,ixElement * nP * nP + k)
+					* dRedistributionMaps[ixSecondFace](ixSubElement,k);
 			}
 		}
 		}
@@ -2117,10 +2086,10 @@ void LinearRemapFVtoGLL_Volumetric(
 			int ixSecondNode = meshThisElement.vecTargetFaceIx[j];
 
 			smatMap(ixSecondNode, ixFirstFace) +=
-				dRedistributedArray[i][j]
+				dRedistributedArray(i,j)
 				/ dataGLLNodalArea[ixSecondNode];
 				// meshThisElement.vecFaceArea[j];
-				// dataGLLJacobian[ixS][ixT][ixSecondElement];
+				// dataGLLJacobian(ixS,ixT,ixSecondElement);
 		}
 		}
 
@@ -2137,9 +2106,9 @@ void LinearRemapFVtoGLL(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	const DataVector<double> & dataGLLNodalArea,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	const DataArray1D<double> & dataGLLNodalArea,
 	int nOrder,
 	OfflineMap & mapRemap,
 	int nMonotoneType,
@@ -2161,8 +2130,8 @@ void LinearRemapFVtoGLL(
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
 
-	const DataMatrix<double> & dG = triquadrule.GetG();
-	const DataVector<double> & dW = triquadrule.GetW();
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
 
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
@@ -2174,8 +2143,7 @@ void LinearRemapFVtoGLL(
 	int nP = dataGLLNodes.GetRows();
 
 	// Sample coefficients
-	DataMatrix<double> dSampleCoeff;
-	dSampleCoeff.Initialize(nP, nP);
+	DataArray2D<double> dSampleCoeff(nP, nP);
 
 	// Number of elements needed
 #ifdef RECTANGULAR_TRUNCATION
@@ -2197,25 +2165,21 @@ void LinearRemapFVtoGLL(
 	int ixOverlap = 0;
 
 	// Build the integration array for each element on meshOverlap
-	DataMatrix3D<double> dGlobalIntArray;
-	dGlobalIntArray.Initialize(
+	DataArray3D<double> dGlobalIntArray(
 		nCoefficients,
 		meshOverlap.faces.size(),
 		nP * nP);
 /*
 	// Build the mass matrix for each element on meshOutput
-	DataMatrix3D<double> dMassMatrix;
+	DataArray3D<double> dMassMatrix;
 	dMassMatrix.Initialize(
 		meshOutput.faces.size(),
 		nP * nP,
 		nP * nP);
 */
 	// Number of overlap Faces per source Face
-	DataVector<int> nAllOverlapFaces;
-	nAllOverlapFaces.Initialize(meshInput.faces.size());
-
-	DataVector<int> nAllTotalOverlapTriangles;
-	nAllTotalOverlapTriangles.Initialize(meshInput.faces.size());
+	DataArray1D<int> nAllOverlapFaces(meshInput.faces.size());
+	DataArray1D<int> nAllTotalOverlapTriangles(meshInput.faces.size());
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -2261,12 +2225,11 @@ void LinearRemapFVtoGLL(
 		Node nodeC = CrossProduct(nodeA1, nodeA2);
 
 		// Fit matrix
-		DataMatrix<double> dFit;
-		dFit.Initialize(3,3);
+		DataArray2D<double> dFit(3,3);
 
-		dFit[0][0] = nodeA1.x; dFit[0][1] = nodeA1.y; dFit[0][2] = nodeA1.z;
-		dFit[1][0] = nodeA2.x; dFit[1][1] = nodeA2.y; dFit[1][2] = nodeA2.z;
-		dFit[2][0] = nodeC.x;  dFit[2][1] = nodeC.y;  dFit[2][2] = nodeC.z;
+		dFit(0,0) = nodeA1.x; dFit(0,1) = nodeA1.y; dFit(0,2) = nodeA1.z;
+		dFit(1,0) = nodeA2.x; dFit(1,1) = nodeA2.y; dFit(1,2) = nodeA2.z;
+		dFit(2,0) = nodeC.x;  dFit(2,1) = nodeC.y;  dFit(2,2) = nodeC.z;
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
@@ -2307,14 +2270,13 @@ void LinearRemapFVtoGLL(
 					CalculateFaceArea(faceTri, nodesOverlap);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
-					double * dGL = dG[k];
 
 					// Get the nodal location of this point
 					double dX[3];
 
-					dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
-					dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
-					dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
+					dX[0] = dG(k,0) * node0.x + dG(k,1) * node1.x + dG(k,2) * node2.x;
+					dX[1] = dG(k,0) * node0.y + dG(k,1) * node1.y + dG(k,2) * node2.y;
+					dX[2] = dG(k,0) * node0.z + dG(k,1) * node1.z + dG(k,2) * node2.z;
 
 					double dMag =
 						sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
@@ -2337,10 +2299,10 @@ void LinearRemapFVtoGLL(
 					int ldb = 3;
 					int info;
 
-					DataMatrix<double> dFitTemp;
+					DataArray2D<double> dFitTemp;
 					dFitTemp = dFit;
 					dgesv_(
-						&n, &nrhs, &(dFitTemp[0][0]), &lda, ipiv, dX, &ldb, &info);
+						&n, &nrhs, &(dFitTemp(0,0)), &lda, ipiv, dX, &ldb, &info);
 
 					// Find the components of this quadrature point in the basis
 					// of the finite element.
@@ -2378,9 +2340,9 @@ void LinearRemapFVtoGLL(
 						int ixu = 0;
 						for (int u = 0; u < nP; u++) {
 						for (int v = 0; v < nP; v++) {
-							dMassMatrix[ixSecond][ixs][ixu] +=
-								  dSampleCoeff[s][t]
-								* dSampleCoeff[u][v]
+							dMassMatrix(ixSecond,ixs,ixu) +=
+								  dSampleCoeff(s,t)
+								* dSampleCoeff(u,v)
 								* dW[k]
 								* dTriArea;
 
@@ -2399,13 +2361,13 @@ void LinearRemapFVtoGLL(
 						for (int q = 0; q < nOrder - p; q++) {
 #endif
 
-							dGlobalIntArray[ixp][ixOverlap + i][ixs] +=
-								  dSampleCoeff[s][t]
+							dGlobalIntArray(ixp,ixOverlap + i,ixs) +=
+								  dSampleCoeff(s,t)
 								* IPow(dX[0], p)
 								* IPow(dX[1], q)
 								* dW[k]
 								* dTriArea
-								/ dataGLLJacobian[s][t][ixSecond];
+								/ dataGLLJacobian(s,t,ixSecond);
 
 							ixp++;
 						}
@@ -2422,20 +2384,6 @@ void LinearRemapFVtoGLL(
 	}
 
 /*
-	// Output mass matrix
-	for (int i = 0; i < nP * nP; i++) {
-		//printf("%1.5e, %1.5e\n", dMassMatrix[0][i][i], dataGLLJacobian[i/nP][i%nP][0]);
-
-		for (int j = 0; j < nP * nP; j++) {
-			printf("%1.5e", dMassMatrix[270][i][j]);
-			if (j != nP * nP - 1) {
-				printf(" ");
-			}
-		}
-		printf("; ");
-	}
-*/
-/*
 	// Calculate inverse mass matrix over all target elements
 	ixOverlap = 0;
 
@@ -2447,22 +2395,22 @@ void LinearRemapFVtoGLL(
 		int lda = nP * nP;
 		int info;
 
-		DataVector<int> iPIV;
+		DataArray1D<int> iPIV;
 		iPIV.Initialize(nP * nP);
 
-		DataVector<double> dWork;
+		DataArray1D<double> dWork;
 		dWork.Initialize(nP * nP);
 
 		int lWork = nP * nP;
 
-		dgetrf_(&m, &n, &(dMassMatrix[ixSecond][0][0]),
+		dgetrf_(&m, &n, &(dMassMatrix(ixSecond,0,0)),
 			&lda, &(iPIV[0]), &info);
 
 		if (info != 0) {
 			_EXCEPTIONT("Mass matrix triangulation error");
 		}
 
-		dgetri_(&n, &(dMassMatrix[ixSecond][0][0]),
+		dgetri_(&n, &(dMassMatrix(ixSecond,0,0)),
 			&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 
 		if (info != 0) {
@@ -2473,7 +2421,7 @@ void LinearRemapFVtoGLL(
 	// Apply inverse mass matrix
 	ixOverlap = 0;
 
-	DataVector<double> dTemp;
+	DataArray1D<double> dTemp;
 	dTemp.Initialize(nP * nP);
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
@@ -2490,16 +2438,16 @@ void LinearRemapFVtoGLL(
 			for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 
 				memcpy(&(dTemp[0]),
-					&(dGlobalIntArray[ixp][ixOverlap + i][0]),
+					&(dGlobalIntArray(ixp,ixOverlap + i,0)),
 					nP * nP * sizeof(double));
 
-				memset(&(dGlobalIntArray[ixp][ixOverlap + i][0]),
+				memset(&(dGlobalIntArray(ixp,ixOverlap + i,0)),
 					0, nP * nP * sizeof(double));
 
 				for (int s = 0; s < nP * nP; s++) {
 				for (int t = 0; t < nP * nP; t++) {
-					dGlobalIntArray[ixp][ixOverlap + i][s] +=
-						dMassMatrix[ixSecond][s][t] * dTemp[t];
+					dGlobalIntArray(ixp,ixOverlap + i,s) +=
+						dMassMatrix(ixSecond,s,t) * dTemp[t];
 				}
 				}
 			}
@@ -2522,9 +2470,9 @@ void LinearRemapFVtoGLL(
 
 		for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 		for (int ixs = 0; ixs < dGlobalIntArray.GetSubColumns(); ixs++) {
-			dGlobalIntArray[ixp][ixOverlap][ixs] *=
-				dataGLLJacobian[ixs/nP][ixs%nP][ixSecond]
-				/ dNumericalTargetArea[ixSecond][ixs];
+			dGlobalIntArray(ixp,ixOverlap,ixs) *=
+				dataGLLJacobian(ixs/nP,ixs%nP,ixSecond)
+				/ dNumericalTargetArea(ixSecond,ixs);
 		}
 		}
 	}
@@ -2536,8 +2484,7 @@ void LinearRemapFVtoGLL(
 			continue;
 		}
 
-		DataMatrix<double> dCoeff;
-		dCoeff.Initialize(
+		DataArray2D<double> dCoeff(
 			nP * nP,
 			vecReverseFaceIx[ixSecond].size());
 
@@ -2545,22 +2492,20 @@ void LinearRemapFVtoGLL(
 			int ixOverlap = vecReverseFaceIx[ixSecond][i];
 
 			for (int s = 0; s < nP * nP; s++) {
-				dCoeff[s][i] = dGlobalIntArray[0][ixOverlap][s];
+				dCoeff[s][i] = dGlobalIntArray(0,ixOverlap,s);
 			}
 		}
 
 		// Target areas
-		DataVector<double> vecTargetArea;
-		vecTargetArea.Initialize(nP * nP);
+		DataArray1D<double> vecTargetArea(nP * nP);
 
 		for (int s = 0; s < nP * nP; s++) {
 			vecTargetArea[s] =
-				dataGLLJacobian[s/nP][s%nP][ixSecond];
+				dataGLLJacobian(s/nP,s%nP,ixSecond);
 		}
 
 		// Source areas
-		DataVector<double> vecSourceArea;
-		vecSourceArea.Initialize(vecReverseFaceIx[ixSecond].size());
+		DataArray1D<double> vecSourceArea(vecReverseFaceIx[ixSecond].size());
 
 		for (int i = 0; i < vecReverseFaceIx[ixSecond].size(); i++) {
 			int ixOverlap = vecReverseFaceIx[ixSecond][i];
@@ -2578,7 +2523,7 @@ void LinearRemapFVtoGLL(
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;
 			for (int j = 0; j < dCoeff.GetColumns(); j++) {
-				dConsistency += dCoeff[i][j];
+				dConsistency += dCoeff(i,j);
 			}
 			//printf("%1.15e\n", dConsistency);
 		}
@@ -2588,7 +2533,7 @@ void LinearRemapFVtoGLL(
 
 			for (int s = 0; s < nP * nP; s++) {
 				//printf("%1.15e %1.15e\n", dGlobalIntArray[0][ixOverlap][s], dCoeff[s][i]);
-				dGlobalIntArray[0][ixOverlap][s] = dCoeff[s][i];
+				dGlobalIntArray(0,ixOverlap,s) = dCoeff(s,i);
 			}
 		}
 
@@ -2596,17 +2541,17 @@ void LinearRemapFVtoGLL(
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			double dConsistency = 0.0;
 			for (int j = 0; j < dCoeff.GetColumns(); j++) {
-				dConsistency += dCoeff[i][j];
+				dConsistency += dCoeff(i,j);
 			}
 			printf("%1.15e\n", dConsistency);
 		}
 
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
-			int ixFirst = vecReverseFaceIx[ixSecond][i];
+			int ixFirst = vecReverseFaceIx(ixSecond,i)
 
 			for (int s = 0; s < dCoeff.GetColumns(); s++) {
-				vecTargetArea[i] += dCoeff[i][s]
-					* dataGLLJacobian[s/nP][s%nP][ixSecond]
+				vecTargetArea[i] += dCoeff(i,s)
+					* dataGLLJacobian(s/nP,s%nP,ixSecond)
 					 meshInput.vecFaceArea[ixFirst];
 			}
 			printf("%1.15e\n", vecTargetArea[i]);
@@ -2620,12 +2565,12 @@ void LinearRemapFVtoGLL(
 		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
 		for (int s = 0; s < nP * nP; s++) {
-			//dConsistency += dGlobalIntArray[0][i][s];
-			dConservation += dGlobalIntArray[0][i][s]
-				* dataGLLJacobian[s/nP][s%nP][ixSecond]
+			//dConsistency += dGlobalIntArray(0,i,s)
+			dConservation += dGlobalIntArray(0,i,s)
+				* dataGLLJacobian(s/nP,s%nP,ixSecond)
 				/ meshInput.vecFaceArea[ixFirst];
 
-			printf("%1.15e\n", dataGLLJacobian[s/nP][s%nP][ixSecond]);
+			printf("%1.15e\n", dataGLLJacobian(s/nP,s%nP,ixSecond));
 		}
 
 		//printf("Consistency: %1.15e\n", dConsistency);
@@ -2637,8 +2582,7 @@ void LinearRemapFVtoGLL(
 
 /*
 	// Check consistency
-	DataMatrix<double> dIntSums;
-	dIntSums.Initialize(meshOutput.faces.size(), nP * nP);
+	DataArray2D<double> dIntSums(meshOutput.faces.size(), nP * nP);
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 	for (int s = 0; s < nP * nP; s++) {
@@ -2655,8 +2599,7 @@ void LinearRemapFVtoGLL(
 */
 /*
 	// Check conservation
-	DataVector<double> dMassSums;
-	dMassSums.Initialize(meshInput.faces.size());
+	DataArray1D<double> dMassSums(meshInput.faces.size());
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 	for (int s = 0; s < nP * nP; s++) {
@@ -2674,8 +2617,7 @@ void LinearRemapFVtoGLL(
 	}
 */
 /*
-	DataVector<double> dOverlapMass;
-	dOverlapMass.Initialize(meshOutput.faces.size());
+	DataArray1D<double> dOverlapMass(meshOutput.faces.size());
 
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 	for (int s = 0; s < nP * nP; s++) {
@@ -2723,9 +2665,7 @@ void LinearRemapFVtoGLL(
 		}
 */
 		// Determine the conservative constraint equation
-		DataVector<double> dConstraint;
-
-		dConstraint.Initialize(nCoefficients);
+		DataArray1D<double> dConstraint(nCoefficients);
 
 		for (int p = 0; p < nCoefficients; p++) {
 		for (int i = 0; i < nOverlapFaces; i++) {
@@ -2766,9 +2706,9 @@ void LinearRemapFVtoGLL(
 		}
 
 		// Build the fit operator
-		DataMatrix<double> dFitArray;
-		DataVector<double> dFitWeights;
-		DataMatrix<double> dFitArrayPlus;
+		DataArray2D<double> dFitArray;
+		DataArray1D<double> dFitWeights;
+		DataArray2D<double> dFitArrayPlus;
 
 		BuildFitArray(
 			meshInput,
@@ -2791,7 +2731,7 @@ void LinearRemapFVtoGLL(
 		);
 
 /*
-		DataVector<double> dRowSum;
+		DataArray1D<double> dRowSum;
 		dRowSum.Initialize(nCoefficients);
 
 		for (int i = 0; i < nAdjFaces; i++) {
@@ -2806,8 +2746,7 @@ void LinearRemapFVtoGLL(
 		_EXCEPTION();
 */
 		// Multiply integration array and fit array
-		DataMatrix<double> dComposedArray;
-		dComposedArray.Initialize(nAdjFaces, nOverlapFaces * nP * nP);
+		DataArray2D<double> dComposedArray(nAdjFaces, nOverlapFaces * nP * nP);
 
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
@@ -2864,11 +2803,11 @@ void LinearRemapGLLtoGLL2(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,
@@ -2880,29 +2819,24 @@ void LinearRemapGLLtoGLL2(
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(8);
 
-	const DataMatrix<double> & dG = triquadrule.GetG();
-	const DataVector<double> & dW = triquadrule.GetW();
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
 
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 
 	// Sample coefficients
-	DataMatrix<double> dSampleCoeffIn;
-	dSampleCoeffIn.Initialize(nPin, nPin);
-
-	DataMatrix<double> dSampleCoeffOut;
-	dSampleCoeffOut.Initialize(nPout, nPout);
+	DataArray2D<double> dSampleCoeffIn(nPin, nPin);
+	DataArray2D<double> dSampleCoeffOut(nPout, nPout);
 
 	// Build the integration array for each element on meshOverlap
-	DataMatrix3D<double> dGlobalIntArray;
-	dGlobalIntArray.Initialize(
+	DataArray3D<double> dGlobalIntArray(
 		nPin * nPin,
 		meshOverlap.faces.size(),
 		nPout * nPout);
 
 	// Number of overlap Faces per source Face
-	DataVector<int> nAllOverlapFaces;
-	nAllOverlapFaces.Initialize(meshInput.faces.size());
+	DataArray1D<int> nAllOverlapFaces(meshInput.faces.size());
 
 	int ixOverlap = 0;
 
@@ -2925,13 +2859,11 @@ void LinearRemapGLLtoGLL2(
 	}
 
 	// Geometric area of each output node
-	DataMatrix<double> dGeometricOutputArea;
-	dGeometricOutputArea.Initialize(
+	DataArray2D<double> dGeometricOutputArea(
 		meshOutput.faces.size(), nPout * nPout);
 
 	// Area of each overlap element in the output basis
-	DataMatrix<double> dOverlapOutputArea;
-	dOverlapOutputArea.Initialize(
+	DataArray2D<double> dOverlapOutputArea(
 		meshOverlap.faces.size(), nPout * nPout);
 
 	// Loop through all faces on meshInput
@@ -2996,14 +2928,13 @@ void LinearRemapGLLtoGLL2(
 					CalculateFaceArea(faceTri, nodesOverlap);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
-					double * dGL = dG[k];
 
 					// Get the nodal location of this point
 					double dX[3];
 
-					dX[0] = dGL[0] * node0.x + dGL[1] * node1.x + dGL[2] * node2.x;
-					dX[1] = dGL[0] * node0.y + dGL[1] * node1.y + dGL[2] * node2.y;
-					dX[2] = dGL[0] * node0.z + dGL[1] * node1.z + dGL[2] * node2.z;
+					dX[0] = dG(k,0) * node0.x + dG(k,1) * node1.x + dG(k,2) * node2.x;
+					dX[1] = dG(k,0) * node0.y + dG(k,1) * node1.y + dG(k,2) * node2.y;
+					dX[2] = dG(k,0) * node0.z + dG(k,1) * node1.z + dG(k,2) * node2.z;
 
 					double dMag =
 						sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
@@ -3115,8 +3046,7 @@ void LinearRemapGLLtoGLL2(
 		}
 
 		// Coefficients
-		DataMatrix<double> dCoeff;
-		dCoeff.Initialize(nOverlapFaces * nPout * nPout, nPin * nPin);
+		DataArray2D<double> dCoeff(nOverlapFaces * nPout * nPout, nPin * nPin);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 
@@ -3143,7 +3073,7 @@ void LinearRemapGLLtoGLL2(
 		}
 
 		// Source areas
-		DataVector<double> vecSourceArea(nPin * nPin);
+		DataArray1D<double> vecSourceArea(nPin * nPin);
 
 		for (int p = 0; p < nPin; p++) {
 		for (int q = 0; q < nPin; q++) {
@@ -3153,7 +3083,7 @@ void LinearRemapGLLtoGLL2(
 		}
 
 		// Target areas
-		DataVector<double> vecTargetArea(nOverlapFaces * nPout * nPout);
+		DataArray1D<double> vecTargetArea(nOverlapFaces * nPout * nPout);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -3229,14 +3159,14 @@ void LinearRemapGLLtoGLL2(
 
 	// Build redistribution map within target element
 	Announce("Building redistribution maps on target mesh");
-	DataVector<double> dRedistSourceArea(nPout * nPout);
-	DataVector<double> dRedistTargetArea(nPout * nPout);
-	std::vector< DataMatrix<double> > dRedistributionMaps;
+	DataArray1D<double> dRedistSourceArea(nPout * nPout);
+	DataArray1D<double> dRedistTargetArea(nPout * nPout);
+	std::vector< DataArray2D<double> > dRedistributionMaps;
 	dRedistributionMaps.resize(meshOutput.faces.size());
 
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
 
-		dRedistributionMaps[ixSecond].Initialize(
+		dRedistributionMaps[ixSecond].Allocate(
 			nPout * nPout, nPout * nPout);
 
 		for (int i = 0; i < nPout * nPout; i++) {
@@ -3270,7 +3200,7 @@ void LinearRemapGLLtoGLL2(
 	}
 
 	// Construct the total geometric area
-	DataVector<double> dTotalGeometricArea(dataNodalAreaOut.GetRows());
+	DataArray1D<double> dTotalGeometricArea(dataNodalAreaOut.GetRows());
 	for (int ixSecond = 0; ixSecond < meshOutput.faces.size(); ixSecond++) {
 		for (int s = 0; s < nPout; s++) {
 		for (int t = 0; t < nPout; t++) {
@@ -3286,7 +3216,7 @@ void LinearRemapGLLtoGLL2(
 	Announce("Assembling map");
 
 	// Map from source DOFs to target DOFs with redistribution applied
-	DataMatrix<double> dRedistributedOp(
+	DataArray2D<double> dRedistributedOp(
 		nPin * nPin, nPout * nPout);
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
@@ -3381,11 +3311,11 @@ void LinearRemapGLLtoGLL2_Pointwise(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,
@@ -3394,8 +3324,8 @@ void LinearRemapGLLtoGLL2_Pointwise(
 	OfflineMap & mapRemap
 ) {
 	// Gauss-Lobatto quadrature within Faces
-	DataVector<double> dGL;
-	DataVector<double> dWL;
+	DataArray1D<double> dGL;
+	DataArray1D<double> dWL;
 
 	GaussLobattoQuadrature::GetPoints(nPout, 0.0, 1.0, dGL, dWL);
 
@@ -3406,12 +3336,10 @@ void LinearRemapGLLtoGLL2_Pointwise(
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 
 	// Sample coefficients
-	DataMatrix<double> dSampleCoeffIn;
-	dSampleCoeffIn.Initialize(nPin, nPin);
+	DataArray2D<double> dSampleCoeffIn(nPin, nPin);
 
 	// Number of overlap Faces per source Face
-	DataVector<int> nAllOverlapFaces;
-	nAllOverlapFaces.Initialize(meshInput.faces.size());
+	DataArray1D<int> nAllOverlapFaces(meshInput.faces.size());
 
 	int ixOverlap = 0;
 
@@ -3434,7 +3362,7 @@ void LinearRemapGLLtoGLL2_Pointwise(
 	}
 
 	// Number of times this point was found
-	DataVector<bool> fSecondNodeFound(dataNodalAreaOut.GetRows());
+	DataArray1D<bool> fSecondNodeFound(dataNodalAreaOut.GetRows());
 
 	// Loop through all faces on meshInput
 	ixOverlap = 0;

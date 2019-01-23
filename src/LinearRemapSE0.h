@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "GridElements.h"
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 
 class OfflineMap;
 
@@ -34,8 +34,8 @@ void LinearRemapSE0(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
 	OfflineMap & mapRemap
 );
 
@@ -49,8 +49,8 @@ void LinearRemapSE4(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
+	const DataArray3D<int> & dataGLLNodes,
+	const DataArray3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fNoConservation,
@@ -67,11 +67,11 @@ void LinearRemapGLLtoGLL_Pointwise(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,
@@ -90,11 +90,11 @@ void LinearRemapGLLtoGLL_Integrated(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	const DataMatrix3D<int> & dataGLLNodesIn,
-	const DataMatrix3D<double> & dataGLLJacobianIn,
-	const DataMatrix3D<int> & dataGLLNodesOut,
-	const DataMatrix3D<double> & dataGLLJacobianOut,
-	const DataVector<double> & dataNodalAreaOut,
+	const DataArray3D<int> & dataGLLNodesIn,
+	const DataArray3D<double> & dataGLLJacobianIn,
+	const DataArray3D<int> & dataGLLNodesOut,
+	const DataArray3D<double> & dataGLLJacobianOut,
+	const DataArray1D<double> & dataNodalAreaOut,
 	int nPin,
 	int nPout,
 	int nMonotoneType,

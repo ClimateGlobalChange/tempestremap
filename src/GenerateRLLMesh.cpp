@@ -15,6 +15,7 @@
 ///	</remarks>
 
 #include "GridElements.h"
+#include "DataArray1D.h"
 #include "Exception.h"
 #include "Announce.h"
 
@@ -57,8 +58,8 @@ int GenerateRLLMesh(Mesh& mesh,
 try {
 
 	// Longitude and latitude arrays
-	DataVector<double> dLonEdge;
-	DataVector<double> dLatEdge;
+	DataArray1D<double> dLonEdge;
+	DataArray1D<double> dLatEdge;
 
 	// Generate mesh from input datafile
 	if (strInputFile != "") {
@@ -101,11 +102,11 @@ try {
 			_EXCEPTIONT("At least two latitudes required in input file");
 		}
 
-		DataVector<double> dLonNode(nLongitudes);
+		DataArray1D<double> dLonNode(nLongitudes);
 		varLon->set_cur((long)0);
 		varLon->get(&(dLonNode[0]), nLongitudes);
 
-		DataVector<double> dLatNode(nLatitudes);
+		DataArray1D<double> dLatNode(nLatitudes);
 		varLat->set_cur((long)0);
 		varLat->get(&(dLatNode[0]), nLatitudes);
 
@@ -131,7 +132,7 @@ try {
 		}
 
 		// Initialize longitude edges
-		dLonEdge.Initialize(nLongitudes+1);
+		dLonEdge.Allocate(nLongitudes+1);
 
 		if (fForceGlobal) {
 			dLonEdge[0] = 0.5 * (dLonNode[0] + dLonNode[nLongitudes-1] - 360.0);
@@ -146,7 +147,7 @@ try {
 		}
 
 		// Initialize latitude edges
-		dLatEdge.Initialize(nLatitudes+1);
+		dLatEdge.Allocate(nLatitudes+1);
 
 		dLatEdge[0] =
 			dLatNode[0]
@@ -218,7 +219,7 @@ try {
 		double dDeltaLat = dLatEnd - dLatBegin;
 
 		// Create longitude arrays
-		dLonEdge.Initialize(nLongitudes+1);
+		dLonEdge.Allocate(nLongitudes+1);
 		for (int i = 0; i <= nLongitudes; i++) {
 			double dLambdaFrac =
 				  static_cast<double>(i)
@@ -228,7 +229,7 @@ try {
 		}
 
 		// Create latitude arrays
-		dLatEdge.Initialize(nLatitudes+1);
+		dLatEdge.Allocate(nLatitudes+1);
 		for (int j = 0; j <= nLatitudes; j++) {
 			double dPhiFrac =
 				  static_cast<double>(j)

@@ -17,7 +17,7 @@
 #ifndef _GAUSSQUADRATURE_H_
 #define _GAUSSQUADRATURE_H_
 
-#include "DataVector.h"
+#include "DataArray1D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -33,8 +33,8 @@ public:
 	///	</summary>
 	static void GetPoints(
 		int nCount,
-		DataVector<double> & dG,
-		DataVector<double> & dW
+		DataArray1D<double> & dG,
+		DataArray1D<double> & dW
 	);
 
 	///	<summary>
@@ -45,8 +45,8 @@ public:
 		int nCount,
 		double dXi0,
 		double dXi1,
-		DataVector<double> & dG,
-		DataVector<double> & dW
+		DataArray1D<double> & dG,
+		DataArray1D<double> & dW
 	);
 };
 

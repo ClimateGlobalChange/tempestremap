@@ -17,7 +17,7 @@
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
-#include "DataMatrix.h"
+#include "DataArray2D.h"
 
 #include <cmath>
 #include <iostream>
@@ -82,7 +82,7 @@ void ConvertUTMtoRLL_Coeff(
 	int iM,
 	double * dC
 ) {
-	DataMatrix<double> dC0(5,9);
+	DataArray2D<double> dC0(5,9);
 
 	dC0[0][0] = -175./16384.;
 	dC0[0][2] = -5./256.;

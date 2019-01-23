@@ -23,8 +23,8 @@
 
 #include "Announce.h"
 #include "Exception.h"
-#include "DataVector.h"
-#include "DataMatrix.h"
+#include "DataArray1D.h"
+#include "DataArray2D.h"
 
 #include <cmath>
 
@@ -78,7 +78,7 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
 		}
 
-		m_dSourceCenterLon.Initialize(dimGridSize->size());
+		m_dSourceCenterLon.Allocate(dimGridSize->size());
 
 		varGridCenterLon->get(
 			&(m_dSourceCenterLon[0]),
@@ -89,7 +89,7 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
 		}
 
-		m_dSourceCenterLat.Initialize(dimGridSize->size());
+		m_dSourceCenterLat.Allocate(dimGridSize->size());
 
 		varGridCenterLat->get(
 			&(m_dSourceCenterLat[0]),
@@ -101,7 +101,7 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
 		}
 
-		m_dSourceVertexLon.Initialize(
+		m_dSourceVertexLon.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -115,7 +115,7 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
 		}
 
-		m_dSourceVertexLat.Initialize(
+		m_dSourceVertexLat.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -255,7 +255,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
 		}
 
-		m_dTargetCenterLon.Initialize(dimGridSize->size());
+		m_dTargetCenterLon.Allocate(dimGridSize->size());
 
 		varGridCenterLon->get(
 			&(m_dTargetCenterLon[0]),
@@ -266,7 +266,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
 		}
 
-		m_dTargetCenterLat.Initialize(dimGridSize->size());
+		m_dTargetCenterLat.Allocate(dimGridSize->size());
 
 		varGridCenterLat->get(
 			&(m_dTargetCenterLat[0]),
@@ -278,7 +278,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
 		}
 
-		m_dTargetVertexLon.Initialize(
+		m_dTargetVertexLon.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -292,7 +292,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
 		}
 
-		m_dTargetVertexLat.Initialize(
+		m_dTargetVertexLat.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
@@ -378,10 +378,10 @@ void OfflineMap::InitializeTargetDimensions(
 
 void OfflineMap::InitializeCoordinatesFromMeshFV(
 	const Mesh & mesh,
-	DataVector<double> & dCenterLon,
-	DataVector<double> & dCenterLat,
-	DataMatrix<double> & dVertexLon,
-	DataMatrix<double> & dVertexLat,
+	DataArray1D<double> & dCenterLon,
+	DataArray1D<double> & dCenterLat,
+	DataArray2D<double> & dVertexLon,
+	DataArray2D<double> & dVertexLat,
 	bool fLatLon
 ) {
 	int nFaces = mesh.faces.size();
@@ -399,15 +399,15 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 		return;
 	}
 
-	dVertexLon.Initialize(nFaces, nNodesPerFace);
-	dVertexLat.Initialize(nFaces, nNodesPerFace);
+	dVertexLon.Allocate(nFaces, nNodesPerFace);
+	dVertexLat.Allocate(nFaces, nNodesPerFace);
 
 	if ((fLatLon) && (nNodesPerFace != 4)) {
 		_EXCEPTIONT("Logic error");
 	}
 
-	dCenterLon.Initialize(nFaces);
-	dCenterLat.Initialize(nFaces);
+	dCenterLon.Allocate(nFaces);
+	dCenterLat.Allocate(nFaces);
 
 	// Store coordinates of each Node and Face centerpoint
 	for (int i = 0; i < nFaces; i++) {
@@ -487,11 +487,11 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 void OfflineMap::InitializeCoordinatesFromMeshFE(
 	const Mesh & mesh,
 	int nP,
-	const DataMatrix3D<int> & dataGLLnodes,
-	DataVector<double> & dCenterLon,
-	DataVector<double> & dCenterLat,
-	DataMatrix<double> & dVertexLon,
-	DataMatrix<double> & dVertexLat
+	const DataArray3D<int> & dataGLLnodes,
+	DataArray1D<double> & dCenterLon,
+	DataArray1D<double> & dCenterLat,
+	DataArray2D<double> & dVertexLon,
+	DataArray2D<double> & dVertexLat
 ) {
 	int nFaces = mesh.faces.size();
 
@@ -511,13 +511,13 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 	}
 	}
 
-	dCenterLon.Initialize(iMaxNodeIx);
-	dCenterLat.Initialize(iMaxNodeIx);
+	dCenterLon.Allocate(iMaxNodeIx);
+	dCenterLat.Allocate(iMaxNodeIx);
 
-	dVertexLon.Initialize(iMaxNodeIx, 1);
-	dVertexLat.Initialize(iMaxNodeIx, 1);
+	dVertexLon.Allocate(iMaxNodeIx, 1);
+	dVertexLat.Allocate(iMaxNodeIx, 1);
 
-	DataVector<double> dG;
+	DataArray1D<double> dG;
 	GetDefaultNodalLocations(nP, dG);
 
 	for (int i = 0; i < dataGLLnodes.GetRows(); i++) {
@@ -552,15 +552,15 @@ void OfflineMap::InitializeCoordinatesFromMeshFE(
 void OfflineMap::InitializeRectilinearCoordinateVector(
 	int nLon,
 	int nLat,
-	const DataMatrix<double> & dVertexLon,
-	const DataMatrix<double> & dVertexLat,
+	const DataArray2D<double> & dVertexLon,
+	const DataArray2D<double> & dVertexLat,
 	bool fLonFirst,
-	DataVector<double> & dCenterLon,
-	DataVector<double> & dCenterLat,
-	DataVector<double> & dVectorCenterLon,
-	DataVector<double> & dVectorCenterLat,
-	DataMatrix<double> & dVectorBoundsLon,
-	DataMatrix<double> & dVectorBoundsLat
+	DataArray1D<double> & dCenterLon,
+	DataArray1D<double> & dCenterLat,
+	DataArray1D<double> & dVectorCenterLon,
+	DataArray1D<double> & dVectorCenterLat,
+	DataArray2D<double> & dVectorBoundsLon,
+	DataArray2D<double> & dVectorBoundsLat
 ) {
 	if (dCenterLon.GetRows() != nLon * nLat) {
 		_EXCEPTION3("CenterLon has incorrect dimension:\n"
@@ -579,14 +579,14 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 		_EXCEPTIONT("Number of faces must be tensor product of nLon and nLat");
 	}
 
-	dCenterLon.Initialize(nFaces);
-	dCenterLat.Initialize(nFaces);
+	dCenterLon.Allocate(nFaces);
+	dCenterLat.Allocate(nFaces);
 
-	dVectorCenterLon.Initialize(nLon);
-	dVectorCenterLat.Initialize(nLat);
+	dVectorCenterLon.Allocate(nLon);
+	dVectorCenterLat.Allocate(nLat);
 
-	dVectorBoundsLon.Initialize(nLon, 2);
-	dVectorBoundsLat.Initialize(nLat, 2);
+	dVectorBoundsLon.Allocate(nLon, 2);
+	dVectorBoundsLat.Allocate(nLat, 2);
 
 	if (!fLonFirst) {
 		for (int i = 0; i < nLon; i++) {
@@ -707,15 +707,15 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFV(
 	const Mesh & meshSource
 ) {
 	// Check if these arrays have been read from file
-	if ((m_dSourceVertexLon.IsInitialized()) ||
-		(m_dSourceVertexLat.IsInitialized()) ||
-		(m_dSourceCenterLon.IsInitialized()) ||
-		(m_dSourceCenterLat.IsInitialized())
+	if ((m_dSourceVertexLon.IsAttached()) ||
+		(m_dSourceVertexLat.IsAttached()) ||
+		(m_dSourceCenterLon.IsAttached()) ||
+		(m_dSourceCenterLat.IsAttached())
 	) {
-		if ((m_dSourceVertexLon.IsInitialized()) &&
-			(m_dSourceVertexLat.IsInitialized()) &&
-			(m_dSourceCenterLon.IsInitialized()) &&
-			(m_dSourceCenterLat.IsInitialized())
+		if ((m_dSourceVertexLon.IsAttached()) &&
+			(m_dSourceVertexLat.IsAttached()) &&
+			(m_dSourceCenterLon.IsAttached()) &&
+			(m_dSourceCenterLat.IsAttached())
 		) {
 			return;
 		}
@@ -788,15 +788,15 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 	const Mesh & meshTarget
 ) {
 	// Check if these arrays have been read from file
-	if ((m_dTargetVertexLon.IsInitialized()) ||
-		(m_dTargetVertexLat.IsInitialized()) ||
-		(m_dTargetCenterLon.IsInitialized()) ||
-		(m_dTargetCenterLat.IsInitialized())
+	if ((m_dTargetVertexLon.IsAttached()) ||
+		(m_dTargetVertexLat.IsAttached()) ||
+		(m_dTargetCenterLon.IsAttached()) ||
+		(m_dTargetCenterLat.IsAttached())
 	) {
-		if ((m_dTargetVertexLon.IsInitialized()) &&
-			(m_dTargetVertexLat.IsInitialized()) &&
-			(m_dTargetCenterLon.IsInitialized()) &&
-			(m_dTargetCenterLat.IsInitialized())
+		if ((m_dTargetVertexLon.IsAttached()) &&
+			(m_dTargetVertexLat.IsAttached()) &&
+			(m_dTargetCenterLon.IsAttached()) &&
+			(m_dTargetCenterLat.IsAttached())
 		) {
 			return;
 		}
@@ -862,8 +862,8 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 		}
 /*
 		// Bounds on vertex array
-		m_dVectorTargetBoundsLon.Initialize(2);
-		m_dVectorTargetBoundsLat.Initialize(2);
+		m_dVectorTargetBoundsLon.Allocate(2);
+		m_dVectorTargetBoundsLat.Allocate(2);
 		m_dVectorTargetBoundsLon[0] = m_dTargetVertexLon[0][0];
 		m_dVectorTargetBoundsLon[1] = m_dTargetVertexLon[0][0];
 		m_dVectorTargetBoundsLat[0] = m_dTargetVertexLat[0][0];
@@ -901,7 +901,7 @@ void OfflineMap::InitializeTargetCoordinatesFromMeshFV(
 void OfflineMap::InitializeSourceCoordinatesFromMeshFE(
 	const Mesh & meshSource,
 	int nP,
-	const DataMatrix3D<int> & dataGLLnodesSource
+	const DataArray3D<int> & dataGLLnodesSource
 ) {
 	InitializeCoordinatesFromMeshFE(
 		meshSource,
@@ -918,7 +918,7 @@ void OfflineMap::InitializeSourceCoordinatesFromMeshFE(
 void OfflineMap::InitializeTargetCoordinatesFromMeshFE(
 	const Mesh & meshTarget,
 	int nP,
-	const DataMatrix3D<int> & dataGLLnodesTarget
+	const DataArray3D<int> & dataGLLnodesTarget
 ) {
 	InitializeCoordinatesFromMeshFE(
 		meshTarget,
@@ -1152,25 +1152,22 @@ void OfflineMap::Apply(
 		}
 	}
 
-	DataVector<float> dataIn;
+	DataArray1D<float> dataIn;
 	if (m_vecSourceDimSizes.size() == 1) {
-		dataIn.Initialize(nSourceCount);
+		dataIn.Allocate(nSourceCount);
 	} else {
-		dataIn.Initialize(m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]);
+		dataIn.Allocate(m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]);
 	}
 
-	DataVector<float> dataOut;
+	DataArray1D<float> dataOut;
 	if (m_vecTargetDimSizes.size() == 1) {
-		dataOut.Initialize(nTargetCount);
+		dataOut.Allocate(nTargetCount);
 	} else {
-		dataOut.Initialize(m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
+		dataOut.Allocate(m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
 	}
 
-	DataVector<double> dataInDouble;
-	dataInDouble.Initialize(nSourceCount);
-
-	DataVector<double> dataOutDouble;
-	dataOutDouble.Initialize(nTargetCount);
+	DataArray1D<double> dataInDouble(nSourceCount);
+	DataArray1D<double> dataOutDouble(nTargetCount);
 
 	// Target
 	if (!fAppend) {
@@ -1500,16 +1497,15 @@ void OfflineMap::Apply(
 		// Construct an array of dimensions for this variable
 		int nVarTotalEntries = 1;
 
-		DataVector<NcDim *> vecDims;
-		vecDims.Initialize(var->num_dims());
+		DataArray1D<NcDim *> vecDims(var->num_dims());
 
-		DataVector<NcDim *> vecDimsOut;
+		DataArray1D<NcDim *> vecDimsOut;
 		if (fTargetRectilinear) {
 
 			if (fSourceRectilinear) {
-				vecDimsOut.Initialize(var->num_dims());
+				vecDimsOut.Allocate(var->num_dims());
 			} else {
-				vecDimsOut.Initialize(var->num_dims()+1);
+				vecDimsOut.Allocate(var->num_dims()+1);
 			}
 
 			vecDimsOut[vecDimsOut.GetRows()-2] = dim0;
@@ -1520,9 +1516,9 @@ void OfflineMap::Apply(
 					_EXCEPTIONT("Rectilinear source data stored in 1D format");
 				}
 
-				vecDimsOut.Initialize(var->num_dims()-1);
+				vecDimsOut.Allocate(var->num_dims()-1);
 			} else {
-				vecDimsOut.Initialize(var->num_dims());
+				vecDimsOut.Allocate(var->num_dims());
 			}
 
 			vecDimsOut[vecDimsOut.GetRows()-1] = dim0;
@@ -1531,8 +1527,7 @@ void OfflineMap::Apply(
 		int nFreeDims = var->num_dims() - m_vecSourceDimSizes.size();
 
 		// Add any missing dimension variables to target file
-		DataVector<long> vecDimSizes;
-		vecDimSizes.Initialize(nFreeDims);
+		DataArray1D<long> vecDimSizes(nFreeDims);
 
 		for (int d = 0; d < nFreeDims; d++) {
 			vecDims[d] = var->get_dim(d);
@@ -1604,15 +1599,11 @@ void OfflineMap::Apply(
 		CopyNcVarAttributes(var, varOut);
 
 		// Source and output counts
-		DataVector<long> nCountsIn;
-		nCountsIn.Initialize(vecDims.GetRows());
-
-		DataVector<long> nCountsOut;
-		nCountsOut.Initialize(vecDimsOut.GetRows());
+		DataArray1D<long> nCountsIn(vecDims.GetRows());
+		DataArray1D<long> nCountsOut(vecDimsOut.GetRows());
 
 		// Get size
-		DataVector<long> nGet;
-		nGet.Initialize(nCountsIn.GetRows());
+		DataArray1D<long> nGet(nCountsIn.GetRows());
 		for (int d = 0; d < nGet.GetRows()-1; d++) {
 			nGet[d] = 1;
 		}
@@ -1624,8 +1615,7 @@ void OfflineMap::Apply(
 		}
 
 		// Put size
-		DataVector<long> nPut;
-		nPut.Initialize(nCountsOut.GetRows());
+		DataArray1D<long> nPut(nCountsOut.GetRows());
 		for (int d = 0; d < nPut.GetRows()-1; d++) {
 			nPut[d] = 1;
 		}
@@ -1922,17 +1912,17 @@ void OfflineMap::Read(
 			strSource.c_str());
 	}
 
-	m_dSourceCenterLat.Initialize(nA);
-	m_dTargetCenterLat.Initialize(nB);
+	m_dSourceCenterLat.Allocate(nA);
+	m_dTargetCenterLat.Allocate(nB);
 
-	m_dSourceCenterLon.Initialize(nA);
-	m_dTargetCenterLon.Initialize(nB);
+	m_dSourceCenterLon.Allocate(nA);
+	m_dTargetCenterLon.Allocate(nB);
 
-	m_dSourceVertexLat.Initialize(nA, nVA);
-	m_dTargetVertexLat.Initialize(nB, nVB);
+	m_dSourceVertexLat.Allocate(nA, nVA);
+	m_dTargetVertexLat.Allocate(nB, nVB);
 
-	m_dSourceVertexLon.Initialize(nA, nVA);
-	m_dTargetVertexLon.Initialize(nB, nVB);
+	m_dSourceVertexLon.Allocate(nA, nVA);
+	m_dTargetVertexLon.Allocate(nB, nVB);
 
 	varYCA->get(&(m_dSourceCenterLat[0]), nA);
 	varYCB->get(&(m_dTargetCenterLat[0]), nB);
@@ -1954,8 +1944,8 @@ void OfflineMap::Read(
 		NcVar * varLatCB = ncMap.get_var("latc_b");
 		NcVar * varLonCB = ncMap.get_var("lonc_b");
 
-		m_dVectorTargetCenterLat.Initialize(dimLatB->size());
-		m_dVectorTargetCenterLon.Initialize(dimLonB->size());
+		m_dVectorTargetCenterLat.Allocate(dimLatB->size());
+		m_dVectorTargetCenterLon.Allocate(dimLonB->size());
 
 		varLatCB->get(&(m_dVectorTargetCenterLat[0]), dimLatB->size());
 		varLonCB->get(&(m_dVectorTargetCenterLon[0]), dimLonB->size());
@@ -1963,8 +1953,8 @@ void OfflineMap::Read(
 		NcVar * varLatBounds = ncMap.get_var("lat_bnds");
 		NcVar * varLonBounds = ncMap.get_var("lon_bnds");
 
-		m_dVectorTargetBoundsLat.Initialize(dimLatB->size(), 2);
-		m_dVectorTargetBoundsLon.Initialize(dimLonB->size(), 2);
+		m_dVectorTargetBoundsLat.Allocate(dimLatB->size(), 2);
+		m_dVectorTargetBoundsLon.Allocate(dimLonB->size(), 2);
 
 		varLatBounds->get(&(m_dVectorTargetBoundsLat[0][0]),
 			dimLatB->size(), 2);
@@ -1973,8 +1963,8 @@ void OfflineMap::Read(
 	}
 
 	// Read areas
-	m_dSourceAreas.Initialize(nA);
-	m_dTargetAreas.Initialize(nB);
+	m_dSourceAreas.Allocate(nA);
+	m_dTargetAreas.Allocate(nB);
 
 	NcVar * varAreaA = ncMap.get_var("area_a");
 	if (varAreaA == NULL) {
@@ -2017,14 +2007,9 @@ void OfflineMap::Read(
 
 	int nS = dimNS->size();
 
-	DataVector<int> vecRow;
-	vecRow.Initialize(nS);
-
-	DataVector<int> vecCol;
-	vecCol.Initialize(nS);
-
-	DataVector<double> vecS;
-	vecS.Initialize(nS);
+	DataArray1D<int> vecRow(nS);
+	DataArray1D<int> vecCol(nS);
+	DataArray1D<double> vecS(nS);
 
 	varRow->set_cur((long)0);
 	varRow->get(&(vecRow[0]), nS);
@@ -2236,16 +2221,16 @@ void OfflineMap::Write(
 	varAreaB->put(&(m_dTargetAreas[0]), nB);
 
 	// Write frac
-	DataVector<double> dFrac;
-
-	dFrac.Initialize(nA);
+	DataArray1D<double> dFrac;
+	
+	dFrac.Allocate(nA);
 	for (int i = 0; i < nA; i++) {
 		dFrac[i] = 1.0;
 	}
 	NcVar * varFracA = ncMap.add_var("frac_a", ncDouble, dimNA);
 	varFracA->put(&(dFrac[0]), nA);
 
-	dFrac.Initialize(nB);
+	dFrac.Allocate(nB);
 	for (int i = 0; i < nB; i++) {
 		dFrac[i] = 1.0;
 	}
@@ -2253,9 +2238,9 @@ void OfflineMap::Write(
 	varFracB->put(&(dFrac[0]), nB);
 
 	// Write SparseMatrix entries
-	DataVector<int> vecRow;
-	DataVector<int> vecCol;
-	DataVector<double> vecS;
+	DataArray1D<int> vecRow;
+	DataArray1D<int> vecCol;
+	DataArray1D<double> vecS;
 
 	m_mapRemap.GetEntries(vecRow, vecCol, vecS);
 
@@ -2334,13 +2319,13 @@ void OfflineMap::SetTranspose(
 	m_vecTargetDimSizes = mapIn.m_vecSourceDimSizes;
 	m_vecTargetDimNames = mapIn.m_vecSourceDimNames;
 
-	DataVector<int> dataRows;
-	DataVector<int> dataCols;
-	DataVector<double> dataEntries;
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
 
 	mapIn.m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 /*
-	DataVector<double> dTargetCoverage(mapIn.m_dTargetAreas.GetRows());
+	DataArray1D<double> dTargetCoverage(mapIn.m_dTargetAreas.GetRows());
 	for (size_t s = 0; s < dataEntries.GetRows(); s++) {
 		dTargetCoverage[dataRows[s]] +=
 			mapIn.m_dTargetAreas[dataRows[s]];
@@ -2362,15 +2347,14 @@ bool OfflineMap::IsConsistent(
 ) {
 
 	// Get map entries
-	DataVector<int> dataRows;
-	DataVector<int> dataCols;
-	DataVector<double> dataEntries;
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
 
 	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 
 	// Calculate row sums
-	DataVector<double> dRowSums;
-	dRowSums.Initialize(m_mapRemap.GetRows());
+	DataArray1D<double> dRowSums(m_mapRemap.GetRows());
 
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		dRowSums[dataRows[i]] += dataEntries[i];
@@ -2403,15 +2387,14 @@ bool OfflineMap::IsConservative(
 	}
 */
 	// Get map entries
-	DataVector<int> dataRows;
-	DataVector<int> dataCols;
-	DataVector<double> dataEntries;
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
 
 	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 
 	// Calculate column sums
-	DataVector<double> dColumnSums;
-	dColumnSums.Initialize(m_mapRemap.GetColumns());
+	DataArray1D<double> dColumnSums(m_mapRemap.GetColumns());
 
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		dColumnSums[dataCols[i]] +=
@@ -2439,9 +2422,9 @@ bool OfflineMap::IsMonotone(
 ) {
 
 	// Get map entries
-	DataVector<int> dataRows;
-	DataVector<int> dataCols;
-	DataVector<double> dataEntries;
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
 
 	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 

@@ -22,8 +22,8 @@
 
 void GaussQuadrature::GetPoints(
 	int nCount,
-	DataVector<double> & dG,
-	DataVector<double> & dW
+	DataArray1D<double> & dG,
+	DataArray1D<double> & dW
 ) {
 	// Check for valid range
 	if (nCount < 1) {
@@ -31,8 +31,8 @@ void GaussQuadrature::GetPoints(
 	}
 
 	// Initialize the arrays
-	dG.Initialize(nCount);
-	dW.Initialize(nCount);
+	dG.Allocate(nCount);
+	dW.Allocate(nCount);
 
 	// Degree 1
 	if (nCount == 1) {
@@ -203,8 +203,8 @@ void GaussQuadrature::GetPoints(
 	int nCount,
 	double dXi0,
 	double dXi1,
-	DataVector<double> & dG,
-	DataVector<double> & dW
+	DataArray1D<double> & dG,
+	DataArray1D<double> & dW
 ) {
 	// Get quadrature points in the [-1, 1] reference element
 	GetPoints(nCount, dG, dW);

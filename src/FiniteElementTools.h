@@ -15,9 +15,9 @@
 ///	</remarks>
 
 #include "Defines.h"
-#include "DataVector.h"
-#include "DataMatrix.h"
-#include "DataMatrix3D.h"
+#include "DataArray1D.h"
+#include "DataArray2D.h"
+#include "DataArray3D.h"
 #include "GridElements.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,7 +31,7 @@ class Mesh;
 ///	</summary>
 void GetDefaultNodalLocations(
 	int nP,
-	DataVector<double> & dG
+	DataArray1D<double> & dG
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,8 +84,8 @@ double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
 	bool fBubble,
-	DataMatrix3D<int> & dataGLLnodes,
-	DataMatrix3D<double> & dataGLLJacobian
+	DataArray3D<int> & dataGLLnodes,
+	DataArray3D<double> & dataGLLJacobian
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -94,9 +94,9 @@ double GenerateMetaData(
 ///		Generate unique Jacobian values from non-unique Jacobians.
 ///	</summary>
 void GenerateUniqueJacobian(
-	const DataMatrix3D<int> & dataGLLnodes,
-	const DataMatrix3D<double> & dataGLLJacobian,
-	DataVector<double> & dataUniqueJacobian
+	const DataArray3D<int> & dataGLLnodes,
+	const DataArray3D<double> & dataGLLJacobian,
+	DataArray1D<double> & dataUniqueJacobian
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -105,8 +105,8 @@ void GenerateUniqueJacobian(
 ///		Generate Jacobian vector from Jacobians on GLL nodes.
 ///	</summary>
 void GenerateDiscontinuousJacobian(
-	const DataMatrix3D<double> & dataGLLJacobian,
-	DataVector<double> & dataUniqueJacobian
+	const DataArray3D<double> & dataGLLJacobian,
+	DataArray1D<double> & dataUniqueJacobian
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -120,7 +120,7 @@ void SampleGLLFiniteElement(
 	int nP,
 	double dAlpha,
 	double dBeta,
-	DataMatrix<double> & dCoeff
+	DataArray2D<double> & dCoeff
 );
 
 ///////////////////////////////////////////////////////////////////////////////

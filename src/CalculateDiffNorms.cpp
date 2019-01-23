@@ -20,7 +20,8 @@
 #include "GaussLobattoQuadrature.h"
 #include "Exception.h"
 #include "Announce.h"
-#include "DataMatrix3D.h"
+#include "DataArray1D.h"
+#include "DataArray3D.h"
 
 #include "netcdfcpp.h"
 
@@ -135,7 +136,7 @@ try {
 	// Get Mesh information
 	int nTotalDataSize = 1;
 
-	DataVector<double> dataUniqueJacobian;
+	DataArray1D<double> dataUniqueJacobian;
 	
 	// Finite volumes
 	if (!fGLL) {
@@ -147,8 +148,8 @@ try {
 	// Finite elements
 	} else {
 		// Calculate pointwise areas
-		DataMatrix3D<int> dataGLLnodes;
-		DataMatrix3D<double> dataGLLJacobian;
+		DataArray3D<int> dataGLLnodes;
+		DataArray3D<double> dataGLLJacobian;
 
 		GenerateMetaData(mesh, nP, fBubble, dataGLLnodes, dataGLLJacobian);
 
@@ -171,8 +172,7 @@ try {
 	// Load data from file A
 	AnnounceStartBlock("Loading data from file A");
 
-	DataVector<double> dDataA;
-	dDataA.Initialize(nTotalDataSize);
+	DataArray1D<double> dDataA(nTotalDataSize);
 
 	NcFile ncFileA(strFileA.c_str(), NcFile::ReadOnly);
 	if (!ncFileA.is_valid()) {
@@ -196,8 +196,7 @@ try {
 	// Load data from file B
 	AnnounceStartBlock("Loading data from file B");
 
-	DataVector<double> dDataB;
-	dDataB.Initialize(nTotalDataSize);
+	DataArray1D<double> dDataB(nTotalDataSize);
 
 	NcFile ncFileB(strFileB.c_str(), NcFile::ReadOnly);
 	if (!ncFileB.is_valid()) {

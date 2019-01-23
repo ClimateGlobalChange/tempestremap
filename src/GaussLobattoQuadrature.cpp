@@ -24,8 +24,8 @@
 
 void GaussLobattoQuadrature::GetPoints(
 	int nCount,
-	DataVector<double> & dG,
-	DataVector<double> & dW
+	DataArray1D<double> & dG,
+	DataArray1D<double> & dW
 ) {
 	// Check for valid range
 	if (nCount < 2) {
@@ -33,8 +33,8 @@ void GaussLobattoQuadrature::GetPoints(
 	}
 
 	// Initialize the arrays
-	dG.Initialize(nCount);
-	dW.Initialize(nCount);
+	dG.Allocate(nCount);
+	dW.Allocate(nCount);
 
 	// Degree 2
 	if (nCount == 2) {
@@ -182,7 +182,7 @@ void GaussLobattoQuadrature::GetPoints(
 
 	// Higher degrees
 	} else {
-		DataVector<double> dRoots(nCount);
+		DataArray1D<double> dRoots(nCount);
 		
 		LegendrePolynomial::AllDerivativeRoots(nCount-1, dRoots);
 
@@ -207,8 +207,8 @@ void GaussLobattoQuadrature::GetPoints(
 	int nCount,
 	double dXi0,
 	double dXi1,
-	DataVector<double> & dG,
-	DataVector<double> & dW
+	DataArray1D<double> & dG,
+	DataArray1D<double> & dW
 ) {
 	// Get quadrature points in the [-1, 1] reference element
 	GetPoints(nCount, dG, dW);

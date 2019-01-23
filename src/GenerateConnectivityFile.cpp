@@ -104,8 +104,8 @@ try {
 	NcVar * varLon = ncmesh.get_var("grid_center_lon");
 
 	// Check if center latitudes and longitudes are already available
-	DataVector<double> dAllLats;
-	DataVector<double> dAllLons;
+	DataArray1D<double> dAllLats;
+	DataArray1D<double> dAllLons;
 
 	bool fConvertLatToDegrees = true;
 	bool fConvertLonToDegrees = true;
@@ -122,7 +122,7 @@ try {
 			_EXCEPTIONT("grid_center_lon dimension mismatch");
 		}
 
-		dAllLats.Initialize(vecConnectivity.size());
+		dAllLats.Allocate(vecConnectivity.size());
 		varLat->set_cur((long)0);
 		varLat->get(dAllLats, vecConnectivity.size());
 
@@ -132,7 +132,7 @@ try {
 			fConvertLatToDegrees = false;
 		}
 
-		dAllLons.Initialize(vecConnectivity.size());
+		dAllLons.Allocate(vecConnectivity.size());
 		varLon->set_cur((long)0);
 		varLon->get(dAllLons, vecConnectivity.size());
 

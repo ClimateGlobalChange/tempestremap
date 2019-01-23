@@ -17,7 +17,7 @@
 #include "Defines.h"
 #include "GridElements.h"
 
-#include "DataMatrix.h"
+#include "DataArray2D.h"
 #include "Announce.h"
 #include "FiniteElementTools.h"
 #include "GaussQuadrature.h"
@@ -126,7 +126,7 @@ Real Mesh::CalculateFaceAreas(
 	bool fContainsConcaveFaces
 ) {
 	int nCount = 0;
-	vecFaceArea.Initialize(faces.size());
+	vecFaceArea.Allocate(faces.size());
 
 	// Calculate the area of each Face
 	if (fContainsConcaveFaces) {
@@ -193,8 +193,7 @@ Real Mesh::CalculateFaceAreasFromOverlap(
 	}
 
 	// Set all Face areas to zero
-	vecFaceArea.Initialize(faces.size());
-	vecFaceArea.Zero();
+	vecFaceArea.Allocate(faces.size());
 
 	// Loop over all Faces in meshOverlap
 	double dTotalArea = 0.0;
@@ -549,7 +548,7 @@ void Mesh::Write(const std::string & strFile) const {
 		std::vector<NcVar*> vecConnectVar;
 		vecConnectVar.resize(vecBlockSizes.size());
 
-		std::vector< DataMatrix<int> > vecConnect;
+		std::vector< DataArray2D<int> > vecConnect;
 		vecConnect.resize(vecBlockSizes.size());
 
 		// Number of elements added to each connectivity array
@@ -560,35 +559,35 @@ void Mesh::Write(const std::string & strFile) const {
 		std::vector<NcVar*> vecGlobalIdVar;
 		vecGlobalIdVar.resize(vecBlockSizes.size());
 
-		std::vector< DataVector<int> > vecGlobalId;
+		std::vector< DataArray1D<int> > vecGlobalId;
 		vecGlobalId.resize(vecBlockSizes.size());
 
 		// Edge types
 		std::vector<NcVar*> vecEdgeTypeVar;
 		vecEdgeTypeVar.resize(vecBlockSizes.size());
 
-		std::vector< DataMatrix<int> > vecEdgeType;
+		std::vector< DataArray2D<int> > vecEdgeType;
 		vecEdgeType.resize(vecBlockSizes.size());
 
 		// Parent on source mesh
 		std::vector<NcVar*> vecFaceParentAVar;
 		vecFaceParentAVar.resize(vecBlockSizes.size());
 
-		std::vector< DataVector<int> > vecFaceParentA;
+		std::vector< DataArray1D<int> > vecFaceParentA;
 		vecFaceParentA.resize(vecBlockSizes.size());
 
 		// Parent on target mesh
 		std::vector<NcVar*> vecFaceParentBVar;
 		vecFaceParentBVar.resize(vecBlockSizes.size());
 
-		std::vector< DataVector<int> > vecFaceParentB;
+		std::vector< DataArray1D<int> > vecFaceParentB;
 		vecFaceParentB.resize(vecBlockSizes.size());
 
 		// Initialize block-local storage arrays and create output variables
 		for (int n = 0; n < vecBlockSizes.size(); n++) {
-			vecConnect[n].Initialize(vecBlockSizeFaces[n], vecBlockSizes[n]);
-			vecGlobalId[n].Initialize(vecBlockSizeFaces[n]);
-			vecEdgeType[n].Initialize(vecBlockSizeFaces[n], vecBlockSizes[n]);
+			vecConnect[n].Allocate(vecBlockSizeFaces[n], vecBlockSizes[n]);
+			vecGlobalId[n].Allocate(vecBlockSizeFaces[n]);
+			vecEdgeType[n].Allocate(vecBlockSizeFaces[n], vecBlockSizes[n]);
 	
 			char szConnectVarName[ParamLenString];
 			sprintf(szConnectVarName, "connect%i", n+1);
@@ -633,7 +632,7 @@ void Mesh::Write(const std::string & strFile) const {
 			}
 
 			if (vecSourceFaceIx.size() != 0) {
-				vecFaceParentA[n].Initialize(vecBlockSizeFaces[n]);
+				vecFaceParentA[n].Allocate(vecBlockSizeFaces[n]);
 
 				char szParentAVarName[ParamLenString];
 				sprintf(szParentAVarName, "el_parent_a%i", n+1);
@@ -649,7 +648,7 @@ void Mesh::Write(const std::string & strFile) const {
 			}
 
 			if (vecTargetFaceIx.size() != 0) {
-				vecFaceParentB[n].Initialize(vecBlockSizeFaces[n]);
+				vecFaceParentB[n].Allocate(vecBlockSizeFaces[n]);
 
 				char szParentBVarName[ParamLenString];
 				sprintf(szParentBVarName, "el_parent_b%i", n+1);
@@ -741,7 +740,7 @@ void Mesh::Write(const std::string & strFile) const {
 			_EXCEPTIONT("Error creating variable \"coord\"");
 		}
 
-		DataVector<double> dCoord(nNodeCount);
+		DataArray1D<double> dCoord(nNodeCount);
 
 		for (int i = 0; i < nNodeCount; i++) {
 			dCoord[i] = static_cast<double>(nodes[i].x);
@@ -820,8 +819,8 @@ void Mesh::Read(const std::string & strFile) {
 		int nGridSize = static_cast<int>(dimGridSize->size());
 		int nGridCorners = static_cast<int>(dimGridCorners->size());
 
-		DataMatrix<double> dCornerLat(nGridSize, nGridCorners);
-		DataMatrix<double> dCornerLon(nGridSize, nGridCorners);
+		DataArray2D<double> dCornerLat(nGridSize, nGridCorners);
+		DataArray2D<double> dCornerLon(nGridSize, nGridCorners);
 
 		varGridCornerLat->set_cur(0, 0);
 		varGridCornerLat->get(&(dCornerLat[0][0]), nGridSize, nGridCorners);
@@ -972,12 +971,12 @@ void Mesh::Read(const std::string & strFile) {
 			int nElementCount = dimBlockElements->size();
 
 			// Variables for each face
-			DataMatrix<int> iConnect(nElementCount, nNodesPerElement);
-			DataVector<int> iGlobalId(nElementCount);
-			DataMatrix<int> iEdgeType(nElementCount, nNodesPerElement);
+			DataArray2D<int> iConnect(nElementCount, nNodesPerElement);
+			DataArray1D<int> iGlobalId(nElementCount);
+			DataArray2D<int> iEdgeType(nElementCount, nNodesPerElement);
 
-			DataVector<int> iParentA(nElementCount);
-			DataVector<int> iParentB(nElementCount);
+			DataArray1D<int> iParentA(nElementCount);
+			DataArray1D<int> iParentB(nElementCount);
 
 			// Load in nodes for all elements in this block
 			char szConnect[ParamLenString];
@@ -1130,8 +1129,7 @@ void Mesh::Read(const std::string & strFile) {
 						"\"coord\"", strFile.c_str());
 			}
 
-			DataMatrix<double> dNodeCoords;
-			dNodeCoords.Initialize(3, nNodeCount);
+			DataArray2D<double> dNodeCoords(3, nNodeCount);
 
 			// Load in node array
 			varNodes->set_cur(0, 0);
@@ -1142,8 +1140,6 @@ void Mesh::Read(const std::string & strFile) {
 				nodes[i].y = static_cast<Real>(dNodeCoords[1][i]);
 				nodes[i].z = static_cast<Real>(dNodeCoords[2][i]);
 			}
-
-			dNodeCoords.Deinitialize();
 		}
 
     // Remove coincident nodes.
@@ -1451,8 +1447,6 @@ void EqualizeCoincidentNodes(
 	const Mesh & meshFirst,
 	Mesh & meshSecond
 ) {
-	int nCoincidentNodes = 0;
-
 	// Sort nodes
 	std::map<Node, int> setSortedFirstNodes;
 	for (int i = 0; i < meshFirst.nodes.size(); i++) {
@@ -1473,7 +1467,7 @@ void EqualizeCoincidentNodes(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
+/*
 void EqualizeCoincidentNodes(
 	Mesh & mesh
 ) {
@@ -1496,7 +1490,7 @@ void EqualizeCoincidentNodes(
 
 	printf("Coincident nodes: %i\n", nCoincidentNodes);
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////////////
 
 int BuildCoincidentNodeVector(
@@ -1541,8 +1535,8 @@ Real CalculateFaceAreaQuadratureMethod(
 
 	const int nOrder = 6;
 
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 	GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
 
 	double dFaceArea = 0.0;
@@ -1601,9 +1595,9 @@ Real CalculateFaceAreaQuadratureMethod(
 			dDaG.y *= dDenomTerm;
 			dDaG.z *= dDenomTerm;
 
-			dDaG.x *= dDenomTerm;
-			dDaG.y *= dDenomTerm;
-			dDaG.z *= dDenomTerm;
+			dDbG.x *= dDenomTerm;
+			dDbG.y *= dDenomTerm;
+			dDbG.z *= dDenomTerm;
 /*
 			Node node;
 			Node dDx1G;

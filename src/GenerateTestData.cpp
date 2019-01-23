@@ -22,7 +22,7 @@
 #include "GaussLobattoQuadrature.h"
 #include "Exception.h"
 #include "Announce.h"
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 
 #include "netcdfcpp.h"
 
@@ -243,8 +243,8 @@ try {
 
 	const int TriQuadraturePoints = triquadrule.GetPoints();
 
-	const DataMatrix<double> & TriQuadratureG = triquadrule.GetG();
-	const DataVector<double> & TriQuadratureW = triquadrule.GetW();
+	const DataArray2D<double> & TriQuadratureG = triquadrule.GetG();
+	const DataArray1D<double> & TriQuadratureW = triquadrule.GetW();
 
 	// Test data
 	TestFunction * pTest;
@@ -344,15 +344,15 @@ try {
 	AnnounceStartBlock("Generating test data");
 
 	// Latitude and Longitude arrays (used for HOMME format output)
-	DataVector<double> dLat;
-	DataVector<double> dLon;
-	DataVector<double> dArea;
+	DataArray1D<double> dLat;
+	DataArray1D<double> dLon;
+	DataArray1D<double> dArea;
 
 	// Output data
-	DataVector<double> dVar;
+	DataArray1D<double> dVar;
 
 	// Nodal geometric area
-	DataVector<double> dNodeArea;
+	DataArray1D<double> dNodeArea;
 
 	// Calculate element areas
 	mesh.CalculateFaceAreas(fContainsConcaveFaces);
@@ -361,7 +361,7 @@ try {
 	if ((!fGLLIntegrate) && (!fGLL)) {
 
 		// Resize the array
-		dVar.Initialize(mesh.faces.size());
+		dVar.Allocate(mesh.faces.size());
 
 		// Loop through all Faces
 		for (int i = 0; i < mesh.faces.size(); i++) {
@@ -431,8 +431,8 @@ try {
 	// Finite element data
 	} else {
 		// Generate grid metadata
-		DataMatrix3D<int> dataGLLNodes;
-		DataMatrix3D<double> dataGLLJacobian;
+		DataArray3D<int> dataGLLNodes;
+		DataArray3D<double> dataGLLJacobian;
 
 		GenerateMetaData(mesh, nP, false, dataGLLNodes, dataGLLJacobian);
 
@@ -465,31 +465,31 @@ try {
 		if (fHOMMEFormat) {
 			vecOutputDimSizes[1] = iMaxNode;
 
-			dLat.Initialize(iMaxNode);
-			dLon.Initialize(iMaxNode);
-			dArea.Initialize(iMaxNode);
+			dLat.Allocate(iMaxNode);
+			dLon.Allocate(iMaxNode);
+			dArea.Allocate(iMaxNode);
 
 		} else {
 			vecOutputDimSizes[0] = iMaxNode;
 		}
 
 		// Get Gauss-Lobatto quadrature nodes
-		DataVector<double> dG;
-		DataVector<double> dW;
+		DataArray1D<double> dG;
+		DataArray1D<double> dW;
 
 		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
 
 		// Get Gauss quadrature nodes
 		const int nGaussP = 10;
 
-		DataVector<double> dGaussG;
-		DataVector<double> dGaussW;
+		DataArray1D<double> dGaussG;
+		DataArray1D<double> dGaussW;
 
 		GaussQuadrature::GetPoints(nGaussP, 0.0, 1.0, dGaussG, dGaussW);
 
 		// Allocate data
-		dVar.Initialize(iMaxNode);
-		dNodeArea.Initialize(iMaxNode);
+		dVar.Allocate(iMaxNode);
+		dNodeArea.Allocate(iMaxNode);
 
 		// Sample data
 		for (int k = 0; k < nElements; k++) {
@@ -536,8 +536,7 @@ try {
 
 			// High-order Gaussian integration over basis function
 			} else {
-				DataMatrix<double> dCoeff;
-				dCoeff.Initialize(nP, nP);
+				DataArray2D<double> dCoeff(nP, nP);
 
 				for (int p = 0; p < nGaussP; p++) {
 				for (int q = 0; q < nGaussP; q++) {

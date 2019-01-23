@@ -31,7 +31,7 @@
 #include <cmath>
 
 #include "Exception.h"
-#include "DataVector.h"
+#include "DataArray1D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 

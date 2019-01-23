@@ -25,8 +25,8 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 	int nOrder
 ) {
 /*
-	DataVector<double> dG;
-	DataVector<double> dW;
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
 	GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
 
 	m_nPoints = nOrder * nOrder;
@@ -103,10 +103,10 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 
 		m_nPoints = 33;
 
-		m_dG.Initialize(33, 3);
+		m_dG.Allocate(33, 3);
 		memcpy(&(m_dG[0][0]), &(TriQuadratureG[0][0]), 33 * 3 * sizeof(double));
 
-		m_dW.Initialize(33);
+		m_dW.Allocate(33);
 		memcpy(&(m_dW[0]), &(TriQuadratureW[0]), 33 * sizeof(double));
 
 	// 10th order quadrature rule (25 points)
@@ -151,10 +151,10 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 
 		m_nPoints = 25;
 
-		m_dG.Initialize(25, 3);
+		m_dG.Allocate(25, 3);
 		memcpy(&(m_dG[0][0]), &(TriQuadratureG[0][0]), 25 * 3 * sizeof(double));
 
-		m_dW.Initialize(25);
+		m_dW.Allocate(25);
 		memcpy(&(m_dW[0]), &(TriQuadratureW[0]), 25 * sizeof(double));
 
 	// 8th order quadrature rule (16 points)
@@ -187,10 +187,10 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 
 		m_nPoints = 16;
 
-		m_dG.Initialize(16, 3);
+		m_dG.Allocate(16, 3);
 		memcpy(&(m_dG[0][0]), &(TriQuadratureG[0][0]), 16 * 3 * sizeof(double));
 
-		m_dW.Initialize(16);
+		m_dW.Allocate(16);
 		memcpy(&(m_dW[0]), &(TriQuadratureW[0]), 16 * sizeof(double));
 
 	// 4th order quadrature rule (6 points)
@@ -210,16 +210,16 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 
 		m_nPoints = 6;
 
-		m_dG.Initialize(6, 3);
+		m_dG.Allocate(6, 3);
 		memcpy(&(m_dG[0][0]), &(TriQuadratureG[0][0]), 6 * 3 * sizeof(double));
 
-		m_dW.Initialize(6);
+		m_dW.Allocate(6);
 		memcpy(&(m_dW[0]), &(TriQuadratureW[0]), 6 * sizeof(double));
 
 	// 1st order quadrature rule (1 point)
 	} else if (nOrder == 1) {
 
-		m_dG.Initialize(1, 3);
+		m_dG.Allocate(1, 3);
 		m_dG[0][0] = 0.333333333333333;
 		m_dG[0][1] = 0.333333333333333;
 		m_dG[0][2] = 0.333333333333333;

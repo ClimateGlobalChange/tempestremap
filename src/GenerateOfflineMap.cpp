@@ -19,7 +19,7 @@
 #include "Exception.h"
 #include "GridElements.h"
 #include "OverlapMesh.h"
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 #include "FiniteElementTools.h"
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
@@ -73,8 +73,8 @@ static void ParseVariableList(
 
 void LoadMetaDataFile(
 	const std::string & strInputMeta,
-	DataMatrix3D<int> & dataGLLNodes,
-	DataMatrix3D<double> & dataGLLJacobian
+	DataArray3D<int> & dataGLLNodes,
+	DataArray3D<double> & dataGLLJacobian
 ) {
 	NcFile ncMeta(strInputMeta.c_str(), NcFile::ReadOnly);
 
@@ -101,13 +101,13 @@ void LoadMetaDataFile(
 	int nP = dimNp->size();
 	int nElem = dimNelem->size();
 
-	DataMatrix3D<int> dataGLLNodes_tmp;
-	DataMatrix3D<double> dataGLLJacobian_tmp;
+	DataArray3D<int> dataGLLNodes_tmp;
+	DataArray3D<double> dataGLLJacobian_tmp;
  
-	dataGLLNodes.Initialize(nP, nP, nElem);
-	dataGLLJacobian.Initialize(nP, nP, nElem);
-	dataGLLNodes_tmp.Initialize(nP, nP, nElem);
-	dataGLLJacobian_tmp.Initialize(nP, nP, nElem);
+	dataGLLNodes.Allocate(nP, nP, nElem);
+	dataGLLJacobian.Allocate(nP, nP, nElem);
+	dataGLLNodes_tmp.Allocate(nP, nP, nElem);
+	dataGLLJacobian_tmp.Allocate(nP, nP, nElem);
  
 	varGLLNodes->get(&(dataGLLNodes_tmp[0][0][0]), nP, nP, nElem);
  	varGLLJacobian->get(&(dataGLLJacobian_tmp[0][0][0]), nP, nP, nElem);
@@ -347,8 +347,8 @@ try {
 
     // Finite volume input / Finite element output
     } else if (eInputType == DiscretizationType_FV) {
-        DataMatrix3D<int> dataGLLNodes;
-        DataMatrix3D<double> dataGLLJacobian;
+        DataArray3D<int> dataGLLNodes;
+        DataArray3D<double> dataGLLJacobian;
 
         if (strOutputMeta != "") {
             AnnounceStartBlock("Loading meta data file");
@@ -430,8 +430,8 @@ try {
         (eInputType != DiscretizationType_FV) &&
         (eOutputType == DiscretizationType_FV)
     ) {
-        DataMatrix3D<int> dataGLLNodes;
-        DataMatrix3D<double> dataGLLJacobian;
+        DataArray3D<int> dataGLLNodes;
+        DataArray3D<double> dataGLLJacobian;
 
         if (strInputMeta != "") {
             AnnounceStartBlock("Loading meta data file");
@@ -507,11 +507,11 @@ try {
         (eInputType  != DiscretizationType_FV) &&
         (eOutputType != DiscretizationType_FV)
     ) {
-        DataMatrix3D<int> dataGLLNodesIn;
-        DataMatrix3D<double> dataGLLJacobianIn;
+        DataArray3D<int> dataGLLNodesIn;
+        DataArray3D<double> dataGLLJacobianIn;
 
-        DataMatrix3D<int> dataGLLNodesOut;
-        DataMatrix3D<double> dataGLLJacobianOut;
+        DataArray3D<int> dataGLLNodesOut;
+        DataArray3D<double> dataGLLJacobianOut;
 
         // Input metadata
         if (strInputMeta != "") {

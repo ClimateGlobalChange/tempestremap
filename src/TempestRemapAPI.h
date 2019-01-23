@@ -1,7 +1,7 @@
 #ifndef TEMPESTREMAP_API_H
 #define TEMPESTREMAP_API_H
 
-#include "DataMatrix3D.h"
+#include "DataArray3D.h"
 #include "GridElements.h"
 #include "OfflineMap.h"
 #include <string>
@@ -80,10 +80,12 @@ extern "C" {
 
 	int GenerateGLLMetaData ( std::string strMesh, Mesh& meshOut,
 							  int nP, bool fBubble, std::string strOutput,
-							  DataMatrix3D<int>& dataGLLnodes,
-							  DataMatrix3D<double>& dataGLLJacobian );
+							  DataArray3D<int>& dataGLLnodes,
+							  DataArray3D<double>& dataGLLJacobian );
 
-	int GenerateOfflineMap ( OfflineMap& offlineMapOut, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
+	int GenerateOfflineMap ( OfflineMap& offlineMapOut,
+							 std::string strInputMesh, std::string strOutputMesh,
+							 std::string strOverlapMesh,
 							 std::string strInputMeta, std::string strOutputMeta,
 							 std::string strInputType, std::string strOutputType,
 							 int nPin = 4, int nPout = 4,
