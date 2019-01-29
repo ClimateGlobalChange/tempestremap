@@ -200,10 +200,10 @@ try {
 		}
 
 		// Convert latitude and longitude interval to radians
-		dLonBegin *= M_PI / 180.0;
-		dLonEnd   *= M_PI / 180.0;
-		dLatBegin *= M_PI / 180.0;
-		dLatEnd   *= M_PI / 180.0;
+		dLonBegin = dLonEdge[0];
+		dLonEnd = dLonEdge[nLongitudes];
+		dLatBegin = dLatEdge[0];
+		dLatEnd = dLatEdge[nLatitudes];
 
 	// Generate mesh from parameters
 	} else {
