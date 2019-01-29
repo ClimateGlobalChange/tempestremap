@@ -45,8 +45,11 @@ try {
 	// Number of elements in mesh
 	int nP;
 
+	// Use uniformly spaced sub-volumes
+	bool fUniformSpacing = false;
+
 	// Do not merge faces
-	bool fNoMergeFaces;
+	bool fNoMergeFaces = false;
 
 	// Nodes appear at GLL nodes
 	bool fCGLL = true;
@@ -54,10 +57,11 @@ try {
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputFile, "in", "");
-		CommandLineString(strOutputMesh, "out_mesh", "");
+		CommandLineString(strOutputMesh, "out", "");
 		CommandLineString(strOutputConnectivity, "out_connect", "");
 		CommandLineInt(nP, "np", 2);
-		CommandLineBool(fNoMergeFaces, "no-merge-face");
+		CommandLineBool(fUniformSpacing, "uniform");
+		//CommandLineBool(fNoMergeFaces, "no-merge-face");
 		//CommandLineBool(fCGLL, "cgll");
 
 		ParseCommandLine(argc, argv);
@@ -69,7 +73,7 @@ try {
 	if (strInputFile == "") {
 		_EXCEPTIONT("No input file specified");
 	}
-	if (nP < 1) {
+	if (nP < 2) {
 		_EXCEPTIONT("--np must be >= 2");
 	}
 
@@ -89,10 +93,23 @@ try {
 
 	// Gauss-Lobatto quadrature nodes and weights
 	std::cout << "..Computing sub-volume boundaries" << std::endl;
-	DataArray1D<double> dG;
-	DataArray1D<double> dW;
 
-	GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+	DataArray1D<double> dG(nP);
+	DataArray1D<double> dW(nP);
+
+	// Uniformly spaced nodes
+	if (fUniformSpacing) {
+		for (int i = 0; i < nP; i++) {
+			dG[i] = (2.0 * static_cast<double>(i) + 1.0) / (2.0 * nP);
+			dW[i] = 1.0 / nP;
+		}
+		dG[0] = 0.0;
+		dG[1] = 1.0;
+
+	// Get Gauss-Lobatto Weights
+	} else {
+		GaussLobattoQuadrature::GetPoints(nP, 0.0, 1.0, dG, dW);
+	}
 
 	// Accumulated weight vector
 	DataArray1D<double> dAccumW(nP+1);
