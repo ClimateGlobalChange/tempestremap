@@ -155,7 +155,7 @@ try {
 			strOutputData,
 			vecVariableStrings2,
 			strNColName,
-			false,
+			fOutputDouble,
 			true);
 
 		AnnounceEndBlock(NULL);
