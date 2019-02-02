@@ -21,6 +21,7 @@
 #include "DataArray1D.h"
 #include "DataArray2D.h"
 #include "DataArray3D.h"
+#include "netcdfcpp.h"
 #include <string>
 #include <vector>
 
@@ -315,7 +316,15 @@ public:
 	///	</summary>
 	virtual void Read(
 		const std::string & strSource,
+                NcFile::FileFormat & eFileFormat, 
 		std::map<std::string, std::string> * pmapAttributes = NULL
+	);
+
+	///	<summary>
+	///		Read the OfflineMap from a NetCDF file.
+	///	</summary>
+	virtual void Read(
+		const std::string & strSource
 	);
 
 	///	<summary>
@@ -323,6 +332,7 @@ public:
 	///	</summary>
 	virtual void Write(
 		const std::string & strTarget,
+                NcFile::FileFormat eFileFormat,
 		const std::map<std::string, std::string> & mapAttributes
 	);
 
@@ -330,7 +340,8 @@ public:
 	///		Write the OfflineMap to a NetCDF file.
 	///	</summary>
 	virtual void Write(
-		const std::string & strTarget
+                const std::string & strTarget,
+                NcFile::FileFormat eFileFormat
 	);
 
 	///	<summary>

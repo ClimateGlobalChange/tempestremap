@@ -94,6 +94,9 @@ int main(int argc, char** argv) {
 	bool fOutputDouble;
 
 	// List of variables to preserve
+	std::string strOutputFormat;
+
+	// List of variables to preserve
 	std::string strPreserveVariables;
 
 	// Preserve all non-remapped variables
@@ -134,6 +137,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 		CommandLineBool(fOutputDouble, "out_double");
+                CommandLineString(strOutputFormat, "out_format","Classic");
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
@@ -159,7 +163,7 @@ int main(int argc, char** argv) {
                                     fBubble, fMonotoneTypeID,
                                     fVolumetric, fNoConservation, fNoCheck,
                                     strVariables, strOutputMap, strInputData, strOutputData,
-                                    strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride,
+                                    strNColName, fOutputDouble, strOutputFormat, strPreserveVariables, fPreserveAll, dFillValueOverride,
                                     fInputConcave, fOutputConcave );
 
 	if (err) exit(err);

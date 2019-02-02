@@ -1747,6 +1747,7 @@ void OfflineMap::Apply(
 
 void OfflineMap::Read(
 	const std::string & strSource,
+        NcFile::FileFormat & eFileFormat,
 	std::map<std::string, std::string> * pmapAttributes
 ) {
 	NcFile ncMap(strSource.c_str(), NcFile::ReadOnly);
@@ -1755,6 +1756,9 @@ void OfflineMap::Read(
 			strSource.c_str());
 	}
 
+	// Read netcdf file format
+        eFileFormat = ncMap.get_format();
+        
 	// Read input dimensions entries
 	NcDim * dimSrcGridRank = ncMap.get_dim("src_grid_rank");
 	if (dimSrcGridRank == NULL) {
@@ -2060,9 +2064,10 @@ void OfflineMap::Read(
 
 void OfflineMap::Write(
 	const std::string & strTarget,
+        NcFile::FileFormat eOutputFormat,
 	const std::map<std::string, std::string> & mapAttributes
 ) {
-	NcFile ncMap(strTarget.c_str(), NcFile::Replace);
+        NcFile ncMap(strTarget.c_str(), NcFile::Replace,NULL,0,eOutputFormat);
 	if (!ncMap.is_valid()) {
 		_EXCEPTION1("Unable to open output map file \"%s\"",
 			strTarget.c_str());
@@ -2334,14 +2339,23 @@ void OfflineMap::Write(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
 void OfflineMap::Write(
+        const std::string & strTarget,
+        NcFile::FileFormat eOutputFormat
+) {
+	std::map<std::string, std::string> mapNoAttributes;
+	return Write(strTarget, eOutputFormat, mapNoAttributes);
+}
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+void OfflineMap::Read(
 	const std::string & strTarget
 ) {
 	std::map<std::string, std::string> mapNoAttributes;
-	return Write(strTarget, mapNoAttributes);
+        NcFile::FileFormat eFileFormat;
+	return Write(strTarget, eFileFormat, mapNoAttributes);
 }
-
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::SetTranspose(

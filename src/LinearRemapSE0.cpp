@@ -772,8 +772,8 @@ void LinearRemapSE4(
 		}
 
 		// Output every 100 elements
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+		if (ixFirst % 1000 == 0) {
+                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// Number of overlapping Faces and triangles
@@ -1099,8 +1099,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+		if (ixFirst % 1000 == 0) {
+                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// Quantities from the First Mesh
@@ -1531,8 +1531,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+		if (ixFirst % 1000 == 0) {
+                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// This Face
@@ -1667,8 +1667,8 @@ void LinearRemapGLLtoGLL_Integrated(
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+		if (ixFirst % 1000 == 0) {
+                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// Quantities from the First Mesh
@@ -2015,8 +2015,8 @@ void LinearRemapGLLtoGLL_Integrated(
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
-		if (ixFirst % 100 == 0) {
-			Announce("Element %i", ixFirst);
+		if (ixFirst % 1000 == 0) {
+                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// This Face
