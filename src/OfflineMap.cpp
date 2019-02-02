@@ -2354,7 +2354,7 @@ void OfflineMap::Read(
 ) {
 	std::map<std::string, std::string> mapNoAttributes;
         NcFile::FileFormat eFileFormat;
-	return Write(strTarget, eFileFormat, mapNoAttributes);
+	return Read(strTarget, eFileFormat, mapNoAttributes);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
