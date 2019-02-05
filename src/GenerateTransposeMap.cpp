@@ -132,8 +132,8 @@ try {
 	// Load map from file
 	AnnounceStartBlock("Loading input map");
 	OfflineMap mapIn;
-        NcFile::FileFormat eFileFormat;
-	mapIn.Read(strInputMapFile, eFileFormat, &mapAttributes);
+	NcFile::FileFormat eFileFormat;
+	mapIn.Read(strInputMapFile, &mapAttributes, &eFileFormat);
 	AnnounceEndBlock("Done");
 
 	// Generate transpose map
@@ -170,7 +170,7 @@ try {
 
 	// Write map to file
 	AnnounceStartBlock("Writing transpose map");
-	mapOut.Write(strOutputMapFile, eFileFormat, mapAttributes);
+	mapOut.Write(strOutputMapFile, mapAttributes, eFileFormat);
 	AnnounceEndBlock("Done");
 
 	return (0);

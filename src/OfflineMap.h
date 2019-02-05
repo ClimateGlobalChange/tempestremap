@@ -316,15 +316,8 @@ public:
 	///	</summary>
 	virtual void Read(
 		const std::string & strSource,
-                NcFile::FileFormat & eFileFormat, 
-		std::map<std::string, std::string> * pmapAttributes = NULL
-	);
-
-	///	<summary>
-	///		Read the OfflineMap from a NetCDF file.
-	///	</summary>
-	virtual void Read(
-		const std::string & strSource
+		std::map<std::string, std::string> * pmapAttributes = NULL,
+		NcFile::FileFormat * peFileFormat = NULL
 	);
 
 	///	<summary>
@@ -332,16 +325,8 @@ public:
 	///	</summary>
 	virtual void Write(
 		const std::string & strTarget,
-                NcFile::FileFormat eFileFormat,
-		const std::map<std::string, std::string> & mapAttributes
-	);
-
-	///	<summary>
-	///		Write the OfflineMap to a NetCDF file.
-	///	</summary>
-	virtual void Write(
-                const std::string & strTarget,
-                NcFile::FileFormat eFileFormat
+		const std::map<std::string, std::string> & mapAttributes,
+		NcFile::FileFormat eFileFormat = NcFile::Classic
 	);
 
 	///	<summary>

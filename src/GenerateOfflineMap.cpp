@@ -172,22 +172,15 @@ try {
 
     // Check command line parameters (data type arguments)
     STLStringHelper::ToLower(strOutputFormat);
-    
-    NcFile::FileFormat eOutputFormat;
-    
-    if (strOutputFormat == "classic") {
-        eOutputFormat = NcFile::Classic;
-    } else if (strOutputFormat == "offset64bits") {
-        eOutputFormat = NcFile::Offset64Bits;
-    } else if (strOutputFormat == "netcdf4") {
-        eOutputFormat = NcFile::Netcdf4;
-    } else if (strOutputFormat == "netcdf4classic") {
-        eOutputFormat = NcFile::Netcdf4Classic;
-    } else {
-        _EXCEPTION1("Invalid \"out_format\" value (%s), expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
-                    strOutputFormat.c_str());
-    }
 
+	NcFile::FileFormat eOutputFormat =
+		GetNcFileFormatFromString(strOutputFormat);
+	if (eOutputFormat == BadFormat) {
+		_EXCEPTION1("Invalid \"out_format\" value (%s), "
+			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+			strOutputFormat.c_str());
+	}
+   
     STLStringHelper::ToLower(strInputType);
     STLStringHelper::ToLower(strOutputType);
 
@@ -705,7 +698,7 @@ try {
 		mapAttributes.insert(AttributePair("concave_dst", (fOutputConcave)?("true"):("false")));
 		mapAttributes.insert(AttributePair("version", g_strVersion));
 
-        mapRemap.Write(strOutputMap, eOutputFormat, mapAttributes);
+        mapRemap.Write(strOutputMap, mapAttributes, eOutputFormat);
         AnnounceEndBlock(NULL);
     }
 

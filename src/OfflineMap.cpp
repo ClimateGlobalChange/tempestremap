@@ -1747,8 +1747,8 @@ void OfflineMap::Apply(
 
 void OfflineMap::Read(
 	const std::string & strSource,
-        NcFile::FileFormat & eFileFormat,
-	std::map<std::string, std::string> * pmapAttributes
+	std::map<std::string, std::string> * pmapAttributes,
+	NcFile::FileFormat * peFileFormat
 ) {
 	NcFile ncMap(strSource.c_str(), NcFile::ReadOnly);
 	if (!ncMap.is_valid()) {
@@ -1757,8 +1757,12 @@ void OfflineMap::Read(
 	}
 
 	// Read netcdf file format
-        eFileFormat = ncMap.get_format();
-        
+	NcFile::FileFormat eFileFormat = ncMap.get_format();
+
+	if (peFileFormat != NULL) {
+		*peFileFormat = eFileFormat;
+	}
+
 	// Read input dimensions entries
 	NcDim * dimSrcGridRank = ncMap.get_dim("src_grid_rank");
 	if (dimSrcGridRank == NULL) {
@@ -2064,14 +2068,14 @@ void OfflineMap::Read(
 
 void OfflineMap::Write(
 	const std::string & strTarget,
-        NcFile::FileFormat eOutputFormat,
-	const std::map<std::string, std::string> & mapAttributes
+	const std::map<std::string, std::string> & mapAttributes,
+	NcFile::FileFormat eOutputFormat
 ) {
 	// Temporarily change error reporting
 	NcError error_temp(NcError::verbose_fatal);
 
 	// Open an output file
-	NcFile ncMap(strTarget.c_str(), NcFile::Replace,NULL,0,eOutputFormat);
+	NcFile ncMap(strTarget.c_str(), NcFile::Replace, NULL, 0, eOutputFormat);
 	if (!ncMap.is_valid()) {
 		_EXCEPTION1("Unable to open output map file \"%s\"",
 			strTarget.c_str());
@@ -2342,24 +2346,6 @@ void OfflineMap::Write(
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-void OfflineMap::Write(
-        const std::string & strTarget,
-        NcFile::FileFormat eOutputFormat
-) {
-	std::map<std::string, std::string> mapNoAttributes;
-	return Write(strTarget, eOutputFormat, mapNoAttributes);
-}
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-void OfflineMap::Read(
-	const std::string & strTarget
-) {
-	std::map<std::string, std::string> mapNoAttributes;
-        NcFile::FileFormat eFileFormat;
-	return Read(strTarget, eFileFormat, mapNoAttributes);
-}
 ///////////////////////////////////////////////////////////////////////////////
 
 void OfflineMap::SetTranspose(
