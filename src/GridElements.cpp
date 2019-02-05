@@ -305,6 +305,9 @@ void Mesh::Write(const std::string & strFile) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
 
+	// Temporarily change error reporting
+	NcError error_temp(NcError::verbose_fatal);
+
 	// Determine block sizes
 	std::vector<int> vecBlockSizes;
 	std::vector<int> vecBlockSizeFaces;

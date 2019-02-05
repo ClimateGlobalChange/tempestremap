@@ -86,7 +86,7 @@ void SwapAttributeNames(
 
 int main(int argc, char** argv) {
 
-        NcError error(NcError::verbose_fatal);
+	NcError error(NcError::silent_nonfatal);
 
 try {
 	// Map file for input

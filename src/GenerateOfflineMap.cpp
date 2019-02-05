@@ -143,8 +143,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
 	bool fInputConcave, bool fOutputConcave
 ) {
-  //    NcError error(NcError::silent_nonfatal);
-  NcError error(NcError::verbose_fatal);
+	NcError error(NcError::silent_nonfatal);
 
 try {
 

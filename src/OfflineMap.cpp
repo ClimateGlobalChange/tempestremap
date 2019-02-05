@@ -2067,7 +2067,11 @@ void OfflineMap::Write(
         NcFile::FileFormat eOutputFormat,
 	const std::map<std::string, std::string> & mapAttributes
 ) {
-        NcFile ncMap(strTarget.c_str(), NcFile::Replace,NULL,0,eOutputFormat);
+	// Temporarily change error reporting
+	NcError error_temp(NcError::verbose_fatal);
+
+	// Open an output file
+	NcFile ncMap(strTarget.c_str(), NcFile::Replace,NULL,0,eOutputFormat);
 	if (!ncMap.is_valid()) {
 		_EXCEPTION1("Unable to open output map file \"%s\"",
 			strTarget.c_str());
