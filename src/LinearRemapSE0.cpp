@@ -974,7 +974,10 @@ void LinearRemapSE4(
 
 			// Source elements only partially cover target volumes
 			} else {
-				_EXCEPTIONT("Target grid must be a subset of source grid");
+				_EXCEPTION2("Target grid must be a subset of source grid:"
+					"\nInput mesh area (%1.15e) Target area (%1.15e)",
+					meshInput.vecFaceArea[ixFirst],
+					dTargetArea);
 			}
 
 			ForceConsistencyConservation3(
