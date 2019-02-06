@@ -139,10 +139,11 @@ int GenerateOfflineMapWithMeshes(
 	std::string strVariables, std::string strOutputMap,
 	std::string strInputData, std::string strOutputData,
 	std::string strNColName, bool fOutputDouble,
+        std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
 	bool fInputConcave, bool fOutputConcave
 ) {
-    NcError error(NcError::silent_nonfatal);
+	NcError error(NcError::silent_nonfatal);
 
 try {
 
@@ -170,6 +171,16 @@ try {
     }
 
     // Check command line parameters (data type arguments)
+    STLStringHelper::ToLower(strOutputFormat);
+
+	NcFile::FileFormat eOutputFormat =
+		GetNcFileFormatFromString(strOutputFormat);
+	if (eOutputFormat == BadFormat) {
+		_EXCEPTION1("Invalid \"out_format\" value (%s), "
+			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+			strOutputFormat.c_str());
+	}
+   
     STLStringHelper::ToLower(strInputType);
     STLStringHelper::ToLower(strOutputType);
 
@@ -687,7 +698,7 @@ try {
 		mapAttributes.insert(AttributePair("concave_dst", (fOutputConcave)?("true"):("false")));
 		mapAttributes.insert(AttributePair("version", g_strVersion));
 
-        mapRemap.Write(strOutputMap, mapAttributes);
+        mapRemap.Write(strOutputMap, mapAttributes, eOutputFormat);
         AnnounceEndBlock(NULL);
     }
 
@@ -746,6 +757,7 @@ int GenerateOfflineMap( OfflineMap& mapRemap, std::string strInputMesh, std::str
 						std::string strVariables, std::string strOutputMap,
 						std::string strInputData, std::string strOutputData,
 						std::string strNColName, bool fOutputDouble,
+                                                std::string strOutputFormat,
 						std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
 						bool fInputConcave, bool fOutputConcave )
 {
@@ -806,7 +818,7 @@ try {
                                             fVolumetric, fNoConservation, fNoCheck,
                                             strVariables, strOutputMap,
                                             strInputData, strOutputData,
-                                            strNColName, fOutputDouble,
+                                            strNColName, fOutputDouble, strOutputFormat,
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
                                             fInputConcave, fOutputConcave );
 
@@ -893,6 +905,9 @@ int main(int argc, char** argv) {
 	// Output as double
 	bool fOutputDouble;
 
+	// Output data Netcdf format
+	std::string strOutputFormat;
+
 	// List of variables to preserve
 	std::string strPreserveVariables;
 
@@ -934,6 +949,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 		CommandLineBool(fOutputDouble, "out_double");
+                CommandLineString(strOutputFormat, "out_format","Classic","[Classic|Offset64Bits|Netcdf4|Netcdf4Classic]");
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
@@ -959,7 +975,7 @@ int main(int argc, char** argv) {
                                     fBubble, fMonotoneTypeID,
                                     fVolumetric, fNoConservation, fNoCheck,
                                     strVariables, strOutputMap, strInputData, strOutputData,
-                                    strNColName, fOutputDouble, strPreserveVariables, fPreserveAll, dFillValueOverride,
+                                    strNColName, fOutputDouble, strOutputFormat, strPreserveVariables, fPreserveAll, dFillValueOverride,
                                     fInputConcave, fOutputConcave );
 
 	if (err) exit(err);

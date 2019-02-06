@@ -365,7 +365,7 @@ NcFile::NcFile( const char* path, FileMode fmode,
     // If the user wants a 64-bit offset format, set that flag.
     if (fformat == Offset64Bits)
        mode |= NC_64BIT_OFFSET;
-#ifdef USE_NETCDF4
+#ifndef NETCDF3_ONLY
     else if (fformat == Netcdf4)
        mode |= NC_NETCDF4;
     else if (fformat == Netcdf4Classic)
