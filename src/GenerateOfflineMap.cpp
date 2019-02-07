@@ -23,6 +23,7 @@
 #include "FiniteElementTools.h"
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
+#include "NetCDFUtilities.h"
 
 #include "OverlapMesh.h"
 #include "OfflineMap.h"
@@ -175,7 +176,7 @@ try {
 
 	NcFile::FileFormat eOutputFormat =
 		GetNcFileFormatFromString(strOutputFormat);
-	if (eOutputFormat == BadFormat) {
+	if (eOutputFormat == NcFile::BadFormat) {
 		_EXCEPTION1("Invalid \"out_format\" value (%s), "
 			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
 			strOutputFormat.c_str());

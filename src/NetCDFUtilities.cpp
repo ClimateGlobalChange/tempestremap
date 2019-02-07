@@ -26,17 +26,17 @@
  NcFile::FileFormat GetNcFileFormatFromString(
 	const std::string & strFormat
 ) {
-    if (strOutputFormat == "classic") {
+	NcFile::FileFormat eOutputFormat = NcFile::BadFormat;
+    if (strFormat == "classic") {
         eOutputFormat = NcFile::Classic;
-    } else if (strOutputFormat == "offset64bits") {
+    } else if (strFormat == "offset64bits") {
         eOutputFormat = NcFile::Offset64Bits;
-    } else if (strOutputFormat == "netcdf4") {
+    } else if (strFormat == "netcdf4") {
         eOutputFormat = NcFile::Netcdf4;
-    } else if (strOutputFormat == "netcdf4classic") {
+    } else if (strFormat == "netcdf4classic") {
         eOutputFormat = NcFile::Netcdf4Classic;
-    } else {
-        eOutputFormat = NcFile::BadFormat
     }
+	return eOutputFormat;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
