@@ -301,7 +301,10 @@ void Mesh::RemoveCoincidentNodes() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::Write(const std::string & strFile) const {
+void Mesh::Write(
+	const std::string & strFile,
+	NcFile::FileFormat eFileFormat
+) const {
 	const int ParamFour = 4;
 	const int ParamLenString = 33;
 
@@ -347,7 +350,7 @@ void Mesh::Write(const std::string & strFile) const {
 	}
 
 	// Output to a NetCDF Exodus file
-	NcFile ncOut(strFile.c_str(), NcFile::Replace);
+	NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
 	if (!ncOut.is_valid()) {
 		_EXCEPTION1("Unable to open grid file \"%s\" for writing",
 			strFile.c_str());
@@ -774,6 +777,9 @@ void Mesh::Read(const std::string & strFile) {
 	strFileName = strFile;
 
 	// Open the NetCDF file
+	if (strFile == "") {
+		_EXCEPTIONT("No grid file specified for reading");
+	}
 	NcFile ncFile(strFile.c_str(), NcFile::ReadOnly);
 	if (!ncFile.is_valid()) {
 		_EXCEPTION1("Unable to open grid file \"%s\" for reading",

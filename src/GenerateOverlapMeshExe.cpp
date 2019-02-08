@@ -33,6 +33,9 @@ int main(int argc, char** argv) {
 	// Output mesh file
 	std::string strOverlapMesh;
 
+	// Output format
+	std::string strOutputFormat;
+
 	// Overlap grid generation method
 	std::string strMethod;
 
@@ -57,6 +60,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strMeshA, "a", "");
 		CommandLineString(strMeshB, "b", "");
 		CommandLineString(strOverlapMesh, "out", "overlap.g");
+		CommandLineString(strOutputFormat, "out_format", "netcdf4");
 		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
 		CommandLineBool(fNoValidate, "novalidate");
 		CommandLineBool(fHasConcaveFacesA, "concavea");
@@ -74,7 +78,7 @@ int main(int argc, char** argv) {
     int err =
 		GenerateOverlapMesh(
 			strMeshA, strMeshB,
- 			meshOverlap, strOverlapMesh,
+ 			meshOverlap, strOverlapMesh, strOutputFormat,
 			strMethod, fNoValidate,
 			fHasConcaveFacesA, fHasConcaveFacesB,
 			fAllowNoOverlap,

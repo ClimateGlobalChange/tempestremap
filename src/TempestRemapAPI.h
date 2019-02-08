@@ -4,6 +4,7 @@
 #include "DataArray3D.h"
 #include "GridElements.h"
 #include "OfflineMap.h"
+#include "netcdfcpp.h"
 #include <string>
 
 extern "C" {
@@ -55,22 +56,25 @@ extern "C" {
 
 	// Compute the overlap mesh given a source and target mesh file names
 	int GenerateOverlapMesh ( std::string strMeshA, std::string strMeshB,
-							  Mesh& meshOverlap, std::string strOverlapMesh,
-							  std::string strMethod, bool fNoValidate,
-							  bool fHasConcaveFacesA = false,
-							  bool fHasConcaveFacesB = false,
-							  bool fAllowNoOverlap = false,
-							  bool verbose = true );
+                              Mesh& meshOverlap, std::string strOverlapMesh,
+                              std::string strOutputFormat,
+                              std::string strMethod, bool fNoValidate,
+                              bool fHasConcaveFacesA = false,
+                              bool fHasConcaveFacesB = false,
+                              bool fAllowNoOverlap = false,
+                              bool fVerbose = true );
 
 	// Compute the overlap mesh given a source and target mesh objects
 	// An overload method which takes as arguments the source and target meshes that are pre-loaded into memory
 	int GenerateOverlapWithMeshes ( Mesh& meshA, Mesh& meshB,
-									Mesh& meshOverlap, std::string strOverlapMesh,
+									Mesh& meshOverlap,
+									std::string strOverlapMesh,
+									std::string strOutputFormat,
 									std::string strMethod,
 									bool fHasConcaveFacesA = false,
 									bool fHasConcaveFacesB = false,
 									bool fAllowNoOverlap = false,
-									bool verbose = true );
+									bool fVerbose = true );
 
 	// New version of the implementation to compute the overlap mesh given a source and target mesh file names
 	int GenerateOverlapMesh_v1 ( std::string strMeshA, std::string strMeshB,

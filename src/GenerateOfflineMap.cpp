@@ -140,7 +140,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strVariables, std::string strOutputMap,
 	std::string strInputData, std::string strOutputData,
 	std::string strNColName, bool fOutputDouble,
-        std::string strOutputFormat,
+	std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
 	bool fInputConcave, bool fOutputConcave
 ) {
@@ -223,8 +223,8 @@ try {
     // Initialize dimension information from file
 	if (!mapRemap.AreDimensionsInitialized()) {
     	AnnounceStartBlock("Initializing dimensions of map");
-      std::vector<std::string> srcDimNames, tgtDimNames;
-      std::vector<int> srcDimSizes, tgtDimSizes;
+		std::vector<std::string> srcDimNames, tgtDimNames;
+		std::vector<int> srcDimSizes, tgtDimSizes;
 	    Announce("Input mesh");
 	    srcDimNames.push_back("num_elem");
 	    srcDimSizes.push_back(meshInput.faces.size());

@@ -22,6 +22,7 @@
 #include "OverlapMesh.h"
 
 #include "netcdfcpp.h"
+#include "NetCDFUtilities.h"
 
 #include <cmath>
 
@@ -33,6 +34,7 @@ int GenerateOverlapWithMeshes (
 	Mesh & meshB,
 	Mesh & meshOverlap,
 	std::string strOverlapMesh,
+	std::string strOutputFormat,
 	std::string strMethod,
 	const bool fHasConcaveFacesA,
 	const bool fHasConcaveFacesB,
@@ -44,6 +46,16 @@ int GenerateOverlapWithMeshes (
 
     try
     {
+		// Check command line parameters (data type arguments)
+		STLStringHelper::ToLower(strOutputFormat);
+
+		NcFile::FileFormat eOutputFormat =
+			GetNcFileFormatFromString(strOutputFormat);
+		if (eOutputFormat == NcFile::BadFormat) {
+			_EXCEPTION1("Invalid \"out_format\" value (%s), "
+				"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+				strOutputFormat.c_str());
+		}
 
         // Method string
         OverlapMeshMethod method;
@@ -110,9 +122,9 @@ int GenerateOverlapWithMeshes (
         // Write the overlap mesh
         if ( strOverlapMesh.size() )
         {
-            AnnounceStartBlock ( "Writing overlap mesh" );
-            meshOverlap.Write ( strOverlapMesh.c_str() );
-            AnnounceEndBlock ( NULL );
+            AnnounceStartBlock("Writing overlap mesh");
+            meshOverlap.Write(strOverlapMesh.c_str(), eOutputFormat);
+            AnnounceEndBlock(NULL);
         }
 
         return 0;
@@ -138,6 +150,7 @@ int GenerateOverlapMesh(
 	std::string strMeshB,
 	Mesh & meshOverlap,
 	std::string strOverlapMesh,
+	std::string strOutputFormat,
 	std::string strMethod,
 	const bool fNoValidate,
 	const bool fHasConcaveFacesA,
@@ -150,6 +163,16 @@ int GenerateOverlapMesh(
 
     try
     {
+		// Check command line parameters (data type arguments)
+		STLStringHelper::ToLower(strOutputFormat);
+
+		NcFile::FileFormat eOutputFormat =
+			GetNcFileFormatFromString(strOutputFormat);
+		if (eOutputFormat == NcFile::BadFormat) {
+			_EXCEPTION1("Invalid \"out_format\" value (%s), "
+				"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+				strOutputFormat.c_str());
+		}
 
         // Load input mesh
         AnnounceStartBlock ( "Loading mesh A" );
@@ -207,6 +230,7 @@ int GenerateOverlapMesh(
 				meshA, meshB,
 				meshOverlap,
 				strOverlapMesh,
+				strOutputFormat,
 				strMethod,
 				fHasConcaveFacesA,
 				fHasConcaveFacesB,

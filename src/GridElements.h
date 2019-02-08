@@ -30,6 +30,7 @@
 
 #include "Exception.h"
 #include "DataArray1D.h"
+#include "netcdfcpp.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -726,7 +727,10 @@ public:
 	///	<summary>
 	///		Write the mesh to a NetCDF file.
 	///	</summary>
-	void Write(const std::string & strFile) const;
+	void Write(
+		const std::string & strFile,
+		NcFile::FileFormat eFileFormat = NcFile::Classic
+	) const;
 
 	///	<summary>
 	///		Read the mesh from a NetCDF file.

@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
 		CommandLineBool(fOutputDouble, "out_double");
-                CommandLineString(strOutputFormat, "out_format","Classic");
+		CommandLineString(strOutputFormat, "out_format","Netcdf4");
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
@@ -149,22 +149,35 @@ int main(int argc, char** argv) {
 
 	AnnounceBanner();
 
-	int fMonotoneTypeID=0;
-	if (fMonotoneType1) fMonotoneTypeID=1;
-	if (fMonotoneType2) fMonotoneTypeID=2;
-	if (fMonotoneType3) fMonotoneTypeID=3;
+	int nMonotoneTypeID=0;
+	if (fMonotoneType1) nMonotoneTypeID=1;
+	if (fMonotoneType2) nMonotoneTypeID=2;
+	if (fMonotoneType3) nMonotoneTypeID=3;
 
 	// Call the actual mesh generator
     OfflineMap mapRemap;
-	int err = GenerateOfflineMap(  mapRemap, strInputMesh, strOutputMesh, strOverlapMesh,
-                                    strInputMeta, strOutputMeta,
-                                    strInputType, strOutputType,
-                                    nPin, nPout,
-                                    fBubble, fMonotoneTypeID,
-                                    fVolumetric, fNoConservation, fNoCheck,
-                                    strVariables, strOutputMap, strInputData, strOutputData,
-                                    strNColName, fOutputDouble, strOutputFormat, strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                    fInputConcave, fOutputConcave );
+	int err = GenerateOfflineMap(
+			mapRemap,
+			strInputMesh, strOutputMesh, strOverlapMesh,
+			strInputMeta, strOutputMeta,
+			strInputType, strOutputType,
+			nPin, nPout,
+			fBubble,
+			nMonotoneTypeID,
+			fVolumetric,
+			fNoConservation,
+			fNoCheck,
+			strVariables,
+			strOutputMap,
+			strInputData,
+			strOutputData,
+			strNColName,
+			fOutputDouble,
+			strOutputFormat,
+			strPreserveVariables,
+			fPreserveAll,
+			dFillValueOverride,
+			fInputConcave, fOutputConcave);
 
 	if (err) exit(err);
 
