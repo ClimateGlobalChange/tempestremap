@@ -1170,7 +1170,7 @@ void GenerateOverlapMesh_v1(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-    const bool verbose
+    const bool fVerbose
 ) {
 	meshOverlap.Clear();
 
@@ -1185,7 +1185,7 @@ void GenerateOverlapMesh_v1(
 		BuildCoincidentNodeVector(
 			meshSource, meshTarget, vecTargetNodeMap);
 
-    if (verbose) Announce("Number of coincident nodes between mesh A and B [%i]",
+    if (fVerbose) Announce("Number of coincident nodes between mesh A and B [%i]",
 		nCoincidentNodes);
 
 	// Insert all nodes from the two NodeVectors
@@ -1684,7 +1684,7 @@ void GenerateOverlapMeshFromFace(
 	OverlapMeshMethod method,
     int ixTargetFaceSeed,
 	bool fAllowNoOverlap,
-    const bool verbose = true
+    const bool fVerbose = true
 ) {
 	// Verify the EdgeMap exists in both meshSource and meshTarget
 	if (meshSource.edgemap.size() == 0) {
@@ -1738,7 +1738,7 @@ void GenerateOverlapMeshFromFace(
 		_EXCEPTIONT("Exiting");
 	}
 
-    if (verbose) {
+    if (fVerbose) {
 		Announce("First overlap match %i", ixCurrentTargetFace);
 	}
 /*
@@ -1829,7 +1829,7 @@ void GenerateOverlapMeshFromFace(
 				}
 			}
 
-            if (verbose) {
+            if (fVerbose) {
 				Announce("Overlap with Face %i", ixCurrentTargetFace);
 			}
 
@@ -1882,7 +1882,7 @@ void GenerateOverlapMesh_v2(
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
 	const bool fAllowNoOverlap,
-    const bool verbose
+    const bool fVerbose
 ) {
 	NodeMap nodemapOverlap;
 
@@ -1901,9 +1901,13 @@ void GenerateOverlapMesh_v2(
 
 	// Generate Overlap mesh for each Face
 	for (int i = 0; i < meshSource.faces.size(); i++) {
-        if (verbose) {
+        if (fVerbose) {
 			std::string strAnnounce = "Source Face " + std::to_string((long long)i);
 			AnnounceStartBlock(strAnnounce.c_str());
+		}
+		if (!fVerbose && ((i % 1000) == 0)) {
+			std::string strAnnounce = "Source Face " + std::to_string((long long)i);
+			Announce(strAnnounce.c_str());
 		}
 
 		// Find a Target face near this source face
@@ -1920,7 +1924,7 @@ void GenerateOverlapMesh_v2(
 
 		int iTargetFaceSeed = pFace - &(meshTarget.faces[0]);
 
-        if (verbose) {
+        if (fVerbose) {
 			Announce("Nearest target face %i", iTargetFaceSeed);
 		}
 
@@ -1934,10 +1938,10 @@ void GenerateOverlapMesh_v2(
 			method,
             iTargetFaceSeed,
 			fAllowNoOverlap,
-            verbose);
+            fVerbose);
 
-		if (verbose) {
-			AnnounceEndBlock( NULL );
+		if (fVerbose) {
+			AnnounceEndBlock(NULL);
 		}
 	}
 
@@ -1996,10 +2000,10 @@ void GenerateOverlapMesh_v2(
 	AnnounceEndBlock("Done");
 */
 	// Calculate Face areas
-  if (verbose) {
-      double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
-      Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
-  }
+	//if (fVerbose) {
+	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
+	//}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

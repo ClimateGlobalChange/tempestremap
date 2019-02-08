@@ -37,7 +37,7 @@ int GenerateOverlapWithMeshes (
 	const bool fHasConcaveFacesA,
 	const bool fHasConcaveFacesB,
 	const bool fAllowNoOverlap,
-	const bool verbose
+	const bool fVerbose
 ) {
 
     NcError error ( NcError::silent_nonfatal );
@@ -74,7 +74,7 @@ int GenerateOverlapWithMeshes (
 			meshOverlap,
 			method,
 			fAllowNoOverlap,
-			verbose );
+			fVerbose );
         AnnounceEndBlock ( NULL );
 
         /*
@@ -143,7 +143,7 @@ int GenerateOverlapMesh(
 	const bool fHasConcaveFacesA,
 	const bool fHasConcaveFacesB,
 	const bool fAllowNoOverlap,
-	const bool verbose
+	const bool fVerbose
 ) {
 
     NcError error ( NcError::silent_nonfatal );
@@ -211,7 +211,7 @@ int GenerateOverlapMesh(
 				fHasConcaveFacesA,
 				fHasConcaveFacesB,
 				fAllowNoOverlap,
-				verbose);
+				fVerbose);
 
         return err;
 

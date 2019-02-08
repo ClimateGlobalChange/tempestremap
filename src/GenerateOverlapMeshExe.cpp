@@ -49,6 +49,9 @@ int main(int argc, char** argv) {
 	// cause the mesh generator to generate an incomplete overlap mesh)
 	bool fAllowNoOverlap;
 
+	// Verbose
+	bool fVerbose;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strMeshA, "a", "");
@@ -59,6 +62,7 @@ int main(int argc, char** argv) {
 		CommandLineBool(fHasConcaveFacesA, "concavea");
 		CommandLineBool(fHasConcaveFacesB, "concaveb");
 		CommandLineBool(fAllowNoOverlap, "allow_no_overlap");
+		CommandLineBool(fVerbose, "verbose");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -74,7 +78,7 @@ int main(int argc, char** argv) {
 			strMethod, fNoValidate,
 			fHasConcaveFacesA, fHasConcaveFacesB,
 			fAllowNoOverlap,
-			true);
+			fVerbose);
 
 	if (err) exit(err);
 
