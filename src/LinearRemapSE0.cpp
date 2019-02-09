@@ -868,6 +868,15 @@ void LinearRemapSE4(
 					if ((dAlpha < -1.0e-13) || (dAlpha > 1.0 + 1.0e-13) ||
 						(dBeta  < -1.0e-13) || (dBeta  > 1.0 + 1.0e-13)
 					) {
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceFirst.edges.size(); x++) {
+							nodesFirst[faceFirst[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						nodeQuadrature.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlpha, dBeta);
+						printf("==== END DEBUGGING INFO ====\n");
 						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
 							dAlpha, dBeta);
 					}
