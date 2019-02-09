@@ -45,6 +45,9 @@ int main(int argc, char** argv) {
 	// Last latitude line on mesh
 	double dLatEnd;
 
+	// Change the arrangement of latitudes to have half a latitude at the poles
+	bool fGlobalCap;
+
 	// Flip latitude and longitude dimension in FaceVector ordering
 	bool fFlipLatLon;
 
@@ -68,6 +71,7 @@ int main(int argc, char** argv) {
     CommandLineDouble(dLonEnd, "lon_end", 360.0);
     CommandLineDouble(dLatBegin, "lat_begin", -90.0);
     CommandLineDouble(dLatEnd, "lat_end", 90.0);
+	CommandLineBool(fGlobalCap, "global_cap");
     CommandLineBool(fFlipLatLon, "flip");
     CommandLineString(strInputFile, "in_file", "");
     CommandLineBool(fForceGlobal, "in_global");
@@ -90,7 +94,16 @@ int main(int argc, char** argv) {
 
 	// Call the actual mesh generator
     Mesh mesh;
-    int err = GenerateRLLMesh(mesh, nLongitudes, nLatitudes, dLonBegin, dLonEnd, dLatBegin, dLatEnd, fFlipLatLon, fForceGlobal, strInputFile, strOutputFile, fVerbose);
+    int err = GenerateRLLMesh(
+		mesh,
+		nLongitudes, nLatitudes,
+		dLonBegin, dLonEnd,
+		dLatBegin, dLatEnd,
+		fGlobalCap,
+		fFlipLatLon,
+		fForceGlobal,
+		strInputFile, strOutputFile,
+		fVerbose);
 	if (err) exit(err);
 
 	return 0;

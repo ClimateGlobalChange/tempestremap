@@ -41,21 +41,50 @@
 // Flip latitude and longitude dimension in FaceVector ordering: bool fFlipLatLon;
 // Output filename:  std::string strOutputFile;
 // 
-// Output Parameters: Mesh*
-// 
 extern "C" 
-int GenerateRLLMesh(Mesh& mesh, 
-                    int nLongitudes, int nLatitudes, 
-                    double dLonBegin, double dLonEnd, 
-                    double dLatBegin, double dLatEnd, 
-                    bool fFlipLatLon, bool fForceGlobal, 
-                    std::string strInputFile, std::string strOutputFile, 
-                    bool fVerbose
+int GenerateRLLMesh(
+	Mesh & mesh, 
+	int nLongitudes,
+	int nLatitudes, 
+	double dLonBegin,
+	double dLonEnd, 
+	double dLatBegin,
+	double dLatEnd, 
+	bool fGlobalCap,
+	bool fFlipLatLon,
+	bool fForceGlobal,
+	std::string strInputFile,
+	std::string strOutputFile, 
+	bool fVerbose
 ) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
+
+	// Check fGlobalCap argument
+	bool fCapBegin = false;
+	bool fCapEnd = false;
+	if (fGlobalCap) {
+		if (strInputFile != "") {
+			_EXCEPTIONT("--global_cap cannot be applied with --in_file");
+		}
+		if (fabs(dLonEnd - dLonBegin) - 360.0 >= 1.0e-12) {
+			_EXCEPTIONT("--global_cap only allowed for 360 degrees of longitude");
+		}
+		if (fabs(fabs(dLatBegin) - 90.0) < 1.0e-12) {
+			fCapBegin = true;
+			std::cout << "Applying global_cap to lat_begin" << std::endl;
+		}
+		if (fabs(fabs(dLatEnd) - 90.0) < 1.0e-12) {
+			fCapEnd = true;
+			std::cout << "Applying global_cap to lat_end" << std::endl;
+		}
+		if (!fCapBegin && !fCapEnd) {
+			std::cout << "WARNING: global_cap only applied if pole points are included in latitude"
+				" range -- ignoring" << std::endl;
+		}
+	}
 
 	// Longitude and latitude arrays
 	DataArray1D<double> dLonEdge;
@@ -176,27 +205,11 @@ try {
 		}
 
 		// Convert all longitudes and latitudes to radians
-		if (fVerbose) {
-			std::cout << "Longitudes: ";
-		}
 		for (int i = 0; i <= nLongitudes; i++) {
-			if (fVerbose) {
-				std::cout << dLonEdge[i] << ", ";
-			}
 			dLonEdge[i] *= M_PI / 180.0;
 		}
-		if (fVerbose) {
-			std::cout << std::endl;
-			std::cout << "Latitudes: ";
-		}
 		for (int j = 0; j <= nLatitudes; j++) {
-			if (fVerbose) {
-				std::cout << dLatEdge[j] << ", ";
-			}
 			dLatEdge[j] *= M_PI / 180.0;
-		}
-		if (fVerbose) {
-			std::cout << std::endl;
 		}
 
 		// Convert latitude and longitude interval to radians
@@ -214,11 +227,10 @@ try {
 		dLatBegin *= M_PI / 180.0;
 		dLatEnd   *= M_PI / 180.0;
 
-		// Deltas in longitude and latitude directions
+		// Create longitude arrays
 		double dDeltaLon = dLonEnd - dLonBegin;
 		double dDeltaLat = dLatEnd - dLatBegin;
 
-		// Create longitude arrays
 		dLonEdge.Allocate(nLongitudes+1);
 		for (int i = 0; i <= nLongitudes; i++) {
 			double dLambdaFrac =
@@ -228,17 +240,73 @@ try {
 			dLonEdge[i] = dDeltaLon * dLambdaFrac + dLonBegin;
 		}
 
-		// Create latitude arrays
+		// Allocate latitude arrays
 		dLatEdge.Allocate(nLatitudes+1);
-		for (int j = 0; j <= nLatitudes; j++) {
-			double dPhiFrac =
-				  static_cast<double>(j)
-				/ static_cast<double>(nLatitudes);
 
-			dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+		// Create latitude arrays (no caps)
+		if (!fCapBegin && !fCapEnd) {
+			for (int j = 0; j <= nLatitudes; j++) {
+				double dPhiFrac =
+					  static_cast<double>(j)
+					/ static_cast<double>(nLatitudes);
+
+				dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+			}
+
+		// Create latitude arrays (cap both)
+		} else if (fCapBegin && fCapEnd) {
+			dLatEdge[0] = dLatBegin;
+			for (int j = 1; j < nLatitudes; j++) {
+				double dPhiFrac =
+					  (static_cast<double>(j) - 0.5)
+					/ static_cast<double>(nLatitudes - 1);
+
+				dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+			}
+			dLatEdge[nLatitudes] = dLatEnd;
+
+		// Create latitude arrays (cap begin)
+		} else if (fCapBegin) {
+			dLatEdge[0] = dLatBegin;
+			for (int j = 1; j <= nLatitudes; j++) {
+				double dPhiFrac =
+					  (static_cast<double>(j) - 0.5)
+					/ (static_cast<double>(nLatitudes) - 0.5);
+
+				dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+			}
+
+		// Create latitude arrays (cap end)
+		} else if (fCapEnd) {
+			for (int j = 0; j < nLatitudes; j++) {
+				double dPhiFrac =
+					  static_cast<double>(j)
+					/ (static_cast<double>(nLatitudes) - 0.5);
+
+				dLatEdge[j] = dDeltaLat * dPhiFrac + dLatBegin;
+			}
+			dLatEdge[nLatitudes] = dLatEnd;
 		}
+	}
 
-
+	// Output longitude / latitude arrays
+	if (fVerbose) {
+		std::cout << "longitude_edges = [";
+		for (int i = 0; i <= nLongitudes; i++) {
+			std::cout << dLonEdge[i] * 180.0 / M_PI;
+			if (i != nLongitudes) {
+				std::cout << ", ";
+			}
+		}
+		std::cout << "]" << std::endl;
+		std::cout << "latitude_edges = [";
+		for (int j = 0; j <= nLatitudes; j++) {
+			std::cout << dLatEdge[j] * 180.0 / M_PI;
+			if (j != nLatitudes) {
+				std::cout << ", ";
+			}
+		}
+		std::cout << "]" << std::endl;
 	}
 
 	std::cout << "..Generating mesh with resolution [";

@@ -23,6 +23,7 @@ extern "C" {
 						  double dLonEnd,
 						  double dLatBegin,
 						  double dLatEnd,
+						  bool fGlobalCap,
 						  bool fFlipLatLon,
 						  bool fForceGlobal,
 						  std::string strInputFile,
