@@ -865,10 +865,14 @@ void LinearRemapSE4(
 						dBeta);
 
 					// Check inverse map value
-					if ((dAlpha < -1.0e-13) || (dAlpha > 1.0 + 1.0e-13) ||
-						(dBeta  < -1.0e-13) || (dBeta  > 1.0 + 1.0e-13)
+					if ((dAlpha < -InverseMapTolerance)      ||
+						(dAlpha > 1.0 + InverseMapTolerance) ||
+						(dBeta  < -InverseMapTolerance)      ||
+						(dBeta  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceFirst.edges.size(); x++) {
 							nodesFirst[faceFirst[x]].Print("");
@@ -877,8 +881,8 @@ void LinearRemapSE4(
 						nodeQuadrature.Print("");
 						printf("Alpha, Beta: %1.15e %1.15e\n", dAlpha, dBeta);
 						printf("==== END DEBUGGING INFO ====\n");
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlpha, dBeta);
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlpha, dBeta);
 					}
 
 					// Sample the finite element at this point
@@ -1200,19 +1204,45 @@ void LinearRemapGLLtoGLL_Pointwise(
 						dBetaOut);
 
 					// Check inverse map value
-					if ((dAlphaIn < 0.0) || (dAlphaIn > 1.0) ||
-						(dBetaIn  < 0.0) || (dBetaIn  > 1.0)
+					if ((dAlphaIn < -InverseMapTolerance)      ||
+						(dAlphaIn > 1.0 + InverseMapTolerance) ||
+						(dBetaIn  < -InverseMapTolerance)      ||
+						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlphaIn, dBetaIn);
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceFirst.edges.size(); x++) {
+							nodesFirst[faceFirst[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						nodeQuadrature.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlphaIn, dBetaIn);
+						printf("==== END DEBUGGING INFO ====\n");
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlphaIn, dBetaIn);
 					}
 
 					// Check inverse map value
-					if ((dAlphaOut < 0.0) || (dAlphaOut > 1.0) ||
-						(dBetaOut  < 0.0) || (dBetaOut  > 1.0)
+					if ((dAlphaOut < -InverseMapTolerance)      ||
+						(dAlphaOut > 1.0 + InverseMapTolerance) ||
+						(dBetaOut  < -InverseMapTolerance)      ||
+						(dBetaOut  > 1.0 + InverseMapTolerance)
 					) {
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlphaOut, dBetaOut);
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceSecond.edges.size(); x++) {
+							nodesSecond[faceSecond[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						nodeQuadrature.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlphaOut, dBetaOut);
+						printf("==== END DEBUGGING INFO ====\n");
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlphaOut, dBetaOut);
 					}
 
 					// Sample the First finite element at this point
@@ -1309,11 +1339,24 @@ void LinearRemapGLLtoGLL_Pointwise(
 						dBetaIn);
 
 					// Check inverse map value
-					if ((dAlphaIn < -1.0e-12) || (dAlphaIn > 1.0 + 1.0e-12) ||
-						(dBetaIn  < -1.0e-12) || (dBetaIn  > 1.0 + 1.0e-12)
+					if ((dAlphaIn < -InverseMapTolerance)      ||
+						(dAlphaIn > 1.0 + InverseMapTolerance) ||
+						(dBetaIn  < -InverseMapTolerance)      ||
+						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlphaIn, dBetaIn);
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceFirst.edges.size(); x++) {
+							nodesFirst[faceFirst[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						node.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlphaIn, dBetaIn);
+						printf("==== END DEBUGGING INFO ====\n");
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlphaIn, dBetaIn);
 					}
 
 					// Sample the First finite element at this point
@@ -1768,19 +1811,45 @@ void LinearRemapGLLtoGLL_Integrated(
 						dBetaOut);
 
 					// Check inverse map value
-					if ((dAlphaIn < 0.0) || (dAlphaIn > 1.0) ||
-						(dBetaIn  < 0.0) || (dBetaIn  > 1.0)
+					if ((dAlphaIn < -InverseMapTolerance)      ||
+						(dAlphaIn > 1.0 + InverseMapTolerance) ||
+						(dBetaIn  < -InverseMapTolerance)      ||
+						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlphaIn, dBetaIn);
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceFirst.edges.size(); x++) {
+							nodesFirst[faceFirst[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						nodeQuadrature.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlphaIn, dBetaIn);
+						printf("==== END DEBUGGING INFO ====\n");
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlphaIn, dBetaIn);
 					}
 
 					// Check inverse map value
-					if ((dAlphaOut < 0.0) || (dAlphaOut > 1.0) ||
-						(dBetaOut  < 0.0) || (dBetaOut  > 1.0)
+					if ((dAlphaOut < -InverseMapTolerance)      ||
+						(dAlphaOut > 1.0 + InverseMapTolerance) ||
+						(dBetaOut  < -InverseMapTolerance)      ||
+						(dBetaOut  > 1.0 + InverseMapTolerance)
 					) {
-						_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
-							dAlphaOut, dBetaOut);
+						printf("\n==== BEGIN DEBUGGING INFO ====\n");
+						printf("WARNING (%s, Line %u) Inverse map out of range",
+							__FILE__, __LINE__);
+						printf("Face nodes:\n");
+						for (int x = 0; x < faceSecond.edges.size(); x++) {
+							nodesSecond[faceSecond[x]].Print("");
+						}
+						printf("Quadrature node:\n");
+						nodeQuadrature.Print("");
+						printf("Alpha, Beta: %1.15e %1.15e\n", dAlphaOut, dBetaOut);
+						printf("==== END DEBUGGING INFO ====\n");
+						//_EXCEPTION2("Inverse Map out of range (%1.5e %1.5e)",
+						//	dAlphaOut, dBetaOut);
 					}
 
 					// Sample the First finite element at this point

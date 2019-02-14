@@ -173,10 +173,27 @@ void ApplyInverseMap(
 
 	double dF[2];
 
-	// Loop until convergence
-	double dDelta = 1.0;
+	// Fix the Cartesian components to use in iteration
+	int iTangentPlane = 0;
+	{
+		const Node & nodeRef = nodes[face[0]];
+		if ((fabs(nodeRef.x) >= fabs(nodeRef.y)) &&
+			(fabs(nodeRef.x) >= fabs(nodeRef.z))
+		) {
+			iTangentPlane = 0;
 
-	// Try all pairs of 
+		} else if (
+			(fabs(nodeRef.y) >= fabs(nodeRef.x)) &&
+			(fabs(nodeRef.y) >= fabs(nodeRef.z))
+		) {
+			iTangentPlane = 1;
+
+		} else {
+			iTangentPlane = 2;
+		}
+	}
+
+	// Apply 10 loops of Newton's method to converge
 	for (int i = 0; i < 10; i++) {
 /*
 		nodes[face[0]].Print("f0");
@@ -193,9 +210,7 @@ void ApplyInverseMap(
 		// Pick the two Cartesian components with greatest chance of success
 		const Node & nodeRef = nodes[face[0]];
 
-		if ((fabs(nodeRef.x) >= fabs(nodeRef.y)) &&
-			(fabs(nodeRef.x) >= fabs(nodeRef.z))
-		) {
+		if (iTangentPlane == 0) {
 			dMap[0][0] = nodeDx1G.y;
 			dMap[0][1] = nodeDx2G.y;
 			dMap[1][0] = nodeDx1G.z;
@@ -204,10 +219,7 @@ void ApplyInverseMap(
 			dF[0] = (nodeG.y - node.y);
 			dF[1] = (nodeG.z - node.z);
 
-		} else if (
-			(fabs(nodeRef.y) >= fabs(nodeRef.x)) &&
-			(fabs(nodeRef.y) >= fabs(nodeRef.z))
-		) {
+		} else if (iTangentPlane == 1) {
 			dMap[0][0] = nodeDx1G.x;
 			dMap[0][1] = nodeDx2G.x;
 			dMap[1][0] = nodeDx1G.z;
@@ -244,7 +256,7 @@ void ApplyInverseMap(
 
 		double dDeltaNorm = fabs(dDeltaAlpha) + fabs(dDeltaBeta);
 
-		if (dDeltaNorm < ReferenceTolerance) {
+		if (dDeltaNorm < InverseMapTolerance) {
 			break;
 		}
 	}
