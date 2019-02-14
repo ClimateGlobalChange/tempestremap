@@ -94,7 +94,7 @@ public:
 	///		Comparator operator using floating point tolerance.
 	///	</summary>
 	bool operator< (const Node & node) const {
-		static const Real Tolerance = 1.0e-8; //ReferenceTolerance;
+		static const Real Tolerance = ReferenceTolerance;
 
 		if (x - node.x <= -Tolerance) {
 			return true;
