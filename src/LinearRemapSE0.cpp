@@ -773,7 +773,7 @@ void LinearRemapSE4(
 
 		// Output every 100 elements
 		if (ixFirst % 1000 == 0) {
-                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
+			Announce("Element %i/%i", ixFirst,meshInput.faces.size());
 		}
 
 		// Number of overlapping Faces and triangles
@@ -871,8 +871,11 @@ void LinearRemapSE4(
 						(dBeta  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + j);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceFirst.edges.size(); x++) {
 							nodesFirst[faceFirst[x]].Print("");
@@ -1210,8 +1213,10 @@ void LinearRemapGLLtoGLL_Pointwise(
 						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + i);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceFirst.edges.size(); x++) {
 							nodesFirst[faceFirst[x]].Print("");
@@ -1231,8 +1236,10 @@ void LinearRemapGLLtoGLL_Pointwise(
 						(dBetaOut  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + i);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceSecond.edges.size(); x++) {
 							nodesSecond[faceSecond[x]].Print("");
@@ -1345,8 +1352,10 @@ void LinearRemapGLLtoGLL_Pointwise(
 						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + i);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceFirst.edges.size(); x++) {
 							nodesFirst[faceFirst[x]].Print("");
@@ -1817,8 +1826,10 @@ void LinearRemapGLLtoGLL_Integrated(
 						(dBetaIn  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + i);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceFirst.edges.size(); x++) {
 							nodesFirst[faceFirst[x]].Print("");
@@ -1838,8 +1849,10 @@ void LinearRemapGLLtoGLL_Integrated(
 						(dBetaOut  > 1.0 + InverseMapTolerance)
 					) {
 						printf("\n==== BEGIN DEBUGGING INFO ====\n");
-						printf("WARNING (%s, Line %u) Inverse map out of range",
+						printf("WARNING (%s, Line %u) Inverse map out of range\n",
 							__FILE__, __LINE__);
+						printf("Source face ix %i, Target face ix %i, Overlap face ix %i\n",
+							ixFirst, ixSecond, ixOverlap + i);
 						printf("Face nodes:\n");
 						for (int x = 0; x < faceSecond.edges.size(); x++) {
 							nodesSecond[faceSecond[x]].Print("");
