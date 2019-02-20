@@ -63,6 +63,9 @@ int main(int argc, char** argv) {
     // Output filename
     std::string strOutputFile;
 
+	// Output format
+	std::string strOutputFormat;
+
     // Parse the command line
     BeginCommandLine()
     CommandLineInt(nLongitudes, "lon", 128);
@@ -77,6 +80,7 @@ int main(int argc, char** argv) {
     CommandLineBool(fForceGlobal, "in_global");
     CommandLineBool(fVerbose, "verbose");
     CommandLineString(strOutputFile, "file", "outRLLMesh.g");
+	CommandLineString(strOutputFormat, "out_format", "Netcdf4");
 
     ParseCommandLine(argc, argv);
     EndCommandLine(argv)
@@ -102,7 +106,7 @@ int main(int argc, char** argv) {
 		fGlobalCap,
 		fFlipLatLon,
 		fForceGlobal,
-		strInputFile, strOutputFile,
+		strInputFile, strOutputFile, strOutputFormat,
 		fVerbose);
 	if (err) exit(err);
 

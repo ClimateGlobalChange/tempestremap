@@ -28,27 +28,31 @@
 
 int main(int argc, char** argv) {
 
-   // Number of elements in mesh
-   int nResolution;
+	// Number of elements in mesh
+	int nResolution;
 
-   // Alternate arrangement
-   bool fAlt;
+	// Alternate arrangement
+	bool fAlt;
 
-   // Output filename
-   std::string strOutputFile;
+	// Output filename
+	std::string strOutputFile;
+
+	// NetCDF format
+	std::string strOutputFormat;
 
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineInt(nResolution, "res", 10);
 		CommandLineBool(fAlt, "alt");
 		CommandLineString(strOutputFile, "file", "outCSMesh.g");
+		CommandLineString(strOutputFormat, "out_format", "Netcdf4");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
 	// Call the actual mesh generator
     Mesh mesh;
-	int err = GenerateCSMesh(mesh, nResolution, fAlt, strOutputFile);
+	int err = GenerateCSMesh(mesh, nResolution, fAlt, strOutputFile, strOutputFormat);
 	if (err) exit(err);
 	else return 0;
 }

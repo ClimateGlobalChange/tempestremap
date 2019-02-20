@@ -13,7 +13,8 @@ extern "C" {
 	int GenerateCSMesh ( Mesh& meshOut,
 						 int nResolution,
 						 bool fAlt,
-						 std::string strOutputFile );
+						 std::string strOutputFile,
+						 std::string strOutputFormat );
 
 	// Generate a Latitude-Longitude mesh
 	int GenerateRLLMesh ( Mesh& meshOut,
@@ -28,6 +29,7 @@ extern "C" {
 						  bool fForceGlobal,
 						  std::string strInputFile,
 						  std::string strOutputFile,
+						  std::string strOutputFormat,
 						  bool fVerbose );
 
 	// Generate a Latitude-Longitude mesh

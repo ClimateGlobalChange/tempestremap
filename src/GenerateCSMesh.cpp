@@ -17,6 +17,8 @@
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
+#include "STLStringHelper.h"
+#include "NetCDFUtilities.h"
 
 #include "netcdfcpp.h"
 
@@ -137,11 +139,28 @@ void GenerateFacesFromQuad(
 // Output Parameters: Mesh*
 // 
 extern "C" 
-int GenerateCSMesh(Mesh& mesh, int nResolution, bool fAlt, std::string strOutputFile) {
+int GenerateCSMesh(
+	Mesh & mesh,
+	int nResolution,
+	bool fAlt,
+	std::string strOutputFile,
+	std::string strOutputFormat
+) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
+
+    // Check command line parameters (data type arguments)
+    STLStringHelper::ToLower(strOutputFormat);
+
+	NcFile::FileFormat eOutputFormat =
+		GetNcFileFormatFromString(strOutputFormat);
+	if (eOutputFormat == NcFile::BadFormat) {
+		_EXCEPTION1("Invalid \"out_format\" value (%s), "
+			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+			strOutputFormat.c_str());
+	}
 
 	// Announce
 	std::cout << "=========================================================";
@@ -267,7 +286,7 @@ try {
 		std::cout << "..Writing mesh to file [" << strOutputFile.c_str() << "] ";
 		std::cout << std::endl;
 
-		mesh.Write(strOutputFile);
+		mesh.Write(strOutputFile, eOutputFormat);
 	}
 
 	// Announce
