@@ -108,6 +108,10 @@ public:
 			m_sSize = sSize;
 
 			m_data = reinterpret_cast<T *>(malloc(GetByteSize()));
+
+			if (m_data == NULL) {
+				_EXCEPTION1("Failed malloc call (%lu bytes)", GetByteSize());
+			}
 		}
 
 		Zero();
