@@ -47,7 +47,8 @@ extern "C" {
 	int GenerateICOMesh ( Mesh& meshOut,
 						  int nResolution,
 						  bool fDual,
-						  std::string strOutputFile );
+						  std::string strOutputFile,
+						  std::string strOutputFormat );
 
 	// Generate Lambert-Conic mesh
 	int GenerateLambertConfConicMesh ( Mesh& meshOut,
