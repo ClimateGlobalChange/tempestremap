@@ -37,18 +37,22 @@ int main(int argc, char** argv) {
 	// Output filename
 	std::string strOutputFile;
 
+  // NetCDF format
+	std::string strOutputFormat;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineInt(nResolution, "res", 10);
 		CommandLineBool(fDual, "dual");
 		CommandLineString(strOutputFile, "file", "outICOMesh.g");
+		CommandLineString(strOutputFormat, "out_format", "Netcdf4");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
 	// Call the actual mesh generator
     Mesh mesh;
-	int err = GenerateICOMesh(mesh, nResolution, fDual, strOutputFile);
+	int err = GenerateICOMesh(mesh, nResolution, fDual, strOutputFile, strOutputFormat);
 	if (err) exit(err);
 	else return 0;
 }
