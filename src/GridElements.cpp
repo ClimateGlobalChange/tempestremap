@@ -768,6 +768,140 @@ void Mesh::Write(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::WriteScrip(
+	const std::string & strFile,
+	NcFile::FileFormat eFileFormat
+) const {
+	const int ParamLenString = 33;
+
+	// Temporarily change error reporting
+   NcError error_temp(NcError::verbose_fatal);
+
+
+
+   // Determine block sizes
+   std::vector<int> vecBlockSizes;
+   std::vector<int> vecBlockSizeFaces;
+   {
+      std::map<int, int> mapBlockSizes;
+      std::map<int, int>::iterator iterBlockSize;
+      int iBlock;
+      char szBuffer[ParamLenString];
+
+      for (int i = 0; i < faces.size(); i++) {
+         iterBlockSize = mapBlockSizes.find(faces[i].edges.size());
+
+         if (iterBlockSize == mapBlockSizes.end()) {
+            mapBlockSizes.insert(
+               std::pair<int,int>(faces[i].edges.size(), 1));
+         } else {
+            (iterBlockSize->second)++;
+         }
+      }
+
+      vecBlockSizes.resize(mapBlockSizes.size());
+      vecBlockSizeFaces.resize(mapBlockSizes.size());
+
+      AnnounceStartBlock("Nodes per element");
+      iterBlockSize = mapBlockSizes.begin();
+      iBlock = 1;
+      for (; iterBlockSize != mapBlockSizes.end(); iterBlockSize++) {
+         vecBlockSizes[iBlock-1] = iterBlockSize->first;
+         vecBlockSizeFaces[iBlock-1] = iterBlockSize->second;
+
+         Announce("Block %i (%i nodes): %i",
+            iBlock, vecBlockSizes[iBlock-1], vecBlockSizeFaces[iBlock-1]);
+
+         iBlock++;
+      }
+      AnnounceEndBlock(NULL);
+   }
+
+   // Output to a NetCDF SCRIP file
+   NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
+   if (!ncOut.is_valid()) {
+      _EXCEPTION1("Unable to open grid file \"%s\" for writing",
+         strFile.c_str());
+   }
+
+   // SCRIP dimensions
+   int nElementCount = faces.size();
+   NcDim * dimGridSize   = ncOut.add_dim("grid_size",    nElementCount);
+   NcDim * dimGridCorner = ncOut.add_dim("grid_corners", 5);
+   NcDim * dimGridRank   = ncOut.add_dim("grid_rank",    1);
+
+   // Global attributes
+   ncOut.add_att("api_version", 5.00f);
+   ncOut.add_att("version", 5.00f);
+   ncOut.add_att("floating_point_word_size", 8);
+   ncOut.add_att("file_size", 0);
+
+   // // Coordinate names
+   // {
+   //    char szCoordNames[3][ParamLenString] = {"x", "y", "z"};
+
+   //    NcVar * varCoordNames =
+   //       ncOut.add_var("coor_names", ncChar, dimDimension, dimLenString);
+
+   //    if (varCoordNames == NULL) {
+   //       _EXCEPTIONT("Error creating variable \"coor_names\"");
+   //    }
+
+   //    varCoordNames->set_cur(0, 0, 0);
+   //    varCoordNames->put(&(szCoordNames[0][0]), 3, ParamLenString);
+   // }
+
+
+   // // Node list
+   // {
+   //    NcVar * varNodes =
+   //       ncOut.add_var("coord", ncDouble, dimDimension, dimNodes);
+
+   //    if (varNodes == NULL) {
+   //       _EXCEPTIONT("Error creating variable \"coord\"");
+   //    }
+
+   //    DataArray1D<double> dCoord(nNodeCount);
+
+   //    for (int i = 0; i < nNodeCount; i++) {
+   //       dCoord[i] = static_cast<double>(nodes[i].x);
+   //    }
+   //    varNodes->set_cur(0, 0);
+   //    varNodes->put(dCoord, 1, nNodeCount);
+   //    for (int i = 0; i < nNodeCount; i++) {
+   //       dCoord[i] = static_cast<double>(nodes[i].y);
+   //    }
+   //    varNodes->set_cur(1, 0);
+   //    varNodes->put(dCoord, 1, nNodeCount);
+   //    for (int i = 0; i < nNodeCount; i++) {
+   //       dCoord[i] = static_cast<double>(nodes[i].z);
+   //    }
+   //    varNodes->set_cur(2, 0);
+   //    varNodes->put(dCoord, 1, nNodeCount);
+   // }
+
+   // Grid Area
+   {
+      NcVar * varArea = ncOut.add_var("grid_area", ncDouble, dimGridSize);
+
+      if (varArea == NULL) {
+         _EXCEPTIONT("Error creating variable \"grid_area\"");
+      }
+
+      DataArray1D<double> area(nElementCount);
+
+      for (int i = 0; i < nElementCount; i++) {
+         // CalculateFaceAreas(false);
+         area[i] = static_cast<double>( vecFaceArea[i] );
+      }
+      // varArea->set_cur(0);
+      varArea->put(area, nElementCount);
+      varArea->add_att("units", "radians^2");
+   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::Read(const std::string & strFile) {
 
 	const int ParamFour = 4;
