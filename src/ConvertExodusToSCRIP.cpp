@@ -68,11 +68,14 @@ try {
 
 	// Generate new mesh
 	// std::cout << "..Generating SCRIP format data" << std::endl;
-	Mesh meshOut;
+	// Mesh meshOut;
 
 	// Write the mesh	
 	std::cout << "..Writing mesh" << std::endl;
-	meshOut.WriteScrip(strOutputFile);
+	NcFile::FileFormat eOutputFormat = NcFile::Offset64Bits;
+	meshIn.WriteScrip(strOutputFile, eOutputFormat);
+
+	std::cout << "..Done writing" << std::endl;
 
 
 	// Announce
