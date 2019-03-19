@@ -827,7 +827,7 @@ void Mesh::WriteScrip(
 	int nElementCount = faces.size();
 	int nCornersMax = 0;
 	for (int i=0; i<nElementCount; i++) {
-		nCornersMax = std::max( nCornersMax, (int)(faces[i].edges.size()+1) );
+		nCornersMax = std::max( nCornersMax, (int)(faces[i].edges.size()) );
 	}
 	// SCRIP dimensions
 	NcDim * dimGridSize   = ncOut.add_dim("grid_size",    nElementCount);
@@ -880,24 +880,23 @@ void Mesh::WriteScrip(
 		Node corner(0,0,0);
 		for (int i=0; i<nElementCount; i++) {
 			Node center(0,0,0);
-			int nCorners = faces[i].edges.size()+1;
-			int jj;
+			// int nCorners = faces[i].edges.size()+1;
+			int nCorners = faces[i].edges.size();
 			for (int j=0; j<nCorners; ++j) {
-				if (j<faces[i].edges.size()) {
-					jj = j;
-				} else {
-					jj = 0;
-				}
-				corner = nodes[ faces[i].edges[jj][0] ];
+				corner = nodes[ faces[i][j] ];
 				XYZtoRLL_Deg(
 					corner.x, corner.y, corner.z,
 					cornerLon[i][j],
 					cornerLat[i][j]);
-				if (j<faces[i].edges.size()) {
-					center = center + corner;
-				}
+				center = center + corner;
 			}
 			center = center / nCorners;
+			double dMag = sqrt(center.x * center.x + 
+							   center.y * center.y + 
+							   center.z * center.z);
+			center.x /= dMag;
+			center.y /= dMag;
+			center.z /= dMag;
 			XYZtoRLL_Deg(
 				center.x, center.y, center.z,
 				centerLon[i],
@@ -905,12 +904,17 @@ void Mesh::WriteScrip(
 			// Adjust corner logitudes
 			double lonDiff;
 			for (int j=0; j<nCorners; ++j) {
+				// First check for polar point
+				if (cornerLat[i][j]==90. || cornerLat[i][j]==-90.) {
+					cornerLon[i][j] = centerLon[i];
+				}
+				// Next check for corners that wrap around prime meridian
 				lonDiff = centerLon[i] - cornerLon[i][j];
 				if (lonDiff>180) {
-					cornerLon[i][j] = cornerLon[i][j] + (double)360;
+					cornerLon[i][j] = cornerLon[i][j] + (double)360.0;
 				}
-				if (lonDiff<180) {
-					cornerLon[i][j] = cornerLon[i][j] - (double)360;
+				if (lonDiff<-180) {
+					cornerLon[i][j] = cornerLon[i][j] - (double)360.0;
 				}
 			}
 		}
