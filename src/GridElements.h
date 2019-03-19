@@ -732,6 +732,11 @@ public:
 		NcFile::FileFormat eFileFormat = NcFile::Classic
 	) const;
 
+	void WriteScrip(
+		const std::string & strFile,
+		NcFile::FileFormat eFileFormat = NcFile::Classic
+	) const;
+
 	///	<summary>
 	///		Read the mesh from a NetCDF file.
 	///	</summary>
