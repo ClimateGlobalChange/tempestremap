@@ -27,6 +27,7 @@
 #include <ctime>
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 #include "netcdfcpp.h"
 
 #include "triangle.h"
@@ -775,129 +776,193 @@ void Mesh::WriteScrip(
 	const int ParamLenString = 33;
 
 	// Temporarily change error reporting
-   NcError error_temp(NcError::verbose_fatal);
+	NcError error_temp(NcError::verbose_fatal);
 
+	//---------------------------------------------------------------------------
+	// Determine block sizes
+	std::vector<int> vecBlockSizes;
+	std::vector<int> vecBlockSizeFaces;
+	{
+		std::map<int, int> mapBlockSizes;
+		std::map<int, int>::iterator iterBlockSize;
+		int iBlock;
+		char szBuffer[ParamLenString];
 
+		for (int i = 0; i < faces.size(); i++) {
+			iterBlockSize = mapBlockSizes.find(faces[i].edges.size());
 
-   // Determine block sizes
-   std::vector<int> vecBlockSizes;
-   std::vector<int> vecBlockSizeFaces;
-   {
-      std::map<int, int> mapBlockSizes;
-      std::map<int, int>::iterator iterBlockSize;
-      int iBlock;
-      char szBuffer[ParamLenString];
+			if (iterBlockSize == mapBlockSizes.end()) {
+				mapBlockSizes.insert(
+					std::pair<int,int>(faces[i].edges.size(), 1));
+			} else {
+				(iterBlockSize->second)++;
+			}
+		}
 
-      for (int i = 0; i < faces.size(); i++) {
-         iterBlockSize = mapBlockSizes.find(faces[i].edges.size());
+		vecBlockSizes.resize(mapBlockSizes.size());
+		vecBlockSizeFaces.resize(mapBlockSizes.size());
 
-         if (iterBlockSize == mapBlockSizes.end()) {
-            mapBlockSizes.insert(
-               std::pair<int,int>(faces[i].edges.size(), 1));
-         } else {
-            (iterBlockSize->second)++;
-         }
-      }
+		AnnounceStartBlock("Nodes per element");
+		iterBlockSize = mapBlockSizes.begin();
+		iBlock = 1;
+		for (; iterBlockSize != mapBlockSizes.end(); iterBlockSize++) {
+			vecBlockSizes[iBlock-1] = iterBlockSize->first;
+			vecBlockSizeFaces[iBlock-1] = iterBlockSize->second;
 
-      vecBlockSizes.resize(mapBlockSizes.size());
-      vecBlockSizeFaces.resize(mapBlockSizes.size());
+			Announce("Block %i (%i nodes): %i",
+				iBlock, vecBlockSizes[iBlock-1], vecBlockSizeFaces[iBlock-1]);
 
-      AnnounceStartBlock("Nodes per element");
-      iterBlockSize = mapBlockSizes.begin();
-      iBlock = 1;
-      for (; iterBlockSize != mapBlockSizes.end(); iterBlockSize++) {
-         vecBlockSizes[iBlock-1] = iterBlockSize->first;
-         vecBlockSizeFaces[iBlock-1] = iterBlockSize->second;
+			iBlock++;
+		}
+		AnnounceEndBlock(NULL);
+	}
+	//---------------------------------------------------------------------------
+	// Output to a NetCDF SCRIP file
+	NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
+	if (!ncOut.is_valid()) {
+		_EXCEPTION1("Unable to open grid file \"%s\" for writing",
+			strFile.c_str());
+	}
+	// Find max number of corners oer all faces
+	int nElementCount = faces.size();
+	int nCornersMax = 0;
+	for (int i=0; i<nElementCount; i++) {
+		nCornersMax = std::max( nCornersMax, (int)(faces[i].edges.size()+1) );
+	}
+	// SCRIP dimensions
+	NcDim * dimGridSize   = ncOut.add_dim("grid_size",    nElementCount);
+	NcDim * dimGridCorner = ncOut.add_dim("grid_corners", nCornersMax);
+	NcDim * dimGridRank   = ncOut.add_dim("grid_rank",    1);
+	// Global attributes
+	ncOut.add_att("api_version", 5.00f);
+	ncOut.add_att("version", 5.00f);
+	ncOut.add_att("floating_point_word_size", 8);
+	ncOut.add_att("file_size", 0);
+	//---------------------------------------------------------------------------
+	// Grid Area
+	{
+		NcVar * varArea = ncOut.add_var("grid_area", ncDouble, dimGridSize);
+		if (varArea == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_area\"");
+		}
+		DataArray1D<double> area(nElementCount);
+		for (int i=0; i<nElementCount; i++) {
+			area[i] = static_cast<double>( CalculateFaceArea(faces[i], nodes) );
+		}
+		varArea->set_cur((long)0);
+		varArea->put(area, nElementCount);
+		varArea->add_att("units", "radians^2");
+	}
+	//---------------------------------------------------------------------------
+	// Grid center and corner coordinates
+	{
+		NcVar * varCenterLat = ncOut.add_var("grid_center_lat", ncDouble, dimGridSize);
+		NcVar * varCenterLon = ncOut.add_var("grid_center_lon", ncDouble, dimGridSize);
+		NcVar * varCornerLat = ncOut.add_var("grid_corner_lat", ncDouble, dimGridSize, dimGridCorner);
+		NcVar * varCornerLon = ncOut.add_var("grid_corner_lon", ncDouble, dimGridSize, dimGridCorner);
+		if (varCenterLat == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_center_lat\"");
+		}
+		if (varCenterLon == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_center_lon\"");
+		}
+		if (varCornerLat == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_corner_lat\"");
+		}
+		if (varCornerLon == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_corner_lon\"");
+		}
 
-         Announce("Block %i (%i nodes): %i",
-            iBlock, vecBlockSizes[iBlock-1], vecBlockSizeFaces[iBlock-1]);
+		DataArray1D<double> centerLat(nElementCount);
+		DataArray1D<double> centerLon(nElementCount);
+		DataArray2D<double> cornerLat(nElementCount, nCornersMax);
+		DataArray2D<double> cornerLon(nElementCount, nCornersMax);
+		Node corner(0,0,0);
+		for (int i=0; i<nElementCount; i++) {
+			Node center(0,0,0);
+			int nCorners = faces[i].edges.size()+1;
+			int jj;
+			for (int j=0; j<nCorners; ++j) {
+				if (j<faces[i].edges.size()) {
+					jj = j;
+				} else {
+					jj = 0;
+				}
+				corner = nodes[ faces[i].edges[jj][0] ];
+				XYZtoRLL_Deg(
+					corner.x, corner.y, corner.z,
+					cornerLon[i][j],
+					cornerLat[i][j]);
+				if (j<faces[i].edges.size()) {
+					center = center + corner;
+				}
+			}
+			center = center / nCorners;
+			XYZtoRLL_Deg(
+				center.x, center.y, center.z,
+				centerLon[i],
+				centerLat[i]);
+			// Adjust corner logitudes
+			double lonDiff;
+			for (int j=0; j<nCorners; ++j) {
+				lonDiff = centerLon[i] - cornerLon[i][j];
+				if (lonDiff>180) {
+					cornerLon[i][j] = cornerLon[i][j] + (double)360;
+				}
+				if (lonDiff<180) {
+					cornerLon[i][j] = cornerLon[i][j] - (double)360;
+				}
+			}
+		}
+		varCenterLat->set_cur((long)0);
+		varCenterLat->put(centerLat, nElementCount);
+		varCenterLat->add_att("units", "degrees");
+		varCenterLat->add_att("_FillValue", 9.96920996838687e+36 );
 
-         iBlock++;
-      }
-      AnnounceEndBlock(NULL);
-   }
+		varCenterLon->set_cur((long)0);
+		varCenterLon->put(centerLon, nElementCount);
+		varCenterLon->add_att("units", "degrees");
+		varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
 
-   // Output to a NetCDF SCRIP file
-   NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
-   if (!ncOut.is_valid()) {
-      _EXCEPTION1("Unable to open grid file \"%s\" for writing",
-         strFile.c_str());
-   }
-
-   // SCRIP dimensions
-   int nElementCount = faces.size();
-   NcDim * dimGridSize   = ncOut.add_dim("grid_size",    nElementCount);
-   NcDim * dimGridCorner = ncOut.add_dim("grid_corners", 5);
-   NcDim * dimGridRank   = ncOut.add_dim("grid_rank",    1);
-
-   // Global attributes
-   ncOut.add_att("api_version", 5.00f);
-   ncOut.add_att("version", 5.00f);
-   ncOut.add_att("floating_point_word_size", 8);
-   ncOut.add_att("file_size", 0);
-
-   // // Coordinate names
-   // {
-   //    char szCoordNames[3][ParamLenString] = {"x", "y", "z"};
-
-   //    NcVar * varCoordNames =
-   //       ncOut.add_var("coor_names", ncChar, dimDimension, dimLenString);
-
-   //    if (varCoordNames == NULL) {
-   //       _EXCEPTIONT("Error creating variable \"coor_names\"");
-   //    }
-
-   //    varCoordNames->set_cur(0, 0, 0);
-   //    varCoordNames->put(&(szCoordNames[0][0]), 3, ParamLenString);
-   // }
-
-
-   // // Node list
-   // {
-   //    NcVar * varNodes =
-   //       ncOut.add_var("coord", ncDouble, dimDimension, dimNodes);
-
-   //    if (varNodes == NULL) {
-   //       _EXCEPTIONT("Error creating variable \"coord\"");
-   //    }
-
-   //    DataArray1D<double> dCoord(nNodeCount);
-
-   //    for (int i = 0; i < nNodeCount; i++) {
-   //       dCoord[i] = static_cast<double>(nodes[i].x);
-   //    }
-   //    varNodes->set_cur(0, 0);
-   //    varNodes->put(dCoord, 1, nNodeCount);
-   //    for (int i = 0; i < nNodeCount; i++) {
-   //       dCoord[i] = static_cast<double>(nodes[i].y);
-   //    }
-   //    varNodes->set_cur(1, 0);
-   //    varNodes->put(dCoord, 1, nNodeCount);
-   //    for (int i = 0; i < nNodeCount; i++) {
-   //       dCoord[i] = static_cast<double>(nodes[i].z);
-   //    }
-   //    varNodes->set_cur(2, 0);
-   //    varNodes->put(dCoord, 1, nNodeCount);
-   // }
-
-   // Grid Area
-   {
-      NcVar * varArea = ncOut.add_var("grid_area", ncDouble, dimGridSize);
-
-      if (varArea == NULL) {
-         _EXCEPTIONT("Error creating variable \"grid_area\"");
-      }
-
-      DataArray1D<double> area(nElementCount);
-
-      for (int i = 0; i < nElementCount; i++) {
-         // CalculateFaceAreas(false);
-         area[i] = static_cast<double>( vecFaceArea[i] );
-      }
-      // varArea->set_cur(0);
-      varArea->put(area, nElementCount);
-      varArea->add_att("units", "radians^2");
-   }
+		for (int i=0; i<nElementCount; i++) {
+			varCornerLat->set_cur(i,0);
+			varCornerLat->put(cornerLat[i], 1, nCornersMax);
+			varCornerLon->set_cur(i,0);
+			varCornerLon->put(cornerLon[i], 1, nCornersMax);
+		}
+		varCornerLat->add_att("units", "degrees");
+		varCornerLon->add_att("units", "degrees");
+		varCornerLat->add_att("_FillValue", 9.96920996838687e+36 );
+		varCornerLon->add_att("_FillValue", 9.96920996838687e+36 );
+	}
+	//---------------------------------------------------------------------------
+	// Grid mask
+	{
+		NcVar * varMask = ncOut.add_var("grid_imask", ncDouble, dimGridSize);
+		if (varMask == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_imask\"");
+		}
+		DataArray1D<double> mask(nElementCount);
+		for (int i = 0; i < nElementCount; i++) {
+			mask[i] = static_cast<double>( 1 );
+		}
+		varMask->set_cur((long)0);
+		varMask->put(mask, nElementCount);
+		varMask->add_att("_FillValue", 9.96920996838687e+36 );
+	}
+	//---------------------------------------------------------------------------
+	// Grid dims
+	{
+		NcVar * varDims = ncOut.add_var("grid_dims", ncInt, dimGridRank);
+		if (varDims == NULL) {
+			_EXCEPTIONT("Error creating variable \"grid_dims\"");
+		}
+		DataArray1D<int> rank(1);
+		rank(0) = 1;
+		varDims->set_cur((long)0);
+		varDims->put(rank, 1);
+	}
+	//---------------------------------------------------------------------------
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1305,8 +1370,8 @@ void Mesh::Read(const std::string & strFile) {
 			}
 		}
 
-    // Remove coincident nodes.
-    RemoveCoincidentNodes();
+	 // Remove coincident nodes.
+	 RemoveCoincidentNodes();
 	}
 }
 
