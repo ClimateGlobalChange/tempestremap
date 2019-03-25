@@ -991,7 +991,7 @@ void LinearRemapSE4(
 			// Source elements only partially cover target volumes
 			} else {
 				printf("\n==== BEGIN DEBUGGING INFO ====\n");
-				printf("EXCEPTION (%s, Line %u) Inverse map out of range\n",
+				printf("EXCEPTION (%s, Line %u) Target grid must be a subset of source grid\n",
 					__FILE__, __LINE__);
 				printf("Source face ix %i, Overlap face ix [%i,%i]\n",
 					ixFirst, ixOverlap, ixOverlap+nOverlapFaces-1);
