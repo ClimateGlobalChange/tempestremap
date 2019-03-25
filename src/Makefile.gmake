@@ -72,6 +72,8 @@ CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
 MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
 
+ConvertExodusToSCRIP_FILES= ConvertExodusToSCRIP.cpp
+
 ########################################################################
 # All executables
 
@@ -92,7 +94,8 @@ EXEC_TARGETS= ApplyOfflineMap \
 			  GenerateTransposeMap \
               GenerateVolumetricMesh \
               MeshToTxt \
-              ShpToMesh
+              ShpToMesh \
+              ConvertExodusToSCRIP
 
 ########################################################################
 # Build rules. 
@@ -119,6 +122,7 @@ CoarsenRectilinearData_EXE: $(CoarsenRectilinearData_FILES:%.cpp=$(BUILDDIR)/%.o
 CalculateDiffNorms_EXE: $(CalculateDiffNorms_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)

@@ -17,6 +17,8 @@
 #include "GridElements.h"
 #include "Exception.h"
 #include "Announce.h"
+#include "STLStringHelper.h"
+#include "NetCDFUtilities.h"
 
 #include "netcdfcpp.h"
 
@@ -459,12 +461,23 @@ void Dual(
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C" 
-int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile)
+int GenerateICOMesh(Mesh& mesh, int nResolution, bool fDual, std::string strOutputFile, std::string strOutputFormat)
 {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
+
+  // Check command line parameters (data type arguments)
+  STLStringHelper::ToLower(strOutputFormat);
+
+	NcFile::FileFormat eOutputFormat =
+		GetNcFileFormatFromString(strOutputFormat);
+	if (eOutputFormat == NcFile::BadFormat) {
+		_EXCEPTION1("Invalid \"out_format\" value (%s), "
+			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+			strOutputFormat.c_str());
+	}
 
 
 	// Generate Mesh
@@ -486,7 +499,7 @@ try {
 		Announce("Mesh size: Nodes [%i] Elements [%i]",
 			mesh.nodes.size(), mesh.faces.size());
 
-		mesh.Write(strOutputFile);
+		mesh.Write(strOutputFile, eOutputFormat);
 		
 		AnnounceEndBlock("Done");
 	}
