@@ -28,6 +28,8 @@
 #include <cmath>
 #include <cassert>
 
+#include "node_multimap_3d.h"
+
 #include "Exception.h"
 #include "DataArray1D.h"
 #include "netcdfcpp.h"
@@ -123,13 +125,13 @@ public:
 	bool operator== (const Node & node) const {
 		static const Real Tolerance = ReferenceTolerance;
 
-		if (fabs(x - node.x) > Tolerance) {
+		if (fabs(x - node.x) >= Tolerance) {
 			return false;
 		}
-		if (fabs(y - node.y) > Tolerance) {
+		if (fabs(y - node.y) >= Tolerance) {
 			return false;
 		}
-		if (fabs(z - node.z) > Tolerance) {
+		if (fabs(z - node.z) >= Tolerance) {
 			return false;
 		}
 
@@ -220,16 +222,12 @@ typedef std::vector<Node> NodeVector;
 ///		A map between Nodes and indices.
 ///	</summary>
 typedef std::map<Node, int> NodeMap;
+//typedef node_multimap_3d<Node, int> NodeMap;
 
 ///	<summary>
 ///		Value type for NodeMap.
 ///	</summary>
 typedef NodeMap::value_type NodeMapPair;
-
-///	<summary>
-///		Iterator for NodeMap.
-///	</summary>
-typedef NodeMap::iterator NodeMapIterator;
 
 ///	<summary>
 ///		Constant iterator for NodeMap.

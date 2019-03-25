@@ -1884,6 +1884,7 @@ void GenerateOverlapMesh_v2(
 	const bool fAllowNoOverlap,
     const bool fVerbose
 ) {
+	//NodeMap nodemapOverlap(ReferenceTolerance, 1.0e-1);
 	NodeMap nodemapOverlap;
 
 	// Create a KD tree for fast searching of the target mesh
