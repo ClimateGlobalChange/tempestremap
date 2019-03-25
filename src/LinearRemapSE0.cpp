@@ -990,6 +990,25 @@ void LinearRemapSE4(
 
 			// Source elements only partially cover target volumes
 			} else {
+				printf("\n==== BEGIN DEBUGGING INFO ====\n");
+				printf("EXCEPTION (%s, Line %u) Inverse map out of range\n",
+					__FILE__, __LINE__);
+				printf("Source face ix %i, Overlap face ix [%i,%i]\n",
+					ixFirst, ixOverlap, ixOverlap+nOverlapFaces-1);
+				printf("Target faces / overlap area:\n");
+				for (int j = 0; j < nOverlapFaces; j++) {
+					printf("  (%i) %1.15e\n",
+						meshOverlap.vecTargetFaceIx[ixOverlap + j],
+						meshOverlap.vecFaceArea[ixOverlap + j]);
+				}
+				printf("Source nodes / source area:\n");
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					printf("(%i,%i) %1.15e\n", p, q, dataGLLJacobian[p][q][ixFirst]);
+				}
+				}
+				printf("==== END DEBUGGING INFO ====\n");
+
 				_EXCEPTION2("Target grid must be a subset of source grid:"
 					"\nInput mesh area (%1.15e) Target area (%1.15e)",
 					meshInput.vecFaceArea[ixFirst],
