@@ -997,14 +997,15 @@ void LinearRemapSE4(
 					ixFirst, ixOverlap, ixOverlap+nOverlapFaces-1);
 				printf("Target faces / overlap area:\n");
 				for (int j = 0; j < nOverlapFaces; j++) {
-					printf("  (%i) %1.15e\n",
+					printf("  (%i) (%i) %1.15e\n",
+						ixOverlap + j,
 						meshOverlap.vecTargetFaceIx[ixOverlap + j],
 						meshOverlap.vecFaceArea[ixOverlap + j]);
 				}
 				printf("Source nodes / source area:\n");
 				for (int p = 0; p < nP; p++) {
 				for (int q = 0; q < nP; q++) {
-					printf("(%i,%i) %1.15e\n", p, q, dataGLLJacobian[p][q][ixFirst]);
+					printf("  (%i,%i) %1.15e\n", p, q, dataGLLJacobian[p][q][ixFirst]);
 				}
 				}
 				printf("==== END DEBUGGING INFO ====\n");
