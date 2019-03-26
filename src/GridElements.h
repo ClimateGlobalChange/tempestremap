@@ -28,7 +28,12 @@
 #include <cmath>
 #include <cassert>
 
+#if defined(OVERLAPMESH_USE_UNSORTED_MAP)
+#include <unordered_map>
+#endif
+#if defined(OVERLAPMESH_USE_NODE_MULTIMAP)
 #include "node_multimap_3d.h"
+#endif
 
 #include "Exception.h"
 #include "DataArray1D.h"
@@ -213,6 +218,7 @@ public:
 	}
 };
 
+
 ///	<summary>
 ///		A vector for the storage of Nodes.
 ///	</summary>
@@ -221,8 +227,32 @@ typedef std::vector<Node> NodeVector;
 ///	<summary>
 ///		A map between Nodes and indices.
 ///	</summary>
+#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
 typedef std::map<Node, int> NodeMap;
-//typedef node_multimap_3d<Node, int> NodeMap;
+#endif
+
+#if defined(OVERLAPMESH_USE_NODE_MULTIMAP)
+typedef node_multimap_3d<Node, int> NodeMap;
+#endif
+
+#if defined(OVERLAPMESH_USE_UNSORTED_MAP)
+///	<summary>
+///		Hasher for a Node.
+///	</summary>
+struct NodeHash {
+	std::size_t operator()(const Node& node) const {
+		static const double bin_width = OVERLAPMESH_BIN_WIDTH;
+
+		int i = static_cast<int>((node.x + 2.123456789101112) / bin_width);
+		int j = static_cast<int>((node.y + 2.123456789101112) / bin_width);
+		int k = static_cast<int>((node.z + 2.123456789101112) / bin_width);
+
+		return (std::size_t)(i * 18397 + j * 20483 + k * 29303);
+	}
+};
+
+typedef std::unordered_map<Node, int, NodeHash> NodeMap;
+#endif
 
 ///	<summary>
 ///		Value type for NodeMap.

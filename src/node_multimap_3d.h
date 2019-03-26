@@ -17,6 +17,7 @@
 #ifndef _NODEMULTIMAP3D_H_
 #define _NODEMULTIMAP3D_H_
 
+#include <iostream>
 #include <array>
 #include <unordered_set>
 
@@ -167,7 +168,7 @@ public:
 	///	</summary>
 	node_multimap_3d(
 		double tolerance = 1.0e-12,
-		double bin_width = 1.0e-3
+		double bin_width = 1.0e-1
 	) :
 		m_tolerance(tolerance),
 		m_bin_width(bin_width)
@@ -179,7 +180,7 @@ public:
 	bin_index_type hasher(
 		const std::array<int,3> & arr
 	) const {
-		return std::hash<int>{}(arr[0] + 9273 * arr[1] + 347315 * arr[2]);
+		return std::hash<int>{}(arr[0] * 18397 + arr[1] * 20483 + arr[2] * 29303);
 	}
 
 	///	<summary>
@@ -223,15 +224,25 @@ public:
 	}
 
 	///	<summary>
+	///		Convert a Node to a bin index.
+	///	</summary>
+	std::array<int,3> NodeToBinIndex(
+		const NodeType & node
+	) const {
+		std::array<int,3> arrBin;
+		arrBin[0] = static_cast<int>((node.x + 2.123456789101112) / m_bin_width);
+		arrBin[1] = static_cast<int>((node.y + 2.123456789101112) / m_bin_width);
+		arrBin[2] = static_cast<int>((node.z + 2.123456789101112) / m_bin_width);
+		return arrBin;
+	}
+
+	///	<summary>
 	///		Insert a given <NodeType, DataType> pair.
 	///	</summary>
 	void insert(
 		const value_type & value
 	) {
-		std::array<int,3> arrBin;
-		arrBin[0] = static_cast<int>(value.first.x / m_bin_width);
-		arrBin[1] = static_cast<int>(value.first.y / m_bin_width);
-		arrBin[2] = static_cast<int>(value.first.z / m_bin_width);
+		std::array<int,3> arrBin = NodeToBinIndex(value.first);
 
 		node_map_type_iterator iter = m_map.find(hasher(arrBin));
 		if (iter == m_map.end()) {
@@ -249,56 +260,43 @@ public:
 	const_iterator find(
 		const NodeType & node
 	) const {
+
 		bool fExtended = false;
 
 		// Bins to search over
-		std::array<int,3> arrBegin;
+		std::array<int,3> arrBegin = NodeToBinIndex(node);
 		std::array<int,3> arrEnd;
 
-		// Calculate the bin range in the x direction
-		arrBegin[0] = static_cast<int>(node.x / m_bin_width);
 		arrEnd[0] = arrBegin[0] + 1;
+		arrEnd[1] = arrBegin[1] + 1;
+		arrEnd[2] = arrBegin[2] + 1;
 
+		// Calculate the bin range in the x direction
 		double dRemainderXL = node.x - static_cast<double>(arrBegin[0]) * m_bin_width;
 		if (fabs(dRemainderXL) < m_tolerance) {
 			fExtended = true;
 			arrBegin[0]--;
-		}
-
-		double dRemainderXR = node.x - static_cast<double>(arrBegin[0]+1) * m_bin_width;
-		if (fabs(dRemainderXR) < m_tolerance) {
+		} else if (fabs(dRemainderXL - 1.0) < m_tolerance) {
 			fExtended = true;
 			arrEnd[0]++;
 		}
 
 		// Calculate the bin range in the y direction
-		arrBegin[1] = static_cast<int>(node.y / m_bin_width);
-		arrEnd[1] = arrBegin[1] + 1;
-
 		double dRemainderYL = node.y - static_cast<double>(arrBegin[1]) * m_bin_width;
 		if (fabs(dRemainderYL) < m_tolerance) {
 			fExtended = true;
 			arrBegin[1]--;
-		}
-
-		double dRemainderYR = node.y - static_cast<double>(arrBegin[1]+1) * m_bin_width;
-		if (fabs(dRemainderYR) < m_tolerance) {
+		} else if (fabs(dRemainderYL - 1.0) < m_tolerance) {
 			fExtended = true;
 			arrEnd[1]++;
 		}
 
 		// Calculate the bin range in the z direction
-		arrBegin[2] = static_cast<int>(node.z / m_bin_width);
-		arrEnd[2] = arrBegin[2] + 1;
-
 		double dRemainderZL = node.z - static_cast<double>(arrBegin[2]) * m_bin_width;
 		if (fabs(dRemainderZL) < m_tolerance) {
 			fExtended = true;
 			arrBegin[2]--;
-		}
-
-		double dRemainderZR = node.z - static_cast<double>(arrBegin[2]+1) * m_bin_width;
-		if (fabs(dRemainderZR) < m_tolerance) {
+		} else if (fabs(dRemainderZL - 1.0) < m_tolerance) {
 			fExtended = true;
 			arrEnd[2]++;
 		}

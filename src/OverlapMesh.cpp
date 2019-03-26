@@ -1854,6 +1854,10 @@ void GenerateOverlapMeshFromFace(
 			// Insert Face into meshOverlap
 			Face faceNew(nodevecOutput.size());
 			for (int i = 0; i < nodevecOutput.size(); i++) {
+#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+				faceNew.SetNode(i, meshOverlap.nodes.size());
+				meshOverlap.nodes.push_back(nodevecOutput[i]);
+#else
 				NodeMapConstIterator iter
 					= nodemapOverlap.find(nodevecOutput[i]);
 
@@ -1865,6 +1869,7 @@ void GenerateOverlapMeshFromFace(
 					nodemapOverlap.insert(
 						NodeMapPair(nodevecOutput[i], iNextNodeMapOverlapIx));
 				}
+#endif
 			}
 			meshOverlap.faces.push_back(faceNew);
 
@@ -1884,8 +1889,15 @@ void GenerateOverlapMesh_v2(
 	const bool fAllowNoOverlap,
     const bool fVerbose
 ) {
-	//NodeMap nodemapOverlap(ReferenceTolerance, 1.0e-1);
+#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
 	NodeMap nodemapOverlap;
+#endif
+#if defined(OVERLAPMESH_USE_UNSORTED_MAP)
+	NodeMap nodemapOverlap;
+#endif
+#if defined(OVERLAPMESH_USE_NODE_MULTIMAP)
+	NodeMap nodemapOverlap(ReferenceTolerance, OVERLAPMESH_BIN_WIDTH);
+#endif
 
 	// Create a KD tree for fast searching of the target mesh
 	kdtree * kdTarget = kd_create(3);
@@ -1981,6 +1993,7 @@ void GenerateOverlapMesh_v2(
 	// Destroy the KD tree
 	kd_free(kdTarget);
 
+#if !defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
 	// Insert all Nodes from nodemapOverlap into meshOverlap.nodes
 	meshOverlap.nodes.resize(nodemapOverlap.size());
 
@@ -1988,6 +2001,7 @@ void GenerateOverlapMesh_v2(
 	for (; iter != nodemapOverlap.end(); iter++) {
 		meshOverlap.nodes[iter->second] = iter->first;
 	}
+#endif
 
 /*
 	// Check concavity of overlap mesh
