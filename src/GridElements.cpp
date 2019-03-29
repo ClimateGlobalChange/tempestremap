@@ -2161,8 +2161,8 @@ bool ConvexifyFace(
 	}
 
 	// append new nodes to end of node vector
-	int size = mesh.nodes.size();
-	mesh.nodes.insert(mesh.nodes.end(), newNodes.begin(), newNodes.end());
+	int size = meshout.nodes.size();
+	meshout.nodes.insert(meshout.nodes.end(), newNodes.begin(), newNodes.end());
 
 	// add new triangles to the mesh
 	for (int i=0; i<out.numberoftriangles; ++i) {
@@ -2470,7 +2470,7 @@ void ConvexifyMesh(
 	char szBuffer[256];
 
 	// Copy all nodes to output mesh
-	meshout.nodes = mesh.nodes;
+	meshout.nodes.clear();
 
 	// Remove all Faces from output mesh
 	meshout.faces.clear();
@@ -2490,6 +2490,7 @@ void ConvexifyMesh(
 		int nMeshSize = meshout.faces.size();
 
 		bool fConcaveFace = ConvexifyFace(mesh, meshout, f, false, fVerbose);
+
 		if (fConcaveFace) {
 			int nAddedFaces = meshout.faces.size() - nMeshSize;
 			for (int i = 0; i < nAddedFaces; i++) {

@@ -184,7 +184,7 @@ int GenerateOverlapMesh(
         if ( fHasConcaveFacesA )
         {
             Mesh meshTemp = meshA;
-            ConvexifyMesh ( meshTemp, meshA );
+            ConvexifyMesh ( meshTemp, meshA, fVerbose );
         }
 
         // Validate mesh
@@ -205,7 +205,7 @@ int GenerateOverlapMesh(
         if ( fHasConcaveFacesB )
         {
             Mesh meshTemp = meshB;
-            ConvexifyMesh ( meshTemp, meshB );
+            ConvexifyMesh ( meshTemp, meshB, fVerbose );
         }
 
         // Validate mesh
