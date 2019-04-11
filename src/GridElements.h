@@ -721,7 +721,7 @@ public:
 	///	<summary>
 	///		Construct the EdgeMap from the NodeVector and FaceVector.
 	///	</summary>
-	void ConstructEdgeMap();
+	void ConstructEdgeMap(bool verbose=true);
 
 	///	<summary>
 	///		Construct the ReverseNodeArray from the NodeVector and FaceVector.
