@@ -166,6 +166,28 @@ fi
 
 # BLAS in Intel MKL library?
 if test $ax_blas_ok = no; then
+  case $host_os in
+    darwin*)
+      AC_CHECK_LIB(mkl_intel_lp64, $sgemm,
+                   [ax_blas_ok=yes;BLAS_LIBS="-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread"; OPENMP_LDFLAGS=""],,
+                   [-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread])
+      ;;
+    *)
+      if test $host_cpu = x86_64; then
+        AC_CHECK_LIB(mkl_intel_lp64, $sgemm,
+                     [ax_blas_ok=yes;BLAS_LIBS="-lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl"],,
+                     [-lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl])
+      elif test $host_cpu = i686; then
+        AC_CHECK_LIB(mkl_intel, $sgemm,
+                     [ax_blas_ok=yes;BLAS_LIBS="-lmkl_intel -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl"],,
+                     [-lmkl_intel -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl])
+      fi
+    ;;
+  esac
+fi
+
+# BLAS in Intel MKL library?
+if test $ax_blas_ok = no; then
   AC_CHECK_LIB(mkl, $sgemm, [ax_blas_ok=yes;BLAS_LIBS="-lmkl"])
 fi
 
