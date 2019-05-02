@@ -180,7 +180,7 @@ public:
 	///	</summary>
 	virtual void Detach() {
 		if ((m_fOwnsData) && (m_data1D != NULL)) {
-			delete[] m_data1D;
+		        free(m_data1D);
 		}
 		m_fOwnsData = true;
 		m_data1D = NULL;
