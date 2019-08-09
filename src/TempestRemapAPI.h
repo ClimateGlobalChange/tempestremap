@@ -116,6 +116,7 @@ extern "C" {
 									   std::string strVariables = "", std::string strOutputMap = "",
 									   std::string strInputData = "", std::string strOutputData = "",
 									   std::string strNColName = "", bool fOutputDouble = false,
+									   std::string strOutputFormat = "Netcdf4",
 									   std::string strPreserveVariables = "", bool fPreserveAll = false, double dFillValueOverride = 0.0,
 									   bool fInputConcave = false, bool fOutputConcave = false );
 
