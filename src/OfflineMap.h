@@ -334,6 +334,18 @@ public:
 	);
 
 	///	<summary>
+	///		Allocate the solution data correctly and load field
+	///     values from a source file.
+	///	</summary>
+	void RetrieveFieldData(
+		const std::string context, /* "source" or "target" */
+		const std::string & strSourceDataFile,
+		const std::vector<std::string> & vecVariables,
+		const std::string & strNColName,
+		std::vector<DataArray1D<double> > & vecSolutions
+	);
+
+	///	<summary>
 	///		Read the OfflineMap from a NetCDF file.
 	///	</summary>
 	virtual void Read(

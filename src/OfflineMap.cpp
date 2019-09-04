@@ -1782,6 +1782,179 @@ void OfflineMap::Apply(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void OfflineMap::RetrieveFieldData(
+	const std::string context, /* "source" or "target" */
+	const std::string & strSourceDataFile,
+	const std::vector<std::string> & vecVariables,
+	const std::string & strNColName,
+	std::vector<DataArray1D<double> > & vecSolutions
+) {
+
+	// Check variable list for "lat" and "lon"
+	for (int v = 0; v < vecVariables.size(); v++) {
+		if (vecVariables[v] == "lat") {
+			_EXCEPTIONT("Latitude variable \"lat\" in variable list will be overwritten on output");
+		}
+		if (vecVariables[v] == "lon") {
+			_EXCEPTIONT("Longitude variable \"lon\" in variable list will be overwritten on output");
+		}
+	}
+
+	// Open source data file
+	NcFile ncSource(strSourceDataFile.c_str(), NcFile::ReadOnly);
+	if (!ncSource.is_valid()) {
+		_EXCEPTION1("Cannot open source data file \"%s\"",
+			strSourceDataFile.c_str());
+	}
+
+	// Number of source and target regions
+	int nSourceCount = (context == "source" ? m_dSourceAreas.GetRows() : m_dTargetAreas.GetRows());
+
+	// Check for rectilinear data
+	bool fSourceRectilinear;
+
+	if (context == "source")
+	{
+		if (m_vecSourceDimSizes.size() == 1) {
+			fSourceRectilinear = false;
+		} else if (m_vecSourceDimSizes.size() == 2) {
+			fSourceRectilinear = true;
+		} else {
+			_EXCEPTIONT("m_vecSourceDimSizes undefined");
+		}
+
+		if (fSourceRectilinear) {
+			if (nSourceCount != m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]) {
+				_EXCEPTIONT("Rectilinear input expected in finite volume form");
+			}
+		}
+	}
+	else
+	{
+		if (m_vecTargetDimSizes.size() == 1) {
+			fSourceRectilinear = false;
+		} else if (m_vecTargetDimSizes.size() == 2) {
+			fSourceRectilinear = true;
+		} else {
+			_EXCEPTIONT("m_vecTargetDimSizes undefined");
+		}
+
+		if (fSourceRectilinear) {
+			if (nSourceCount != m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]) {
+				printf("%i %i\n", nSourceCount,
+					m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
+
+				_EXCEPTIONT("Rectilinear output expected in finite volume form");
+			}
+		}
+	}
+
+	DataArray1D<float> dataIn;
+	if (context == "source")
+	{
+		if (m_vecSourceDimSizes.size() == 1) {
+			dataIn.Allocate(nSourceCount);
+		} else {
+			dataIn.Allocate(m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]);
+		}
+	}
+	else
+	{
+		if (m_vecTargetDimSizes.size() == 1) {
+			dataIn.Allocate(nSourceCount);
+		} else {
+			dataIn.Allocate(m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
+		}
+	}
+
+	// DataArray1D<double> vecSolutions(nSourceCount);
+	// DataArray1D<double> dataOutDouble(nTargetCount);
+
+	vecSolutions.resize(vecVariables.size());
+	for (unsigned k = 0; k < vecVariables.size(); k++)
+		vecSolutions[k].Allocate(nSourceCount);
+
+	// Generate variable list
+	std::vector<std::string> vecVariableList = vecVariables;
+
+	if (vecVariables.size() == 0) {
+		for (int v = 0; v < ncSource.num_vars(); v++) {
+			NcVar * var = ncSource.get_var(v);
+
+			if (fSourceRectilinear) {
+				if (var->num_dims() < 2) {
+					continue;
+
+				} else {
+					NcDim * dimA = var->get_dim(var->num_dims()-2);
+					NcDim * dimB = var->get_dim(var->num_dims()-1);
+
+					if (dimA->size() != m_vecSourceDimSizes[0]) {
+						continue;
+					}
+					if (dimB->size() != m_vecSourceDimSizes[1]) {
+						continue;
+					}
+				}
+
+			} else {
+				if (var->num_dims() < 1) {
+					continue;
+
+				} else {
+					NcDim * dim = var->get_dim(var->num_dims()-1);
+
+					if (dim->size() != nSourceCount) {
+						continue;
+					}
+
+					bool fDimensionName = false;
+					for (int d = 0; d < m_vecTargetDimNames.size(); d++) {
+						const char * szDimName = m_vecTargetDimNames[d].c_str();
+						if (strcmp(var->name(), szDimName) == 0) {
+							fDimensionName = true;
+							break;
+						}
+					}
+					if (fDimensionName) {
+						continue;
+					}
+				}
+			}
+
+			vecVariableList.push_back(var->name());
+		}
+	}
+
+	// Loop through all variables
+	for (int v = 0; v < vecVariableList.size(); v++) {
+		NcVar * var = ncSource.get_var(vecVariableList[v].c_str());
+		if (var == NULL) {
+			// _EXCEPTION1("Variable \"%s\" does not exist in input file %s",
+			// 	vecVariableList[v].c_str(), strSourceDataFile);
+			std::cout << "Variable \"" << vecVariableList[v].c_str() << "\" does not exist in input file " << strSourceDataFile << std::endl;
+			continue;
+		}
+	
+		// Get size
+		DataArray1D<long> nGet(var->num_dims());
+		for (int d = 0; d < nGet.GetRows()-1; d++) {
+			nGet[d] = 1;
+		}
+		if (fSourceRectilinear) {
+			nGet[nGet.GetRows()-2] = (context == "source" ? m_vecSourceDimSizes[0] : m_vecTargetDimSizes[0]);
+			nGet[nGet.GetRows()-1] = (context == "source" ? m_vecSourceDimSizes[1] : m_vecTargetDimSizes[1]);
+		} else {
+			nGet[nGet.GetRows()-1] = nSourceCount;
+		}
+
+		var->get(&(vecSolutions[v][0]), &(nGet[0]));
+
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::Read(
 	const std::string & strSource,
 	std::map<std::string, std::string> * pmapAttributes,
