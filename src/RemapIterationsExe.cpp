@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    ApplyOfflineMapExe.cpp
-///	\author  Paul Ullrich
-///	\version September 15, 2014
+///	\file    RemapIterationsExe.cpp
+///	\author  Vijay Mahadevan
+///	\version September 4, 2019
 ///
 ///	<remarks>
 ///		Copyright 2000-2014 Paul Ullrich
@@ -13,6 +13,13 @@
 ///		Public License.  This software is provided "as is" without express
 ///		or implied warranty.
 ///	</remarks>
+
+///
+/// Example usage:
+///
+///  ./RemapIterations --iterations 10 --src_mesh source.g --tgt_mesh target.g --ov_mesh overlap.g --fwdmap fwdRemapWeights.nc --revmap revRemapWeights.nc \
+///                    --var "Temperature" --out_data outputdata.nc
+///
 
 #include "Announce.h"
 #include "CommandLine.h"

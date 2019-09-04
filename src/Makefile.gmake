@@ -74,6 +74,7 @@ CoarsenRectilinearData_FILES= CoarsenRectilinearData.cpp
 CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
 AnalyzeMap_FILES= AnalyzeMap.cpp
 VerticalInterpolate_FILES= VerticalInterpolate.cpp
+RemapIterations_FILES= RemapIterationsExe.cpp
 
 MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
