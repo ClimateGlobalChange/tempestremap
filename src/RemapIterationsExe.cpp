@@ -218,8 +218,8 @@ int main(int argc, char** argv) {
     int nA = (int)(smatRemap.GetRows());
     int nB = (int)(smatRemap.GetColumns());
 
-    NcDim * dimSrcGridRank = ncOutput.add_dim("n_src_dofs", nA);
-    NcDim * dimDstGridRank = ncOutput.add_dim("n_dst_dofs", nB);
+    NcDim * dimSrcGridRank = ncOutput.add_dim("n_src_dofs", nB);
+    NcDim * dimDstGridRank = ncOutput.add_dim("n_dst_dofs", nA);
     NcDim * dimLevels      = ncOutput.add_dim("time", iNRemapIterations);
     std::vector<NcVar *> varFields(vecVariableStrings.size()*2);
 
