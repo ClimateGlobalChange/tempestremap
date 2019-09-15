@@ -145,6 +145,7 @@ int main(int argc, char** argv) {
     // Parse variable list
     std::vector< std::string > vecVariableStrings;
     ParseVariableList(strVariables, vecVariableStrings);
+    const unsigned nvars = vecVariableStrings.size();
 
     // Apply OfflineMap to data
     if (strReverseMap == "") {
@@ -205,14 +206,15 @@ int main(int argc, char** argv) {
     }
 
     // Open source data file
-    NcFile ncOutput(strOutputData.c_str(), NcFile::Replace);
+    NcFile ncOutput(strOutputData.c_str(), NcFile::Replace, NULL, 0, NcFile::Offset64Bits);
     if (!ncOutput.is_valid()) {
       _EXCEPTION1("Cannot open output data file \"%s\"",
         strOutputData.c_str());
     }
+    std::cout << "\nWriting output solution vectors to " << strOutputData << "\n";
 
     // Attributes
-    ncOutput.add_att("Title", "TempestRemap Repetetive Remapper");
+    ncOutput.add_att("Title", "TempestRemap Repetitive Remapper");
 
     // Map dimensions
     int nA = (int)(smatRemap.GetRows());
@@ -220,47 +222,68 @@ int main(int argc, char** argv) {
 
     NcDim * dimSrcGridRank = ncOutput.add_dim("n_src_dofs", nB);
     NcDim * dimDstGridRank = ncOutput.add_dim("n_dst_dofs", nA);
-    NcDim * dimLevels      = ncOutput.add_dim("time", iNRemapIterations);
-    std::vector<NcVar *> varFields(vecVariableStrings.size()*2);
+    NcDim * dimOutputFrequency = ncOutput.add_dim("output_frequency", iOutputFrequency);
+    NcDim * dimLevels      = ncOutput.add_dim("time", iNRemapIterations/iOutputFrequency+1);
+    std::vector<NcVar *> varFields(nvars*2);
 
     std::stringstream sstr;
-    for (unsigned ivar=0; ivar < vecVariableStrings.size(); ++ivar)
+    for (unsigned ivar=0; ivar < nvars; ++ivar)
     {
       sstr.str("");
-      // std::cout << "Source solution: " << vecVariableStrings[ivar] << " " << source_solutions[ivar].GetRows() << std::endl;
       sstr << vecVariableStrings[ivar] << "_remap_src";
-      varFields[ivar]                           = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimSrcGridRank, dimLevels);
+      std::cout << ivar << ") Source solution: " << sstr.str() << " " << source_solutions[ivar].GetRows() << std::endl;
+      assert(source_solutions[ivar].GetRows() == nB);
+      varFields[ivar]       = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimSrcGridRank, dimLevels);
       sstr.str("");
-      // std::cout << "Target solution: " << vecVariableStrings[ivar] << " " << target_solutions[ivar].GetRows() << std::endl;
       sstr << vecVariableStrings[ivar] << "_remap_tgt";
-      varFields[vecVariableStrings.size()+ivar] = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimDstGridRank, dimLevels);
+      std::cout << ivar << ") Target solution: " << sstr.str() << " " << target_solutions[ivar].GetRows() << std::endl;
+      assert(target_solutions[ivar].GetRows() == nA);
+      varFields[nvars+ivar] = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimDstGridRank, dimLevels);
     }
 
     AnnounceEndBlock(NULL);
 
+    // Write out the original source data to file
+    {
+      for (unsigned ivar=0; ivar < nvars; ++ivar)
+      {
+        varFields[ivar]->set_cur(0, 0);
+        varFields[ivar]->put(source_solutions[ivar], nB, 1);
+      }
+    }
+
     for (int iter=0; iter < iNRemapIterations; ++iter)
     {
-      AnnounceStartBlock("Applying forward offline map to data");
-
-      for (unsigned ivar=0; ivar < vecVariableStrings.size(); ++ivar)
+      std::cout << "Iteration " << iter << " ...\n";
+      
+      std::cout << "\tApplying forward offline map to data\n";
+      for (unsigned ivar=0; ivar < nvars; ++ivar)
       {
         // Apply the offline map to the data
         smatRemap.Apply(source_solutions[ivar], target_solutions[ivar]);
         if (iter % iOutputFrequency == 0) { // Put the data in NetCDF file as needed
-          varFields[ivar]->set_cur(0, iter);
-          varFields[ivar]->put(target_solutions[ivar], nA, 1);
-        }
-
-        // Apply the offline map to the data
-        smatRemap2.Apply(target_solutions[ivar], source_solutions[ivar]);
-        if (iter % iOutputFrequency == 0) { // Put the data in NetCDF file as needed
-          varFields[vecVariableStrings.size()+ivar]->set_cur(0, iter);
-          varFields[vecVariableStrings.size()+ivar]->put(source_solutions[ivar], nB, 1);
+          varFields[nvars+ivar]->set_cur(0, iter);
+          varFields[nvars+ivar]->put(target_solutions[ivar], nA, 1);
         }
       }
 
-      AnnounceEndBlock(NULL);
+      std::cout << "\tApplying reverse offline map to forward data\n";
+      for (unsigned ivar=0; ivar < nvars; ++ivar)
+      {
+        // Apply the offline map to the data
+        smatRemap2.Apply(target_solutions[ivar], source_solutions[ivar]);
+        if (iter % iOutputFrequency == 0) { // Put the data in NetCDF file as needed
+          varFields[ivar]->set_cur(0, iter+1);
+          varFields[ivar]->put(source_solutions[ivar], nB, 1);
+        }
+      }
+
+      if ( (iter/iOutputFrequency) % 10) // After every 5 iterations, flush to disk
+        ncOutput.sync();
+
     }
+
+    ncOutput.close();
 
   } catch(Exception & e) {
     Announce(e.ToString().c_str());
