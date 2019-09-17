@@ -58,7 +58,7 @@ try {
 	BeginCommandLine()
 		CommandLineString(strInputFile, "in", "");
 		CommandLineString(strOutputMesh, "out", "");
-		CommandLineString(strOutputConnectivity, "out_connect", "");
+		//CommandLineString(strOutputConnectivity, "out_connect", "");
 		CommandLineInt(nP, "np", 2);
 		CommandLineBool(fUniformSpacing, "uniform");
 		//CommandLineBool(fNoMergeFaces, "no-merge-face");
@@ -125,8 +125,6 @@ try {
 	DataArray3D<int> dataGLLnodes(nP, nP, nElements);
 	std::vector<Node> vecNodes;
 	std::map<Node, int> mapFaces;
-
-	// Data structure for 
 
 	// Data structure used for avoiding coincident nodes on the fly
 	std::map<Node, int> mapNewNodes;
