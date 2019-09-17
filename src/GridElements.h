@@ -753,13 +753,16 @@ public:
 	void RemoveCoincidentNodes();
 
 	///	<summary>
-	///		Write the mesh to a NetCDF file.
+	///		Write the mesh to a NetCDF file in Exodus format.
 	///	</summary>
 	void Write(
 		const std::string & strFile,
 		NcFile::FileFormat eFileFormat = NcFile::Classic
 	) const;
 
+	///	<summary>
+	///		Write the mesh to a NetCDF file in SCRIP format.
+	///	</summary>
 	void WriteScrip(
 		const std::string & strFile,
 		NcFile::FileFormat eFileFormat = NcFile::Classic
@@ -844,6 +847,65 @@ inline void XYZtoRLL_Deg(
 		dLon = 0.0;
 		dLat = -90.0;
 	}
+}
+
+///	<summary>
+///		Calculate an average longitude from two given longitudes (in radians).
+///	</summary>
+inline double AverageLongitude_Rad(
+	double dLon1,
+	double dLon2
+) {
+	double dDeltaLon;
+	if (dLon2 > dLon1) {
+		dDeltaLon = fmod(dLon2 - dLon1, 2.0 * M_PI);
+		if (dDeltaLon > M_PI) {
+			dDeltaLon = dDeltaLon - 2.0 * M_PI;
+		}
+	} else {
+		dDeltaLon = - fmod(dLon1 - dLon2, 2.0 * M_PI);
+		if (dDeltaLon < -M_PI) {
+			dDeltaLon = dDeltaLon + 2.0 * M_PI;
+		}
+	}
+
+	double dLonAvg = dLon1 + 0.5 * dDeltaLon;
+
+	if ((dLonAvg < 0.0) && (dLon1 >= 0.0) && (dLon2 >= 0.0)) {
+		dLonAvg += 2.0 * M_PI;
+	}
+	if ((dLonAvg > 2.0 * M_PI) && (dLon1 <= 2.0 * M_PI) && (dLon2 <= 2.0 * M_PI)) {
+		dLonAvg -= 2.0 * M_PI;
+	}
+
+	return dLonAvg;
+}
+
+///	<summary>
+///		Calculate the great circle distance between two RLL points.
+///	</summary>
+inline double GreatCircleDistance_Deg(
+	double dLon1,
+	double dLat1,
+	double dLon2,
+	double dLat2
+) {
+	double dR =
+		sin(dLat1) * sin(dLat2)
+		+ cos(dLat1) * cos(dLat2) * cos(dLon2 - dLon1);
+
+	if (dR >= 1.0) {
+		dR = 0.0;
+	} else if (dR <= -1.0) {
+		dR = 180.0;
+	} else {
+		dR = 180.0 / M_PI * acos(dR);
+	}
+	if (dR != dR) {
+		_EXCEPTIONT("NaN value detected");
+	}
+
+	return dR;
 }
 
 ///	<summary>
