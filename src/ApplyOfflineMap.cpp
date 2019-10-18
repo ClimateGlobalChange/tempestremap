@@ -122,6 +122,7 @@ try {
 	// OfflineMap
 	OfflineMap mapRemap;
 	mapRemap.Read(strInputMap);
+	mapRemap.SetFillValueOverrideDbl(dFillValueOverride);
 	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 
 	mapRemap.Apply(

@@ -1476,17 +1476,19 @@ void OfflineMap::Apply(
 		AnnounceStartBlock(vecVariableList[v].c_str());
 
 		// Check for _FillValue
-		float flFillValue = 0.0f;
-		double dFillValue = 0.0;
+		float flFillValue = m_flFillValueOverride;
+		double dFillValue = m_dFillValueOverride;
 		for (int a = 0; a < var->num_atts(); a++) {
 			NcAtt * att = var->get_att(a);
-			if (strcmp(att->name(), "_FillValue") == 0) {
+			if ((strcmp(att->name(), "_FillValue") == 0) ||
+			    (strcmp(att->name(), "missing_value") == 0)
+			) {
 				if (att->type() == ncDouble) {
 					dFillValue = att->as_double(0);
 				} else if (att->type() == ncFloat) {
 					flFillValue = att->as_float(0);
 				} else {
-					_EXCEPTIONT("Invalid type for _FillValue");
+					_EXCEPTION1("Invalid type for attribute \"%s\"", att->name());
 				}
 			}
 		}

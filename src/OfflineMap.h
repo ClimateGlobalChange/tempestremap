@@ -24,6 +24,7 @@
 #include "netcdfcpp.h"
 #include <string>
 #include <vector>
+#include <cfloat>
 
 class Mesh;
 
@@ -35,6 +36,14 @@ class Mesh;
 class OfflineMap {
 
 public:
+	///	<summary>
+	///		Constructor.
+	///	</summary>
+	OfflineMap() :
+		m_flFillValueOverride(FLT_MAX),
+		m_dFillValueOverride(DBL_MAX)
+	{ }
+
 	///	<summary>
 	///		An empty virtual destructor.
 	///	</summary>
@@ -466,10 +475,17 @@ public:
 
 public:
 	///	<summary>
-	///		Set the fill value override.
+	///		Set the fill value override (float).
 	///	</summary>
 	void SetFillValueOverride(float flFillValueOverride) {
 		m_flFillValueOverride = flFillValueOverride;
+	}
+
+	///	<summary>
+	///		Set the fill value override (double).
+	///	</summary>
+	void SetFillValueOverrideDbl(double dFillValueOverride) {
+		m_dFillValueOverride = dFillValueOverride;
 	}
 
 protected:
@@ -601,9 +617,14 @@ protected:
 	std::vector<std::string> m_vecTargetDimNames;
 
 	///	<summary>
-	///		The fill value override.
+	///		The fill value override (float).
 	///	</summary>
 	float m_flFillValueOverride;
+
+	///	<summary>
+	///		The fill value override (double).
+	///	</summary>
+	double m_dFillValueOverride;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
