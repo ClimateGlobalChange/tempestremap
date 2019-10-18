@@ -75,7 +75,7 @@ void Mesh::Clear() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::ConstructEdgeMap() {
+void Mesh::ConstructEdgeMap(bool verbose) {
 
 	// Construct the edge map
 	edgemap.clear();
@@ -99,7 +99,7 @@ void Mesh::ConstructEdgeMap() {
 		}
 	}
 
-	Announce("Mesh size: Edges [%i]", edgemap.size());
+	if (verbose) Announce("Mesh size: Edges [%i]", edgemap.size());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

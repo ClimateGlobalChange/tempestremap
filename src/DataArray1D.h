@@ -155,7 +155,7 @@ public:
 	///	</summary>
 	virtual void Detach() {
 		if ((m_fOwnsData) && (m_data != NULL)) {
-			delete[] m_data;
+		        free(m_data);
 		}
 		m_fOwnsData = true;
 		m_data = NULL;
