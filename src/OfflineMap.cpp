@@ -187,15 +187,15 @@ void OfflineMap::InitializeSourceDimensions(
   const std::vector<std::string>& p_srcDimNames,
   const std::vector<int>& p_srcDimSizes
 ) {
-  m_vecSourceDimNames.clear();
-  m_vecSourceDimNames.resize(p_srcDimNames.size());
-  std::copy(p_srcDimNames.begin(), p_srcDimNames.end(), m_vecSourceDimNames.begin());
+	m_vecSourceDimNames.clear();
+	m_vecSourceDimNames.resize(p_srcDimNames.size());
+	std::copy(p_srcDimNames.begin(), p_srcDimNames.end(), m_vecSourceDimNames.begin());
   
-  m_vecSourceDimSizes.clear();
-  m_vecSourceDimSizes.resize(p_srcDimSizes.size());
-  std::copy(p_srcDimSizes.begin(), p_srcDimSizes.end(), m_vecSourceDimSizes.begin());
+	m_vecSourceDimSizes.clear();
+	m_vecSourceDimSizes.resize(p_srcDimSizes.size());
+	std::copy(p_srcDimSizes.begin(), p_srcDimSizes.end(), m_vecSourceDimSizes.begin());
   
-  return;
+	return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1509,10 +1509,11 @@ void OfflineMap::Apply(
 
 			vecDimsOut[vecDimsOut.GetRows()-2] = dim0;
 			vecDimsOut[vecDimsOut.GetRows()-1] = dim1;
+
 		} else {
 			if (fSourceRectilinear) {
 				if (var->num_dims() == 1) {
-					_EXCEPTIONT("Rectilinear source data stored in 1D format");
+					_EXCEPTIONT("Expected rectilinear source data to be stored in 2D");
 				}
 
 				vecDimsOut.Allocate(var->num_dims()-1);
@@ -1524,6 +1525,37 @@ void OfflineMap::Apply(
 		}
 
 		int nFreeDims = var->num_dims() - m_vecSourceDimSizes.size();
+
+		// Verify map is compatible with source variable
+		if (fSourceRectilinear) {
+			if (var->get_dim(var->num_dims()-2)->size() != m_vecSourceDimSizes[0]) {
+				_EXCEPTION4("Error: Source variable \"%s\" has inconsistent dimension size "
+					"for this map in dimension \"%s\".  Expected %i, found %i.",
+					var->name(),
+					var->get_dim(var->num_dims()-2)->name(),
+					m_vecSourceDimSizes[0],
+					var->get_dim(var->num_dims()-2)->size());
+			}
+			if (var->get_dim(var->num_dims()-1)->size() != m_vecSourceDimSizes[1]) {
+				_EXCEPTION4("Error: Source variable \"%s\" has inconsistent dimension size "
+					"for this map in dimension \"%s\".  Expected %i, found %i.",
+					var->name(),
+					var->get_dim(var->num_dims()-1)->name(),
+					m_vecSourceDimSizes[1],
+					var->get_dim(var->num_dims()-1)->size());
+			}
+
+		} else {
+			if (var->get_dim(var->num_dims()-1)->size() != nSourceCount) {
+				std::cout << "TEST" << std::endl;
+				_EXCEPTION4("Error: Source variable \"%s\" has inconsistent dimension size "
+					"for this map in dimension \"%s\".  Expected %i, found %i.",
+					var->name(),
+					var->get_dim(var->num_dims()-1)->name(),
+					nSourceCount,
+					var->get_dim(var->num_dims()-1)->size());
+			}
+		}
 
 		// Add any missing dimension variables to target file
 		DataArray1D<long> vecDimSizes(nFreeDims);
@@ -1609,6 +1641,7 @@ void OfflineMap::Apply(
 		if (fSourceRectilinear) {
 			nGet[nGet.GetRows()-2] = m_vecSourceDimSizes[0];
 			nGet[nGet.GetRows()-1] = m_vecSourceDimSizes[1];
+
 		} else {
 			nGet[nGet.GetRows()-1] = nSourceCount;
 		}
