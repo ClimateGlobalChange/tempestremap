@@ -286,12 +286,13 @@ try {
 			//	" in Exodus format");
 		}
 
-		DataArray1D<int32_t> iParts(shppolyhead.nNumParts);
-		shpfile.read((char*)&(iParts[0]),
+		DataArray1D<int32_t> iPartBeginIx(shppolyhead.nNumParts+1);
+		shpfile.read((char*)&(iPartBeginIx[0]),
 			shppolyhead.nNumParts * sizeof(int32_t));
 		if (shpfile.eof()) {
 			break;
 		}
+		iPartBeginIx[shppolyhead.nNumParts] = shppolyhead.nNumPoints;
 
 		DataArray1D<double> dPoints(shppolyhead.nNumPoints * 2);
 		shpfile.read((char*)&(dPoints[0]),
@@ -302,7 +303,7 @@ try {
 
 		if (O32_HOST_ORDER == O32_BIG_ENDIAN) {
 			for (int i = 0; i < shppolyhead.nNumParts; i++) {
-				iParts[i] = SwapEndianInt32(iParts[i]);
+				iPartBeginIx[i] = SwapEndianInt32(iPartBeginIx[i]);
 			}
 			for (int i = 0; i < shppolyhead.nNumPoints * 2; i++) {
 				dPoints[i] = SwapEndianDouble(dPoints[i]);
@@ -319,6 +320,32 @@ try {
 			continue;
 		}
 
+		// Find the largest part
+		int iLargestPartBeginIx = 0;
+		int iLargestPartEndIx = shppolyhead.nNumPoints;
+		if (shppolyhead.nNumParts > 1) {
+			int iMaxPartIx = 0;
+			int nMaxPartSize = 0;
+			for (int i = 0; i < iPartBeginIx.GetRows()-1; i++) {
+				int nPartSize = iPartBeginIx[i+1] - iPartBeginIx[i];
+				if (nPartSize > nMaxPartSize) {
+					iMaxPartIx = i;
+					nMaxPartSize = nPartSize;
+					iLargestPartBeginIx = iPartBeginIx[i];
+					iLargestPartEndIx = iPartBeginIx[i+1];
+				}
+			}
+			Announce("Using part %i with %i points [%i, %i]",
+				iMaxPartIx, nMaxPartSize,
+				iLargestPartBeginIx, iLargestPartEndIx-1);
+		}
+
+		FILE * fp = fopen("log.txt", "w");
+		for (int i = 0; i < shppolyhead.nNumPoints; i++) {
+			fprintf(fp, "%1.15e %1.15e\n", dPoints[2*i], dPoints[2*i+1]);
+		}
+		fclose(fp);
+
 		// Convert to Exodus mesh.  Note that shapefile polygons are specified
 		// in clockwise order, whereas Exodus files request polygons to be
 		// specified in counter-clockwise order.  Hence we need to reorient
@@ -326,22 +353,24 @@ try {
 		int nFaces = mesh.faces.size();
 		int nNodes = mesh.nodes.size();
 		mesh.faces.resize(nFaces+1);
-		mesh.nodes.resize(nNodes + shppolyhead.nNumPoints);
+		mesh.nodes.resize(nNodes + iLargestPartEndIx - iLargestPartBeginIx);
 
-		mesh.faces[nFaces] = Face(shppolyhead.nNumPoints);
+		mesh.faces[nFaces] = Face(iLargestPartEndIx - iLargestPartBeginIx);
 
 		// Convert from longitude/latitude to XYZ
 		if (strXYUnits == "lonlat") {
-			for (int i = 0; i < shppolyhead.nNumPoints; i++) {
+			for (int i = iLargestPartBeginIx; i < iLargestPartEndIx; i++) {
+				int ix = i - iLargestPartBeginIx;
+
 				double dLonRad = dPoints[2*i] / 180.0 * M_PI;
 				double dLatRad = dPoints[2*i+1] / 180.0 * M_PI;
 
-				mesh.nodes[nNodes+i].x = cos(dLatRad) * cos(dLonRad);
-				mesh.nodes[nNodes+i].y = cos(dLatRad) * sin(dLonRad);
-				mesh.nodes[nNodes+i].z = sin(dLatRad);
+				mesh.nodes[nNodes+ix].x = cos(dLatRad) * cos(dLonRad);
+				mesh.nodes[nNodes+ix].y = cos(dLatRad) * sin(dLonRad);
+				mesh.nodes[nNodes+ix].z = sin(dLatRad);
 
 				mesh.faces[nFaces].SetNode(
-					shppolyhead.nNumPoints - i - 1, nNodes + i);
+					iLargestPartEndIx - i - 1, nNodes + ix);
 			}
 
 		} else {
@@ -357,16 +386,6 @@ try {
 			Announce("Area: %1.15e sr", dArea);
 		}
 
-/*
-		Face face5(5);
-		face5.SetNode(0, 37);
-		face5.SetNode(1, 32);
-		face5.SetNode(2, 28);
-		face5.SetNode(3, 27);
-		face5.SetNode(4, 26);
-
-		mesh.faces[0] = face5;
-*/
 		AnnounceEndBlock("Done");
 	}
 

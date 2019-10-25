@@ -126,6 +126,12 @@ void Mesh::ConstructReverseNodeArray() {
 Real Mesh::CalculateFaceAreas(
 	bool fContainsConcaveFaces
 ) {
+	// If no faces, then zero area
+	if (faces.size() == 0) {
+		return 0.0;
+	}
+
+	// Calculate areas
 	int nCount = 0;
 	vecFaceArea.Allocate(faces.size());
 
@@ -1374,8 +1380,8 @@ void Mesh::Read(const std::string & strFile) {
 			}
 		}
 
-	 // Remove coincident nodes.
-	 RemoveCoincidentNodes();
+		// Remove coincident nodes.
+		RemoveCoincidentNodes();
 	}
 }
 
@@ -2004,17 +2010,25 @@ Real CalculateFaceArea_Concave(
 	Real dArea = 0.0;
 
 	if (IsFaceConcave(face, nodes)) {
-		Mesh meshout;
+
+		// Generate a new Mesh only including this Face
+		Mesh mesh;
 		for (int j = 0; j < face.edges.size(); j++) {
-			meshout.nodes.push_back(nodes[face[j]]);
+			mesh.nodes.push_back(nodes[face[j]]);
 		}
 		Face faceTemp(face.edges.size());
 		for (int j = 0; j < faceTemp.edges.size(); j++) {
 			faceTemp.SetNode(j, j);
 		}
-		meshout.faces.push_back(faceTemp);
-		ConvexifyMesh(meshout);
+		mesh.faces.push_back(faceTemp);
 
+		// Convexify this Face
+		Mesh meshout;
+		ConvexifyFace(mesh, meshout, 0, false, true);
+
+		if (meshout.faces.size() == 0) {
+			_EXCEPTIONT("Call to ConvexifyFace() failed; no convex mesh generated");
+		}
 		return meshout.CalculateFaceAreas(false);
 	}
 
@@ -2048,8 +2062,7 @@ bool ConvexifyFace(
 	int iFace,
 	bool fRemoveConcaveFaces,
 	bool fVerbose
-)
-{
+) {
 	Face & face = mesh.faces[iFace];
 	const int nNodes = face.edges.size()-1;
 	if(fVerbose) {
@@ -2064,14 +2077,14 @@ bool ConvexifyFace(
 	Node localZ = center.Normalized();
 
 	// construct tangent space X and Y unit vectors
-	Node node0 =(mesh.nodes[face[0]]- center).Normalized();
+	Node node0 = (mesh.nodes[face[0]] - center).Normalized();
 	Node localY = CrossProduct(localZ,node0);
 	Node localX = CrossProduct(localY,localZ);
 
 	// get orthographic projection of nodes onto the tangent plane
 	NodeVector planarNodes;
 	for (int i=0; i<nNodes; ++i) {
-		Node node3D = mesh.nodes[face[i]];
+		Node & node3D = mesh.nodes[face[i]];
 		Node node2D( DotProduct(node3D,localX), DotProduct(node3D,localY), 0);
 		planarNodes.push_back(node2D);
 	}
@@ -2116,14 +2129,22 @@ bool ConvexifyFace(
 
 	// fill in 2d point list
 	for(int i=0; i<nNodes; ++i) {
-		Node n = planarNodes[i];
+		const Node & n = planarNodes[i];
 		in.pointlist[i*2+0] = n.x;
 		in.pointlist[i*2+1] = n.y;
 	}
 
+	char szFile[20];
+	sprintf(szFile, "log%06i.txt", iFace);
+	FILE * fp = fopen(szFile, "w");
+	for(int i=0; i<nNodes; ++i) {
+		const Node & n = planarNodes[i];
+		fprintf(fp, "%1.15e %1.15e\n", n.x, n.y);
+	}
+	fclose(fp);
+
 	// fill in segment list
 	for(int i=0; i<nNodes; ++i) {
-		Node n = planarNodes[i];
 		in.segmentlist[i*2+0] = i;
 		in.segmentlist[i*2+1] = (i+1)%nNodes;
 	}
@@ -2138,7 +2159,9 @@ bool ConvexifyFace(
 
 	if (fVerbose) {
 		char options[256] ="pq5jzYV";
+		AnnounceBanner();
 		triangulate(options, &in, &out, &vorout);
+		AnnounceBanner();
 	}
 	else {
 		char options[256] ="pq5jzYQ";
@@ -2155,9 +2178,14 @@ bool ConvexifyFace(
 		newNodes.push_back(node3D);
 	}
 
+	// Clean up
+	free(in.pointlist);
+	free(in.segmentlist);
+
 	// delete concave face from the mesh
 	if (fRemoveConcaveFaces) {
-		mesh.faces.erase(mesh.faces.begin() + iFace);
+		_EXCEPTION();
+		//mesh.faces.erase(mesh.faces.begin() + iFace);
 	}
 
 	// append new nodes to end of node vector
@@ -2437,6 +2465,8 @@ void ConvexifyMesh(
 	Mesh & mesh,
 	bool fVerbose
 ) {
+	_EXCEPTION();
+/*
 	char szBuffer[256];
 
 	// Loop through all Faces in the Mesh
@@ -2458,6 +2488,7 @@ void ConvexifyMesh(
 			AnnounceEndBlock("Done");
 		}
 	}
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////
