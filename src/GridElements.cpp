@@ -2133,7 +2133,7 @@ bool ConvexifyFace(
 		in.pointlist[i*2+0] = n.x;
 		in.pointlist[i*2+1] = n.y;
 	}
-
+/*
 	char szFile[20];
 	sprintf(szFile, "log%06i.txt", iFace);
 	FILE * fp = fopen(szFile, "w");
@@ -2142,7 +2142,7 @@ bool ConvexifyFace(
 		fprintf(fp, "%1.15e %1.15e\n", n.x, n.y);
 	}
 	fclose(fp);
-
+*/
 	// fill in segment list
 	for(int i=0; i<nNodes; ++i) {
 		in.segmentlist[i*2+0] = i;

@@ -339,13 +339,13 @@ try {
 				iMaxPartIx, nMaxPartSize,
 				iLargestPartBeginIx, iLargestPartEndIx-1);
 		}
-
+/*
 		FILE * fp = fopen("log.txt", "w");
 		for (int i = 0; i < shppolyhead.nNumPoints; i++) {
 			fprintf(fp, "%1.15e %1.15e\n", dPoints[2*i], dPoints[2*i+1]);
 		}
 		fclose(fp);
-
+*/
 		// Convert to Exodus mesh.  Note that shapefile polygons are specified
 		// in clockwise order, whereas Exodus files request polygons to be
 		// specified in counter-clockwise order.  Hence we need to reorient
