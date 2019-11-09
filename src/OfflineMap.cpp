@@ -1262,9 +1262,13 @@ void OfflineMap::Apply(
 				_EXCEPTIONT("Cannot create variable \"lon\" in target file");
 			}
 
-			varLon->put(
+			NcBool fNoErr = varLon->put(
 				&(m_dVectorTargetCenterLon[0]),
 				m_dVectorTargetCenterLon.GetRows());
+
+			if (!fNoErr) {
+				_EXCEPTION1("Error writing \"lon\" to NetCDF file (%i)", NcError::get_err());
+			}
 
 			varLon->add_att("bounds", "lon_bnds");
 			varLon->add_att("units", "degrees_east");
@@ -1292,9 +1296,13 @@ void OfflineMap::Apply(
 				_EXCEPTIONT("Cannot create variable \"lat\" in target file");
 			}
 
-			varLat->put(
+			NcBool fNoErr = varLat->put(
 				&(m_dVectorTargetCenterLat[0]),
 				m_dVectorTargetCenterLat.GetRows());
+
+			if (!fNoErr) {
+				_EXCEPTION1("Error writing \"lon\" to NetCDF file (%i)", NcError::get_err());
+			}
 
 			varLat->add_att("bounds", "lat_bnds");
 			varLat->add_att("units", "degrees_north");
@@ -1337,6 +1345,7 @@ void OfflineMap::Apply(
 			varLatBounds->put(&(m_dVectorTargetBoundsLat[0][0]),
 				m_dVectorTargetBoundsLat.GetRows(), 2);
 		}
+
 
 	// Add lat/lon to unstructured data
 	} else if (!fTargetRectilinear) {
@@ -1547,7 +1556,6 @@ void OfflineMap::Apply(
 
 		} else {
 			if (var->get_dim(var->num_dims()-1)->size() != nSourceCount) {
-				std::cout << "TEST" << std::endl;
 				_EXCEPTION4("Error: Source variable \"%s\" has inconsistent dimension size "
 					"for this map in dimension \"%s\".  Expected %i, found %i.",
 					var->name(),
@@ -1628,6 +1636,32 @@ void OfflineMap::Apply(
 		}
 
 		CopyNcVarAttributes(var, varOut);
+
+		// Fix type of _FillValue
+		{
+			NcAtt * attFillValue = varOut->get_att("_FillValue");
+			if (attFillValue != NULL) {
+				if ((attFillValue->type() == ncFloat) &&
+				    (varOut->type() == ncDouble)
+				) {
+					double dFillValue = attFillValue->as_double(0);
+					attFillValue->remove();
+					varOut->add_att("_FillValue", dFillValue);
+
+				} else if (
+				    (attFillValue->type() == ncDouble) &&
+				    (varOut->type() == ncFloat)
+				) {
+					float flFillValue = attFillValue->as_float(0);
+					attFillValue->remove();
+					varOut->add_att("_FillValue", flFillValue);
+
+				} else if (attFillValue->type() != varOut->type()) {
+					_EXCEPTION1("Type incompatibility between inherited attribute"
+						" \"_FillValue\" and variable \"%s\"", varOut->name());
+				}
+			}
+		}
 
 		// Source and output counts
 		DataArray1D<long> nCountsIn(vecDims.GetRows());
@@ -1761,7 +1795,10 @@ void OfflineMap::Apply(
 			// Write the data
 			if (fTargetDouble) {
 				varOut->set_cur(&(nCountsOut[0]));
-				varOut->put(&(dataOutDouble[0]), &(nPut[0]));
+				NcBool fNoErr = varOut->put(&(dataOutDouble[0]), &(nPut[0]));
+				if (!fNoErr) {
+					_EXCEPTION1("Error writing to NetCDF file (%i)", NcError::get_err());
+				}
 
 			} else {
 				// Cast the data to float
@@ -1771,7 +1808,12 @@ void OfflineMap::Apply(
 
 				// Write the data as float
 				varOut->set_cur(&(nCountsOut[0]));
-				varOut->put(&(dataOut[0]), &(nPut[0]));
+				NcBool fNoErr = varOut->put(&(dataOut[0]), &(nPut[0]));
+				if (!fNoErr) {
+					_EXCEPTION1("Error writing to NetCDF file (%i)", NcError::get_err());
+				}
+
+				//}
 			}
 		}
 		AnnounceEndBlock(NULL);

@@ -644,8 +644,6 @@ try {
         _EXCEPTIONT("Not implemented");
     }
 
-//#pragma warning "NOTE: VERIFICATION DISABLED"
-
     // Verify consistency, conservation and monotonicity
     if (!fNoCheck) {
         AnnounceStartBlock("Verifying map");
@@ -749,18 +747,28 @@ try {
 
 
 extern "C" 
-int GenerateOfflineMap( OfflineMap& mapRemap, std::string strInputMesh, std::string strOutputMesh, std::string strOverlapMesh,
-						std::string strInputMeta, std::string strOutputMeta,
-						std::string strInputType, std::string strOutputType,
-						int nPin, int nPout,
-						bool fBubble, int fMonotoneTypeID,
-						bool fVolumetric, bool fNoConservation, bool fNoCheck,
-						std::string strVariables, std::string strOutputMap,
-						std::string strInputData, std::string strOutputData,
-						std::string strNColName, bool fOutputDouble,
-                                                std::string strOutputFormat,
-						std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-						bool fInputConcave, bool fOutputConcave )
+int GenerateOfflineMap(
+	OfflineMap& mapRemap,
+	std::string strInputMesh, std::string strOutputMesh,
+	std::string strOverlapMesh,
+	std::string strInputMeta, std::string strOutputMeta,
+	std::string strInputType, std::string strOutputType,
+	int nPin, int nPout,
+	bool fBubble,
+	int fMonotoneTypeID,
+	bool fVolumetric,
+	bool fNoConservation,
+	bool fNoCheck,
+	std::string strVariables,
+	std::string strOutputMap,
+	std::string strInputData, std::string strOutputData,
+	std::string strNColName,
+	bool fOutputDouble,
+	std::string strOutputFormat,
+	std::string strPreserveVariables,
+	bool fPreserveAll,
+	double dFillValueOverride,
+	bool fInputConcave, bool fOutputConcave )
 {
 	NcError error(NcError::silent_nonfatal);
 
