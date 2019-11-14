@@ -14,35 +14,35 @@ include $(TEMPESTREMAPDIR)/mk/framework.make
 
 UTIL_FILES= Announce.cpp \
             FiniteElementTools.cpp \
-			GaussLobattoQuadrature.cpp \
-			GaussQuadrature.cpp \
-			GridElements.cpp \
-			LegendrePolynomial.cpp \
-			LinearRemapFV.cpp \
-			LinearRemapSE0.cpp \
-			MeshUtilities.cpp \
-			MeshUtilitiesExact.cpp \
-			MeshUtilitiesFuzzy.cpp \
-			NetCDFUtilities.cpp \
-			OfflineMap.cpp \
-			OverlapMesh.cpp \
-			PolynomialInterp.cpp \
-			TriangularQuadrature.cpp \
-			kdtree.cpp \
-			ApplyOfflineMap.cpp \
-			GenerateConnectivityData.cpp \
-			GenerateCSMesh.cpp \
-			GenerateGLLMetaData.cpp \
-			GenerateICOMesh.cpp \
-			GenerateLambertConfConicMesh.cpp \
-			GenerateOfflineMap.cpp \
-			GenerateOverlapMesh.cpp \
-			GenerateOverlapMesh_v1.cpp \
-			GenerateRLLMesh.cpp \
-			GenerateUTMMesh.cpp \
-			triangle.cpp \
-			netcdf.cpp \
-			ncvalues.cpp
+            GaussLobattoQuadrature.cpp \
+            GaussQuadrature.cpp \
+            GridElements.cpp \
+            LegendrePolynomial.cpp \
+            LinearRemapFV.cpp \
+            LinearRemapSE0.cpp \
+            MeshUtilities.cpp \
+            MeshUtilitiesExact.cpp \
+            MeshUtilitiesFuzzy.cpp \
+            NetCDFUtilities.cpp \
+            OfflineMap.cpp \
+            OverlapMesh.cpp \
+            PolynomialInterp.cpp \
+            TriangularQuadrature.cpp \
+            kdtree.cpp \
+            ApplyOfflineMap.cpp \
+            GenerateConnectivityData.cpp \
+            GenerateCSMesh.cpp \
+            GenerateGLLMetaData.cpp \
+            GenerateICOMesh.cpp \
+            GenerateLambertConfConicMesh.cpp \
+            GenerateOfflineMap.cpp \
+            GenerateOverlapMesh.cpp \
+            GenerateOverlapMesh_v1.cpp \
+            GenerateRLLMesh.cpp \
+            GenerateUTMMesh.cpp \
+            triangle.cpp \
+            netcdf.cpp \
+            ncvalues.cpp
 
 # Mesh generation drivers
 GenerateTestData_FILES= GenerateTestData.cpp
@@ -73,6 +73,7 @@ MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
 
 ConvertExodusToSCRIP_FILES= ConvertExodusToSCRIP.cpp
+ConvertSCRIPToExodus_FILES= ConvertSCRIPToExodus.cpp
 
 ########################################################################
 # All executables
@@ -91,11 +92,12 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateRLLMesh \
               GenerateUTMMesh \
               GenerateTestData \
-			  GenerateTransposeMap \
+              GenerateTransposeMap \
               GenerateVolumetricMesh \
               MeshToTxt \
               ShpToMesh \
-              ConvertExodusToSCRIP
+              ConvertExodusToSCRIP \
+              ConvertSCRIPToExodus
 
 ########################################################################
 # Build rules. 
@@ -123,6 +125,7 @@ CalculateDiffNorms_EXE: $(CalculateDiffNorms_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
+ConvertSCRIPToExodus_EXE: $(ConvertSCRIPToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)

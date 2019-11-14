@@ -116,6 +116,7 @@ CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
 MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
 ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
+ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateRLLMesh GenerateUTMMesh GenerateICOMesh \
@@ -124,7 +125,7 @@ bin_PROGRAMS = GenerateTestData \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData GenerateConnectivityFile \
 				GenerateTransposeMap CoarsenRectilinearData \
-				MeshToTxt ShpToMesh ConvertExodusToSCRIP
+				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus
 
 
 # Utility target: build but don't run tests
