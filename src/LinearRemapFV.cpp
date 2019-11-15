@@ -14,6 +14,7 @@
 ///		or implied warranty.
 ///	</remarks>
 
+#include "Defines.h"
 #include "LinearRemapFV.h"
 #include "GridElements.h"
 #include "OfflineMap.h"
@@ -719,7 +720,7 @@ void BuildFitArray(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void InvertFitArray_Corrected(
+bool InvertFitArray_Corrected(
 	const DataArray1D<double> & dConstraint,
 	DataArray2D<double> & dFitArray,
 	DataArray1D<double> & dFitWeights,
@@ -819,7 +820,11 @@ void InvertFitArray_Corrected(
 	}
 */
 
-	// Compute Moore-Penrose pseudoinverse via QR method
+	// Used for calculation of the 1-norm condition number using max column sums
+	DataArray1D<double> dColSumA(nCoefficients);
+	DataArray1D<double> dColSumAT(nCoefficients);
+
+	// Compute Moore-Penrose pseudoinverse via inv(A^T*A)*A^T
 	DataArray2D<double> dFit2(nCoefficients, nCoefficients);
 
 	for (int j = 0; j < nCoefficients; j++) {
@@ -827,6 +832,13 @@ void InvertFitArray_Corrected(
 	for (int l = 0; l < nAdjFaces; l++) {
 		dFit2(j,k) += dFitArray(j,l) * dFitArray(k,l);
 	}
+	}
+	}
+
+	// Column sums of dFit2
+	for (int j = 0; j < nCoefficients; j++) {
+	for (int k = 0; k < nCoefficients; k++) {
+		dColSumA[j] += fabs(dFit2(j,k));
 	}
 	}
 
@@ -842,9 +854,49 @@ void InvertFitArray_Corrected(
 
 	int lWork = nCoefficients;
 
+	// Compute LU factorization
 	dgetrf_(&m, &n, &(dFit2(0,0)), &lda, &(iPIV[0]), &info);
+	if (info < 0) {
+		_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
+	}
+	if (info > 0) {
+		Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
+		return false;
+	}
 
+	// Matrix inverse using LU factorization
 	dgetri_(&n, &(dFit2(0,0)), &lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+	if (info < 0) {
+		_EXCEPTION1("dgetri_ reports matrix had an illegal value (%i)", info);
+	}
+	if (info > 0) {
+		Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
+		return false;
+	}
+
+	// Column sums of dFit2
+	for (int j = 0; j < nCoefficients; j++) {
+	for (int k = 0; k < nCoefficients; k++) {
+		dColSumAT[j] += fabs(dFit2(j,k));
+	}
+	}
+
+	// Warning if condition number estimate is too high
+	double dMaxColSumA = dColSumA[0];
+	double dMaxColSumAT = dColSumAT[0];
+	for (int k = 1; k < nCoefficients; k++) {
+		if (dColSumA[k] > dMaxColSumA) {
+			dMaxColSumA = dColSumA[k];
+		}
+		if (dColSumAT[k] > dMaxColSumAT) {
+			dMaxColSumAT = dColSumAT[k];
+		}
+	}
+	if (dMaxColSumA * dMaxColSumAT > FVConditionNumberThreshold) {
+		Announce("WARNING: Poor conditioning in fit matrix (%1.15e); dropping to 1st order",
+			dMaxColSumA * dMaxColSumAT);
+		return false;
+	}
 
 	// Calculate pseudoinverse
 	for (int j = 0; j < nAdjFaces; j++) {
@@ -892,6 +944,8 @@ void InvertFitArray_Corrected(
 		}
 	}
 */
+
+	return true;
 
 }
 
@@ -1053,6 +1107,64 @@ void InvertFitArray_LeastSquares(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void LinearRemapFVtoFV_np1(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+) {
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.revnodearray.size() == 0) {
+		_EXCEPTIONT("ReverseNodeArray has not been calculated for meshInput");
+	}
+
+	// Get SparseMatrix represntation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+
+	// Current overlap face
+	int ixOverlap = 0;
+
+	// Loop through all faces on meshInput
+	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+
+		// Output every 100 elements
+		if (ixFirst % 1000 == 0) {
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+		}
+
+		// This Face
+		const Face & faceFirst = meshInput.faces[ixFirst];
+
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+				break;
+			}
+		}
+
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		// Put composed array into map
+		for (int j = 0; j < nOverlapFaces; j++) {
+			int ixFirstFace = meshOverlap.vecSourceFaceIx[ixOverlap + j];
+			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			smatMap(ixSecondFace, ixFirstFace) +=
+				meshOverlap.vecFaceArea[ixOverlap + j]
+				/ meshOutput.vecFaceArea[ixSecondFace];
+		}
+
+		// Increment the current overlap index
+		ixOverlap += nOverlapFaces;
+
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void LinearRemapFVtoFV(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -1060,6 +1172,12 @@ void LinearRemapFVtoFV(
 	int nOrder,
 	OfflineMap & mapRemap
 ) {
+	// Use streamlined helper function for first order
+	if (nOrder == 1) {
+		return LinearRemapFVtoFV_np1(
+			meshInput, meshOutput, meshOverlap, mapRemap);
+	}
+
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 4;
 
@@ -1098,6 +1216,10 @@ void LinearRemapFVtoFV(
 	// Current overlap face
 	int ixOverlap = 0;
 
+	// Arrays used in analysis
+	DataArray2D<double> dIntArray;
+	DataArray1D<double> dConstraint(nCoefficients);
+
 	// Loop through all faces on meshInput
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -1114,7 +1236,6 @@ void LinearRemapFVtoFV(
 		int ixOverlapEnd = ixOverlapBegin;
 	
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
-
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
 			}
@@ -1122,9 +1243,8 @@ void LinearRemapFVtoFV(
 
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
-		// Build integration array
-		DataArray2D<double> dIntArray;
-
+		// Build integration array, which maps polynomial coefficients to
+		// area integrals.
 		BuildIntegrationArray(
 			meshInput,
 			meshOverlap,
@@ -1149,10 +1269,9 @@ void LinearRemapFVtoFV(
 		int nAdjFaces = vecAdjFaces.size();
 
 		// Determine the conservative constraint equation
-		DataArray1D<double> dConstraint(nCoefficients);
-
 		double dFirstArea = meshInput.vecFaceArea[ixFirst];
 
+		dConstraint.Zero();
 		for (int p = 0; p < nCoefficients; p++) {
 			for (int j = 0; j < nOverlapFaces; j++) {
 				dConstraint[p] += dIntArray(p,j);
@@ -1178,23 +1297,37 @@ void LinearRemapFVtoFV(
 		);
 
 		// Compute the inverse fit array
-		InvertFitArray_Corrected(
-			dConstraint,
-			dFitArray,
-			dFitWeights,
-			dFitArrayPlus
-		);
+		bool fSuccess =
+			InvertFitArray_Corrected(
+				dConstraint,
+				dFitArray,
+				dFitWeights,
+				dFitArrayPlus
+			);
 
-		// Multiply integration array and fit array
+		// Build the composition, which maps average values in adjacent cells
+		// to the integrated values of the reconstruction in overlap faces.
 		DataArray2D<double> dComposedArray(nAdjFaces, nOverlapFaces);
+		if (fSuccess) {
 
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < nOverlapFaces; j++) {
-		for (int k = 0; k < nCoefficients; k++) {
-			dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
+			// Multiply integration array and inverse fit array
+			for (int i = 0; i < nAdjFaces; i++) {
+			for (int j = 0; j < nOverlapFaces; j++) {
+			for (int k = 0; k < nCoefficients; k++) {
+				dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
+			}
+			}
+			}
+
+		// Unable to invert fit array, drop to 1st order.  In this case
+		// dFitArrayPlus(0,0) = 1 and all other entries are zero.
+		} else {
+			dComposedArray.Zero();
+			for (int j = 0; j < nOverlapFaces; j++) {
+				dComposedArray(0,j) += dIntArray(0,j);
+			}
 		}
-		}
-		}
+
 
 /*
 		for (int j = 0; j < nOverlapFaces; j++) {
@@ -1569,12 +1702,18 @@ void LinearRemapFVtoGLL_Simple(
 		);
 
 		// Compute the inverse fit array
-		InvertFitArray_Corrected(
-			dConstraint,
-			dFitArray,
-			dFitWeights,
-			dFitArrayPlus
-		);
+		bool fSuccess =
+			InvertFitArray_Corrected(
+				dConstraint,
+				dFitArray,
+				dFitWeights,
+				dFitArrayPlus
+			);
+
+		if (!fSuccess) {
+			dFitArrayPlus.Zero();
+			dFitArrayPlus(0,0) = 1.0;
+		}
 
 		// Number of overlapping Faces
 		int nOverlapFaces = 0;
@@ -2041,26 +2180,37 @@ void LinearRemapFVtoGLL_Volumetric(
 			dFitWeights
 		);
 
-		// Compute the inverse fit array
-		InvertFitArray_Corrected(
-			dConstraint,
-			dFitArray,
-			dFitWeights,
-			dFitArrayPlus
-		);
+		// Compute the pseudoinverse fit array
+		bool fSuccess =
+			InvertFitArray_Corrected(
+				dConstraint,
+				dFitArray,
+				dFitWeights,
+				dFitArrayPlus
+			);
 
-		// Multiply integration array and fit array
+		// Build the composition, which maps average values in adjacent cells
+		// to the integrated values of the reconstruction in overlap faces.
 		DataArray2D<double> dComposedArray(nAdjFaces, meshThisElement.faces.size());
+		if (fSuccess) {
+			for (int i = 0; i < nAdjFaces; i++) {
+			for (int j = 0; j < meshThisElement.faces.size(); j++) {
+			for (int k = 0; k < nCoefficients; k++) {
+				dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
+			}
+			}
+			}
 
-		for (int i = 0; i < nAdjFaces; i++) {
-		for (int j = 0; j < meshThisElement.faces.size(); j++) {
-		for (int k = 0; k < nCoefficients; k++) {
-			dComposedArray(i,j) += dIntArray(k,j) * dFitArrayPlus(i,k);
-		}
-		}
+		// Unable to invert fit array, drop to 1st order.  In this case
+		// dFitArrayPlus(0,0) = 1 and all other entries are zero.
+		} else {
+			for (int j = 0; j < meshThisElement.faces.size(); j++) {
+				dComposedArray(0,j) += dIntArray(0,j);
+			}
 		}
 
-		// Apply redistribution operator
+		// Apply redistribution operator, which redistributes mass within
+		// a finite element.
 		DataArray2D<double> dRedistributedArray(nAdjFaces, meshThisElement.faces.size());
 
 		for (int i = 0; i < nAdjFaces; i++) {
@@ -2722,14 +2872,6 @@ void LinearRemapFVtoGLL(
 			dFitWeights
 		);
 
-		// Compute the inverse fit array
-		InvertFitArray_Corrected(
-			dConstraint,
-			dFitArray,
-			dFitWeights,
-			dFitArrayPlus
-		);
-
 /*
 		DataArray1D<double> dRowSum;
 		dRowSum.Initialize(nCoefficients);
@@ -2745,20 +2887,44 @@ void LinearRemapFVtoGLL(
 		}
 		_EXCEPTION();
 */
-		// Multiply integration array and fit array
+
+		// Compute the pseudoinverse fit array
+		bool fSuccess =
+			InvertFitArray_Corrected(
+				dConstraint,
+				dFitArray,
+				dFitWeights,
+				dFitArrayPlus
+			);
+
+		// Build the composition, which maps average values in adjacent cells
+		// to the integrated values of the reconstruction in overlap faces.
 		DataArray2D<double> dComposedArray(nAdjFaces, nOverlapFaces * nP * nP);
+		if (fSuccess) {
+			for (int j = 0; j < nOverlapFaces; j++) {
+				//int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
-		for (int j = 0; j < nOverlapFaces; j++) {
-			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+				for (int i = 0; i < nAdjFaces; i++) {
+				for (int s = 0; s < nP * nP; s++) {
+				for (int k = 0; k < nCoefficients; k++) {
+					dComposedArray[i][j * nP * nP + s] +=
+						dGlobalIntArray[k][ixOverlap + j][s]
+						* dFitArrayPlus[i][k];
+				}
+				}
+				}
+			}
 
-			for (int i = 0; i < nAdjFaces; i++) {
-			for (int s = 0; s < nP * nP; s++) {
-			for (int k = 0; k < nCoefficients; k++) {
-				dComposedArray[i][j * nP * nP + s] +=
-					dGlobalIntArray[k][ixOverlap + j][s]
-					* dFitArrayPlus[i][k];
-			}
-			}
+		// Unable to invert fit array, drop to 1st order.  In this case
+		// dFitArrayPlus(0,0) = 1 and all other entries are zero.
+		} else {
+			for (int j = 0; j < nOverlapFaces; j++) {
+				//int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+				for (int s = 0; s < nP * nP; s++) {
+					dComposedArray[0][j * nP * nP + s] +=
+						dGlobalIntArray[0][ixOverlap + j][s];
+				}
 			}
 		}
 

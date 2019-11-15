@@ -2482,13 +2482,15 @@ void OfflineMap::SetTranspose(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsConsistent(
+int OfflineMap::IsConsistent(
 	double dTolerance,
 	const DataArray1D<int> & dataRows,
 	const DataArray1D<int> & dataCols,
 	const DataArray1D<double> & dataEntries,
 	DataArray1D<double> * pdRowSums
 ) {
+	int nCount = 0;
+
 	// Calculate row sums
 	if (m_mapRemap.GetRows() < 1) {
 		_EXCEPTIONT("IsConservative() called on map with no rows");
@@ -2506,10 +2508,9 @@ bool OfflineMap::IsConsistent(
 	}
 
 	// Verify all row sums are equal to 1
-	bool fConsistent = true;
 	for (int i = 0; i < dRowSums.GetRows(); i++) {
 		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
-			fConsistent = false;
+			nCount++;
 			Announce("OfflineMap is not consistent (row %i) [%1.15e != 1.0]",
 				i+1, dRowSums[i]);
 		}
@@ -2519,12 +2520,12 @@ bool OfflineMap::IsConsistent(
 		delete pdRowSums;
 	}
 
-	return fConsistent;
+	return nCount;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsConservative(
+int OfflineMap::IsConservative(
 	double dTolerance,
 	const DataArray1D<int> & dataRows,
 	const DataArray1D<int> & dataCols,
@@ -2532,6 +2533,8 @@ bool OfflineMap::IsConservative(
 	DataArray1D<double> * pdColumnSums
 
 ) {
+	int nCount = 0;
+
 	// Calculate column sums
 	if (m_mapRemap.GetColumns() < 1) {
 		_EXCEPTIONT("IsConservative() called on map with no columns");
@@ -2556,10 +2559,9 @@ bool OfflineMap::IsConservative(
 	}
 
 	// Verify all column sums equal the input Jacobian
-	bool fConservative = true;
 	for (int i = 0; i < dColumnSums.GetRows(); i++) {
 		if (fabs(dColumnSums[i] - 1.0) > dTolerance) {
-			fConservative = false;
+			nCount++;
 			Announce("OfflineMap is not conservative (col %i) [%1.15e != 1.0]",
 				i+1, dColumnSums[i]);
 		}
@@ -2569,35 +2571,36 @@ bool OfflineMap::IsConservative(
 		delete pdColumnSums;
 	}
 
-	return fConservative;
+	return nCount;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsMonotone(
+int OfflineMap::IsMonotone(
 	double dTolerance,
 	const DataArray1D<int> & dataRows,
 	const DataArray1D<int> & dataCols,
 	const DataArray1D<double> & dataEntries
 ) {
+	int nCount = 0;
+
 	// Verify all entries are in the range [0,1]
-	bool fMonotone = true;
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		if ((dataEntries[i] < -dTolerance) ||
 			(dataEntries[i] > 1.0 + dTolerance)
 		) {
-			fMonotone = false;
+			nCount++;
 			Announce("OfflineMap is not monotone (s%i -> t%i) %1.15e",
 				dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
 		}
 	}
 
-	return fMonotone;
+	return nCount;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsConsistent(
+int OfflineMap::IsConsistent(
 	double dTolerance
 ) {
 
@@ -2613,7 +2616,7 @@ bool OfflineMap::IsConsistent(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsConservative(
+int OfflineMap::IsConservative(
 	double dTolerance
 ) {
 	// Get map entries
@@ -2628,7 +2631,7 @@ bool OfflineMap::IsConservative(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool OfflineMap::IsMonotone(
+int OfflineMap::IsMonotone(
 	double dTolerance
 ) {
 
@@ -2678,15 +2681,15 @@ bool OfflineMap::CheckMap(
    	AnnounceStartBlock("Analyzing map");
 
 	// Check consistency in individual cells
-	bool fConsistent = true;
+	int nConsistentFail = 0;
 	if (fCheckConsistency) {
 		AnnounceStartBlock("Per-dof consistency  (tol %1.5e)", dNormalTolerance);
-		fConsistent =
+		nConsistentFail =
 			IsConsistent(dNormalTolerance, dataRows, dataCols, dataEntries, &dRowSums);
-		if (fConsistent) {
+		if (nConsistentFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("FAIL");
+			AnnounceEndBlock("%i warnings found", nConsistentFail);
 		}
 	} else {
 		for (int i = 0; i < dataRows.GetRows(); i++) {
@@ -2695,15 +2698,15 @@ bool OfflineMap::CheckMap(
 	}
 
 	// Check conservation
-	bool fConservative = true;
+	int nConservativeFail = 0;
 	if (fCheckConservation) {
 		AnnounceStartBlock("Per-dof conservation (tol %1.5e)", dNormalTolerance);
-		fConservative =
+		nConservativeFail =
 			IsConservative(dNormalTolerance, dataRows, dataCols, dataEntries, &dColSums);
-		if (fConservative) {
+		if (nConservativeFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("FAIL");
+			AnnounceEndBlock("%i warnings found", nConservativeFail);
 		}
 	} else {
 		if (m_dSourceAreas.GetRows() != dColSums.GetRows()) {
@@ -2716,15 +2719,15 @@ bool OfflineMap::CheckMap(
 	}
 
 	// Check monotonicity
-	bool fMonotone = true;
+	int nMonotoneFail = 0;
 	if (fCheckMonotonicity) {
 		AnnounceStartBlock("Per-dof monotonicity (tol %1.5e)", dStrictTolerance);
-		fMonotone =
+		nMonotoneFail =
 			IsMonotone(dStrictTolerance, dataRows, dataCols, dataEntries);
-		if (fMonotone) {
+		if (nMonotoneFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("FAIL");
+			AnnounceEndBlock("%i warnings found", nMonotoneFail);
 		}
 
 	// Check nominal range of entries
@@ -3032,7 +3035,10 @@ bool OfflineMap::CheckMap(
     AnnounceEndBlock(NULL);
 	AnnounceBanner();
 
-	return (fConsistent && fConservative && fMonotone);
+	return (
+		(nConsistentFail == 0) &&
+		(nConservativeFail == 0) &&
+		(nMonotoneFail == 0));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

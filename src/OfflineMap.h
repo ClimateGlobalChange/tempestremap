@@ -349,7 +349,7 @@ private:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
 	///	</summary>
-	virtual bool IsConsistent(
+	virtual int IsConsistent(
 		double dTolerance,
 		const DataArray1D<int> & dataRows,
 		const DataArray1D<int> & dataCols,
@@ -360,7 +360,7 @@ private:
 	///	<summary>
 	///		Determine if the map is conservative.
 	///	</summary>
-	virtual bool IsConservative(
+	virtual int IsConservative(
 		double dTolerance,
 		const DataArray1D<int> & dataRows,
 		const DataArray1D<int> & dataCols,
@@ -371,7 +371,7 @@ private:
 	///	<summary>
 	///		Determine if the map is monotone.
 	///	</summary>
-	virtual bool IsMonotone(
+	virtual int IsMonotone(
 		double dTolerance,
 		const DataArray1D<int> & dataRows,
 		const DataArray1D<int> & dataCols,
@@ -382,21 +382,21 @@ public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
 	///	</summary>
-	virtual bool IsConsistent(
+	virtual int IsConsistent(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is conservative.
 	///	</summary>
-	virtual bool IsConservative(
+	virtual int IsConservative(
 		double dTolerance
 	);
 
 	///	<summary>
 	///		Determine if the map is monotone.
 	///	</summary>
-	virtual bool IsMonotone(
+	virtual int IsMonotone(
 		double dTolerance
 	);
 

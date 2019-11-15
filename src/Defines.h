@@ -24,6 +24,13 @@ typedef Real   REAL;  // for use with triangles.h
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// Defines the threshold for the 1-norm condition number, above which
+// the finite volume reconstruction drops to first order accuracy.
+//
+static const Real FVConditionNumberThreshold = 1.0e5;
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // Defines for floating point tolerance.
 //
 static const Real HighTolerance      = 1.0e-10;

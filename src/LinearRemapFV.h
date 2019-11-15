@@ -30,6 +30,19 @@ class OfflineMap;
 
 ///	<summary>
 ///		Generate the OfflineMap for remapping from finite volumes to finite
+///		volumes using a constant reconstruction.
+///	</summary>
+void LinearRemapFVtoFV_np1(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite volumes to finite
 ///		volumes.
 ///	</summary>
 void LinearRemapFVtoFV(
