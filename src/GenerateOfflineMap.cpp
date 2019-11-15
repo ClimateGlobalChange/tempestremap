@@ -327,12 +327,17 @@ try {
     Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
     AnnounceEndBlock(NULL);
 
-    // Partial cover
+	// Checks
+	bool fCheckConsistency = !fNoCheck;
+	bool fCheckConservation = !fNoCheck;
+	bool fCheckMonotonicity = (!fNoCheck) && (nMonotoneType != 0);
+
+    // Partial cover on input
     if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
-        if (!fNoCheck) {
+        if (fCheckConsistency) {
             Announce("WARNING: Significant mismatch between overlap mesh area "
-                "and input mesh area.\n  Automatically enabling --nocheck");
-            fNoCheck = true;
+                "and input mesh area.\n  Disabling checks for consistency.");
+            fCheckConsistency = false;
         }
     }
 
@@ -644,19 +649,18 @@ try {
         _EXCEPTIONT("Not implemented");
     }
 
-    // Verify consistency, conservation and monotonicity
-    if (!fNoCheck) {
-        AnnounceStartBlock("Verifying map");
-        mapRemap.IsConsistent(1.0e-8);
-        mapRemap.IsConservative(1.0e-8);
-
-        if (nMonotoneType != 0) {
-            mapRemap.IsMonotone(1.0e-12);
-        }
-        AnnounceEndBlock(NULL);
-    }
-
+	Announce("Map generation complete");
     AnnounceEndBlock(NULL);
+
+    // Verify consistency, conservation and monotonicity
+	if (!fNoCheck) {
+		mapRemap.CheckMap(
+			fCheckConsistency,
+			fCheckConservation,
+			fCheckMonotonicity,
+			1.0e-8,               // Normal tolerance
+			1.0e-12);             // Strict tolerance
+	}
 
     // Initialize element dimensions from input/output Mesh
     AnnounceStartBlock("Writing output");
@@ -698,7 +702,7 @@ try {
 		mapAttributes.insert(AttributePair("version", g_strVersion));
 
         mapRemap.Write(strOutputMap, mapAttributes, eOutputFormat);
-        AnnounceEndBlock(NULL);
+        AnnounceEndBlock("Done");
     }
 
     // Apply Offline Map to data
@@ -713,7 +717,7 @@ try {
             strNColName,
             fOutputDouble,
             false);
-        AnnounceEndBlock(NULL);
+        AnnounceEndBlock("Done");
     }
     AnnounceEndBlock(NULL);
 
@@ -722,7 +726,7 @@ try {
         if (fPreserveAll) {
             AnnounceStartBlock("Preserving variables");
             mapRemap.PreserveAllVariables(strInputData, strOutputData);
-            AnnounceEndBlock(NULL);
+            AnnounceEndBlock("Done");
 
         } else if (vecPreserveVariableStrings.size() != 0) {
             AnnounceStartBlock("Preserving variables");
@@ -730,9 +734,11 @@ try {
                 strInputData,
                 strOutputData,
                 vecPreserveVariableStrings);
-            AnnounceEndBlock(NULL);
+            AnnounceEndBlock("Done");
         }
     }
+
+	AnnounceBanner();
 
     return (0);
 

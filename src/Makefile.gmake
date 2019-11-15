@@ -74,6 +74,7 @@ ShpToMesh_FILES= ShpToMesh.cpp
 
 ConvertExodusToSCRIP_FILES= ConvertExodusToSCRIP.cpp
 ConvertSCRIPToExodus_FILES= ConvertSCRIPToExodus.cpp
+AnalyzeMap_FILES= AnalyzeMap.cpp
 
 ########################################################################
 # All executables
@@ -97,7 +98,8 @@ EXEC_TARGETS= ApplyOfflineMap \
               MeshToTxt \
               ShpToMesh \
               ConvertExodusToSCRIP \
-              ConvertSCRIPToExodus
+              ConvertSCRIPToExodus \
+			  AnalyzeMap
 
 ########################################################################
 # Build rules. 
@@ -126,6 +128,7 @@ MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertSCRIPToExodus_EXE: $(ConvertSCRIPToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
+AnalyzeMap_EXE: $(AnalyzeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)

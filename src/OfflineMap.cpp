@@ -2483,18 +2483,23 @@ void OfflineMap::SetTranspose(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool OfflineMap::IsConsistent(
-	double dTolerance
+	double dTolerance,
+	const DataArray1D<int> & dataRows,
+	const DataArray1D<int> & dataCols,
+	const DataArray1D<double> & dataEntries,
+	DataArray1D<double> * pdRowSums
 ) {
-
-	// Get map entries
-	DataArray1D<int> dataRows;
-	DataArray1D<int> dataCols;
-	DataArray1D<double> dataEntries;
-
-	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
-
 	// Calculate row sums
-	DataArray1D<double> dRowSums(m_mapRemap.GetRows());
+	if (m_mapRemap.GetRows() < 1) {
+		_EXCEPTIONT("IsConservative() called on map with no rows");
+	}
+
+	bool fDeleteRowSums = false;
+	if (pdRowSums == NULL) {
+		pdRowSums = new DataArray1D<double>(m_mapRemap.GetRows());
+		fDeleteRowSums = true;
+	}
+	DataArray1D<double> & dRowSums = (*pdRowSums);
 
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		dRowSums[dataRows[i]] += dataEntries[i];
@@ -2505,9 +2510,13 @@ bool OfflineMap::IsConsistent(
 	for (int i = 0; i < dRowSums.GetRows(); i++) {
 		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
 			fConsistent = false;
-			Announce("OfflineMap is not consistent in row %i (%1.15e)",
-				i, dRowSums[i]);
+			Announce("OfflineMap is not consistent (t%i) [%1.15e != 1.0]",
+				i+1, dRowSums[i]);
 		}
+	}
+
+	if (fDeleteRowSums) {
+		delete pdRowSums;
 	}
 
 	return fConsistent;
@@ -2516,16 +2525,82 @@ bool OfflineMap::IsConsistent(
 ///////////////////////////////////////////////////////////////////////////////
 
 bool OfflineMap::IsConservative(
+	double dTolerance,
+	const DataArray1D<int> & dataRows,
+	const DataArray1D<int> & dataCols,
+	const DataArray1D<double> & dataEntries,
+	DataArray1D<double> * pdColumnSums
+
+) {
+	// Calculate column sums
+	if (m_mapRemap.GetColumns() < 1) {
+		_EXCEPTIONT("IsConservative() called on map with no columns");
+	}
+
+	bool fDeleteColumnSums = false;
+	if (pdColumnSums == NULL) {
+		pdColumnSums = new DataArray1D<double>(m_mapRemap.GetColumns());
+		fDeleteColumnSums = true;
+	}
+	DataArray1D<double> & dColumnSums = (*pdColumnSums);
+
+	if (dColumnSums.GetRows() != m_dSourceAreas.GetRows()) {
+		_EXCEPTIONT("Assertion failure: dColumnSums.GetRows() != m_dSourceAreas.GetRows()");
+	}
+	for (int i = 0; i < dataRows.GetRows(); i++) {
+		dColumnSums[dataCols[i]] +=
+			dataEntries[i] * m_dTargetAreas[dataRows[i]];
+	}
+	for (int i = 0; i < m_dSourceAreas.GetRows(); i++) {
+		dColumnSums[i] /= m_dSourceAreas[i];
+	}
+
+	// Verify all column sums equal the input Jacobian
+	bool fConservative = true;
+	for (int i = 0; i < dColumnSums.GetRows(); i++) {
+		if (fabs(dColumnSums[i] - 1.0) > dTolerance) {
+			fConservative = false;
+			Announce("OfflineMap is not conservative (s%i) [%1.15e != %1.15e]",
+				i+1, dColumnSums[i], m_dSourceAreas[i]);
+		}
+	}
+
+	if (fDeleteColumnSums) {
+		delete pdColumnSums;
+	}
+
+	return fConservative;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::IsMonotone(
+	double dTolerance,
+	const DataArray1D<int> & dataRows,
+	const DataArray1D<int> & dataCols,
+	const DataArray1D<double> & dataEntries
+) {
+	// Verify all entries are in the range [0,1]
+	bool fMonotone = true;
+	for (int i = 0; i < dataRows.GetRows(); i++) {
+		if ((dataEntries[i] < -dTolerance) ||
+			(dataEntries[i] > 1.0 + dTolerance)
+		) {
+			fMonotone = false;
+			Announce("OfflineMap is not monotone (s%i -> t%i) %1.15e",
+				dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
+		}
+	}
+
+	return fMonotone;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::IsConsistent(
 	double dTolerance
 ) {
-/*
-	if (vecSourceAreas.GetRows() != m_mapRemap.GetColumns()) {
-		_EXCEPTIONT("vecSourceAreas / mapRemap dimension mismatch");
-	}
-	if (vecTargetAreas.GetRows() != m_mapRemap.GetRows()) {
-		_EXCEPTIONT("vecTargetAreas / mapRemap dimension mismatch");
-	}
-*/
+
 	// Get map entries
 	DataArray1D<int> dataRows;
 	DataArray1D<int> dataCols;
@@ -2533,26 +2608,22 @@ bool OfflineMap::IsConservative(
 
 	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 
-	// Calculate column sums
-	DataArray1D<double> dColumnSums(m_mapRemap.GetColumns());
+	return IsConsistent(dTolerance, dataRows, dataCols, dataEntries);
+}
 
-	for (int i = 0; i < dataRows.GetRows(); i++) {
-		dColumnSums[dataCols[i]] +=
-			dataEntries[i] * m_dTargetAreas[dataRows[i]];
-	}
+///////////////////////////////////////////////////////////////////////////////
 
-	// Verify all column sums equal the input Jacobian
-	bool fConservative = true;
-	for (int i = 0; i < dColumnSums.GetRows(); i++) {
-		if (fabs(dColumnSums[i] - m_dSourceAreas[i]) > dTolerance) {
-			fConservative = false;
-			Announce("OfflineMap is not conservative in column "
-				"%i (%1.15e / %1.15e)",
-				i, dColumnSums[i], m_dSourceAreas[i]);
-		}
-	}
+bool OfflineMap::IsConservative(
+	double dTolerance
+) {
+	// Get map entries
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
 
-	return fConservative;
+	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+
+	return IsConservative(dTolerance, dataRows, dataCols, dataEntries);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2568,20 +2639,400 @@ bool OfflineMap::IsMonotone(
 
 	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
 
-	// Verify all entries are in the range [0,1]
-	bool fMonotone = true;
-	for (int i = 0; i < dataRows.GetRows(); i++) {
-		if ((dataEntries[i] < -dTolerance) ||
-			(dataEntries[i] > 1.0 + dTolerance)
-		) {
-			fMonotone = false;
+	return IsMonotone(dTolerance, dataRows, dataCols, dataEntries);
+}
 
-			Announce("OfflineMap is not monotone in entry (%i): %1.15e",
-				i, dataEntries[i]);
+///////////////////////////////////////////////////////////////////////////////
+
+bool OfflineMap::CheckMap(
+	bool fCheckConsistency,
+	bool fCheckConservation,
+	bool fCheckMonotonicity,
+	double dNormalTolerance,
+	double dStrictTolerance
+) {
+	// Get map entries
+	DataArray1D<int> dataRows;
+	DataArray1D<int> dataCols;
+	DataArray1D<double> dataEntries;
+
+	m_mapRemap.GetEntries(dataRows, dataCols, dataEntries);
+
+	// Verify at least one entry
+	if (dataEntries.GetRows() == 0) {
+		Announce("No entries found in map; aborting");
+		return true;
+	}
+	if (m_mapRemap.GetRows() < 1) {
+		_EXCEPTIONT("Assertion failure: m_mapRemap.GetRows() < 1");
+	}
+	if (m_mapRemap.GetColumns() < 1) {
+		_EXCEPTIONT("Assertion failure: m_mapRemap.GetColumns() < 1");
+	}
+
+	DataArray1D<double> dRowSums(m_mapRemap.GetRows());
+	DataArray1D<double> dColSums(m_mapRemap.GetColumns());
+
+	// Announce
+	AnnounceBanner();
+   	AnnounceStartBlock("Analyzing map");
+
+	// Check consistency in individual cells
+	bool fConsistent = true;
+	if (fCheckConsistency) {
+		AnnounceStartBlock("Per-dof consistency  (tol %1.5e)", dNormalTolerance);
+		fConsistent =
+			IsConsistent(dNormalTolerance, dataRows, dataCols, dataEntries, &dRowSums);
+		if (fConsistent) {
+			AnnounceEndBlock("PASS");
+		} else {
+			AnnounceEndBlock("FAIL");
+		}
+	} else {
+		for (int i = 0; i < dataRows.GetRows(); i++) {
+			dRowSums[dataRows[i]] += dataEntries[i];
 		}
 	}
 
-	return fMonotone;
+	// Check conservation
+	bool fConservative = true;
+	if (fCheckConservation) {
+		AnnounceStartBlock("Per-dof conservation (tol %1.5e)", dNormalTolerance);
+		fConservative =
+			IsConservative(dNormalTolerance, dataRows, dataCols, dataEntries, &dColSums);
+		if (fConservative) {
+			AnnounceEndBlock("PASS");
+		} else {
+			AnnounceEndBlock("FAIL");
+		}
+	} else {
+		if (m_dSourceAreas.GetRows() != dColSums.GetRows()) {
+			_EXCEPTIONT("Assertion failure: m_dSourceAreas.GetRows() != dColSums.GetRows()");
+		}
+		for (int i = 0; i < dataRows.GetRows(); i++) {
+			dColSums[dataCols[i]] +=
+				dataEntries[i] * m_dTargetAreas[dataRows[i]];
+		}
+	}
+
+	// Check monotonicity
+	bool fMonotone = true;
+	if (fCheckMonotonicity) {
+		AnnounceStartBlock("Per-dof monotonicity (tol %1.5e)", dStrictTolerance);
+		fMonotone =
+			IsMonotone(dStrictTolerance, dataRows, dataCols, dataEntries);
+		if (fMonotone) {
+			AnnounceEndBlock("PASS");
+		} else {
+			AnnounceEndBlock("FAIL");
+		}
+
+	// Check nominal range of entries
+	} else {
+		AnnounceStartBlock("Weights within range [-10,+10]");
+		for (int i = 0; i < dataRows.GetRows(); i++) {
+			if ((dataEntries[i] < -10.0) || (dataEntries[i] > 10.0)) {
+				Announce("OfflineMap has unusually large weight (s%i -> t%i) %1.15e",
+					dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
+			}
+		}
+		AnnounceEndBlock("Done");
+	}
+
+	// Basic information
+	{
+		DataArray1D<int> nHistogramWeights(7);
+		DataArray1D<int> nHistogramRows(32);
+		DataArray1D<int> nHistogramCols(32);
+		DataArray1D<int> nNonzeroRowCount(m_mapRemap.GetRows());
+		DataArray1D<int> nNonzeroColCount(m_mapRemap.GetColumns());
+
+		int iMinCol = dataCols[0];
+		int iMaxCol = dataCols[0];
+
+		int iMinRow = dataRows[0];
+		int iMaxRow = dataRows[0];
+
+		double dMinWeight = dataEntries[0];
+		double dMaxWeight = dataEntries[0];
+
+		for (int i = 0; i < dataRows.GetRows(); i++) {
+			if (dataCols[i] > iMaxCol) {
+				iMaxCol = dataCols[i];
+			}
+			if (dataCols[i] < iMinCol) {
+				iMinCol = dataCols[i];
+			}
+			if (dataRows[i] > iMaxRow) {
+				iMaxRow = dataRows[i];
+			}
+			if (dataRows[i] < iMinRow) {
+				iMinRow = dataRows[i];
+			}
+			if (dataEntries[i] < dMinWeight) {
+				dMinWeight = dataEntries[i];
+			}
+			if (dataEntries[i] > dMaxWeight) {
+				dMaxWeight = dataEntries[i];
+			}
+
+			nNonzeroRowCount[dataRows[i]]++;
+			nNonzeroColCount[dataCols[i]]++;
+
+			if (dataEntries[i] < -10.0) {
+				nHistogramWeights[0]++;
+			} else if (dataEntries[i] < -1.0) {
+				nHistogramWeights[1]++;
+			} else if (dataEntries[i] < - dStrictTolerance) {
+				nHistogramWeights[2]++;
+			} else if (dataEntries[i] <= 1.0 + dStrictTolerance) {
+				nHistogramWeights[3]++;
+			} else if (dataEntries[i] < 2.0) {
+				nHistogramWeights[4]++;
+			} else if (dataEntries[i] < 10.0) {
+				nHistogramWeights[5]++;
+			} else {
+				nHistogramWeights[6]++;
+			}
+		}
+
+		for (int i = 0; i < nNonzeroRowCount.GetRows(); i++) {
+			if (nNonzeroRowCount[i] < 31) {
+				nHistogramRows[ nNonzeroRowCount[i] ]++;
+			} else {
+				nHistogramRows[31]++;
+			}
+		}
+
+		for (int i = 0; i < nNonzeroColCount.GetRows(); i++) {
+			if (nNonzeroColCount[i] < 31) {
+				nHistogramCols[ nNonzeroColCount[i] ]++;
+			} else {
+				nHistogramCols[31]++;
+			}
+		}
+
+		double dSourceMinArea = DBL_MAX;
+		double dSourceMaxArea = -DBL_MAX;
+		double dSourceArea = 0.0;
+		for (int i = 0; i < m_dSourceAreas.GetRows(); i++) {
+			dSourceArea += m_dSourceAreas[i];
+			if (dSourceArea < dSourceMinArea) {
+				dSourceMinArea = dSourceArea;
+			}
+			if (dSourceArea > dSourceMaxArea) {
+				dSourceMaxArea = dSourceArea;
+			}
+		}
+
+		double dTargetMinArea = DBL_MAX;
+		double dTargetMaxArea = -DBL_MAX;
+		double dTargetArea = 0.0;
+		for (int i = 0; i < m_dTargetAreas.GetRows(); i++) {
+			dTargetArea += m_dTargetAreas[i];
+			if (dTargetArea < dTargetMinArea) {
+				dTargetMinArea = dTargetArea;
+			}
+			if (dTargetArea > dTargetMaxArea) {
+				dTargetMaxArea = dTargetArea;
+			}
+		}
+
+		int iSourceMinMask = INT_MAX;
+		int iSourceMaxMask = INT_MIN;
+		for (int i = 0; i < m_iSourceMask.GetRows(); i++) {
+			if (m_iSourceMask[i] < iSourceMinMask) {
+				iSourceMinMask = m_iSourceMask[i];
+			}
+			if (m_iSourceMask[i] > iSourceMaxMask) {
+				iSourceMaxMask = m_iSourceMask[i];
+			}
+		}
+
+		int iTargetMinMask = INT_MAX;
+		int iTargetMaxMask = INT_MIN;
+		for (int i = 0; i < m_iTargetMask.GetRows(); i++) {
+			if (m_iTargetMask[i] < iTargetMinMask) {
+				iTargetMinMask = m_iTargetMask[i];
+			}
+			if (m_iTargetMask[i] > iTargetMaxMask) {
+				iTargetMaxMask = m_iTargetMask[i];
+			}
+		}
+
+		double dRowSumMin = dRowSums[0];
+		double dRowSumMax = dRowSums[0];
+		for (int i = 1; i < dRowSums.GetRows(); i++) {
+			if (dRowSums[i] < dRowSumMin) {
+				dRowSumMin = dRowSums[i];
+			}
+			if (dRowSums[i] > dRowSumMax) {
+				dRowSumMax = dRowSums[i];
+			}
+		}
+
+		double dColSumMin = dColSums[0];
+		double dColSumMax = dColSums[0];
+		for (int i = 1; i < dColSums.GetRows(); i++) {
+			if (dColSums[i] < dColSumMin) {
+				dColSumMin = dColSums[i];
+			}
+			if (dColSums[i] > dColSumMax) {
+				dColSumMax = dColSums[i];
+			}
+		}
+
+		Announce("");
+		Announce("  Total nonzero entries: %i", dataEntries.GetRows());
+		Announce("   Column index min/max: %i / %i (%i source dofs)",
+			iMinCol+1, iMaxCol+1, m_mapRemap.GetColumns());
+		Announce("      Row index min/max: %i / %i (%i target dofs)",
+			iMinRow+1, iMaxRow+1, m_mapRemap.GetRows());
+		Announce("      Source area / 4pi: %1.15e", dSourceArea / (4.0 * M_PI));
+		Announce("    Source area min/max: %1.15e / %1.15e",
+			dSourceMinArea, dSourceMaxArea);
+		if (dSourceMinArea < 0.0) {
+			Announce("ERROR: Negative source area detected");
+		}
+		Announce("      Target area / 4pi: %1.15e", dTargetArea / (4.0 * M_PI));
+		Announce("    Target area min/max: %1.15e / %1.15e",
+			dTargetMinArea, dTargetMaxArea);
+		if (dTargetMinArea < 0.0) {
+			Announce("ERROR: Negative source area detected");
+		}
+		if (m_iSourceMask.GetRows() != 0) {
+			Announce("    Source mask min/max: %i / %i",
+				iSourceMinMask, iSourceMaxMask);
+		}
+		if (m_iTargetMask.GetRows() != 0) {
+			Announce("    Target mask min/max: %i / %i",
+				iTargetMinMask, iTargetMaxMask);
+		}
+
+		Announce("    Map weights min/max: %1.15e / %1.15e",
+			dMinWeight, dMaxWeight);
+		Announce("       Row sums min/max: %1.15e / %1.15e",
+			dRowSumMin, dRowSumMax);
+		Announce("   Consist. err min/max: %1.15e / %1.15e",
+			dRowSumMin - 1.0, dRowSumMax - 1.0);
+		Announce("    Col wt.sums min/max: %1.15e / %1.15e",
+			dColSumMin, dColSumMax);
+		Announce("   Conserv. err min/max: %1.15e / %1.15e",
+			dColSumMin - 1.0, dColSumMax - 1.0);
+
+
+		char szBuffer[128];
+
+		Announce("");
+		Announce("Histogram of nonzero entries in sparse matrix");
+		Announce("..Column 1: Number of nonzero entries (bin minimum)");
+		Announce("..Column 2: Number of columns with that many nonzero values");
+		Announce("..Column 3: Number of rows with that many nonzero values");
+		std::string strHistogram("[");
+		for (int i = 0; i < nHistogramRows.GetRows(); i++) {
+			if ((nHistogramCols[i] != 0) || (nHistogramRows[i] != 0)) {
+				if (strHistogram.length() != 1) {
+					strHistogram += ",";
+				}
+				if (i == nHistogramRows.GetRows()-1) {
+					sprintf(szBuffer, "[%i, %i, %i]",
+						i, nHistogramCols[i], nHistogramRows[i]);
+				} else {
+					sprintf(szBuffer, "[%i, %i, %i]",
+						i, nHistogramCols[i], nHistogramRows[i]);
+				}
+				strHistogram += szBuffer;
+			}
+		}
+		strHistogram += "]";
+		Announce(strHistogram.c_str());
+
+		Announce("");
+		Announce("Histogram of weights");
+		Announce("..Column 1: Lower bound on weights");
+		Announce("..Column 2: Upper bound on weights");
+		Announce("..Column 3: # of weights in that bin");
+		strHistogram = "[";
+		if (nHistogramWeights[0] != 0) {
+			sprintf(szBuffer, "[-inf, -10, %i]", nHistogramWeights[0]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[1] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[-10, -1, %i]", nHistogramWeights[1]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[2] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[-1, 0, %i]", nHistogramWeights[2]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[3] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[0, 1, %i]", nHistogramWeights[3]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[4] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[1, 2, %i]", nHistogramWeights[4]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[5] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[2, 10, %i]", nHistogramWeights[5]);
+			strHistogram += szBuffer;
+		}
+		if (nHistogramWeights[6] != 0) {
+			if (strHistogram.length() != 1) {
+				strHistogram += ",";
+			}
+			sprintf(szBuffer, "[10, inf, %i]", nHistogramWeights[6]);
+			strHistogram += szBuffer;
+		}
+		strHistogram += "]";
+
+		Announce("%s", strHistogram.c_str());
+
+		bool fError = false;
+		if (nHistogramCols[0] != 0) {
+			if (!fError) Announce("");
+			fError = true;
+			Announce("NOTE: Some source mesh dofs are not captured by this map");
+		}
+		if (nHistogramRows[0] != 0) {
+			if (!fError) Announce("");
+			fError = true;
+			Announce("NOTE: Some target mesh dofs are not captured by this map");
+		}
+		if (fabs(dSourceArea - 4.0 * M_PI) > dStrictTolerance) {
+			if (!fError) Announce("");
+			fError = true;
+			Announce("NOTE: Source weights do not agree with sphere area (tol %1.5e)",
+				dStrictTolerance);
+		}
+		if (fabs(dTargetArea - 4.0 * M_PI) > dStrictTolerance) {
+			if (!fError) Announce("");
+			fError = true;
+			Announce("NOTE: Target weights do not agree with sphere area (tol %1.5e)",
+				dStrictTolerance);
+		}
+
+	}
+
+    AnnounceEndBlock(NULL);
+	AnnounceBanner();
+
+	return (fConsistent && fConservative && fMonotone);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -345,6 +345,39 @@ public:
 		const OfflineMap & mapIn
 	);
 
+private:
+	///	<summary>
+	///		Determine if the map is first-order accurate.
+	///	</summary>
+	virtual bool IsConsistent(
+		double dTolerance,
+		const DataArray1D<int> & dataRows,
+		const DataArray1D<int> & dataCols,
+		const DataArray1D<double> & dataEntries,
+		DataArray1D<double> * pdRowSums = NULL
+	);
+
+	///	<summary>
+	///		Determine if the map is conservative.
+	///	</summary>
+	virtual bool IsConservative(
+		double dTolerance,
+		const DataArray1D<int> & dataRows,
+		const DataArray1D<int> & dataCols,
+		const DataArray1D<double> & dataEntries,
+		DataArray1D<double> * pdColSums = NULL
+	);
+
+	///	<summary>
+	///		Determine if the map is monotone.
+	///	</summary>
+	virtual bool IsMonotone(
+		double dTolerance,
+		const DataArray1D<int> & dataRows,
+		const DataArray1D<int> & dataCols,
+		const DataArray1D<double> & dataEntries
+	);
+
 public:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
@@ -365,6 +398,17 @@ public:
 	///	</summary>
 	virtual bool IsMonotone(
 		double dTolerance
+	);
+
+	///	<summary>
+	///		Determine if the map is sane.
+	///	</summary>
+	virtual bool CheckMap(
+		bool fCheckConsistency,
+		bool fCheckConservation,
+		bool fCheckMonotonicity,
+		double dNormalTolerance,
+		double dStrictTolerance
 	);
 
 public:
