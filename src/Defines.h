@@ -27,7 +27,15 @@ typedef Real   REAL;  // for use with triangles.h
 // Defines the threshold for the 1-norm condition number, above which
 // the finite volume reconstruction drops to first order accuracy.
 //
-static const Real FVConditionNumberThreshold = 1.0e5;
+static const Real FVConditionNumberThreshold = 1.0e7;
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Defines what type of finite volume reconstruction to use when generating
+// maps whose source grid is of type finite volume.
+//
+#define RECTANGULAR_TRUNCATION
+//#define TRIANGULAR_TRUNCATION
 
 ///////////////////////////////////////////////////////////////////////////////
 //
