@@ -2510,7 +2510,7 @@ bool OfflineMap::IsConsistent(
 	for (int i = 0; i < dRowSums.GetRows(); i++) {
 		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
 			fConsistent = false;
-			Announce("OfflineMap is not consistent (t%i) [%1.15e != 1.0]",
+			Announce("OfflineMap is not consistent (row %i) [%1.15e != 1.0]",
 				i+1, dRowSums[i]);
 		}
 	}
@@ -2560,8 +2560,8 @@ bool OfflineMap::IsConservative(
 	for (int i = 0; i < dColumnSums.GetRows(); i++) {
 		if (fabs(dColumnSums[i] - 1.0) > dTolerance) {
 			fConservative = false;
-			Announce("OfflineMap is not conservative (s%i) [%1.15e != %1.15e]",
-				i+1, dColumnSums[i], m_dSourceAreas[i]);
+			Announce("OfflineMap is not conservative (col %i) [%1.15e != 1.0]",
+				i+1, dColumnSums[i]);
 		}
 	}
 
