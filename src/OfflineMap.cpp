@@ -2817,11 +2817,11 @@ bool OfflineMap::CheckMap(
 		double dSourceArea = 0.0;
 		for (int i = 0; i < m_dSourceAreas.GetRows(); i++) {
 			dSourceArea += m_dSourceAreas[i];
-			if (dSourceArea < dSourceMinArea) {
-				dSourceMinArea = dSourceArea;
+			if (m_dSourceAreas[i] < dSourceMinArea) {
+				dSourceMinArea = m_dSourceAreas[i];
 			}
-			if (dSourceArea > dSourceMaxArea) {
-				dSourceMaxArea = dSourceArea;
+			if (m_dSourceAreas[i] > dSourceMaxArea) {
+				dSourceMaxArea = m_dSourceAreas[i];
 			}
 		}
 
@@ -2830,11 +2830,11 @@ bool OfflineMap::CheckMap(
 		double dTargetArea = 0.0;
 		for (int i = 0; i < m_dTargetAreas.GetRows(); i++) {
 			dTargetArea += m_dTargetAreas[i];
-			if (dTargetArea < dTargetMinArea) {
-				dTargetMinArea = dTargetArea;
+			if (m_dTargetAreas[i] < dTargetMinArea) {
+				dTargetMinArea = m_dTargetAreas[i];
 			}
-			if (dTargetArea > dTargetMaxArea) {
-				dTargetMaxArea = dTargetArea;
+			if (m_dTargetAreas[i] > dTargetMaxArea) {
+				dTargetMaxArea = m_dTargetAreas[i];
 			}
 		}
 
