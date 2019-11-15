@@ -925,7 +925,7 @@ void LinearRemapSE4(
 			}
 
 			// Source elements are completely covered by target volumes
-			if (fabs(meshInput.vecFaceArea[ixFirst] - dTargetArea) <= 1.0e-10) {
+			if (fabs(meshInput.vecFaceArea[ixFirst] - dTargetArea) <= HighTolerance) {
 				vecTargetArea.Allocate(nOverlapFaces);
 				for (int j = 0; j < nOverlapFaces; j++) {
 					vecTargetArea[j] = meshOverlap.vecFaceArea[ixOverlap + j];
@@ -942,7 +942,7 @@ void LinearRemapSE4(
 				}
 
 			// Target volumes only partially cover source elements
-			} else if (meshInput.vecFaceArea[ixFirst] - dTargetArea > 1.0e-10) {
+			} else if (meshInput.vecFaceArea[ixFirst] - dTargetArea > HighTolerance) {
 				double dExtraneousArea = meshInput.vecFaceArea[ixFirst] - dTargetArea;
 
 				vecTargetArea.Allocate(nOverlapFaces+1);
@@ -1037,6 +1037,10 @@ void LinearRemapSE4(
 
 			for (int p = 0; p < nP; p++) {
 			for (int q = 0; q < nP; q++) {
+
+				if (dRemapCoeff[p][q][j] == 0.0) {
+					continue;
+				}
 
 				if (fContinuousIn) {
 					int ixFirstNode = dataGLLNodes[p][q][ixFirst] - 1;
