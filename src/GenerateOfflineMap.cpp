@@ -690,7 +690,8 @@ try {
 			fCheckConservation,
 			fCheckMonotonicity,
 			1.0e-8,               // Normal tolerance
-			1.0e-12);             // Strict tolerance
+			1.0e-12,              // Strict tolerance
+			dTotalAreaOverlap);
 	}
 
     // Initialize element dimensions from input/output Mesh

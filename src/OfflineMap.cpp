@@ -2542,13 +2542,13 @@ int OfflineMap::IsConservative(
 
 	bool fDeleteColumnSums = false;
 	if (pdColumnSums == NULL) {
-		pdColumnSums = new DataArray1D<double>(m_mapRemap.GetColumns());
+		pdColumnSums = new DataArray1D<double>(m_dSourceAreas.GetRows());
 		fDeleteColumnSums = true;
 	}
 	DataArray1D<double> & dColumnSums = (*pdColumnSums);
 
 	if (dColumnSums.GetRows() != m_dSourceAreas.GetRows()) {
-		_EXCEPTIONT("Assertion failure: dColumnSums.GetRows() != m_dSourceAreas.GetRows()");
+		_EXCEPTION2("Assertion failure: dColumnSums.GetRows() (%i) != m_dSourceAreas.GetRows() (%i)", dColumnSums.GetRows(), m_dSourceAreas.GetRows());
 	}
 	for (int i = 0; i < dataRows.GetRows(); i++) {
 		dColumnSums[dataCols[i]] +=
@@ -2652,7 +2652,8 @@ bool OfflineMap::CheckMap(
 	bool fCheckConservation,
 	bool fCheckMonotonicity,
 	double dNormalTolerance,
-	double dStrictTolerance
+	double dStrictTolerance,
+	double dTotalOverlapArea
 ) {
 	// Get map entries
 	DataArray1D<int> dataRows;
@@ -2672,9 +2673,15 @@ bool OfflineMap::CheckMap(
 	if (m_mapRemap.GetColumns() < 1) {
 		_EXCEPTIONT("Assertion failure: m_mapRemap.GetColumns() < 1");
 	}
+	if (m_dSourceAreas.GetRows() < m_mapRemap.GetColumns()) {
+		_EXCEPTIONT("Assertion failure: m_dSourceAreas.GetRows() < m_mapRemap.GetColumns()");
+	}
+	if (m_dTargetAreas.GetRows() < m_mapRemap.GetRows()) {
+		_EXCEPTIONT("Assertion failure: m_dTargetAreas.GetRows() < m_mapRemap.GetRows()");
+	}
 
-	DataArray1D<double> dRowSums(m_mapRemap.GetRows());
-	DataArray1D<double> dColSums(m_mapRemap.GetColumns());
+	DataArray1D<double> dRowSums(m_dTargetAreas.GetRows());
+	DataArray1D<double> dColSums(m_dSourceAreas.GetRows());
 
 	// Announce
 	AnnounceBanner();
@@ -2923,6 +2930,14 @@ bool OfflineMap::CheckMap(
 		Announce("   Conserv. err min/max: %1.15e / %1.15e",
 			dColSumMin - 1.0, dColSumMax - 1.0);
 
+		if (dTotalOverlapArea != 0.0) {
+			double dGlobalConservationError = 0.0;
+			for (int i = 0; i < dColSums.GetRows(); i++) {
+				dGlobalConservationError += dColSums[i] * m_dSourceAreas[i];
+			}
+			Announce("    Global conserv. err: %1.15e",
+				dGlobalConservationError - dTotalOverlapArea);
+		}
 
 		char szBuffer[128];
 

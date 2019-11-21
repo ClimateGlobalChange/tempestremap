@@ -408,7 +408,8 @@ public:
 		bool fCheckConservation,
 		bool fCheckMonotonicity,
 		double dNormalTolerance,
-		double dStrictTolerance
+		double dStrictTolerance,
+		double dTotalOverlapArea = 0.0
 	);
 
 public:
