@@ -94,6 +94,22 @@ void CopyNcVarAttributes(
 		long num_vals = att->num_vals();
 
 		NcValues * pValues = att->values();
+		if (pValues == NULL) {
+			_EXCEPTION2("Invalid attribute type \"%s::%s\"",
+				varIn->name(), att->name());
+		}
+
+		if (strcmp(att->name(), "_FillValue") == 0) {
+			if ((att->type() == ncFloat) && (varOut->type() == ncDouble)) {
+				double dFillValue = *((const float *)pValues->base());
+				varOut->add_att(att->name(), 1, (const double*)(&dFillValue));
+			} else if ((att->type() == ncDouble) && (varOut->type() == ncFloat)) {
+				float dFillValue = *((const double *)pValues->base());
+				varOut->add_att(att->name(), 1, (const float*)(&dFillValue));
+			}
+			delete pValues;
+			continue;
+		}
 
 		if (att->type() == ncByte) {
 			varOut->add_att(att->name(), num_vals,
@@ -279,6 +295,23 @@ void CopyNcVar(
 	// Copy attributes
 	if (fCopyAttributes) {
 		CopyNcVarAttributes(var, varOut);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void CopyNcVarIfExists(
+	NcFile & ncIn,
+	NcFile & ncOut,
+	const std::string & strVarName,
+	bool fCopyAttributes
+) {
+	// Turn off fatal errors in NetCDF
+	NcError error(NcError::silent_nonfatal);
+
+	NcVar * var = ncIn.get_var(strVarName.c_str());
+	if (var != NULL) {
+		CopyNcVar(ncIn, ncOut, strVarName, fCopyAttributes);
 	}
 }
 

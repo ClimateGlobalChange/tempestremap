@@ -68,13 +68,14 @@ GenerateConnectivityFile_FILES= GenerateConnectivityFile.cpp
 GenerateTransposeMap_FILES= GenerateTransposeMap.cpp
 CoarsenRectilinearData_FILES= CoarsenRectilinearData.cpp
 CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
+AnalyzeMap_FILES= AnalyzeMap.cpp
+VerticalInterpolate_FILES= VerticalInterpolate.cpp
 
 MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
 
 ConvertExodusToSCRIP_FILES= ConvertExodusToSCRIP.cpp
 ConvertSCRIPToExodus_FILES= ConvertSCRIPToExodus.cpp
-AnalyzeMap_FILES= AnalyzeMap.cpp
 
 ########################################################################
 # All executables
@@ -99,7 +100,8 @@ EXEC_TARGETS= ApplyOfflineMap \
               ShpToMesh \
               ConvertExodusToSCRIP \
               ConvertSCRIPToExodus \
-			  AnalyzeMap
+			  AnalyzeMap \
+			  VerticalInterpolate
 
 ########################################################################
 # Build rules. 
@@ -124,11 +126,12 @@ GenerateConnectivityFile_EXE: $(GenerateConnectivityFile_FILES:%.cpp=$(BUILDDIR)
 GenerateTransposeMap_EXE: $(GenerateTransposeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 CoarsenRectilinearData_EXE: $(CoarsenRectilinearData_FILES:%.cpp=$(BUILDDIR)/%.o)
 CalculateDiffNorms_EXE: $(CalculateDiffNorms_FILES:%.cpp=$(BUILDDIR)/%.o)
+AnalyzeMap_EXE: $(AnalyzeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
+VerticalInterpolate_EXE: $(VerticalInterpolate_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertSCRIPToExodus_EXE: $(ConvertSCRIPToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
-AnalyzeMap_EXE: $(AnalyzeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)

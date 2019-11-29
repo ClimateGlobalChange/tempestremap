@@ -26,12 +26,18 @@ class NcVar;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Get the NetCDF file format from a its name.
+///	</summary>
 NcFile::FileFormat GetNcFileFormatFromString(
 	const std::string & strFormat
 );
 
 ////////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Copy NetCDF attribute metadata from one file to another.
+///	</summary>
 void CopyNcFileAttributes(
 	NcFile * fileIn,
 	NcFile * fileOut
@@ -39,6 +45,9 @@ void CopyNcFileAttributes(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Copy NetCDF attribute metadata from one variable to another.
+///	</summary>
 void CopyNcVarAttributes(
 	NcVar * varIn,
 	NcVar * varOut
@@ -46,7 +55,22 @@ void CopyNcVarAttributes(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Copy a NetCDF varaible from one file to another.
+///	</summary>
 void CopyNcVar(
+	NcFile & ncIn,
+	NcFile & ncOut,
+	const std::string & strVarName,
+	bool fCopyAttributes = true
+);
+
+////////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Copy a NetCDF varaible from one file to another if it exists.
+///	</summary>
+void CopyNcVarIfExists(
 	NcFile & ncIn,
 	NcFile & ncOut,
 	const std::string & strVarName,

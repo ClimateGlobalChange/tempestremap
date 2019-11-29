@@ -112,12 +112,13 @@ GenerateConnectivityFile_SOURCES = src/GenerateConnectivityFile.cpp
 GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
 CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
 CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
+AnalyzeMap_SOURCES = src/AnalyzeMap.cpp
+VerticalInterpolate_SOURCES = src/VerticalInterpolate.cpp
 
 MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
 ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
 ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
-AnalyzeMap_SOURCES = src/AnalyzeMap.cpp
 
 bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateRLLMesh GenerateUTMMesh GenerateICOMesh \
@@ -127,7 +128,7 @@ bin_PROGRAMS = GenerateTestData \
 				CalculateDiffNorms GenerateGLLMetaData GenerateConnectivityFile \
 				GenerateTransposeMap CoarsenRectilinearData \
 				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus \
-				AnalyzeMap
+				AnalyzeMap VerticalInterpolate
 
 
 # Utility target: build but don't run tests
