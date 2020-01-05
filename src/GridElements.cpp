@@ -924,15 +924,19 @@ void Mesh::WriteScrip(
 				}
 			}
 		}
+		varCenterLat->add_att("_FillValue", 9.96920996838687e+36 );
+                varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
+		varCornerLat->add_att("_FillValue", 9.96920996838687e+36 );
+		varCornerLon->add_att("_FillValue", 9.96920996838687e+36 );
+
 		varCenterLat->set_cur((long)0);
 		varCenterLat->put(centerLat, nElementCount);
 		varCenterLat->add_att("units", "degrees");
-		varCenterLat->add_att("_FillValue", 9.96920996838687e+36 );
 
 		varCenterLon->set_cur((long)0);
 		varCenterLon->put(centerLon, nElementCount);
 		varCenterLon->add_att("units", "degrees");
-		varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
+
 
 		for (int i=0; i<nElementCount; i++) {
 			varCornerLat->set_cur(i,0);
@@ -942,8 +946,6 @@ void Mesh::WriteScrip(
 		}
 		varCornerLat->add_att("units", "degrees");
 		varCornerLon->add_att("units", "degrees");
-		varCornerLat->add_att("_FillValue", 9.96920996838687e+36 );
-		varCornerLon->add_att("_FillValue", 9.96920996838687e+36 );
 	}
 	//---------------------------------------------------------------------------
 	// Grid mask
@@ -952,13 +954,14 @@ void Mesh::WriteScrip(
 		if (varMask == NULL) {
 			_EXCEPTIONT("Error creating variable \"grid_imask\"");
 		}
+		varMask->add_att("_FillValue", 9.96920996838687e+36 );
 		DataArray1D<double> mask(nElementCount);
 		for (int i = 0; i < nElementCount; i++) {
 			mask[i] = static_cast<double>( 1 );
 		}
 		varMask->set_cur((long)0);
 		varMask->put(mask, nElementCount);
-		varMask->add_att("_FillValue", 9.96920996838687e+36 );
+
 	}
 	//---------------------------------------------------------------------------
 	// Grid dims
