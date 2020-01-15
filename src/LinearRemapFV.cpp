@@ -1150,6 +1150,34 @@ void LinearRemapFVtoFV_np1(
 			smatMap(ixSecondFace, ixFirstFace) +=
 				meshOverlap.vecFaceArea[ixOverlap + j]
 				/ meshOutput.vecFaceArea[ixSecondFace];
+
+			if (smatMap(ixSecondFace, ixFirstFace) > 10.0) {
+				printf("%i %i %i\n", ixFirstFace, ixSecondFace, ixOverlap+j);
+				printf("Input:\n");
+				for (int i = 0; i < meshInput.faces[ixFirstFace].edges.size(); i++) {
+					const Node & node = meshInput.nodes[ meshInput.faces[ixFirstFace][i] ];
+					printf("%i,%1.15e,%1.15e;\n",
+						i, atan2(node.y, node.x), asin(node.z));
+				}
+				printf("Output:\n");
+				for (int i = 0; i < meshOutput.faces[ixSecondFace].edges.size(); i++) {
+					const Node & node = meshOutput.nodes[ meshOutput.faces[ixSecondFace][i] ];
+					printf("%i,%1.15e,%1.15e;\n",
+						i, atan2(node.y, node.x), asin(node.z));
+				}
+				printf("Overlap:\n");
+				for (int i = 0; i < meshOverlap.faces[ixOverlap + j].edges.size(); i++) {
+					const Node & node = meshOverlap.nodes[ meshOverlap.faces[ixOverlap + j][i] ];
+					printf("%i,%1.15e,%1.15e;\n",
+						i, atan2(node.y, node.x), asin(node.z));
+				}
+
+
+				printf("%1.15e\n", meshInput.vecFaceArea[ixFirstFace]);
+				printf("%1.15e\n", meshOverlap.vecFaceArea[ixOverlap + j]);
+				printf("%1.15e\n", meshOutput.vecFaceArea[ixSecondFace]);
+				_EXCEPTIONT("Anomalous map weight detected");
+			}
 		}
 
 		// Increment the current overlap index
@@ -3220,6 +3248,10 @@ void LinearRemapGLLtoGLL2(
 				int ixs = 0;
 				for (int s = 0; s < nPout; s++) {
 				for (int t = 0; t < nPout; t++) {
+					if (fabs(dOverlapOutputArea[ixOverlap + i][s * nPout + t]) < ReferenceTolerance) {
+						continue;
+					}
+
 					dCoeff[i * nPout * nPout + ixs][ixp] =
 						dGlobalIntArray[ixp][ixOverlap + i][ixs]
 						/ dOverlapOutputArea[ixOverlap + i][s * nPout + t];
