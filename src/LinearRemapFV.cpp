@@ -661,7 +661,7 @@ void BuildFitArray(
 				int ldb = 3;
 				int info;
 
-#pragma message "Pre-triangularize this matrix for efficiency"
+//#pragma message "Pre-triangularize this matrix for efficiency"
 				DataArray2D<double> dFitTemp;
 				dFitTemp = dFit;
 				dgesv_(

@@ -1698,7 +1698,6 @@ void LinearRemapGLLtoGLL_Integrated(
 	bool fContinuousOut,
 	OfflineMap & mapRemap
 ) {
-
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(4);
 

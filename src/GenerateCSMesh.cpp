@@ -142,7 +142,6 @@ extern "C"
 int GenerateCSMesh(
 	Mesh & mesh,
 	int nResolution,
-	bool fAlt,
 	std::string strOutputFile,
 	std::string strOutputFormat
 ) {
@@ -266,8 +265,8 @@ try {
 		nodes,
 		faces);
 
-	// Alternative arrangement of nodes on Faces
-	if (fAlt) {
+	// Alternative arrangement of nodes on Faces (now always on)
+	{
 		for (int i = 0; i < faces.size(); i++) {
 			int ix[4];
 			for (int j = 0; j < 4; j++) {

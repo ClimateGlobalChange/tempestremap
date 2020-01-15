@@ -135,7 +135,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strTargetMeta,
 	std::string strSourceType, std::string strTargetType,
 	int nPin, int nPout,
-	bool fBubble, int fMonotoneTypeID,
+	bool fNoBubble, bool fCorrectAreas, int fMonotoneTypeID,
 	bool fVolumetric, bool fNoConservation, bool fNoCheck,
 	std::string strVariables, std::string strOutputMap,
 	std::string strInputData, std::string strOutputData,
@@ -326,9 +326,9 @@ try {
     Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
     Announce("Overlap Mesh Area: %1.15e (%1.15e)", dTotalAreaOverlap, dTotalAreaOverlap / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
-/*
+
 	// Correct areas to match the areas calculated in the overlap mesh
-	{
+	if (fCorrectAreas) {
 		AnnounceStartBlock("Correcting source/target areas to overlap mesh areas");
 		DataArray1D<double> dSourceArea(meshSource.faces.size());
 		DataArray1D<double> dTargetArea(meshTarget.faces.size());
@@ -357,7 +357,7 @@ try {
 		}
 		AnnounceEndBlock(NULL);
 	}
-*/
+
 	// Checks
 	bool fCheckConsistency = !fNoCheck;
 	bool fCheckConservation = !fNoCheck;
@@ -415,7 +415,7 @@ try {
                 GenerateMetaData(
                     meshTarget,
                     nPout,
-                    fBubble,
+                    fNoBubble,
                     dataGLLNodes,
                     dataGLLJacobian);
 
@@ -498,7 +498,7 @@ try {
                 GenerateMetaData(
                     meshSource,
                     nPin,
-                    fBubble,
+                    fNoBubble,
                     dataGLLNodes,
                     dataGLLJacobian);
 
@@ -580,7 +580,7 @@ try {
                 GenerateMetaData(
                     meshSource,
                     nPin,
-                    fBubble,
+                    fNoBubble,
                     dataGLLNodesIn,
                     dataGLLJacobianIn);
 
@@ -606,7 +606,7 @@ try {
                 GenerateMetaData(
                     meshTarget,
                     nPout,
-                    fBubble,
+                    fNoBubble,
                     dataGLLNodesOut,
                     dataGLLJacobianOut);
 
@@ -721,7 +721,7 @@ try {
 		mapAttributes.insert(AttributePair("type_dst", strTargetType));
 		mapAttributes.insert(AttributePair("np_src", std::to_string((long long)nPin)));
 		mapAttributes.insert(AttributePair("np_dst", std::to_string((long long)nPout)));
-		mapAttributes.insert(AttributePair("bubble", (fBubble)?("true"):("false")));
+		mapAttributes.insert(AttributePair("bubble", (!fNoBubble)?("true"):("false")));
 		mapAttributes.insert(AttributePair("mono_type", std::to_string((long long)fMonotoneTypeID)));
 		if (fVolumetric) {
 			mapAttributes.insert(AttributePair("volumetric", "true"));
@@ -792,7 +792,8 @@ int GenerateOfflineMap(
 	std::string strSourceMeta, std::string strTargetMeta,
 	std::string strSourceType, std::string strTargetType,
 	int nPin, int nPout,
-	bool fBubble,
+	bool fNoBubble,
+	bool fCorrectAreas,
 	int fMonotoneTypeID,
 	bool fVolumetric,
 	bool fNoConservation,
@@ -861,7 +862,7 @@ try {
                                             strSourceMeta, strTargetMeta,
                                             strSourceType, strTargetType,
                                             nPin, nPout,
-                                            fBubble, fMonotoneTypeID,
+                                            fNoBubble, fCorrectAreas, fMonotoneTypeID,
                                             fVolumetric, fNoConservation, fNoCheck,
                                             strVariables, strOutputMap,
                                             strInputData, strOutputData,
@@ -914,7 +915,7 @@ int main(int argc, char** argv) {
 	int nPout;
 
 	// Use bubble on interior of spectral element nodes
-	bool fBubble;
+	bool fNoBubble;
 
 	// Enforce monotonicity
 	bool fMonotoneType1;
@@ -983,7 +984,7 @@ int main(int argc, char** argv) {
 		// Optional arguments
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fBubble, "bubble");
+		CommandLineBool(fNoBubble, "no_bubble");
 		CommandLineBool(fMonotoneType1, "mono");
 		CommandLineBool(fMonotoneType2, "mono2");
 		CommandLineBool(fMonotoneType3, "mono3");
@@ -1019,7 +1020,7 @@ int main(int argc, char** argv) {
                                     strSourceMeta, strTargetMeta,
                                     strSourceType, strTargetType,
                                     nPin, nPout,
-                                    fBubble, fMonotoneTypeID,
+                                    fNoBubble, fMonotoneTypeID,
                                     fVolumetric, fNoConservation, fNoCheck,
                                     strVariables, strOutputMap, strInputData, strOutputData,
                                     strNColName, fOutputDouble, strOutputFormat, strPreserveVariables, fPreserveAll, dFillValueOverride,

@@ -140,7 +140,7 @@ try {
 	int nPout;
 
 	// Use bubble on interior of spectral element nodes
-	bool fBubble;
+	bool fNoBubble;
 
 	// Enforce monotonicity
 	bool fMonotone;
@@ -189,7 +189,7 @@ try {
 		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fBubble, "bubble");
+		CommandLineBool(fNoBubble, "no_bubble");
 		CommandLineBool(fMonotone, "mono");
 		CommandLineBool(fNoCheck, "nocheck");
 		CommandLineString(strVariables, "var", "");
@@ -421,7 +421,7 @@ try {
 				GenerateMetaData(
 					meshOutput,
 					nPout,
-					fBubble,
+					fNoBubble,
 					dataGLLNodes,
 					dataGLLJacobian);
 
@@ -488,7 +488,7 @@ try {
 				GenerateMetaData(
 					meshInput,
 					nPin,
-					fBubble,
+					fNoBubble,
 					dataGLLNodes,
 					dataGLLJacobian);
 
@@ -556,7 +556,7 @@ try {
 			GenerateMetaData(
 				meshInput,
 				nPin,
-				fBubble,
+				fNoBubble,
 				dataGLLNodesIn,
 				dataGLLJacobianIn);
 
@@ -568,7 +568,7 @@ try {
 			GenerateMetaData(
 				meshOutput,
 				nPout,
-				fBubble,
+				fNoBubble,
 				dataGLLNodesOut,
 				dataGLLJacobianOut);
 

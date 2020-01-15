@@ -31,7 +31,7 @@ int GenerateGLLMetaData(
 	std::string strMesh,
 	Mesh & meshInput,
 	int nP,
-	bool fBubble,
+	bool fNoBubble,
 	std::string strOutput,
 	DataArray3D<int>& dataGLLnodes,
 	DataArray3D<double>& dataGLLJacobian
@@ -61,7 +61,7 @@ try {
 		GenerateMetaData(
 			meshInput,
 			nP,
-			fBubble,
+			fNoBubble,
 			dataGLLnodes,
 			dataGLLJacobian
 		);

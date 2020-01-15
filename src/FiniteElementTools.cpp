@@ -267,7 +267,7 @@ void ApplyInverseMap(
 double GenerateMetaData(
 	const Mesh & mesh,
 	int nP,
-	bool fBubble,
+	bool fNoBubble,
 	DataArray3D<int> & dataGLLnodes,
 	DataArray3D<double> & dataGLLJacobian
 ) {
@@ -293,7 +293,7 @@ double GenerateMetaData(
 	std::vector<double> vecGLLJacobian;
 
 	// Verify face areas are available
-	if (fBubble) {
+	if (!fNoBubble) {
 		if (mesh.vecFaceArea.GetRows() != nElements) {
 			_EXCEPTIONT("Face area information unavailable or incorrect");
 		}
@@ -434,7 +434,7 @@ double GenerateMetaData(
 		}
 
 		// Apply bubble adjustment to area
-		if (fBubble && (dFaceNumericalArea != mesh.vecFaceArea[k])) {
+		if ((!fNoBubble) && (dFaceNumericalArea != mesh.vecFaceArea[k])) {
 
 			// Use uniform bubble for linear elements
 			if (nP < 3) {

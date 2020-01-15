@@ -54,7 +54,7 @@ try {
 	int nP;
 
 	// Use bubble function
-	bool fBubble;
+	bool fNoBubble;
 
 	// Output filename
 	std::string strOutputFile;
@@ -69,7 +69,7 @@ try {
 		CommandLineString(strVariableName, "var", "Psi");
 		CommandLineBool(fGLL, "gll");
 		CommandLineInt(nP, "np", 4);
-		CommandLineBool(fBubble, "bubble");
+		CommandLineBool(fNoBubble, "no_bubble");
 		CommandLineString(strMeshFile, "mesh", "");
 		CommandLineString(strOutputFile, "outfile", "");
 		CommandLineBool(fContainsConcaveFaces, "concave");
@@ -151,7 +151,7 @@ try {
 		DataArray3D<int> dataGLLnodes;
 		DataArray3D<double> dataGLLJacobian;
 
-		GenerateMetaData(mesh, nP, fBubble, dataGLLnodes, dataGLLJacobian);
+		GenerateMetaData(mesh, nP, fNoBubble, dataGLLnodes, dataGLLJacobian);
 
 		GenerateUniqueJacobian(
 			dataGLLnodes, dataGLLJacobian, dataUniqueJacobian);

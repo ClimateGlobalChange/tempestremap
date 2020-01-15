@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 	int nP;
 
 	// Use of bubble to adjust areas
-	bool fBubble;
+	bool fNoBubble;
 
 	// Output metadata file
 	std::string strOutput;
@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 	BeginCommandLine()
 		CommandLineString(strMesh, "mesh", "");
 		CommandLineInt(nP, "np", 4);
+		CommandLineBool(fNoBubble, "no_bubble");
 		CommandLineString(strOutput, "out", "gllmeta.nc");
 
 		ParseCommandLine(argc, argv);
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
 			strMesh,
 			mesh,
 			nP,
-			fBubble,
+			fNoBubble,
 			strOutput,
 			dataGLLnodes,
 			dataGLLJacobian);

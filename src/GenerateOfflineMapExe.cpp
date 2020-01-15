@@ -55,7 +55,10 @@ int main(int argc, char** argv) {
 	int nPout;
 
 	// Use bubble on interior of spectral element nodes
-	bool fBubble;
+	bool fNoBubble;
+
+	// Correct the areas to match the overlap mesh
+	bool fCorrectAreas;
 
 	// Enforce monotonicity
 	bool fMonotoneType1;
@@ -124,7 +127,8 @@ int main(int argc, char** argv) {
 		// Optional arguments
 		CommandLineInt(nPin, "in_np", 4);
 		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fBubble, "bubble");
+		CommandLineBool(fNoBubble, "no_bubble");
+		CommandLineBool(fCorrectAreas, "correct_areas");
 		CommandLineBool(fMonotoneType1, "mono");
 		CommandLineBool(fMonotoneType2, "mono2");
 		CommandLineBool(fMonotoneType3, "mono3");
@@ -162,7 +166,8 @@ int main(int argc, char** argv) {
 			strInputMeta, strOutputMeta,
 			strInputType, strOutputType,
 			nPin, nPout,
-			fBubble,
+			fNoBubble,
+			fCorrectAreas,
 			nMonotoneTypeID,
 			fVolumetric,
 			fNoConservation,

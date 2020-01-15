@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    gecore2.cpp
+///	\file    MeshToTxt.cpp
 ///	\author  Paul Ullrich
 ///	\version March 7, 2014
 ///
@@ -20,6 +20,9 @@
 #include "GridElements.h"
 #include "netcdfcpp.h"
 
+#include <map>
+#include <vector>
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
@@ -30,6 +33,12 @@ try {
 
 	// Input mesh file
 	std::string strInputMesh;
+
+	// First index
+	int iFirstIndex;
+
+	// Last index
+	int iLastIndex;
 
 	// Output node file
 	std::string strOutputNodes;
@@ -43,6 +52,8 @@ try {
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputMesh, "in", "");
+		CommandLineInt(iFirstIndex, "ix_begin", 0);
+		CommandLineInt(iLastIndex, "ix_last", -1);
 		CommandLineString(strOutputNodes, "out_nodes", "nodes.dat");
 		CommandLineString(strOutputFaces, "out_faces", "faces.dat");
 		CommandLineBool(fPad, "pad");
@@ -61,18 +72,6 @@ try {
 	Mesh meshInput(strInputMesh);
 	AnnounceEndBlock(NULL);
 
-	// Output nodes
-	AnnounceStartBlock("Writing nodes");
-	FILE * fpNodes = fopen(strOutputNodes.c_str(), "w");
-	for (int i = 0; i < meshInput.nodes.size(); i++) {
-		fprintf(fpNodes, "%1.10e %1.10e %1.10e\n",
-			static_cast<double>(meshInput.nodes[i].x),
-			static_cast<double>(meshInput.nodes[i].y),
-			static_cast<double>(meshInput.nodes[i].z));
-	}
-	fclose(fpNodes);
-	AnnounceEndBlock("Done!");
-
 	// Maximum number of nodes per face
 	int nMaximumNodes = 0;
 	if (fPad) {
@@ -83,26 +82,117 @@ try {
 		}
 	}
 
-	// Output faces
-	AnnounceStartBlock("Writing faces");
-	FILE * fpFaces = fopen(strOutputFaces.c_str(), "w");
-	for (int i = 0; i < meshInput.faces.size(); i++) {
-		for (int j = 0; j < meshInput.faces[i].edges.size(); j++) {
-			fprintf(fpFaces, "%i", meshInput.faces[i][j] + 1);
-			if (j != meshInput.faces[i].edges.size()-1) {
-				fprintf(fpFaces, " ");
-			}
+	// Output all faces
+	if ((iFirstIndex == (0)) && (iLastIndex == (-1))) {
+		// Output nodes
+		AnnounceStartBlock("Writing nodes");
+		FILE * fpNodes = fopen(strOutputNodes.c_str(), "w");
+		for (int i = 0; i < meshInput.nodes.size(); i++) {
+			fprintf(fpNodes, "%1.10e %1.10e %1.10e\n",
+				static_cast<double>(meshInput.nodes[i].x),
+				static_cast<double>(meshInput.nodes[i].y),
+				static_cast<double>(meshInput.nodes[i].z));
 		}
-		if (fPad) {
-			int j = meshInput.faces[i].edges.size();
-			for (; j < nMaximumNodes; j++) {
-				fprintf(fpFaces, " %i", meshInput.faces[i][0] + 1);
+		fclose(fpNodes);
+		AnnounceEndBlock("Done!");
+
+		// Output faces
+		AnnounceStartBlock("Writing faces");
+		FILE * fpFaces = fopen(strOutputFaces.c_str(), "w");
+		for (int i = 0; i < meshInput.faces.size(); i++) {
+			for (int j = 0; j < meshInput.faces[i].edges.size(); j++) {
+				fprintf(fpFaces, "%i", meshInput.faces[i][j] + 1);
+				if (j != meshInput.faces[i].edges.size()-1) {
+					fprintf(fpFaces, " ");
+				}
 			}
+			if (fPad) {
+				int j = meshInput.faces[i].edges.size();
+				for (; j < nMaximumNodes; j++) {
+					fprintf(fpFaces, " %i", meshInput.faces[i][0] + 1);
+				}
+			}
+			fprintf(fpFaces, "\n");
 		}
-		fprintf(fpFaces, "\n");
+		fclose(fpFaces);
+		AnnounceEndBlock("Done!");
+
+	// Only output some faces
+	} else {
+		// Determine which nodes are needed
+		std::map<int,int> mapNodes;
+		std::vector<int> vecNodeIx;
+
+		if (iFirstIndex < 0) {
+			_EXCEPTIONT("--ix_first must be nonnegative");
+		}
+		if (iFirstIndex > iLastIndex) {
+			_EXCEPTIONT("--ix_first must be less than or equal to --ix_last");
+		}
+		if (iLastIndex >= meshInput.faces.size()) {
+			_EXCEPTIONT("--ix_last must be less than the total number of faces in the mesh");
+		}
+
+		// Output faces
+		AnnounceStartBlock("Writing faces");
+		FILE * fpFaces = fopen(strOutputFaces.c_str(), "w");
+		for (int i = iFirstIndex; i <= iLastIndex; i++) {
+			for (int j = 0; j < meshInput.faces[i].edges.size(); j++) {
+
+				// Build new indices for the nodes
+				int iUpdatedIx = -1;
+				std::map<int,int>::const_iterator iter =
+					mapNodes.find(meshInput.faces[i][j]);
+				if (iter == mapNodes.end()) {
+					iUpdatedIx = mapNodes.size();
+					mapNodes.insert(
+						std::pair<int,int>(
+							meshInput.faces[i][j],
+							mapNodes.size()));
+					vecNodeIx.push_back(meshInput.faces[i][j]);
+				} else {
+					iUpdatedIx = iter->second;
+				}
+
+				fprintf(fpFaces, "%i", iUpdatedIx + 1);
+				if (j != meshInput.faces[i].edges.size()-1) {
+					fprintf(fpFaces, " ");
+				}
+			}
+			if (fPad) {
+				int j = meshInput.faces[i].edges.size();
+
+				int iUpdatedIx = (-1);
+				std::map<int,int>::const_iterator iter =
+					mapNodes.find(meshInput.faces[i][0]);
+				if (iter == mapNodes.end()) {
+					_EXCEPTIONT("Logic error");
+				} else {
+					iUpdatedIx = iter->second;
+				}
+
+				for (; j < nMaximumNodes; j++) {
+					fprintf(fpFaces, " %i", iUpdatedIx + 1);
+				}
+			}
+			fprintf(fpFaces, "\n");
+		}
+		fclose(fpFaces);
+		AnnounceEndBlock("Done!");
+
+		// Output nodes
+		AnnounceStartBlock("Writing nodes");
+		FILE * fpNodes = fopen(strOutputNodes.c_str(), "w");
+		for (int i = 0; i < vecNodeIx.size(); i++) {
+			fprintf(fpNodes, "%1.10e %1.10e %1.10e\n",
+				static_cast<double>(meshInput.nodes[ vecNodeIx[i] ].x),
+				static_cast<double>(meshInput.nodes[ vecNodeIx[i] ].y),
+				static_cast<double>(meshInput.nodes[ vecNodeIx[i] ].z));
+		}
+		fclose(fpNodes);
+		AnnounceEndBlock("Done!");
+
 	}
-	fclose(fpFaces);
-	AnnounceEndBlock("Done!");
 
 	AnnounceBanner();
 
