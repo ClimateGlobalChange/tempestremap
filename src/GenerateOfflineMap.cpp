@@ -251,7 +251,7 @@ try {
     // Calculate Face areas
     AnnounceStartBlock("Calculating input mesh Face areas");
     double dTotalAreaInput = meshSource.CalculateFaceAreas(fSourceConcave);
-    Announce("Input Mesh Geometric Area: %1.15e", dTotalAreaInput);
+    Announce("Input Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaInput, dTotalAreaInput / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
 
     // Input mesh areas
@@ -265,7 +265,7 @@ try {
     // Calculate Face areas
     AnnounceStartBlock("Calculating output mesh Face areas");
     Real dTotalAreaOutput = meshTarget.CalculateFaceAreas(fTargetConcave);
-    Announce("Output Mesh Geometric Area: %1.15e", dTotalAreaOutput);
+    Announce("Output Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOutput, dTotalAreaOutput / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
 
     // Output mesh areas
@@ -324,7 +324,7 @@ try {
     // Calculate Face areas
     AnnounceStartBlock("Calculating overlap mesh Face areas");
     Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
-    Announce("Overlap Mesh Area: %1.15e", dTotalAreaOverlap);
+    Announce("Overlap Mesh Area: %1.15e (%1.15e)", dTotalAreaOverlap, dTotalAreaOverlap / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
 /*
 	// Correct areas to match the areas calculated in the overlap mesh
