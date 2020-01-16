@@ -246,7 +246,7 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			_EXCEPTIONT("Missing \"grid_corners\" dimension in grid file");
 		}
 
-		// Pull grid center information from file
+		// Pull grid center longitude information from file
 		NcVar * varGridCenterLon = ncTargetMesh.get_var("grid_center_lon");
 		if (varGridCenterLon == NULL) {
 			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
@@ -258,6 +258,23 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			&(m_dTargetCenterLon[0]),
 			dimGridSize->size());
 
+		// Convert radians to degrees
+		NcAtt * attGridCenterLonUnits = varGridCenterLon->get_att("units");
+		if (attGridCenterLonUnits != NULL) {
+			std::string strGridCenterLonUnits = attGridCenterLonUnits->as_string(0);
+			if (strGridCenterLonUnits == "degrees") {
+
+			} else if (strGridCenterLonUnits == "radians") {
+				for (int i = 0; i < m_dTargetCenterLon.GetRows(); i++) {
+					m_dTargetCenterLon[i] *= 180.0 / M_PI;
+				}
+
+			} else {
+				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_center_lon\" variable: Expected \"degrees\" or \"radians\"");
+			}
+		}
+
+		// Pull grid center latitude information from file
 		NcVar * varGridCenterLat = ncTargetMesh.get_var("grid_center_lat");
 		if (varGridCenterLat == NULL) {
 			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
@@ -269,7 +286,23 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			&(m_dTargetCenterLat[0]),
 			dimGridSize->size());
 
-		// Pull grid vertex information from file
+		// Convert radians to degrees
+		NcAtt * attGridCenterLatUnits = varGridCenterLat->get_att("units");
+		if (attGridCenterLatUnits != NULL) {
+			std::string strGridCenterLatUnits = attGridCenterLatUnits->as_string(0);
+			if (strGridCenterLatUnits == "degrees") {
+
+			} else if (strGridCenterLatUnits == "radians") {
+				for (int i = 0; i < m_dTargetCenterLat.GetRows(); i++) {
+					m_dTargetCenterLat[i] *= 180.0 / M_PI;
+				}
+
+			} else {
+				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_center_lat\" variable: Expected \"degrees\" or \"radians\"");
+			}
+		}
+
+		// Pull longitude grid vertex information from file
 		NcVar * varGridVertexLon = ncTargetMesh.get_var("grid_corner_lon");
 		if (varGridVertexLon == NULL) {
 			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
@@ -284,6 +317,25 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
+		// Convert radians to degrees
+		NcAtt * attGridVertexLonUnits = varGridVertexLon->get_att("units");
+		if (attGridVertexLonUnits != NULL) {
+			std::string strGridVertexLonUnits = attGridVertexLonUnits->as_string(0);
+			if (strGridVertexLonUnits == "degrees") {
+
+			} else if (strGridVertexLonUnits == "radians") {
+				for (int i = 0; i < m_dTargetVertexLon.GetRows(); i++) {
+				for (int j = 0; j < m_dTargetVertexLon.GetColumns(); j++) {
+					m_dTargetVertexLon[i][j] *= 180.0 / M_PI;
+				}
+				}
+
+			} else {
+				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_corner_lon\" variable: Expected \"degrees\" or \"radians\"");
+			}
+		}
+
+		// Pull latitude grid vertex information from file
 		NcVar * varGridVertexLat = ncTargetMesh.get_var("grid_corner_lat");
 		if (varGridVertexLat == NULL) {
 			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
@@ -297,6 +349,24 @@ void OfflineMap::InitializeTargetDimensionsFromFile(
 			&(m_dTargetVertexLat[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
+
+		// Convert radians to degrees
+		NcAtt * attGridVertexLatUnits = varGridVertexLat->get_att("units");
+		if (attGridVertexLatUnits != NULL) {
+			std::string strGridVertexLatUnits = attGridVertexLatUnits->as_string(0);
+			if (strGridVertexLatUnits == "degrees") {
+
+			} else if (strGridVertexLatUnits == "radians") {
+				for (int i = 0; i < m_dTargetVertexLat.GetRows(); i++) {
+				for (int j = 0; j < m_dTargetVertexLat.GetColumns(); j++) {
+					m_dTargetVertexLat[i][j] *= 180.0 / M_PI;
+				}
+				}
+
+			} else {
+				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_corner_lat\" variable: Expected \"degrees\" or \"radians\"");
+			}
+		}
 
 		return;
 	}
