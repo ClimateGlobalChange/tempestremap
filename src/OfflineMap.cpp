@@ -30,119 +30,203 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void OfflineMap::InitializeSourceDimensionsFromFile(
-	const std::string & strSourceMesh
+void OfflineMap::InitializeDimensionsFromMeshFile(
+	const std::string & strMeshFile,
+	std::vector<std::string> & vecDimNames,
+	std::vector<int> & vecDimSizes,
+	DataArray1D<double> & dCenterLon,
+	DataArray1D<double> & dCenterLat,
+	DataArray2D<double> & dVertexLon,
+	DataArray2D<double> & dVertexLat
 ) {
-	// Open the source mesh
-	NcFile ncSourceMesh(strSourceMesh.c_str(), NcFile::ReadOnly);
-	if (!ncSourceMesh.is_valid()) {
-		_EXCEPTION1("Unable to open mesh \"%s\"", strSourceMesh.c_str());
+	// Open the mesh
+	NcFile ncMesh(strMeshFile.c_str(), NcFile::ReadOnly);
+	if (!ncMesh.is_valid()) {
+		_EXCEPTION1("Unable to open mesh file \"%s\"", strMeshFile.c_str());
 	}
 
 	// Check for grid dimensions (SCRIP format grid)
-	NcVar * varGridDims = ncSourceMesh.get_var("grid_dims");
+	NcVar * varGridDims = ncMesh.get_var("grid_dims");
 	if (varGridDims != NULL) {
 		NcDim * dimGridRank = varGridDims->get_dim(0);
+		if (dimGridRank == NULL) {
+			_EXCEPTIONT("Variable \"grid_dims\" has no dimensions");
+		}
 
-		m_vecSourceDimSizes.resize(dimGridRank->size());
-		varGridDims->get(&(m_vecSourceDimSizes[0]), dimGridRank->size());
+		vecDimSizes.resize(dimGridRank->size());
+		varGridDims->get(&(vecDimSizes[0]), dimGridRank->size());
 
 		if (dimGridRank->size() == 1) {
-			m_vecSourceDimNames.push_back("num_elem");
+			vecDimNames.push_back("num_elem");
 		} else if (dimGridRank->size() == 2) {
-			m_vecSourceDimNames.push_back("lat");
-			m_vecSourceDimNames.push_back("lon");
+			vecDimNames.push_back("lat");
+			vecDimNames.push_back("lon");
 
-			int iTemp = m_vecSourceDimSizes[0];
-			m_vecSourceDimSizes[0] = m_vecSourceDimSizes[1];
-			m_vecSourceDimSizes[1] = iTemp;
+			int iTemp = vecDimSizes[0];
+			vecDimSizes[0] = vecDimSizes[1];
+			vecDimSizes[1] = iTemp;
+
 		} else {
-			_EXCEPTIONT("Source grid grid_rank must be < 3");
+			_EXCEPTION1("Mesh file \"%s\" grid_rank must be < 3", strMeshFile.c_str());
 		}
 
 		// Number of faces
-		NcDim * dimGridSize = ncSourceMesh.get_dim("grid_size");
+		NcDim * dimGridSize = ncMesh.get_dim("grid_size");
 		if (dimGridSize == NULL) {
-			_EXCEPTIONT("Missing \"grid_size\" dimension in grid file");
+			_EXCEPTION1("Missing \"grid_size\" dimension in mesh file \"%s\"", strMeshFile.c_str());
 		}
 
 		// Number of grid corners
-		NcDim * dimGridCorners = ncSourceMesh.get_dim("grid_corners");
+		NcDim * dimGridCorners = ncMesh.get_dim("grid_corners");
 		if (dimGridCorners == NULL) {
-			_EXCEPTIONT("Missing \"grid_corners\" dimension in grid file");
+			_EXCEPTION1("Missing \"grid_corners\" dimension in mesh file \"%s\"", strMeshFile.c_str());
 		}
 
-		// Pull grid center information from file
-		NcVar * varGridCenterLon = ncSourceMesh.get_var("grid_center_lon");
+		// Pull grid center longitude information from file
+		NcVar * varGridCenterLon = ncMesh.get_var("grid_center_lon");
 		if (varGridCenterLon == NULL) {
-			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
+			_EXCEPTION1("Missing \"grid_center_lon\" variable in mesh file \"%s\"", strMeshFile.c_str());
 		}
 
-		m_dSourceCenterLon.Allocate(dimGridSize->size());
+		dCenterLon.Allocate(dimGridSize->size());
 
 		varGridCenterLon->get(
-			&(m_dSourceCenterLon[0]),
+			&(dCenterLon[0]),
 			dimGridSize->size());
 
-		NcVar * varGridCenterLat = ncSourceMesh.get_var("grid_center_lat");
-		if (varGridCenterLat == NULL) {
-			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
+		// Convert radians to degrees
+		NcAtt * attGridCenterLonUnits = varGridCenterLon->get_att("units");
+		if (attGridCenterLonUnits != NULL) {
+			std::string strGridCenterLonUnits = attGridCenterLonUnits->as_string(0);
+			if (strGridCenterLonUnits == "degrees") {
+
+			} else if (strGridCenterLonUnits == "radians") {
+				for (int i = 0; i < dCenterLon.GetRows(); i++) {
+					dCenterLon[i] *= 180.0 / M_PI;
+				}
+
+			} else {
+				_EXCEPTION1("Invalid \"units\" attribute for \"grid_center_lon\" variable: Expected \"degrees\" or \"radians\" in mesh file \"%s\"", strMeshFile.c_str());
+			}
 		}
 
-		m_dSourceCenterLat.Allocate(dimGridSize->size());
+		// Pull grid center latitude information from file
+		NcVar * varGridCenterLat = ncMesh.get_var("grid_center_lat");
+		if (varGridCenterLat == NULL) {
+			_EXCEPTION1("Missing \"grid_center_lat\" variable in mesh file \"%s\"", strMeshFile.c_str());
+		}
+
+		dCenterLat.Allocate(dimGridSize->size());
 
 		varGridCenterLat->get(
-			&(m_dSourceCenterLat[0]),
+			&(dCenterLat[0]),
 			dimGridSize->size());
 
-		// Pull grid vertex information from file
-		NcVar * varGridVertexLon = ncSourceMesh.get_var("grid_corner_lon");
-		if (varGridVertexLon == NULL) {
-			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
+		// Convert radians to degrees
+		NcAtt * attGridCenterLatUnits = varGridCenterLat->get_att("units");
+		if (attGridCenterLatUnits != NULL) {
+			std::string strGridCenterLatUnits = attGridCenterLatUnits->as_string(0);
+			if (strGridCenterLatUnits == "degrees") {
+
+			} else if (strGridCenterLatUnits == "radians") {
+				for (int i = 0; i < dCenterLat.GetRows(); i++) {
+					dCenterLat[i] *= 180.0 / M_PI;
+				}
+
+			} else {
+				_EXCEPTION1("Invalid \"units\" attribute for \"grid_center_lat\" variable: Expected \"degrees\" or \"radians\" in mesh file \"%s\"", strMeshFile.c_str());
+			}
 		}
 
-		m_dSourceVertexLon.Allocate(
+		// Pull longitude grid vertex information from file
+		NcVar * varGridVertexLon = ncMesh.get_var("grid_corner_lon");
+		if (varGridVertexLon == NULL) {
+			_EXCEPTION1("Missing \"grid_corner_lon\" variable in mesh file \"%s\"", strMeshFile.c_str());
+		}
+
+		dVertexLon.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
 		varGridVertexLon->get(
-			&(m_dSourceVertexLon[0][0]),
+			&(dVertexLon[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
 
-		NcVar * varGridVertexLat = ncSourceMesh.get_var("grid_corner_lat");
-		if (varGridVertexLat == NULL) {
-			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
+		// Convert radians to degrees
+		NcAtt * attGridVertexLonUnits = varGridVertexLon->get_att("units");
+		if (attGridVertexLonUnits != NULL) {
+			std::string strGridVertexLonUnits = attGridVertexLonUnits->as_string(0);
+			if (strGridVertexLonUnits == "degrees") {
+
+			} else if (strGridVertexLonUnits == "radians") {
+				for (int i = 0; i < dVertexLon.GetRows(); i++) {
+				for (int j = 0; j < dVertexLon.GetColumns(); j++) {
+					dVertexLon[i][j] *= 180.0 / M_PI;
+				}
+				}
+
+			} else {
+				_EXCEPTION1("Invalid \"units\" attribute for \"grid_corner_lon\" variable: Expected \"degrees\" or \"radians\" in mesh file \"%s\"", strMeshFile.c_str());
+			}
 		}
 
-		m_dSourceVertexLat.Allocate(
+		// Pull latitude grid vertex information from file
+		NcVar * varGridVertexLat = ncMesh.get_var("grid_corner_lat");
+		if (varGridVertexLat == NULL) {
+			_EXCEPTION1("Missing \"grid_corner_lat\" variable in mesh file \"%s\"", strMeshFile.c_str());
+		}
+
+		dVertexLat.Allocate(
 			dimGridSize->size(),
 			dimGridCorners->size());
 
 		varGridVertexLat->get(
-			&(m_dSourceVertexLat[0][0]),
+			&(dVertexLat[0][0]),
 			dimGridSize->size(),
 			dimGridCorners->size());
+
+		// Convert radians to degrees
+		NcAtt * attGridVertexLatUnits = varGridVertexLat->get_att("units");
+		if (attGridVertexLatUnits != NULL) {
+			std::string strGridVertexLatUnits = attGridVertexLatUnits->as_string(0);
+			if (strGridVertexLatUnits == "degrees") {
+
+			} else if (strGridVertexLatUnits == "radians") {
+				for (int i = 0; i < dVertexLat.GetRows(); i++) {
+				for (int j = 0; j < dVertexLat.GetColumns(); j++) {
+					dVertexLat[i][j] *= 180.0 / M_PI;
+				}
+				}
+
+			} else {
+				_EXCEPTION1("Invalid \"units\" attribute for \"grid_corner_lat\" variable: Expected \"degrees\" or \"radians\" in mesh file \"%s\"", strMeshFile.c_str());
+			}
+		}
 
 		return;
 	}
 
 	// Check for rectilinear attribute
-	NcAtt * attRectilinear = ncSourceMesh.get_att("rectilinear");
+	NcAtt * attRectilinear = ncMesh.get_att("rectilinear");
 
 	// No rectilinear attribute
 	if (attRectilinear == NULL) {
-		int nElements = ncSourceMesh.get_dim("num_elem")->size();
-		m_vecSourceDimSizes.push_back(nElements);
-		m_vecSourceDimNames.push_back("num_elem");
+		NcDim * dimNumElem = ncMesh.get_dim("num_elem");
+		if (dimNumElem == NULL) {
+			_EXCEPTION1("Missing dimension \"num_elem\" in mesh file \"%s\"", strMeshFile.c_str());
+		}
+		int nElements = dimNumElem->size();
+		vecDimSizes.push_back(nElements);
+		vecDimNames.push_back("num_elem");
 		return;
 	}
 
 	// Obtain rectilinear attributes (dimension sizes)
 	NcAtt * attRectilinearDim0Size =
-		ncSourceMesh.get_att("rectilinear_dim0_size");
+		ncMesh.get_att("rectilinear_dim0_size");
 	NcAtt * attRectilinearDim1Size =
-		ncSourceMesh.get_att("rectilinear_dim1_size");
+		ncMesh.get_att("rectilinear_dim1_size");
 
 	if (attRectilinearDim0Size == NULL) {
 		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_size\"");
@@ -156,9 +240,9 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 
 	// Obtain rectilinear attributes (dimension names)
 	NcAtt * attRectilinearDim0Name =
-		ncSourceMesh.get_att("rectilinear_dim0_name");
+		ncMesh.get_att("rectilinear_dim0_name");
 	NcAtt * attRectilinearDim1Name =
-		ncSourceMesh.get_att("rectilinear_dim1_name");
+		ncMesh.get_att("rectilinear_dim1_name");
 
 	if (attRectilinearDim0Name == NULL) {
 		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_name\"");
@@ -171,13 +255,28 @@ void OfflineMap::InitializeSourceDimensionsFromFile(
 	std::string strDim1Name = attRectilinearDim1Name->as_string(0);
 
 	// Push rectilinear attributes into array
-	m_vecSourceDimSizes.resize(2);
-	m_vecSourceDimSizes[0] = nDim0Size;
-	m_vecSourceDimSizes[1] = nDim1Size;
+	vecDimSizes.resize(2);
+	vecDimSizes[0] = nDim0Size;
+	vecDimSizes[1] = nDim1Size;
 
-	m_vecSourceDimNames.resize(2);
-	m_vecSourceDimNames[0] = strDim0Name;
-	m_vecSourceDimNames[1] = strDim1Name;
+	vecDimNames.resize(2);
+	vecDimNames[0] = strDim0Name;
+	vecDimNames[1] = strDim1Name;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::InitializeSourceDimensionsFromFile(
+	const std::string & strSourceMesh
+) {
+	InitializeDimensionsFromMeshFile(
+		strSourceMesh,
+		m_vecSourceDimNames,
+		m_vecSourceDimSizes,
+		m_dSourceCenterLon,
+		m_dSourceCenterLat,
+		m_dSourceVertexLon,
+		m_dSourceVertexLat);
 }
 
 
@@ -203,225 +302,14 @@ void OfflineMap::InitializeSourceDimensions(
 void OfflineMap::InitializeTargetDimensionsFromFile(
 	const std::string & strTargetMesh
 ) {
-	// Open the source mesh
-	NcFile ncTargetMesh(strTargetMesh.c_str(), NcFile::ReadOnly);
-	if (!ncTargetMesh.is_valid()) {
-		_EXCEPTION1("Unable to open mesh \"%s\"", strTargetMesh.c_str());
-	}
-
-	// Check for grid dimensions (SCRIP format grid)
-	NcVar * varGridDims = ncTargetMesh.get_var("grid_dims");
-	if (varGridDims != NULL) {
-		NcDim * dimGridRank = varGridDims->get_dim(0);
-		if (dimGridRank == NULL) {
-			_EXCEPTIONT("Variable \"grid_dims\" has no dimensions");
-		}
-
-		m_vecTargetDimSizes.resize(dimGridRank->size());
-		varGridDims->get(&(m_vecTargetDimSizes[0]), dimGridRank->size());
-
-		if (dimGridRank->size() == 1) {
-			m_vecTargetDimNames.push_back("num_elem");
-		} else if (dimGridRank->size() == 2) {
-			m_vecTargetDimNames.push_back("lat");
-			m_vecTargetDimNames.push_back("lon");
-
-			int iTemp = m_vecTargetDimSizes[0];
-			m_vecTargetDimSizes[0] = m_vecTargetDimSizes[1];
-			m_vecTargetDimSizes[1] = iTemp;
-
-		} else {
-			_EXCEPTIONT("Target grid grid_rank must be < 3");
-		}
-
-		// Number of faces
-		NcDim * dimGridSize = ncTargetMesh.get_dim("grid_size");
-		if (dimGridSize == NULL) {
-			_EXCEPTIONT("Missing \"grid_size\" dimension in grid file");
-		}
-
-		// Number of grid corners
-		NcDim * dimGridCorners = ncTargetMesh.get_dim("grid_corners");
-		if (dimGridCorners == NULL) {
-			_EXCEPTIONT("Missing \"grid_corners\" dimension in grid file");
-		}
-
-		// Pull grid center longitude information from file
-		NcVar * varGridCenterLon = ncTargetMesh.get_var("grid_center_lon");
-		if (varGridCenterLon == NULL) {
-			_EXCEPTIONT("Missing \"grid_center_lon\" variable in grid file");
-		}
-
-		m_dTargetCenterLon.Allocate(dimGridSize->size());
-
-		varGridCenterLon->get(
-			&(m_dTargetCenterLon[0]),
-			dimGridSize->size());
-
-		// Convert radians to degrees
-		NcAtt * attGridCenterLonUnits = varGridCenterLon->get_att("units");
-		if (attGridCenterLonUnits != NULL) {
-			std::string strGridCenterLonUnits = attGridCenterLonUnits->as_string(0);
-			if (strGridCenterLonUnits == "degrees") {
-
-			} else if (strGridCenterLonUnits == "radians") {
-				for (int i = 0; i < m_dTargetCenterLon.GetRows(); i++) {
-					m_dTargetCenterLon[i] *= 180.0 / M_PI;
-				}
-
-			} else {
-				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_center_lon\" variable: Expected \"degrees\" or \"radians\"");
-			}
-		}
-
-		// Pull grid center latitude information from file
-		NcVar * varGridCenterLat = ncTargetMesh.get_var("grid_center_lat");
-		if (varGridCenterLat == NULL) {
-			_EXCEPTIONT("Missing \"grid_center_lat\" variable in grid file");
-		}
-
-		m_dTargetCenterLat.Allocate(dimGridSize->size());
-
-		varGridCenterLat->get(
-			&(m_dTargetCenterLat[0]),
-			dimGridSize->size());
-
-		// Convert radians to degrees
-		NcAtt * attGridCenterLatUnits = varGridCenterLat->get_att("units");
-		if (attGridCenterLatUnits != NULL) {
-			std::string strGridCenterLatUnits = attGridCenterLatUnits->as_string(0);
-			if (strGridCenterLatUnits == "degrees") {
-
-			} else if (strGridCenterLatUnits == "radians") {
-				for (int i = 0; i < m_dTargetCenterLat.GetRows(); i++) {
-					m_dTargetCenterLat[i] *= 180.0 / M_PI;
-				}
-
-			} else {
-				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_center_lat\" variable: Expected \"degrees\" or \"radians\"");
-			}
-		}
-
-		// Pull longitude grid vertex information from file
-		NcVar * varGridVertexLon = ncTargetMesh.get_var("grid_corner_lon");
-		if (varGridVertexLon == NULL) {
-			_EXCEPTIONT("Missing \"grid_corner_lon\" variable in grid file");
-		}
-
-		m_dTargetVertexLon.Allocate(
-			dimGridSize->size(),
-			dimGridCorners->size());
-
-		varGridVertexLon->get(
-			&(m_dTargetVertexLon[0][0]),
-			dimGridSize->size(),
-			dimGridCorners->size());
-
-		// Convert radians to degrees
-		NcAtt * attGridVertexLonUnits = varGridVertexLon->get_att("units");
-		if (attGridVertexLonUnits != NULL) {
-			std::string strGridVertexLonUnits = attGridVertexLonUnits->as_string(0);
-			if (strGridVertexLonUnits == "degrees") {
-
-			} else if (strGridVertexLonUnits == "radians") {
-				for (int i = 0; i < m_dTargetVertexLon.GetRows(); i++) {
-				for (int j = 0; j < m_dTargetVertexLon.GetColumns(); j++) {
-					m_dTargetVertexLon[i][j] *= 180.0 / M_PI;
-				}
-				}
-
-			} else {
-				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_corner_lon\" variable: Expected \"degrees\" or \"radians\"");
-			}
-		}
-
-		// Pull latitude grid vertex information from file
-		NcVar * varGridVertexLat = ncTargetMesh.get_var("grid_corner_lat");
-		if (varGridVertexLat == NULL) {
-			_EXCEPTIONT("Missing \"grid_corner_lat\" variable in grid file");
-		}
-
-		m_dTargetVertexLat.Allocate(
-			dimGridSize->size(),
-			dimGridCorners->size());
-
-		varGridVertexLat->get(
-			&(m_dTargetVertexLat[0][0]),
-			dimGridSize->size(),
-			dimGridCorners->size());
-
-		// Convert radians to degrees
-		NcAtt * attGridVertexLatUnits = varGridVertexLat->get_att("units");
-		if (attGridVertexLatUnits != NULL) {
-			std::string strGridVertexLatUnits = attGridVertexLatUnits->as_string(0);
-			if (strGridVertexLatUnits == "degrees") {
-
-			} else if (strGridVertexLatUnits == "radians") {
-				for (int i = 0; i < m_dTargetVertexLat.GetRows(); i++) {
-				for (int j = 0; j < m_dTargetVertexLat.GetColumns(); j++) {
-					m_dTargetVertexLat[i][j] *= 180.0 / M_PI;
-				}
-				}
-
-			} else {
-				_EXCEPTIONT("Invalid \"units\" attribute for \"grid_corner_lat\" variable: Expected \"degrees\" or \"radians\"");
-			}
-		}
-
-		return;
-	}
-
-	// Check for rectilinear attribute
-	NcAtt * attRectilinear = ncTargetMesh.get_att("rectilinear");
-
-	// No rectilinear attribute
-	if (attRectilinear == NULL) {
-		int nElements = ncTargetMesh.get_dim("num_elem")->size();
-		m_vecTargetDimSizes.push_back(nElements);
-		m_vecTargetDimNames.push_back("num_elem");
-		return;
-	}
-
-	// Obtain rectilinear attributes (dimension sizes)
-	NcAtt * attRectilinearDim0Size =
-		ncTargetMesh.get_att("rectilinear_dim0_size");
-	NcAtt * attRectilinearDim1Size =
-		ncTargetMesh.get_att("rectilinear_dim1_size");
-
-	if (attRectilinearDim0Size == NULL) {
-		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_size\"");
-	}
-	if (attRectilinearDim1Size == NULL) {
-		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_size\"");
-	}
-
-	int nDim0Size = attRectilinearDim0Size->as_int(0);
-	int nDim1Size = attRectilinearDim1Size->as_int(0);
-
-	// Obtain rectilinear attributes (dimension names)
-	NcAtt * attRectilinearDim0Name =
-		ncTargetMesh.get_att("rectilinear_dim0_name");
-	NcAtt * attRectilinearDim1Name =
-		ncTargetMesh.get_att("rectilinear_dim1_name");
-
-	if (attRectilinearDim0Name == NULL) {
-		_EXCEPTIONT("Missing attribute \"rectilinear_dim0_name\"");
-	}
-	if (attRectilinearDim1Name == NULL) {
-		_EXCEPTIONT("Missing attribute \"rectilinear_dim1_name\"");
-	}
-
-	std::string strDim0Name = attRectilinearDim0Name->as_string(0);
-	std::string strDim1Name = attRectilinearDim1Name->as_string(0);
-
-	// Push rectilinear attributes into array
-	m_vecTargetDimSizes.resize(2);
-	m_vecTargetDimSizes[0] = nDim0Size;
-	m_vecTargetDimSizes[1] = nDim1Size;
-
-	m_vecTargetDimNames.resize(2);
-	m_vecTargetDimNames[0] = strDim0Name;
-	m_vecTargetDimNames[1] = strDim1Name;
+	InitializeDimensionsFromMeshFile(
+		strTargetMesh,
+		m_vecTargetDimNames,
+		m_vecTargetDimSizes,
+		m_dTargetCenterLon,
+		m_dTargetCenterLat,
+		m_dTargetVertexLon,
+		m_dTargetVertexLat);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

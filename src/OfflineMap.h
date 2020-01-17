@@ -52,6 +52,19 @@ public:
 
 public:
 	///	<summary>
+	///		Initialize the array of dimensions from a file.
+	///	</summary>
+	static void InitializeDimensionsFromMeshFile(
+		const std::string & strMeshFile,
+		std::vector<std::string> & vecDimNames,
+		std::vector<int> & vecDimSizes,
+		DataArray1D<double> & dCenterLon,
+		DataArray1D<double> & dCenterLat,
+		DataArray2D<double> & dVertexLon,
+		DataArray2D<double> & dVertexLat
+	);
+
+	///	<summary>
 	///		Initialize the array of input dimensions from a file.
 	///	</summary>
 	void InitializeSourceDimensionsFromFile(
