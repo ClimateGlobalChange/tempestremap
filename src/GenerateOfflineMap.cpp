@@ -254,27 +254,11 @@ try {
     Announce("Input Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaInput, dTotalAreaInput / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
 
-    // Input mesh areas
-    if (eInputType == DiscretizationType_FV) {
-        mapRemap.SetSourceAreas(meshSource.vecFaceArea);
-		if (meshSource.vecMask.IsAttached()) {
-			mapRemap.SetSourceMask(meshSource.vecMask);
-		}
-    }
-
     // Calculate Face areas
     AnnounceStartBlock("Calculating output mesh Face areas");
     Real dTotalAreaOutput = meshTarget.CalculateFaceAreas(fTargetConcave);
     Announce("Output Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOutput, dTotalAreaOutput / (4.0 * M_PI));
     AnnounceEndBlock(NULL);
-
-    // Output mesh areas
-    if (eOutputType == DiscretizationType_FV) {
-        mapRemap.SetTargetAreas(meshTarget.vecFaceArea);
-		if (meshTarget.vecMask.IsAttached()) {
-			mapRemap.SetTargetMask(meshTarget.vecMask);
-		}
-    }
 
     // Verify that overlap mesh is in the correct order
     int ixSourceFaceMax = (-1);
@@ -357,6 +341,22 @@ try {
 		}
 		AnnounceEndBlock(NULL);
 	}
+
+    // Set source mesh areas in map
+    if (eInputType == DiscretizationType_FV) {
+        mapRemap.SetSourceAreas(meshSource.vecFaceArea);
+		if (meshSource.vecMask.IsAttached()) {
+			mapRemap.SetSourceMask(meshSource.vecMask);
+		}
+    }
+
+    // Set target mesh areas in map
+    if (eOutputType == DiscretizationType_FV) {
+        mapRemap.SetTargetAreas(meshTarget.vecFaceArea);
+		if (meshTarget.vecMask.IsAttached()) {
+			mapRemap.SetTargetMask(meshTarget.vecMask);
+		}
+    }
 
 	// Checks
 	bool fCheckConsistency = !fNoCheck;
