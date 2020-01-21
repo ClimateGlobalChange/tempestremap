@@ -100,6 +100,8 @@ int main(int argc, char** argv) {
   // Fill value override
   double dFillValueOverride=0.0;
 
+  bool skipMapGen = false;
+
   int nPin, nPout;
 
 	// Parse the command line
@@ -107,6 +109,7 @@ int main(int argc, char** argv) {
     CommandLineString(strSrcMesh, "src_mesh", "");
     CommandLineString(strTgtMesh, "tgt_mesh", "");
     CommandLineString(strOvMesh, "ov_mesh", "");
+    CommandLineBool(skipMapGen, "skip");
     CommandLineInt(nPin, "np_in", 1);
     CommandLineInt(nPout, "np_out", 1);
     CommandLineString(strForwardMap, "fwdmap", "");
@@ -158,30 +161,45 @@ int main(int argc, char** argv) {
 
     // Generate overlap meshes
     Mesh meshOverlap;
-    int ierr = GenerateOverlapMesh ( strSrcMesh, strTgtMesh, 
-                                     meshOverlap, strOvMesh,
-                                     "Netcdf4", "exact", false );
+    if (skipMapGen)
+    {
+      meshOverlap.Read(strOvMesh);
+    }
+    else
+    {
+      int ierr = GenerateOverlapMesh ( strSrcMesh, strTgtMesh, 
+                                       meshOverlap, strOvMesh,
+                                       "Netcdf4", "exact", false );
+    }
 
     OfflineMap mapFwdRemap, mapRevRemap;
-    // Compute the Forward map
-    ierr = GenerateOfflineMap ( mapFwdRemap, strSrcMesh, strTgtMesh, strOvMesh, "", "", 
-                                "fv", "fv", nPin, nPout,
-                                /* fBubble */ false, 
-                                /* fMonotoneTypeID */ 2,
-                                /* fVolumetric */ false,
-                                /* fNoConservation */ false, 
-                                /* fNoCheck */ false,
-                                "", strForwardMap);
+    if (skipMapGen)
+    {
+      mapFwdRemap.Read(strForwardMap);
+      mapRevRemap.Read(strReverseMap);
+    }
+    else
+    {
+      // Compute the Forward map
+      int ierr = GenerateOfflineMap ( mapFwdRemap, strSrcMesh, strTgtMesh, strOvMesh, "", "", 
+                                  "fv", "fv", nPin, nPout,
+                                  /* fBubble */ false, 
+                                  /* fMonotoneTypeID */ 2,
+                                  /* fVolumetric */ false,
+                                  /* fNoConservation */ false, 
+                                  /* fNoCheck */ false,
+                                  "", strForwardMap);
 
-    // Compute the Reverse map
-    ierr = GenerateOfflineMap ( mapRevRemap, strTgtMesh, strSrcMesh, strOvMesh, "", "", 
-                                "fv", "fv", nPout, nPin,
-                                /* fBubble */ false, 
-                                /* fMonotoneTypeID */ 2,
-                                /* fVolumetric */ false,
-                                /* fNoConservation */ false, 
-                                /* fNoCheck */ false,
-                                "", strReverseMap);
+      // Compute the Reverse map
+      ierr = GenerateOfflineMap ( mapRevRemap, strTgtMesh, strSrcMesh, strOvMesh, "", "", 
+                                  "fv", "fv", nPout, nPin,
+                                  /* fBubble */ false, 
+                                  /* fMonotoneTypeID */ 2,
+                                  /* fVolumetric */ false,
+                                  /* fNoConservation */ false, 
+                                  /* fNoCheck */ false,
+                                  "", strReverseMap);
+    }
 
     // OfflineMap
     std::vector<DataArray1D<double> > source_solutions, target_solutions;
@@ -206,7 +224,7 @@ int main(int argc, char** argv) {
     }
 
     // Open source data file
-    NcFile ncOutput(strOutputData.c_str(), NcFile::Replace, NULL, 0, NcFile::Offset64Bits);
+    NcFile ncOutput(strOutputData.c_str(), NcFile::Replace, NULL, 0, NcFile::/*Offset64Bits*//*Netcdf4*/Netcdf4Classic);
     if (!ncOutput.is_valid()) {
       _EXCEPTION1("Cannot open output data file \"%s\"",
         strOutputData.c_str());
@@ -223,7 +241,8 @@ int main(int argc, char** argv) {
     NcDim * dimSrcGridRank = ncOutput.add_dim("n_src_dofs", nB);
     NcDim * dimDstGridRank = ncOutput.add_dim("n_dst_dofs", nA);
     NcDim * dimOutputFrequency = ncOutput.add_dim("output_frequency", iOutputFrequency);
-    NcDim * dimLevels      = ncOutput.add_dim("time", iNRemapIterations/iOutputFrequency+1);
+    //NcDim * dimLevels      = ncOutput.add_dim("time", iNRemapIterations/iOutputFrequency+1);
+    NcDim * dimLevels      = ncOutput.add_dim("time", NC_UNLIMITED);
     std::vector<NcVar *> varFields(nvars*2);
 
     std::stringstream sstr;
@@ -233,12 +252,12 @@ int main(int argc, char** argv) {
       sstr << vecVariableStrings[ivar] << "_remap_src";
       std::cout << ivar << ") Source solution: " << sstr.str() << " " << source_solutions[ivar].GetRows() << std::endl;
       assert(source_solutions[ivar].GetRows() == nB);
-      varFields[ivar]       = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimSrcGridRank, dimLevels);
+      varFields[ivar]       = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimLevels, dimSrcGridRank);
       sstr.str("");
       sstr << vecVariableStrings[ivar] << "_remap_tgt";
       std::cout << ivar << ") Target solution: " << sstr.str() << " " << target_solutions[ivar].GetRows() << std::endl;
       assert(target_solutions[ivar].GetRows() == nA);
-      varFields[nvars+ivar] = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimDstGridRank, dimLevels);
+      varFields[nvars+ivar] = ncOutput.add_var(sstr.str().c_str(), ncDouble, dimLevels, dimDstGridRank);
     }
 
     AnnounceEndBlock(NULL);
@@ -248,7 +267,7 @@ int main(int argc, char** argv) {
       for (unsigned ivar=0; ivar < nvars; ++ivar)
       {
         varFields[ivar]->set_cur(0, 0);
-        varFields[ivar]->put(source_solutions[ivar], nB, 1);
+        varFields[ivar]->put(source_solutions[ivar], 1, nB);
       }
     }
 
@@ -262,8 +281,8 @@ int main(int argc, char** argv) {
         // Apply the offline map to the data
         smatRemap.Apply(source_solutions[ivar], target_solutions[ivar]);
         if (iter % iOutputFrequency == 0) { // Put the data in NetCDF file as needed
-          varFields[nvars+ivar]->set_cur(0, iter);
-          varFields[nvars+ivar]->put(target_solutions[ivar], nA, 1);
+          varFields[nvars+ivar]->set_cur(iter+1, 0);
+          varFields[nvars+ivar]->put(target_solutions[ivar], 1, nA);
         }
       }
 
@@ -273,8 +292,8 @@ int main(int argc, char** argv) {
         // Apply the offline map to the data
         smatRemap2.Apply(target_solutions[ivar], source_solutions[ivar]);
         if (iter % iOutputFrequency == 0) { // Put the data in NetCDF file as needed
-          varFields[ivar]->set_cur(0, iter+1);
-          varFields[ivar]->put(source_solutions[ivar], nB, 1);
+          varFields[ivar]->set_cur(iter+1, 0);
+          varFields[ivar]->put(source_solutions[ivar], 1, nB);
         }
       }
 
