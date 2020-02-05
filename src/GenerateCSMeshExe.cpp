@@ -37,11 +37,15 @@ int main(int argc, char** argv) {
 	// NetCDF format
 	std::string strOutputFormat;
 
+	// Alternative method (removed)
+	bool fAlt;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineInt(nResolution, "res", 10);
 		CommandLineString(strOutputFile, "file", "outCSMesh.g");
 		CommandLineString(strOutputFormat, "out_format", "Netcdf4");
+		CommandLineBool(fAlt, "alt");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
