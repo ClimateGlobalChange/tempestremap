@@ -641,7 +641,8 @@ public:
         MeshType_IcosaHedral = 2,
         MeshType_IcosaHedralDual = 3,
         MeshType_Overlap = 4,
-		MeshType_UTM = 5
+		MeshType_UTM = 5,
+		MeshType_Transect = 6
     };
 
     MeshType type;

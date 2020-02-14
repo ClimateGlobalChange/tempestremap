@@ -58,6 +58,7 @@ libTempestRemap_la_SOURCES = \
 	src/MeshUtilitiesFuzzy.cpp \
 	src/MeshUtilitiesExact.cpp \
 	src/GenerateCSMesh.cpp \
+	src/GenerateTransectMesh.cpp \
 	src/GenerateICOMesh.cpp \
 	src/GenerateRLLMesh.cpp \
 	src/GenerateUTMMesh.cpp \
@@ -94,6 +95,7 @@ GenerateTestData_SOURCES = src/GenerateTestData.cpp
 GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
 GenerateUTMMesh_SOURCES = src/GenerateUTMMeshExe.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
+GenerateTransectMesh_SOURCES = src/GenerateTransectMeshExe.cpp
 GenerateICOMesh_SOURCES = src/GenerateICOMeshExe.cpp
 GenerateLambertConfConicMesh_SOURCES = src/GenerateLambertConfConicMeshExe.cpp
 GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
@@ -121,7 +123,8 @@ ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
 ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
-				GenerateCSMesh GenerateRLLMesh GenerateUTMMesh GenerateICOMesh \
+				GenerateCSMesh GenerateTransectMesh GenerateRLLMesh \
+				GenerateUTMMesh GenerateICOMesh \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
 				ApplyOfflineMap GenerateOfflineMap \
