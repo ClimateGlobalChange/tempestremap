@@ -56,6 +56,8 @@ int GenerateRLLMesh(
 	bool fFlipLatLon,
 	bool fForceGlobal,
 	std::string strInputFile,
+	std::string strInputFileLonName,
+	std::string strInputFileLatName,
 	std::string strOutputFile, 
 	std::string strOutputFormat,
 	bool fVerbose
@@ -115,24 +117,28 @@ try {
 			_EXCEPTION1("Unable to load input file \"%s\"", strInputFile.c_str());
 		}
 
-		NcDim * dimLon = ncfileInput.get_dim("lon");
+		NcDim * dimLon = ncfileInput.get_dim(strInputFileLonName.c_str());
 		if (dimLon == NULL) {
-			_EXCEPTIONT("Input file missing dimension \"lon\"");
+			_EXCEPTION1("Input file missing dimension \"%s\"",
+				strInputFileLonName.c_str());
 		}
 
-		NcDim * dimLat = ncfileInput.get_dim("lat");
+		NcDim * dimLat = ncfileInput.get_dim(strInputFileLatName.c_str());
 		if (dimLat == NULL) {
-			_EXCEPTIONT("Input file missing dimension \"lat\"");
+			_EXCEPTION1("Input file missing dimension \"%s\"",
+				strInputFileLatName.c_str());
 		}
 
-		NcVar * varLon = ncfileInput.get_var("lon");
+		NcVar * varLon = ncfileInput.get_var(strInputFileLonName.c_str());
 		if (varLon == NULL) {
-			_EXCEPTIONT("Input file missing variable \"lon\"");
+			_EXCEPTION1("Input file missing variable \"%s\"",
+				strInputFileLonName.c_str());
 		}
 
-		NcVar * varLat = ncfileInput.get_var("lat");
+		NcVar * varLat = ncfileInput.get_var(strInputFileLatName.c_str());
 		if (varLon == NULL) {
-			_EXCEPTIONT("Input file missing variable \"lat\"");
+			_EXCEPTION1("Input file missing variable \"%s\"",
+				strInputFileLatName.c_str());
 		}
 
 		nLongitudes = dimLon->size();
@@ -153,24 +159,34 @@ try {
 		varLat->set_cur((long)0);
 		varLat->get(&(dLatNode[0]), nLatitudes);
 
+		double dLatOrient = 1.0;
+		if (dLatNode[1] < dLatNode[0]) {
+			dLatOrient = -1.0;
+		}
+		for (int i = 0; i < nLatitudes-1; i++) {
+			if (dLatOrient * dLatNode[i] > dLatOrient * dLatNode[i+1]) {
+				_EXCEPTIONT("Latitudes must be monotone increasing or decreasing");
+			}
+		}
+
 		for (int i = 0; i < nLongitudes-1; i++) {
 			if (dLonNode[i] > dLonNode[i+1]) {
 				_EXCEPTIONT("Longitudes must be monotone increasing");
 			}
 		}
-
+/*
 		for (int j = 0; j < nLatitudes-1; j++) {
 			if (dLatNode[j] > dLatNode[j+1]) {
 				_EXCEPTIONT("Latitudes must be monotone increasing");
 			}
 		}
-
+*/
 		double dFirstDeltaLon = dLonNode[1] - dLonNode[0];
 		double dSecondLastDeltaLon = dLonNode[nLongitudes-1] - dLonNode[nLongitudes-2];
 		double dLastDeltaLon = dLonNode[0] - (dLonNode[nLongitudes-1] - 360.0);
 
 		if (fabs(dFirstDeltaLon - dLastDeltaLon) < 1.0e-12) {
-			std::cout << "Mesh assumed periodic in longitude" << std::endl;
+			std::cout << "..Mesh assumed periodic in longitude" << std::endl;
 			fForceGlobal = true;
 		}
 
@@ -179,7 +195,7 @@ try {
 
 		if (fForceGlobal) {
 			dLonEdge[0] = 0.5 * (dLonNode[0] + dLonNode[nLongitudes-1] - 360.0);
-			dLonEdge[nLongitudes] = dLonEdge[0];
+			dLonEdge[nLongitudes] = dLonEdge[0] + 360.0;
 		} else {
 			dLonEdge[0] = dLonNode[0] - 0.5 * dFirstDeltaLon;
 			dLonEdge[nLongitudes] = dLonNode[nLongitudes-1] + 0.5 * dSecondLastDeltaLon;
@@ -329,7 +345,6 @@ try {
 	std::cout << dLonBegin * 180.0 / M_PI << ", " << dLonEnd * 180.0 / M_PI << "]" << std::endl;
 	std::cout << "..Latitudes in range [";
 	std::cout << dLatBegin * 180.0 / M_PI << ", " << dLatEnd * 180.0 / M_PI << "]" << std::endl;
-	std::cout << std::endl;
 
 	// Check parameters
 	if (nLatitudes < 2) {

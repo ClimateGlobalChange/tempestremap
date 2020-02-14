@@ -51,8 +51,14 @@ int main(int argc, char** argv) {
 	// Flip latitude and longitude dimension in FaceVector ordering
 	bool fFlipLatLon;
 
-    // Input filename
+    // Input file for automatic generation of consistent RLL mesh
     std::string strInputFile;
+
+	// Input file longitude name
+	std::string strInputFileLonName;
+
+	// Input file latitude name
+	std::string strInputFileLatName;
 
     // Input mesh is global
     bool fForceGlobal;
@@ -77,6 +83,8 @@ int main(int argc, char** argv) {
 	CommandLineBool(fGlobalCap, "global_cap");
     CommandLineBool(fFlipLatLon, "flip");
     CommandLineString(strInputFile, "in_file", "");
+    CommandLineString(strInputFileLonName, "in_file_lon", "lon");
+    CommandLineString(strInputFileLatName, "in_file_lat", "lat");
     CommandLineBool(fForceGlobal, "in_global");
     CommandLineBool(fVerbose, "verbose");
     CommandLineString(strOutputFile, "file", "outRLLMesh.g");
@@ -106,7 +114,8 @@ int main(int argc, char** argv) {
 		fGlobalCap,
 		fFlipLatLon,
 		fForceGlobal,
-		strInputFile, strOutputFile, strOutputFormat,
+		strInputFile, strInputFileLonName, strInputFileLatName,
+		strOutputFile, strOutputFormat,
 		fVerbose);
 	if (err) exit(err);
 
