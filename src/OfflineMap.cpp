@@ -2566,7 +2566,7 @@ int OfflineMap::IsMonotone(
 
 	// Verify all entries are in the range [0,1]
 	for (int i = 0; i < dataRows.GetRows(); i++) {
-		if (isnan(dataEntries[i])) {
+		if (std::isnan(dataEntries[i])) {
 			Announce("OfflineMap has NaN (s%i -> t%i)",
 				dataCols[i]+1, dataRows[i]+1);
 		}
@@ -2736,7 +2736,7 @@ bool OfflineMap::CheckMap(
 	} else {
 		AnnounceStartBlock("Weights within range [-10,+10]");
 		for (int i = 0; i < dataRows.GetRows(); i++) {
-			if (isnan(dataEntries[i])) {
+			if (std::isnan(dataEntries[i])) {
 				Announce("OfflineMap has NaN (s%i -> t%i)",
 					dataCols[i]+1, dataRows[i]+1);
 
@@ -2778,7 +2778,7 @@ bool OfflineMap::CheckMap(
 			if (dataRows[i] < iMinRow) {
 				iMinRow = dataRows[i];
 			}
-			if (!isnan(dataEntries[i])) {
+			if (!std::isnan(dataEntries[i])) {
 				if (dataEntries[i] < dMinWeight) {
 					dMinWeight = dataEntries[i];
 				}
