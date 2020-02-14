@@ -2324,7 +2324,7 @@ void OfflineMap::Write(
 	{
 		DataArray1D<double> dFracA(nA);
 		DataArray1D<double> dFracB(nB);
-	
+
 		for (int i = 0; i < vecS.GetRows(); i++) {
 			dFracA[vecCol[i]] += vecS[i] / m_dSourceAreas[vecCol[i]] * m_dTargetAreas[vecRow[i]];
 			dFracB[vecRow[i]] += vecS[i];
@@ -2566,6 +2566,10 @@ int OfflineMap::IsMonotone(
 
 	// Verify all entries are in the range [0,1]
 	for (int i = 0; i < dataRows.GetRows(); i++) {
+		if (isnan(dataEntries[i])) {
+			Announce("OfflineMap has NaN (s%i -> t%i)",
+				dataCols[i]+1, dataRows[i]+1);
+		}
 		if ((dataEntries[i] < -dTolerance) ||
 			(dataEntries[i] > 1.0 + dTolerance)
 		) {
@@ -2732,7 +2736,11 @@ bool OfflineMap::CheckMap(
 	} else {
 		AnnounceStartBlock("Weights within range [-10,+10]");
 		for (int i = 0; i < dataRows.GetRows(); i++) {
-			if ((dataEntries[i] < -10.0) || (dataEntries[i] > 10.0)) {
+			if (isnan(dataEntries[i])) {
+				Announce("OfflineMap has NaN (s%i -> t%i)",
+					dataCols[i]+1, dataRows[i]+1);
+
+			} else if ((dataEntries[i] < -10.0) || (dataEntries[i] > 10.0)) {
 				Announce("OfflineMap has unusually large weight (s%i -> t%i) %1.15e",
 					dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
 			}
@@ -2770,11 +2778,13 @@ bool OfflineMap::CheckMap(
 			if (dataRows[i] < iMinRow) {
 				iMinRow = dataRows[i];
 			}
-			if (dataEntries[i] < dMinWeight) {
-				dMinWeight = dataEntries[i];
-			}
-			if (dataEntries[i] > dMaxWeight) {
-				dMaxWeight = dataEntries[i];
+			if (!isnan(dataEntries[i])) {
+				if (dataEntries[i] < dMinWeight) {
+					dMinWeight = dataEntries[i];
+				}
+				if (dataEntries[i] > dMaxWeight) {
+					dMaxWeight = dataEntries[i];
+				}
 			}
 
 			nNonzeroRowCount[dataRows[i]]++;
@@ -2839,6 +2849,42 @@ bool OfflineMap::CheckMap(
 			}
 		}
 
+		double dSourceMinFrac = DBL_MAX;
+		double dSourceMaxFrac = -DBL_MAX;
+		double dTargetMinFrac = DBL_MAX;
+		double dTargetMaxFrac = -DBL_MAX;
+		{
+			DataArray1D<double> dSourceFrac(m_dSourceAreas.GetRows());
+			DataArray1D<double> dTargetFrac(m_dTargetAreas.GetRows());
+
+			for (int i = 0; i < dataEntries.GetRows(); i++) {
+				dSourceFrac[dataCols[i]] +=
+					dataEntries[i]
+					/ m_dSourceAreas[dataCols[i]]
+					* m_dTargetAreas[dataRows[i]];
+				dTargetFrac[dataRows[i]] += dataEntries[i];
+			}
+
+			for (int i = 0; i < m_dSourceAreas.GetRows(); i++) {
+				if (dSourceFrac[i] < dSourceMinFrac) {
+					dSourceMinFrac = dSourceFrac[i];
+				}
+				if (dSourceFrac[i] > dSourceMaxFrac) {
+					dSourceMaxFrac = dSourceFrac[i];
+				}
+			}
+
+			for (int i = 0; i < m_dTargetAreas.GetRows(); i++) {
+				if (dTargetFrac[i] < dTargetMinFrac) {
+					dTargetMinFrac = dTargetFrac[i];
+				}
+				if (dTargetFrac[i] > dTargetMaxFrac) {
+					dTargetMaxFrac = dTargetFrac[i];
+				}
+			}
+
+		}
+
 		int iSourceMinMask = INT_MAX;
 		int iSourceMaxMask = INT_MIN;
 		for (int i = 0; i < m_iSourceMask.GetRows(); i++) {
@@ -2901,6 +2947,10 @@ bool OfflineMap::CheckMap(
 		if (dTargetMinArea < 0.0) {
 			Announce("ERROR: Negative source area detected");
 		}
+		Announce("    Source frac min/max: %1.15e / %1.15e",
+			dSourceMinFrac, dSourceMaxFrac);
+		Announce("    Target frac min/max: %1.15e / %1.15e",
+			dTargetMinFrac, dTargetMaxFrac);
 		if (m_iSourceMask.GetRows() != 0) {
 			Announce("    Source mask min/max: %i / %i",
 				iSourceMinMask, iSourceMaxMask);

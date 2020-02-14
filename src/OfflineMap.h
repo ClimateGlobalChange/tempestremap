@@ -300,7 +300,6 @@ public:
 		return m_dTargetVertexLat;
 	}
 
-
 public:
 	///	<summary>
 	///		Copy a list of variables from a source file to target file.
