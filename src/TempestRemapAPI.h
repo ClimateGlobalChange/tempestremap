@@ -16,6 +16,19 @@ extern "C" {
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
+	// Generate a transect mesh
+	int GenerateTransectMesh(
+		Mesh & mesh,
+		double dLonDeg0,
+		double dLatDeg0,
+		double dLonDeg1,
+		double dLatDeg1,
+		double dPerpDtheta,
+		int nParaElements,
+		int nPerpElements,
+		std::string strOutputFile,
+		std::string strOutputFormat );
+
 	// Generate a Latitude-Longitude mesh
 	int GenerateRLLMesh (
 		Mesh & meshOut,
@@ -29,6 +42,8 @@ extern "C" {
 		bool fFlipLatLon,
 		bool fForceGlobal,
 		std::string strInputFile,
+		std::string strInputFileLonName,
+		std::string strInputFileLatName,
 		std::string strOutputFile,
 		std::string strOutputFormat,
 		bool fVerbose );
