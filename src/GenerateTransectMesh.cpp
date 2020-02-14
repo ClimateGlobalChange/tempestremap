@@ -195,6 +195,15 @@ try {
 		std::cout << std::endl;
 
 		mesh.Write(strOutputFile, eOutputFormat);
+
+		if (nPerpElements > 1) {
+			NcFile ncOutput(strOutputFile.c_str(), NcFile::Write);
+			ncOutput.add_att("rectilinear", "true");
+			ncOutput.add_att("rectilinear_dim0_size", nParaElements);
+			ncOutput.add_att("rectilinear_dim1_size", nPerpElements);
+			ncOutput.add_att("rectilinear_dim0_name", "along_transect");
+			ncOutput.add_att("rectilinear_dim1_name", "perp_transect");
+		}
 	}
 
 	// Announce
