@@ -24,6 +24,13 @@ typedef Real   REAL;  // for use with triangles.h
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// Number of warning messages for individual cells that should be printed
+// by AnalyzeMap.
+//
+static const int OfflineMapWarningMessageCount = 10;
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // Defines the threshold for the 1-norm condition number, above which
 // the finite volume reconstruction drops to first order accuracy.
 //

@@ -2469,8 +2469,19 @@ int OfflineMap::IsConsistent(
 	for (int i = 0; i < dRowSums.GetRows(); i++) {
 		if (fabs(dRowSums[i] - 1.0) > dTolerance) {
 			nCount++;
-			Announce("OfflineMap is not consistent (row %i) [%1.15e != 1.0]",
-				i+1, dRowSums[i]);
+			if (nCount <= OfflineMapWarningMessageCount) {
+				Announce("OfflineMap is not consistent (row %i) [%1.15e != 1.0]",
+					i+1, dRowSums[i]);
+			}
+		}
+	}
+	if (nCount > OfflineMapWarningMessageCount) {
+		if (OfflineMapWarningMessageCount == 0) {
+			Announce("OfflineMap is not consistent in %i dofs",
+				nCount - OfflineMapWarningMessageCount);
+		} else if (OfflineMapWarningMessageCount > 0) {
+			Announce("OfflineMap is not consistent in %i more dofs",
+				nCount - OfflineMapWarningMessageCount);
 		}
 	}
 
@@ -2520,8 +2531,19 @@ int OfflineMap::IsConservative(
 	for (int i = 0; i < dColumnSums.GetRows(); i++) {
 		if (fabs(dColumnSums[i] - 1.0) > dTolerance) {
 			nCount++;
-			Announce("OfflineMap is not conservative (col %i) [%1.15e != 1.0]",
-				i+1, dColumnSums[i]);
+			if (nCount <= OfflineMapWarningMessageCount) {
+				Announce("OfflineMap is not conservative (col %i) [%1.15e != 1.0]",
+					i+1, dColumnSums[i]);
+			}
+		}
+	}
+	if (nCount > OfflineMapWarningMessageCount) {
+		if (OfflineMapWarningMessageCount == 0) {
+			Announce("OfflineMap is not conservative in %i dofs",
+				nCount - OfflineMapWarningMessageCount);
+		} else if (OfflineMapWarningMessageCount > 0) {
+			Announce("OfflineMap is not conservative in %i more dofs",
+				nCount - OfflineMapWarningMessageCount);
 		}
 	}
 
@@ -2548,8 +2570,19 @@ int OfflineMap::IsMonotone(
 			(dataEntries[i] > 1.0 + dTolerance)
 		) {
 			nCount++;
-			Announce("OfflineMap is not monotone (s%i -> t%i) %1.15e",
-				dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
+			if (nCount <= OfflineMapWarningMessageCount) {
+				Announce("OfflineMap is not monotone (s%i -> t%i) %1.15e",
+					dataCols[i]+1, dataRows[i]+1, dataEntries[i]);
+			}
+		}
+	}
+	if (nCount > OfflineMapWarningMessageCount) {
+		if (OfflineMapWarningMessageCount == 0) {
+			Announce("OfflineMap is not monotone in %i dofs",
+				nCount - OfflineMapWarningMessageCount);
+		} else if (OfflineMapWarningMessageCount > 0) {
+			Announce("OfflineMap is not monotone in %i more dofs",
+				nCount - OfflineMapWarningMessageCount);
 		}
 	}
 
@@ -2654,7 +2687,7 @@ bool OfflineMap::CheckMap(
 		if (nConsistentFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("%i warnings found", nConsistentFail);
+			AnnounceEndBlock(NULL);
 		}
 	} else {
 		for (int i = 0; i < dataRows.GetRows(); i++) {
@@ -2671,7 +2704,7 @@ bool OfflineMap::CheckMap(
 		if (nConservativeFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("%i warnings found", nConservativeFail);
+			AnnounceEndBlock(NULL);
 		}
 	} else {
 		if (m_dSourceAreas.GetRows() != dColSums.GetRows()) {
@@ -2692,7 +2725,7 @@ bool OfflineMap::CheckMap(
 		if (nMonotoneFail == 0) {
 			AnnounceEndBlock("PASS");
 		} else {
-			AnnounceEndBlock("%i warnings found", nMonotoneFail);
+			AnnounceEndBlock(NULL);
 		}
 
 	// Check nominal range of entries
