@@ -285,7 +285,9 @@ void Mesh::RemoveCoincidentNodes() {
 		return;
 	}
 
-	Announce("%i duplicate nodes detected", nodes.size() - vecUniques.size());
+	if(verbose) {
+		Announce("%i duplicate nodes detected", nodes.size() - vecUniques.size());
+	}
 
 	// Remove duplicates
 	NodeVector nodesOld = nodes;

@@ -751,7 +751,7 @@ public:
 	///	<summary>
 	///		Remove coincident nodes from the Mesh and adjust indices in faces.
 	///	</summary>
-	void RemoveCoincidentNodes();
+	void RemoveCoincidentNodes(bool verbose=true);
 
 	///	<summary>
 	///		Write the mesh to a NetCDF file in Exodus format.
