@@ -17,6 +17,7 @@
 #ifndef _COMMANDLINE_H_
 #define _COMMANDLINE_H_
 
+#include "Announce.h"
 #include "Exception.h"
 
 #include <vector>
@@ -146,7 +147,7 @@ public:
 	///		Print the usage information of this parameter.
 	///	</summary>
 	virtual void PrintUsage() const {
-		printf("  %s <bool> [%s] %s\n",
+		Announce("  %s <bool> [%s] %s",
 			m_strName.c_str(),
 			(m_fValue)?("true"):("false"),
 			m_strDescription.c_str());
@@ -206,7 +207,7 @@ public:
 	///		Print the usage information of this parameter.
 	///	</summary>
 	virtual void PrintUsage() const {
-		printf("  %s <string> [\"%s\"] %s\n",
+		Announce("  %s <string> [\"%s\"] %s",
 			m_strName.c_str(),
 			m_strValue.c_str(),
 			m_strDescription.c_str());
@@ -272,7 +273,7 @@ public:
 	///		Print the usage information of this parameter.
 	///	</summary>
 	virtual void PrintUsage() const {
-		printf("  %s <integer> [%i] %s\n",
+		Announce("  %s <integer> [%i] %s",
 			m_strName.c_str(),
 			m_dValue,
 			m_strDescription.c_str());
@@ -338,7 +339,7 @@ public:
 	///		Print the usage information of this parameter.
 	///	</summary>
 	virtual void PrintUsage() const {
-		printf("  %s <double> [%f] %s\n",
+		Announce("  %s <double> [%f] %s",
 			m_strName.c_str(),
 			m_dValue,
 			m_strDescription.c_str());
@@ -429,7 +430,7 @@ void _ParseCommandLine(
 				vecParameters[p]->Activate();
 				int z;
 				if (vecParameters[p]->GetValueCount() >= argc - command) {
-					printf("Error: Insufficient values for option %s\n",
+					Announce("Error: Insufficient values for option %s",
 						argv[command]);
 					errorCommandLine = true;
 					command = argc;
@@ -447,7 +448,7 @@ void _ParseCommandLine(
 				if ((vecParameters[p]->GetValueCount() >= 0) &&
 					(z != vecParameters[p]->GetValueCount())
 				) {
-					printf("Error: Insufficient values for option %s\n",
+					Announce("Error: Insufficient values for option %s",
 						argv[command]);
 					errorCommandLine = true;
 					command = argc;
@@ -456,7 +457,7 @@ void _ParseCommandLine(
 			}
 		}
 		if (!found) {
-			printf("Error: Invalid parameter \"%s\"\n", argv[command]);
+			Announce("Error: Invalid parameter \"%s\"", argv[command]);
 			errorCommandLine = true;
 			break;
 		}
@@ -542,7 +543,7 @@ void _ParseCommandLine(
 				_vecParameters[_p]->Activate(); \
 				int _z; \
 				if (_vecParameters[_p]->GetValueCount() >= argc - _command) { \
-					printf("Error: Insufficient values for option %s\n", \
+					Announce("Error: Insufficient values for option %s", \
 						argv[_command]); \
 					_errorCommandLine = true; \
 					_command = argc; \
@@ -560,7 +561,7 @@ void _ParseCommandLine(
 				if ((_vecParameters[_p]->GetValueCount() >= 0) && \
 					(_z != _vecParameters[_p]->GetValueCount()) \
 				) { \
-					printf("Error: Insufficient values for option %s\n", \
+					Announce("Error: Insufficient values for option %s", \
 						argv[_command]); \
 					_errorCommandLine = true; \
 					_command = argc; \
@@ -569,7 +570,7 @@ void _ParseCommandLine(
 			} \
 		} \
 		if (!_found) { \
-			printf("Error: Invalid parameter \"%s\"\n", argv[_command]); \
+			Announce("Error: Invalid parameter \"%s\"", argv[_command]); \
 			_errorCommandLine = true; \
 			break; \
 		} \
@@ -580,14 +581,14 @@ void _ParseCommandLine(
 ///	</summary>
 #define PrintCommandLineUsage(argv) \
 	if (_errorCommandLine) \
-		printf("\nUsage: %s <Parameter List>\n", argv[0]); \
-	printf("Parameters:\n"); \
+		Announce("\nUsage: %s <Parameter List>", argv[0]); \
+	Announce("Parameters:"); \
 	for (int _p = 0; _p < _vecParameters.size(); _p++) \
 		_vecParameters[_p]->PrintUsage(); \
 	if (_errorCommandLine) \
 		exit(-1);
 
-///	<summary>
+///	<summary
 ///		End the definition of command line parameters.
 ///	</summary>
 #define EndCommandLine(argv) \

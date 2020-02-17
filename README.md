@@ -7,11 +7,10 @@ Email:   paullrich@ucdavis.edu
 Overview
 --------
 
-This software constitutes the beta release of TempestRemap, a conservative,
-consistent and monotone remapping package for arbitrary grid geometry with
-support for finite volumes and finite elements.  There is still quite a bit of
-work to be done, but any feedback is appreciated on the software in its current
-form.
+TempestRemap is a conservative, consistent and monotone remapping package for
+arbitrary grid geometry with support for finite volumes and finite elements.
+There is still quite a bit of work to be done, but any feedback is appreciated
+on the software in its current form.
 
 If you choose to use this software in your work, please cite our papers:
 

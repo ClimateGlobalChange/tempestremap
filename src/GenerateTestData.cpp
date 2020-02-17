@@ -261,7 +261,7 @@ try {
 	}
 
 	// Input mesh
-	AnnounceStartBlock("Loading Mesh");
+	AnnounceStartBlock("Loading mesh");
 	Mesh mesh(strMeshFile);
 
 	// Check for rectilinear Mesh
@@ -338,7 +338,7 @@ try {
 		vecOutputDimNames.push_back("lev");
 	}
 
-	AnnounceEndBlock("Done");
+	AnnounceEndBlock(NULL);
 
 	// Generate test data
 	AnnounceStartBlock("Generating test data");
@@ -667,13 +667,18 @@ try {
 	// Delete the test
 	delete pTest;
 
+	AnnounceBanner();
+
 	return (0);
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
+	AnnounceBanner();
+
 	return (-1);
 
 } catch(...) {
+	AnnounceBanner();
 	return (-2);
 }
 }

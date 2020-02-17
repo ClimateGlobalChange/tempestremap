@@ -2,10 +2,10 @@
 ///
 ///	\file    ApplyOfflineMap.cpp
 ///	\author  Paul Ullrich
-///	\version September 15, 2014
+///	\version Feburary 14, 2020
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2020 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -18,6 +18,12 @@
 #include "Exception.h"
 #include "OfflineMap.h"
 #include "netcdfcpp.h"
+
+#include <fstream>
+
+#if defined(TEMPEST_MPIOMP)
+#include <mpi.h>
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -54,20 +60,55 @@ static void ParseVariableList(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Parse the list of input files.
+///	</summary>
+void ParseInputFiles(
+	const std::string & strInputFile,
+	std::vector<NcFile *> & vecFiles
+) {
+	int iLast = 0;
+	for (int i = 0; i <= strInputFile.length(); i++) {
+		if ((i == strInputFile.length()) ||
+		    (strInputFile[i] == ';')
+		) {
+			std::string strFile =
+				strInputFile.substr(iLast, i - iLast);
+
+			NcFile * pNewFile = new NcFile(strFile.c_str());
+
+			if (!pNewFile->is_valid()) {
+				_EXCEPTION1("Cannot open input file \"%s\"",
+					strFile.c_str());
+			}
+
+			vecFiles.push_back(pNewFile);
+			iLast = i+1;
+		}
+	}
+
+	if (vecFiles.size() == 0) {
+		_EXCEPTION1("No input files found in \"%s\"",
+			strInputFile.c_str());
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 extern "C" 
 int ApplyOfflineMap(
 	std::string strInputData,
+	std::string strInputDataList,
 	std::string strInputMap,
 	std::string strVariables,
-	std::string strInputData2, 
-	std::string strInputMap2,
-	std::string strVariables2,
 	std::string strOutputData,
+	std::string strOutputDataList,
 	std::string strNColName, 
 	bool fOutputDouble,
 	std::string strPreserveVariables,
 	bool fPreserveAll,
-	double dFillValueOverride
+	double dFillValueOverride,
+	std::string strLogDir
 ) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -78,11 +119,76 @@ try {
 	if (strInputMap == "") {
 		_EXCEPTIONT("No map specified");
 	}
-	if (strInputData == "") {
-		_EXCEPTIONT("No input data specified");
+	if ((strInputData == "") && (strInputDataList == "")) {
+		_EXCEPTIONT("No input data (--in_data) or (--in_data_list) specified");
 	}
-	if (strOutputData == "") {
-		_EXCEPTIONT("No output data specified");
+	if ((strInputData != "") && (strInputDataList != "")) {
+		_EXCEPTIONT("Only one of --in_data or --in_data_list may be specified");
+	}
+	if ((strOutputData == "") && (strOutputDataList == "")) {
+		_EXCEPTIONT("No output data (--out_data) or (--out_data_list)");
+	}
+	if ((strOutputData != "") && (strOutputDataList != "")) {
+		_EXCEPTIONT("Only one of --out_data or --out_data_list may be specified");
+	}
+	if ((strInputData != "") && (strOutputData == "")) {
+		_EXCEPTIONT("If --in_data is specified then --out_data must also be specified");
+	}
+	if ((strInputDataList != "") && (strOutputDataList == "")) {
+		_EXCEPTIONT("If --in_data_list is specified then --out_data_list must also be specified");
+	}
+
+	// Load input file list
+	std::vector<std::string> vecInputDataFiles;
+
+	if (strInputData.length() != 0) {
+		vecInputDataFiles.push_back(strInputData);
+
+	} else {
+		std::ifstream ifInputFileList(strInputDataList.c_str());
+		if (!ifInputFileList.is_open()) {
+			_EXCEPTION1("Unable to open file \"%s\"",
+				strInputDataList.c_str());
+		}
+		std::string strFileLine;
+		while (std::getline(ifInputFileList, strFileLine)) {
+			if (strFileLine.length() == 0) {
+				continue;
+			}
+			if (strFileLine[0] == '#') {
+				continue;
+			}
+			vecInputDataFiles.push_back(strFileLine);
+		}
+	}
+
+	// Load output file list
+	std::vector<std::string> vecOutputDataFiles;
+
+	if (strOutputData.length() != 0) {
+		vecOutputDataFiles.push_back(strOutputData);
+
+	} else {
+		std::ifstream ifOutputFileList(strOutputDataList.c_str());
+		if (!ifOutputFileList.is_open()) {
+			_EXCEPTION1("Unable to open file \"%s\"",
+				strOutputDataList.c_str());
+		}
+		std::string strFileLine;
+		while (std::getline(ifOutputFileList, strFileLine)) {
+			if (strFileLine.length() == 0) {
+				continue;
+			}
+			if (strFileLine[0] == '#') {
+				continue;
+			}
+			vecOutputDataFiles.push_back(strFileLine);
+		}
+	}
+
+	// Check length
+	if (vecInputDataFiles.size() != vecOutputDataFiles.size()) {
+		_EXCEPTIONT("Mistmatch in --in_data_list and --out_data_list file length");
 	}
 
 	// Parse variable list
@@ -97,6 +203,63 @@ try {
 		_EXCEPTIONT("--preserveall and --preserve cannot both be specified");
 	}
 
+#if defined(TEMPEST_MPIOMP)
+	// Spread files across nodes
+	int nMPIRank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &nMPIRank);
+
+	int nMPISize;
+	MPI_Comm_size(MPI_COMM_WORLD, &nMPISize);
+
+	Announce("Executing detection with %i threads over %i files",
+		nMPISize, vecInputDataFiles.size());
+#endif
+
+#if defined(TEMPEST_MPIOMP)
+	// Set up logging
+	if (strLogDir == "") {
+		Announce("Reporting only enabled on thread 0 (if reporting desired, use --logdir)");
+	} else {
+		Announce("Logs will be written to directory \"%s\"", strLogDir.c_str());
+	}
+
+	// Open log file
+	if (strLogDir != "") {
+		std::string strLogFile = strLogDir;
+		if (strLogFile[strLogFile.length()-1] != '/') {
+			strLogFile += "/";
+		}
+		char szTemp[20];
+		sprintf(szTemp, "log%06i.txt", nMPIRank);
+		strLogFile += szTemp;
+
+		FILE * fp = fopen(strLogFile.c_str(), "w");
+		if (fp == NULL) {
+			_EXCEPTION1("Unable to open output log file \"%s\"",
+				strLogFile.c_str());
+		}
+		AnnounceSetOutputBuffer(fp);
+		AnnounceOutputOnAllRanks();
+	}
+#else
+	if (strLogDir != "") {
+		std::string strLogFile = strLogDir;
+		if (strLogFile[strLogFile.length()-1] != '/') {
+			strLogFile += "/";
+		}
+		strLogFile += "log000000.txt";
+
+		Announce("Log will be written to file \"%s\"", strLogFile.c_str());
+
+		FILE * fp = fopen(strLogFile.c_str(), "w");
+		if (fp == NULL) {
+			_EXCEPTION1("Unable to open output log file \"%s\"",
+				strLogFile.c_str());
+		}
+		AnnounceSetOutputBuffer(fp);
+	}
+#endif
+/*
 	// Second input data file
 	std::vector< std::string > vecVariableStrings2;
 	if (strInputData2 != "") {
@@ -118,22 +281,56 @@ try {
 	} else {
 		AnnounceStartBlock("Applying first offline map to data");
 	}
-
+*/
 	// OfflineMap
+	AnnounceStartBlock("Loading offline map");
+
 	OfflineMap mapRemap;
 	mapRemap.Read(strInputMap);
 	mapRemap.SetFillValueOverrideDbl(dFillValueOverride);
 	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
 
-	mapRemap.Apply(
-		strInputData,
-		strOutputData,
-		vecVariableStrings,
-		strNColName,
-		fOutputDouble,
-		false);
-	AnnounceEndBlock(NULL);
+	AnnounceEndBlock("Done");
 
+	for (int f = 0; f < vecInputDataFiles.size(); f++) {
+
+#if defined(TEMPEST_MPIOMP)
+		if (f % nMPISize != nMPIRank) {
+			continue;
+		}
+#endif
+		AnnounceStartBlock("Processing \"%s\"", vecInputDataFiles[f].c_str());
+
+		// Apply the map
+		mapRemap.Apply(
+			vecInputDataFiles[f],
+			vecOutputDataFiles[f],
+			vecVariableStrings,
+			strNColName,
+			fOutputDouble,
+			false);
+	
+		// Copy variables from input file to output file
+		if (fPreserveAll) {
+			AnnounceStartBlock("Preserving variables");
+			mapRemap.PreserveAllVariables(
+				vecInputDataFiles[f],
+				vecOutputDataFiles[f]);
+			AnnounceEndBlock(NULL);
+
+		} else if (vecPreserveVariableStrings.size() != 0) {
+			AnnounceStartBlock("Preserving variables");
+			mapRemap.PreserveVariables(
+				vecInputDataFiles[f],
+				vecOutputDataFiles[f],
+				vecPreserveVariableStrings);
+			AnnounceEndBlock(NULL);
+		}
+
+		AnnounceEndBlock("Done");
+	}
+	AnnounceEndBlock(NULL);
+/*
 	if (strInputMap2.size()) {
 		AnnounceStartBlock("Applying second offline map to data");
 
@@ -161,22 +358,10 @@ try {
 
 		AnnounceEndBlock(NULL);
 	}
+*/
 
-	// Copy variables from input file to output file
-	if (fPreserveAll) {
-		AnnounceStartBlock("Preserving variables");
-		mapRemap.PreserveAllVariables(strInputData, strOutputData);
-		AnnounceEndBlock(NULL);
-
-	} else if (vecPreserveVariableStrings.size() != 0) {
-		AnnounceStartBlock("Preserving variables");
-		mapRemap.PreserveVariables(
-			strInputData,
-			strOutputData,
-			vecPreserveVariableStrings);
-		AnnounceEndBlock(NULL);
-	}
-
+	AnnounceOnlyOutputOnRankZero();
+	AnnounceSetOutputBuffer(stdout);
 
 } catch(Exception & e) {
 	Announce(e.ToString().c_str());
@@ -185,6 +370,7 @@ try {
 } catch(...) {
 	return (-2);
 }
+
 	return 0;
 }
 

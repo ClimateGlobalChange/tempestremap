@@ -196,17 +196,17 @@ extern "C" {
 	// Apply an offline map to a datafile
 	int ApplyOfflineMap(
 		std::string strInputData,
+		std::string strInputDataList,
 		std::string strInputMap,
 		std::string strVariables,
-		std::string strInputData2, 
-		std::string strInputMap2,
-		std::string strVariables2,
 		std::string strOutputData,
+		std::string strOutputDataList,
 		std::string strNColName, 
 		bool fOutputDouble,
 		std::string strPreserveVariables,
 		bool fPreserveAll,
-		double dFillValueOverride );
+		double dFillValueOverride,
+		std::string strLogDir );
 
 	// Generate the connectivity data for faces of the given Mesh
 	int GenerateConnectivityData (
