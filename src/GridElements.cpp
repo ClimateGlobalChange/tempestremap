@@ -258,7 +258,7 @@ void Mesh::ExchangeFirstAndSecondMesh() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::RemoveCoincidentNodes() {
+void Mesh::RemoveCoincidentNodes(bool verbose) {
 
 	// Put nodes into a map, tagging uniques
 	std::map<Node, int> mapNodes;
