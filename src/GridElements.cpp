@@ -75,7 +75,9 @@ void Mesh::Clear() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::ConstructEdgeMap(bool verbose) {
+void Mesh::ConstructEdgeMap(
+  bool fVerbose
+) {
 
 	// Construct the edge map
 	edgemap.clear();
@@ -99,7 +101,7 @@ void Mesh::ConstructEdgeMap(bool verbose) {
 		}
 	}
 
-	if (verbose) Announce("Mesh size: Edges [%i]", edgemap.size());
+	if (fVerbose) Announce("Mesh size: Edges [%i]", edgemap.size());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,7 +260,9 @@ void Mesh::ExchangeFirstAndSecondMesh() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::RemoveCoincidentNodes() {
+void Mesh::RemoveCoincidentNodes(
+  bool fVerbose
+) {
 
 	// Put nodes into a map, tagging uniques
 	std::map<Node, int> mapNodes;
@@ -285,7 +289,9 @@ void Mesh::RemoveCoincidentNodes() {
 		return;
 	}
 
-	Announce("%i duplicate nodes detected", nodes.size() - vecUniques.size());
+	if(fVerbose) {
+		Announce("%i duplicate nodes detected", nodes.size() - vecUniques.size());
+	}
 
 	// Remove duplicates
 	NodeVector nodesOld = nodes;
