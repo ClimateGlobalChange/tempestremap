@@ -1179,12 +1179,23 @@ void Mesh::Read(const std::string & strFile) {
 		int nElementBlocks = dimElementBlocks->size();
 
 		// Total number of elements
+		int nTotalElementCount = 0;
 		NcDim * dimElements = ncFile.get_dim("num_elem");
 		if (dimElements == NULL) {
-			_EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
+		  for (unsigned ib = 1; ib <= nElementBlocks; ++ib)
+		  {
+        std::string numelblk = std::string("num_el_in_blk"+std::to_string(ib));
+		    NcDim * dimElementBlockElems = ncFile.get_dim(numelblk.c_str());
+        nTotalElementCount += (dimElementBlockElems != NULL ? dimElementBlockElems->size() : 0);
+      }
+			if (nTotalElementCount == 0)
+			  _EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
 					"\"num_elem\"", strFile.c_str());
 		}
-		int nTotalElementCount = dimElements->size();
+    else
+    {
+		  nTotalElementCount = dimElements->size();
+    }
 
 		// Output size
 		Announce("Mesh size: Nodes [%i] Elements [%i]",
