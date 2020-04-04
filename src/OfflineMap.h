@@ -94,7 +94,7 @@ public:
         const std::vector<int>& p_tgtDimSizes
     );
 
-private:
+protected:
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
 	///	</summary>
