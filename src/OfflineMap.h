@@ -104,7 +104,8 @@ protected:
 		DataArray1D<double> & dCenterLat,
 		DataArray2D<double> & dVertexLon,
 		DataArray2D<double> & dVertexLat,
-		bool fLatLon
+		bool fLatLon,
+		int nNodesPerFace = 0
 	);
 
 	///	<summary>
