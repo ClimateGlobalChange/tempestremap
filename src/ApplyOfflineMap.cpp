@@ -211,7 +211,7 @@ try {
 	int nMPISize;
 	MPI_Comm_size(MPI_COMM_WORLD, &nMPISize);
 
-	Announce("Executing detection with %i threads over %i files",
+	Announce("Executing ApplyOfflineMap with %i threads over %i files",
 		nMPISize, vecInputDataFiles.size());
 #endif
 

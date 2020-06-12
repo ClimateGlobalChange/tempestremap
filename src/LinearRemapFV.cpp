@@ -1122,7 +1122,7 @@ void LinearRemapFVtoFV_np1(
 	// Loop through all faces on meshInput
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
-		// Output every 100 elements
+		// Output every 1000 elements
 		if (ixFirst % 1000 == 0) {
 			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
