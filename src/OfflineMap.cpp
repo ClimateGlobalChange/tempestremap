@@ -337,22 +337,24 @@ void OfflineMap::InitializeCoordinatesFromMeshFV(
 	DataArray1D<double> & dCenterLat,
 	DataArray2D<double> & dVertexLon,
 	DataArray2D<double> & dVertexLat,
-	bool fLatLon
+	bool fLatLon,
+	int nNodesPerFace
 ) {
-	int nFaces = mesh.faces.size();
-
-	// Count maximum number of Nodes per Face
-	int nNodesPerFace = 0;
-	for (int i = 0; i < nFaces; i++) {
-		if (mesh.faces[i].edges.size() > nNodesPerFace) {
-			nNodesPerFace = mesh.faces[i].edges.size();
-		}
-	}
-
 	// Check if already initialized
 	if (dCenterLon.GetRows() != 0) {
 		return;
 	}
+
+	int nFaces = mesh.faces.size();
+
+	// Count maximum number of Nodes per Face
+	if (nNodesPerFace == 0) {
+    for (int i = 0; i < nFaces; i++) {
+      if (mesh.faces[i].edges.size() > nNodesPerFace) {
+        nNodesPerFace = mesh.faces[i].edges.size();
+      }
+    }
+  }
 
 	dVertexLon.Allocate(nFaces, nNodesPerFace);
 	dVertexLat.Allocate(nFaces, nNodesPerFace);

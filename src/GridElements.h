@@ -722,7 +722,9 @@ public:
 	///	<summary>
 	///		Construct the EdgeMap from the NodeVector and FaceVector.
 	///	</summary>
-	void ConstructEdgeMap(bool verbose=true);
+	void ConstructEdgeMap(
+	  bool fVerbose = true
+	);
 
 	///	<summary>
 	///		Construct the ReverseNodeArray from the NodeVector and FaceVector.
@@ -751,7 +753,9 @@ public:
 	///	<summary>
 	///		Remove coincident nodes from the Mesh and adjust indices in faces.
 	///	</summary>
-	void RemoveCoincidentNodes();
+	void RemoveCoincidentNodes(
+	  bool fVerbose = true
+	);
 
 	///	<summary>
 	///		Write the mesh to a NetCDF file in Exodus format.

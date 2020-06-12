@@ -94,7 +94,7 @@ public:
         const std::vector<int>& p_tgtDimSizes
     );
 
-private:
+protected:
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
 	///	</summary>
@@ -104,7 +104,8 @@ private:
 		DataArray1D<double> & dCenterLat,
 		DataArray2D<double> & dVertexLon,
 		DataArray2D<double> & dVertexLat,
-		bool fLatLon
+		bool fLatLon,
+		int nNodesPerFace = 0
 	);
 
 	///	<summary>
