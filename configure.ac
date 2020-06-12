@@ -3,7 +3,7 @@
 # Usage: autoreconf -fi
 #
 AC_PREREQ([2.68])
-AC_INIT([TempestRemap], [2.0.2], [paullrich@ucdavis.edu])
+AC_INIT([TempestRemap], [2.0.5], [paullrich@ucdavis.edu])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 #AC_CONFIG_SRCDIR([test/optimtest.m])
