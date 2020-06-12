@@ -23,6 +23,7 @@
 
 #include "netcdfcpp.h"
 
+#include <cfloat>
 #include <string>
 #include <iostream>
 
@@ -117,6 +118,9 @@ try {
 	// Output the interpolating level instead
 	bool fOutputInterpLevel;
 
+	// Output the value of the vertical dimension on the interpolating level instead
+	bool fOutputInterpLevelValue;
+
 	// Check weights
 	bool fCheckWeights;
 
@@ -133,6 +137,7 @@ try {
 		CommandLineBool(fLastMatch, "use_last_match");
 		CommandLineBool(fOnlyInRange, "only_in_range");
 		CommandLineBool(fOutputInterpLevel, "output_interp_level");
+		CommandLineBool(fOutputInterpLevelValue, "output_interp_level_value");
 		CommandLineBool(fCheckWeights, "check_weights");
 
 		ParseCommandLine(argc, argv);
@@ -159,6 +164,9 @@ try {
 	}
 	if (strValues == "") {
 		_EXCEPTIONT("No values specified");
+	}
+	if (fOutputInterpLevel && fOutputInterpLevelValue) {
+		_EXCEPTIONT("Only one of \"--output_interp_level\" and \"--output_interp_level_value\" allowed");
 	}
 
 	// Parse input filenames
@@ -405,6 +413,24 @@ try {
 
 	DataArray2D<double> dOutputData(nValues, nSpatialDOFs);
 
+	// Load old dimension (only used when --output_interp_level_value)
+	DataArray1D<double> dOldDimValues;
+	if (fOutputInterpLevelValue) {
+		_ASSERT(vecInputNcFiles.size() > 0);
+		NcVar * varOldDim = vecInputNcFiles[0]->get_var(strOldDimensionVar.c_str());
+		if (varOldDim == NULL) {
+			_EXCEPTION1("Unable to find dimension variable \"%s\" in input files",
+				strOldDimensionVar.c_str());
+		}
+		if (varOldDim->num_dims() != 1) {
+			_EXCEPTION1("Dimension variable \"%s\" has dimensionality greater than 1",
+				strOldDimensionVar.c_str());
+		}
+		dOldDimValues.Allocate(varOldDim->get_dim(0)->size());
+		varOldDim->set_cur((long)0);
+		varOldDim->get(&(dOldDimValues[0]), dOldDimValues.GetRows());
+	}
+
 	// Loop through auxiliary dimensions
 	std::vector<long> vecVarSlicePos;
 	vecVarSlicePos.resize(nVarDims);
@@ -432,6 +458,13 @@ try {
 			strSpatialRange = ":";
 		} else if (nSpatialDims == 2) {
 			strSpatialRange = ":,:";
+		}
+
+		// Check for fillvalue
+		double dFillValue = DBL_MAX;
+		NcAtt * attFillValue = vecInputNcVars[0]->get_att("_FillValue");
+		if (attFillValue != NULL) {
+			dFillValue = attFillValue->as_float(0);
 		}
 
 		///////////////////////////////////////////////////////////
@@ -475,6 +508,10 @@ try {
 					const double dLower = (*pSliceDataLower)[i];
 					const double dUpper = (*pSliceDataUpper)[i];
 
+					if ((dLower == dFillValue) || (dUpper == dFillValue)) {
+						continue;
+					}
+
 					// Field increasing with level
 					if (dUpper > dLower) {
 						for (int k = 0; k < nValues; k++) {
@@ -509,6 +546,10 @@ try {
 				for (int i = 0; i < nSpatialDOFs; i++) {
 					const double dLower = (*pSliceDataLower)[i];
 					const double dUpper = (*pSliceDataUpper)[i];
+
+					if ((dLower == dFillValue) || (dUpper == dFillValue)) {
+						continue;
+					}
 
 					// Field increasing with level
 					if (dUpper > dLower) {
@@ -545,12 +586,19 @@ try {
 					const double dLower = (*pSliceDataLower)[i];
 					const double dUpper = (*pSliceDataUpper)[i];
 
+					if ((dLower == dFillValue) || (dUpper == dFillValue)) {
+						continue;
+					}
+
 					// Field increasing with level
 					for (int k = 0; k < nValues; k++) {
 						if (IsBetween(dLower, dUpper, vecValuesDouble[k])) {
 							if (!fLastMatch && (nLevelIndexLower[i][k] != (-1))) {
 								continue;
 							}
+							//if (fabs(dUpper - dLower) < 1.0e-12) {
+							//	continue;
+							//}
 							nLevelIndexLower[i][k] = (int)(l);
 							dWeightLower[i][k] =
 								(dUpper - vecValuesDouble[k]) / (dUpper - dLower);
@@ -621,6 +669,18 @@ try {
 					}
 				}
 
+			} else if (fOutputInterpLevelValue) {
+				for (int i = 0; i < nSpatialDOFs; i++) {
+					for (int k = 0; k < nValues; k++) {
+						if (nLevelIndexLower[i][k] != -1) {
+							const double dWeight = dWeightLower[i][k];
+							dOutputData[k][i] =
+								dWeight * dOldDimValues[nLevelIndexLower[i][k]]
+								+ (1.0 - dWeight) * dOldDimValues[nLevelIndexLower[i][k]+1];
+						}
+					}
+				}
+
 			} else {
 
 				for (long l = lLevelBegin; l <= lLevelLast; l++) {
@@ -648,6 +708,9 @@ try {
 							for (int k = 0; k < nValues; k++) {
 								if (nLevelIndexLower[i][k] == l-1) {
 									const double dWeight = dWeightLower[i][k];
+									if ((dWeight < 0.0) || (dWeight > 1.0)) {
+										printf("WARNING: %1.5e\n", dWeight);
+									}
 									dOutputData[k][i] =
 										dWeight * (*pSliceDataLower)[i]
 										+ (1.0 - dWeight) * (*pSliceDataUpper)[i];
