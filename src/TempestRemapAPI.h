@@ -29,6 +29,21 @@ extern "C" {
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
+	// Generate a polar stereographic mesh
+	int GenerateStereographicMesh(
+		Mesh & mesh,
+		double dLonDegP,
+		double dLatDegP,
+		double dLonDeg0,
+		double dLatDeg0,
+		double dLonDeg1,
+		double dLatDeg1,
+		int nXElements,
+		int nYElements,
+		bool fCentroids,
+		std::string strOutputFile,
+		std::string strOutputFormat );
+
 	// Generate a Latitude-Longitude mesh
 	int GenerateRLLMesh (
 		Mesh & meshOut,

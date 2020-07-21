@@ -821,6 +821,24 @@ struct FindFaceStruct {
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Convert radians to degrees.
+///	</summary>
+inline double RadToDeg(
+	double dRad
+) {
+	return (dRad * 180.0 / M_PI);
+}
+
+///	<summary>
+///		Convert degrees to radians.
+///	</summary>
+inline double DegToRad(
+	double dDeg
+) {
+	return (dDeg * M_PI / 180.0);
+}
+
+///	<summary>
 ///		Calculate latitude and longitude from normalized 3D Cartesian
 ///		coordinates, in degrees.
 ///	</summary>

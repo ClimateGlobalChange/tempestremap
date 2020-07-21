@@ -59,6 +59,7 @@ libTempestRemap_la_SOURCES = \
 	src/MeshUtilitiesExact.cpp \
 	src/GenerateCSMesh.cpp \
 	src/GenerateTransectMesh.cpp \
+	src/GenerateStereographicMesh.cpp \
 	src/GenerateICOMesh.cpp \
 	src/GenerateRLLMesh.cpp \
 	src/GenerateUTMMesh.cpp \
@@ -96,6 +97,7 @@ GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
 GenerateUTMMesh_SOURCES = src/GenerateUTMMeshExe.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
 GenerateTransectMesh_SOURCES = src/GenerateTransectMeshExe.cpp
+GenerateStereographicMesh_SOURCES = src/GenerateStereographicMeshExe.cpp
 GenerateICOMesh_SOURCES = src/GenerateICOMeshExe.cpp
 GenerateLambertConfConicMesh_SOURCES = src/GenerateLambertConfConicMeshExe.cpp
 GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
@@ -123,7 +125,7 @@ ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
 ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
-				GenerateCSMesh GenerateTransectMesh GenerateRLLMesh \
+				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
 				GenerateUTMMesh GenerateICOMesh \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
