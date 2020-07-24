@@ -929,6 +929,11 @@ void Mesh::WriteScrip(
 					cornerLon[i][j] = cornerLon[i][j] - (double)360.0;
 				}
 			}
+			// Make sure the padded coordinate data is same as last vertex
+			for (int j=nCorners; j<nCornersMax; ++j) {
+				cornerLon[i][j] = cornerLon[i][nCorners-1];
+				cornerLat[i][j] = cornerLat[i][nCorners-1];
+			}
 		}
 		varCenterLat->add_att("_FillValue", 9.96920996838687e+36 );
                 varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
@@ -956,14 +961,14 @@ void Mesh::WriteScrip(
 	//---------------------------------------------------------------------------
 	// Grid mask
 	{
-		NcVar * varMask = ncOut.add_var("grid_imask", ncDouble, dimGridSize);
+		NcVar * varMask = ncOut.add_var("grid_imask", ncInt, dimGridSize);
 		if (varMask == NULL) {
 			_EXCEPTIONT("Error creating variable \"grid_imask\"");
 		}
-		varMask->add_att("_FillValue", 9.96920996838687e+36 );
-		DataArray1D<double> mask(nElementCount);
+		// varMask->add_att("_FillValue", 9.96920996838687e+36 );
+		DataArray1D<int> mask(nElementCount);
 		for (int i = 0; i < nElementCount; i++) {
-			mask[i] = static_cast<double>( 1 );
+			mask[i] = ( 1 );
 		}
 		varMask->set_cur((long)0);
 		varMask->put(mask, nElementCount);
