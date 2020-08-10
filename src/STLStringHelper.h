@@ -54,6 +54,74 @@ inline static void ToUpper(std::string &str) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+inline static bool IsInteger(const std::string &str) {
+	if (str.length() == 0) {
+		return false;
+	}
+	for(size_t i = 0; i < str.length(); i++) {
+		if ((i == 0) && ((str[i] == '-') || (str[i] == '+'))) {
+			if (str.length() == 1) {
+				return false;
+			}
+			continue;
+		}
+		if ((str[i] < '0') || (str[i] > '9')) {
+			return false;
+		}
+	}
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+inline static bool IsFloat(const std::string &str) {
+	bool fIsFloat = false;
+	bool fHasExponent = false;
+	bool fHasDecimal = false;
+	for(size_t i = 0; i < str.length(); i++) {
+		if ((str[i] < '0') || (str[i] > '9')) {
+			if (str[i] == '.') {
+				if (fHasDecimal) {
+					return false;
+				}
+				if (fHasExponent) {
+					return false;
+				}
+				fHasDecimal = true;
+				continue;
+			}
+			if (str[i] == 'e') {
+				if (fHasExponent) {
+					return false;
+				}
+				fHasExponent = true;
+				continue;
+			}
+			if ((str[i] == '-') || (str[i] == '+')) {
+				if (i == 0) {
+					continue;
+				} else if (str[i-1] == 'e') {
+					continue;
+				} else {
+					return false;
+				}
+			}
+			if (str[i] == 'f') {
+				if (i != str.length()-1) {
+					return false;
+				}
+			}
+			return false;
+
+		} else {
+			fIsFloat = true;
+		}
+	}
+	return fIsFloat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 };
 
 #endif
