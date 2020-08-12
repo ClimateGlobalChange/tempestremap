@@ -112,7 +112,6 @@ GenerateOfflineMap_SOURCES = src/GenerateOfflineMapExe.cpp
 # GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp
 
 GenerateGLLMetaData_SOURCES = src/GenerateGLLMetaDataExe.cpp
-GenerateConnectivityFile_SOURCES = src/GenerateConnectivityFile.cpp
 GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
 CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
 CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
@@ -130,7 +129,7 @@ bin_PROGRAMS = GenerateTestData \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
 				ApplyOfflineMap GenerateOfflineMap \
-				CalculateDiffNorms GenerateGLLMetaData GenerateConnectivityFile \
+				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \
 				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus \
 				AnalyzeMap VerticalInterpolate

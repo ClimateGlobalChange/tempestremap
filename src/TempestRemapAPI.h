@@ -170,7 +170,7 @@ extern "C" {
 		std::string strOutputData = "",
 		std::string strNColName = "",
 		bool fOutputDouble = false,
-		std::string strOutputFormat ="Classic",
+		std::string strOutputFormat = "Classic",
 		std::string strPreserveVariables = "",
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
@@ -224,9 +224,9 @@ extern "C" {
 		std::string strLogDir );
 
 	// Generate the connectivity data for faces of the given Mesh
-	int GenerateConnectivityData (
-		Mesh & meshIn,
-		std::vector< std::set<int> > & vecConnectivity );
+	int GenerateConnectivityData(
+		const Mesh & meshIn,
+		std::vector< std::set<int> > & vecConnectivity);
 
 }
 

@@ -68,7 +68,6 @@ GenerateOfflineMap_FILES= GenerateOfflineMapExe.cpp
 
 # Additional utilities
 GenerateGLLMetaData_FILES= GenerateGLLMetaDataExe.cpp
-GenerateConnectivityFile_FILES= GenerateConnectivityFile.cpp
 GenerateTransposeMap_FILES= GenerateTransposeMap.cpp
 CoarsenRectilinearData_FILES= CoarsenRectilinearData.cpp
 CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
@@ -87,7 +86,6 @@ ConvertSCRIPToExodus_FILES= ConvertSCRIPToExodus.cpp
 EXEC_TARGETS= ApplyOfflineMap \
               CalculateDiffNorms \
               CoarsenRectilinearData \
-              GenerateConnectivityFile \
               GenerateCSMesh \
 			  GenerateTransectMesh \
 			  GenerateStereographicMesh \
@@ -130,7 +128,6 @@ GenerateOverlapMesh_v1_EXE: $(GenerateOverlapMesh_v1_FILES:%.cpp=$(BUILDDIR)/%.o
 ApplyOfflineMap_EXE: $(ApplyOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateOfflineMap_EXE: $(GenerateOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o) 
 GenerateGLLMetaData_EXE: $(GenerateGLLMetaData_FILES:%.cpp=$(BUILDDIR)/%.o)
-GenerateConnectivityFile_EXE: $(GenerateConnectivityFile_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateTransposeMap_EXE: $(GenerateTransposeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 CoarsenRectilinearData_EXE: $(CoarsenRectilinearData_FILES:%.cpp=$(BUILDDIR)/%.o)
 CalculateDiffNorms_EXE: $(CalculateDiffNorms_FILES:%.cpp=$(BUILDDIR)/%.o)
