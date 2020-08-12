@@ -75,7 +75,8 @@ void GetAdjacentFaceVectorByNode(
 
 ///	<summary>
 ///		Build the integration array, an operator that integrates a polynomial
-///		reconstruction over all overlap faces.
+///		reconstruction (specified as a vector of polynomial coefficients) to
+///		the integral over all overlap faces.
 ///	</summary>
 void BuildIntegrationArray(
 	const Mesh & meshInput,
@@ -91,8 +92,8 @@ void BuildIntegrationArray(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
-///		Build the fit array, which maps area averages in adjacent faces
-///		to the coefficients of the polynomial reconstruction.
+///		Build the fit array, which maps the coefficients of the polynomial
+///		reconstruction to the area averages over the AdjacentFaceVector.
 ///	</summary>
 void BuildFitArray(
 	const Mesh & mesh,

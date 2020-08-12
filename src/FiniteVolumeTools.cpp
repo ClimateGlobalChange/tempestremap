@@ -18,6 +18,7 @@
 #include "MathHelper.h"
 #include "Announce.h"
 #include "Exception.h"
+#include "CoordTransforms.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -371,21 +372,6 @@ void BuildIntegrationArray(
 
 	// Coordinate axes
 	Node nodeRef = GetFaceCentroid(faceFirst, meshInput.nodes);
-/*
-	Node node0 = meshInput.nodes[faceFirst[0]];
-	Node node1 = meshInput.nodes[faceFirst[1]];
-	Node node2 = meshInput.nodes[faceFirst[2]];
-
-	Node nodeA1(
-		0.5 * (node0.x + node1.x) - nodeRef.x,
-		0.5 * (node0.y + node1.y) - nodeRef.y,
-		0.5 * (node0.z + node1.z) - nodeRef.z);
-
-	Node nodeA2(
-		0.5 * (node1.x + node2.x) - nodeRef.x,
-		0.5 * (node1.y + node2.y) - nodeRef.y,
-		0.5 * (node1.z + node2.z) - nodeRef.z);
-*/
 	Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
 
@@ -399,25 +385,7 @@ void BuildIntegrationArray(
 	dFit(2,0) = nodeC.x;  dFit(2,1) = nodeC.y;  dFit(2,2) = nodeC.z;
 
 	DataArray2D<double> dFitTemp;
-/*
-	// Number of overlapping Faces and triangles
-	int nOverlapFaces = 0;
-	int nTotalOverlapTriangles = 0;
 
-	// Determine how many overlap Faces and triangles are present
-	int ixOverlapTemp = ixOverlap;
-	for (; ixOverlapTemp < meshOverlap.faces.size(); ixOverlapTemp++) {
-
-		const Face & faceOverlap = meshOverlap.faces[ixOverlapTemp];
-
-		if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirstFace) {
-			break;
-		}
-
-		nOverlapFaces++;
-		nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
-	}
-*/
 	// Number of overlapping faces and triangles
 	int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
@@ -848,7 +816,7 @@ bool InvertFitArray_Corrected(
 		dColSumAT[j] += fabs(dFit2(j,k));
 	}
 	}
-
+/*
 	// Warning if condition number estimate is too high
 	double dMaxColSumA = dColSumA[0];
 	double dMaxColSumAT = dColSumAT[0];
@@ -865,7 +833,7 @@ bool InvertFitArray_Corrected(
 			dMaxColSumA * dMaxColSumAT);
 		return false;
 	}
-
+*/
 	// Calculate pseudoinverse
 	for (int j = 0; j < nAdjFaces; j++) {
 	for (int k = 0; k < nCoefficients; k++) {
