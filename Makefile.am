@@ -40,6 +40,7 @@ libTempestRemap_la_include_HEADERS = \
 	src/SparseMatrix.h \
 	src/DataArray2D.h \
 	src/FiniteElementTools.h \
+	src/FiniteVolumeTools.h \
 	src/GridElementsExact.h \
 	src/LinearRemapFV.h \
 	src/MeshUtilitiesFuzzy.h \
@@ -71,6 +72,7 @@ libTempestRemap_la_SOURCES = \
 	src/GaussLobattoQuadrature.cpp \
 	src/LegendrePolynomial.cpp \
 	src/FiniteElementTools.cpp \
+	src/FiniteVolumeTools.cpp \
 	src/NetCDFUtilities.cpp \
 	src/ncvalues.cpp \
 	src/netcdf.cpp \
