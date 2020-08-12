@@ -25,51 +25,6 @@
 #include <cmath>
 #include <iostream>
 
-
-///////////////////////////////////////////////////////////////////////////////
-
-inline void StereographicProjection(
-	double dLonRad0,
-	double dLatRad0,
-	double dLonRad,
-	double dLatRad,
-	double & dXs,
-	double & dYs
-) {
-	// Forward projection using equations (1)-(3)
-	// http://mathworld.wolfram.com/StereographicProjection.html
-	double dK = 2.0 / (1.0 + sin(dLatRad0) * sin(dLatRad) + cos(dLatRad0) * cos(dLatRad) * cos(dLonRad - dLonRad0));
-	dXs = dK * cos(dLatRad) * sin(dLonRad - dLonRad0);
-	dYs = dK * (cos(dLatRad0) * sin(dLatRad) - sin(dLatRad0) * cos(dLatRad) * cos(dLonRad - dLonRad0));
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-inline void StereographicProjectionInv(
-	double dLonRad0,
-	double dLatRad0,
-	double dXs,
-	double dYs,
-	double & dLonRad,
-	double & dLatRad
-) {
-	// Forward projection using equations (3)-(5)
-	// http://mathworld.wolfram.com/StereographicProjection.html
-	double dRho = sqrt(dXs * dXs + dYs * dYs);
-	double dC = 2.0 * atan(0.5 * dRho);
-
-	if (dRho < 1.0e-14) {
-		dLatRad = dLatRad0;
-		dLonRad = dLonRad0;
-		return;
-	}
-
-	dLatRad = asin(cos(dC) * sin(dLatRad0) + dYs * sin(dC) * cos(dLatRad0) / dRho);
-	dLonRad = dLonRad0 + atan2(
-			dXs * sin(dC),
-			dRho * cos(dLatRad0) * cos(dC) - dYs * sin(dLatRad0) * sin(dC));
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // 
 // Input Parameters:
