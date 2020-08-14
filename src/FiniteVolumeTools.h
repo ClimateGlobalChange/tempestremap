@@ -40,10 +40,65 @@ typedef std::vector<FaceDistancePair> AdjacentFaceVector;
 ///	<summary>
 ///		Get the centroid of a Face by averaging vertices in Cartesian space.
 ///	</summary>
-Node GetFaceCentroid(
+inline Node GetFaceCentroid(
 	const Face & face,
 	const NodeVector & nodes
-);
+) {
+	Node nodeRef;
+
+	nodeRef.x = 0.0;
+	nodeRef.y = 0.0;
+	nodeRef.z = 0.0;
+
+	for (int i = 0; i < face.edges.size(); i++) {
+		nodeRef.x += nodes[face[i]].x;
+		nodeRef.y += nodes[face[i]].y;
+		nodeRef.z += nodes[face[i]].z;
+	}
+	nodeRef.x /= static_cast<double>(face.edges.size());
+	nodeRef.y /= static_cast<double>(face.edges.size());
+	nodeRef.z /= static_cast<double>(face.edges.size());
+
+	return nodeRef;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Get a perpendicular tangent basis to the given unit-length node.
+///	</summary>
+inline void GetTangentBasis(
+	const Node & nodeRef,
+	Node & nodeA,
+	Node & nodeB
+) {
+	// One basis vector has zero y component
+	if (fabs(nodeRef.z) > 0.5) {
+		double dMagXZ = sqrt(nodeRef.x * nodeRef.x + nodeRef.z * nodeRef.z);
+		double dInvMagXZ = 1.0 / dMagXZ;
+
+		nodeA.x = - nodeRef.z * dInvMagXZ;
+		nodeA.y = 0.0;
+		nodeA.z = nodeRef.x * dInvMagXZ;
+
+		nodeB.x = nodeRef.y * nodeRef.x * dInvMagXZ;
+		nodeB.y = - dMagXZ;
+		nodeB.z = nodeRef.y * nodeRef.z * dInvMagXZ;
+
+	// One basis vector has zero z component
+	} else {
+		double dMagXY = sqrt(nodeRef.x * nodeRef.x + nodeRef.y * nodeRef.y);
+		double dInvMagXY = 1.0 / dMagXY;
+
+		nodeA.x = - nodeRef.y * dInvMagXY;
+		nodeA.y = nodeRef.x * dInvMagXY;
+		nodeA.z = 0.0;
+
+		nodeB.x = - nodeRef.z * nodeRef.x * dInvMagXY;
+		nodeB.y = - nodeRef.z * nodeRef.y * dInvMagXY;
+		nodeB.z = dMagXY;
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

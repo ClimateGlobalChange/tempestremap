@@ -14,6 +14,7 @@
 ///		or implied warranty.
 ///	</remarks>
 
+#include "Defines.h"
 #include "FiniteVolumeTools.h"
 #include "MathHelper.h"
 #include "Announce.h"
@@ -147,42 +148,6 @@ extern "C" {
 		int * lwork,
 		int * info);
 };
-
-///////////////////////////////////////////////////////////////////////////////
-
-Node GetFaceCentroid(
-	const Face & face,
-	const NodeVector & nodes
-) {
-	Node nodeRef;
-
-	//nodeRef = nodes[face[0]];
-
-	nodeRef.x = 0.0;
-	nodeRef.y = 0.0;
-	nodeRef.z = 0.0;
-
-	for (int i = 0; i < face.edges.size(); i++) {
-		nodeRef.x += nodes[face[i]].x;
-		nodeRef.y += nodes[face[i]].y;
-		nodeRef.z += nodes[face[i]].z;
-	}
-	nodeRef.x /= static_cast<double>(face.edges.size());
-	nodeRef.y /= static_cast<double>(face.edges.size());
-	nodeRef.z /= static_cast<double>(face.edges.size());
-
-/*
-	double dMag = sqrt(
-		  nodeRef.x * nodeRef.x
-		+ nodeRef.y * nodeRef.y
-		+ nodeRef.z * nodeRef.z);
-
-	nodeRef.x /= dMag;
-	nodeRef.y /= dMag;
-	nodeRef.z /= dMag;
-*/
-	return nodeRef;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -359,7 +324,7 @@ void BuildIntegrationArray(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -372,10 +337,16 @@ void BuildIntegrationArray(
 
 	// Coordinate axes
 	Node nodeRef = GetFaceCentroid(faceFirst, meshInput.nodes);
+
+#if defined(USE_STEREOGRAPHIC_FITS)
+	Node nodeA1, nodeA2;
+	Node nodeC = nodeRef;
+	GetTangentBasis(nodeRef, nodeA1, nodeA2);
+#else
 	Node nodeA1 = meshInput.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = meshInput.nodes[faceFirst[2]] - nodeRef;
-
 	Node nodeC = CrossProduct(nodeA1, nodeA2);
+#endif
 
 	// Fit matrix
 	DataArray2D<double> dFit(3,3);
@@ -521,25 +492,16 @@ void BuildFitArray(
 
 	// Coordinate axes
 	Node nodeRef = GetFaceCentroid(faceFirst, mesh.nodes);
-/*
-	Node node0 = mesh.nodes[faceFirst[0]];
-	Node node1 = mesh.nodes[faceFirst[1]];
-	Node node2 = mesh.nodes[faceFirst[2]];
 
-	Node nodeA1(
-		0.5 * (node0.x + node1.x) - nodeRef.x,
-		0.5 * (node0.y + node1.y) - nodeRef.y,
-		0.5 * (node0.z + node1.z) - nodeRef.z);
-
-	Node nodeA2(
-		0.5 * (node1.x + node2.x) - nodeRef.x,
-		0.5 * (node1.y + node2.y) - nodeRef.y,
-		0.5 * (node1.z + node2.z) - nodeRef.z);
-*/
+#if defined(USE_STEREOGRAPHIC_FITS)
+	Node nodeA1, nodeA2;
+	Node nodeC = nodeRef;
+	GetTangentBasis(nodeRef, nodeA1, nodeA2);
+#else
 	Node nodeA1 = mesh.nodes[faceFirst[1]] - nodeRef;
 	Node nodeA2 = mesh.nodes[faceFirst[2]] - nodeRef;
-
 	Node nodeC = CrossProduct(nodeA1, nodeA2);
+#endif
 
 	// Fit matrix
 	DataArray2D<double> dFit(3,3);
@@ -816,7 +778,7 @@ bool InvertFitArray_Corrected(
 		dColSumAT[j] += fabs(dFit2(j,k));
 	}
 	}
-/*
+
 	// Warning if condition number estimate is too high
 	double dMaxColSumA = dColSumA[0];
 	double dMaxColSumAT = dColSumAT[0];
@@ -833,7 +795,7 @@ bool InvertFitArray_Corrected(
 			dMaxColSumA * dMaxColSumAT);
 		return false;
 	}
-*/
+
 	// Calculate pseudoinverse
 	for (int j = 0; j < nAdjFaces; j++) {
 	for (int k = 0; k < nCoefficients; k++) {
@@ -1040,4 +1002,6 @@ void InvertFitArray_LeastSquares(
 	}
 	}
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
