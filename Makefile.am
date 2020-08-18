@@ -13,6 +13,7 @@ libTempestRemap_la_includedir = $(includedir)
 libTempestRemap_la_include_HEADERS = \
 	src/Announce.h \
 	src/Subscript.h \
+	src/CoordTransforms.h \
 	src/DataArray1D.h \
 	src/FixedPoint.h \
 	src/GridElements.h \
