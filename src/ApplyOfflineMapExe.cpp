@@ -81,6 +81,12 @@ int main(int argc, char** argv) {
 
 	// Log directory
 	std::string strLogDir;
+	
+	double lb;
+	
+	double ub;
+	
+	bool fCAAS;
 
 	// Parse the command line
 	BeginCommandLine()
@@ -99,6 +105,9 @@ int main(int argc, char** argv) {
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 		CommandLineString(strLogDir, "logdir", "");
+		CommandLineDouble(lb, "lb", 0.0);
+		CommandLineDouble(ub, "ub", 1.0);
+		CommandLineBool(fCAAS,"f_CAAS");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -118,7 +127,10 @@ int main(int argc, char** argv) {
 		strPreserveVariables,
 		fPreserveAll,
 		dFillValueOverride,
-		strLogDir );
+		strLogDir,
+		lb,
+		ub,
+		fCAAS );
 
 	// Done
 	AnnounceBanner();

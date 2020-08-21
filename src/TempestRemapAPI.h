@@ -221,7 +221,10 @@ extern "C" {
 		std::string strPreserveVariables,
 		bool fPreserveAll,
 		double dFillValueOverride,
-		std::string strLogDir );
+		std::string strLogDir,
+		double lb,
+		double ub,
+		bool fCAAS );
 
 	// Generate the connectivity data for faces of the given Mesh
 	int GenerateConnectivityData(

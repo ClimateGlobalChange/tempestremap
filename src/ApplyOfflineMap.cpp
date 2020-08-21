@@ -108,7 +108,10 @@ int ApplyOfflineMap(
 	std::string strPreserveVariables,
 	bool fPreserveAll,
 	double dFillValueOverride,
-	std::string strLogDir
+	std::string strLogDir,
+	double lb,
+	double ub,
+	bool fCAAS
 ) {
 
 	NcError error(NcError::silent_nonfatal);
