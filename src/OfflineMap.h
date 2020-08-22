@@ -95,6 +95,16 @@ public:
     );
 
 protected:
+
+	///	Clip and assured sum function.
+
+	void CAAS(
+		double & x,
+		double & l,
+		double & u,
+		double & b
+	);
+
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
 	///	</summary>
@@ -329,8 +339,11 @@ public:
 		const std::string & strTargetDataFile,
 		const std::vector<std::string> & vecVariables,
 		const std::string & strNColName,
+		double lb,
+		double ub,
 		bool fTargetDouble = false,
-		bool fAppend = false
+		bool fAppend = false,
+		bool fCAAS = false
 	);
 
 	///	<summary>

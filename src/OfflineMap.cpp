@@ -331,6 +331,18 @@ void OfflineMap::InitializeTargetDimensions(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+
+void OfflineMap::CAAS(
+		double & x,
+		double & l,
+		double & u,
+		double & b){
+			
+		}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
 void OfflineMap::InitializeCoordinatesFromMeshFV(
 	const Mesh & mesh,
 	DataArray1D<double> & dCenterLon,
@@ -1038,8 +1050,11 @@ void OfflineMap::Apply(
 	const std::string & strTargetDataFile,
 	const std::vector<std::string> & vecVariables,
 	const std::string & strNColName,
+	double lb,
+	double ub,
 	bool fTargetDouble,
-	bool fAppend
+	bool fAppend,
+	bool fCAAS
 ) {
 
 	// Check variable list for "lat" and "lon"
