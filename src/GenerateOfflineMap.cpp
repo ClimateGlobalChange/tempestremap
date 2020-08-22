@@ -142,7 +142,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strNColName, bool fOutputDouble,
 	std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave
+	bool fSourceConcave, bool fTargetConcave, double lb, double ub, bool fCAAS
 ) {
 	NcError error(NcError::silent_nonfatal);
 
@@ -747,8 +747,11 @@ try {
             strOutputData,
             vecVariableStrings,
             strNColName,
+            lb,
+            ub,
             fOutputDouble,
-            false);
+            false,
+            fCAAS);
         AnnounceEndBlock("Done");
     }
     AnnounceEndBlock(NULL);
@@ -807,7 +810,8 @@ int GenerateOfflineMap(
 	std::string strPreserveVariables,
 	bool fPreserveAll,
 	double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave )
+	bool fSourceConcave, bool fTargetConcave, double lb, double ub, bool fCAAS
+	 )
 {
 	NcError error(NcError::silent_nonfatal);
 
@@ -868,7 +872,7 @@ try {
                                             strInputData, strOutputData,
                                             strNColName, fOutputDouble, strOutputFormat,
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                            fSourceConcave, fTargetConcave );
+                                            fSourceConcave, fTargetConcave, lb, ub, fCAAS );
 
     return err;
 
