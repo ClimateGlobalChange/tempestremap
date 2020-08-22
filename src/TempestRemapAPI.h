@@ -175,7 +175,10 @@ extern "C" {
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
 		bool fInputConcave = false,
-		bool fOutputConcave = false );
+		bool fOutputConcave = false,
+		double lb = 0.0,
+		double ub = 1.0,
+		bool fCAAS = false);
 
 	// Generate the OfflineMap between input and output meshes
 	int GenerateOfflineMapWithMeshes (
