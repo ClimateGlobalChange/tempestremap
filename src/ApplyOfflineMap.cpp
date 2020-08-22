@@ -310,8 +310,10 @@ try {
 			vecOutputDataFiles[f],
 			vecVariableStrings,
 			strNColName,
+			lb,
+			ub,
 			fOutputDouble,
-			false);
+			false,fCAAS);
 	
 		// Copy variables from input file to output file
 		if (fPreserveAll) {
