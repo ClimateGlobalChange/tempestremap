@@ -97,13 +97,19 @@ public:
 protected:
 
 	///	Clip and assured sum function.
-
 	void CAAS(
-		double & x,
-		double & l,
-		double & u,
+		DataArray1D<double> & x,
+		DataArray1D<double> & l,
+		DataArray1D<double> & u,
 		double & b
-	);
+		);
+
+	//double CAAS(
+		//double & l,
+		//double & u,
+		//double & b,
+		//int N
+	//);
 
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
@@ -645,7 +651,7 @@ protected:
 	///		Matrix of vertex latitudes on source grid.
 	///	</summary>
 	DataArray2D<double> m_dTargetVertexLat;
-
+	
 	///	<summary>
 	///		Vector containing cell center longitude along "lon" dimension.
 	///	</sumamry>

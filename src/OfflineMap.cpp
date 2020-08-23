@@ -333,12 +333,87 @@ void OfflineMap::InitializeTargetDimensions(
 
 
 void OfflineMap::CAAS(
-		double & x,
-		double & l,
-		double & u,
+		DataArray1D<double> & x,
+		DataArray1D<double> & l,
+		DataArray1D<double> & u,
 		double & b){
-			
+		
+		double mL = 0.0;
+		
+		double mU = 0.0;
+		
+		for (int i = 0; i<l.GetRows(); i++){
+			mL += l[i]*m_dTargetAreas[i];
+			mU += u[i]*m_dTargetAreas[i];
 		}
+				
+			
+		for (int i = 0; i<l.GetRows(); i++){
+			x[i] = fmax(l[i],fmin(u[i],0.0));
+		}
+		
+		double m = b;
+		
+		for (int i = 0; i<x.GetRows(); i++){
+			m -= m_dTargetAreas[i]*x[i];
+		}
+		
+		if(m == 0){
+			return;
+		}
+		else{
+			
+			DataArray1D<double> v(u.GetRows());
+			
+			if(m>0.0){
+				for (int i = 0; i < u.GetRows(); i++){
+					v[i] = (u[i]-x[i])/(m_dTargetAreas[i]*(u[i]-x[i]));
+				}
+			}
+			else{
+				for (int i = 0; i < l.GetRows(); i++){
+					v[i] = (x[i] - l[i])/(m_dTargetAreas[i]*(x[i]-l[i]));
+				}
+			}
+		}
+		
+		return;
+}
+			//double x = fmax(l,fmin(u,0.0));
+			
+			//double m = b;
+			
+			//for (int i = 0; i < N; i++){
+				//m -=  m_dTargetAreas[i];
+			//}
+			//if(m==0.0){
+				//return x;
+			//}
+			//else{
+				
+				//double v;
+				
+				//if(m>0.0){
+					
+					//v = u-x;
+					
+					//for (int i = 0; i < N; i++){
+						//v /= m_dTargetAreas[i]*(u-x);
+					//}
+				//}
+				//else{
+					//v = x-l;
+					
+					//for (int i = 0; i < N; i++){
+						//v /= m_dTargetAreas[i]*(x-l);
+					//}
+				//}
+				
+				//return x + m*v;
+				
+			//}
+							
+		//}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1750,6 +1825,29 @@ void OfflineMap::Apply(
 
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
+			
+			if(fCAAS){
+				
+				//Define l, x, and u as vectors
+				DataArray1D<double> l = dataInDouble;
+				DataArray1D<double> u = dataInDouble;
+				DataArray1D<double> x(nTargetCount);
+				double b = dSourceMass;
+				
+				for (int i=0; i < l.GetRows(); i++){
+					l[i] = lb - l[i];
+					u[i] = ub - u[i];
+					b -= dataOutDouble[i]*m_dTargetAreas[i];
+				}
+				
+				CAAS(x,l,u,b);
+				
+				// Add correction
+				for (int i = 0; i < l.GetRows(); i++){
+					dataOutDouble[i] += x[i];
+				}
+				
+			}
 
 			// Announce output mass
 			double dTargetMass = 0.0;
