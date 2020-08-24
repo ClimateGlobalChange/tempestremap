@@ -1829,8 +1829,8 @@ void OfflineMap::Apply(
 			if(fCAAS){
 				
 				//Define l, x, and u as vectors
-				DataArray1D<double> l = dataInDouble;
-				DataArray1D<double> u = dataInDouble;
+				DataArray1D<double> l = dataOutDouble;
+				DataArray1D<double> u = dataOutDouble;
 				DataArray1D<double> x(nTargetCount);
 				double b = dSourceMass;
 				
