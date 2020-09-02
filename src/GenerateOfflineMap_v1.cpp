@@ -671,8 +671,11 @@ try {
 			strOutputData,
 			vecVariableStrings,
 			strNColName,
+			lb,
+			ub,
 			fOutputDouble,
-			false);
+			false,
+			fCAAS);
 		AnnounceEndBlock(NULL);
 	}
 	AnnounceEndBlock(NULL);
