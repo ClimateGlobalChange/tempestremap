@@ -338,14 +338,10 @@ void OfflineMap::CAAS(
 		DataArray1D<double> & u,
 		double & b){
 		
-		double mL = 0.0;
-		
-		double mU = 0.0;
-		
-		for (int i = 0; i<l.GetRows(); i++){
-			mL += l[i]*m_dTargetAreas[i];
-			mU += u[i]*m_dTargetAreas[i];
-		}
+//		for (int i = 0; i<l.GetRows(); i++){
+//			mL += l[i]*m_dTargetAreas[i];
+//			mU += u[i]*m_dTargetAreas[i];
+//		}
 				
 			
 		for (int i = 0; i<l.GetRows(); i++){
@@ -358,6 +354,7 @@ void OfflineMap::CAAS(
 			m -= m_dTargetAreas[i]*x[i];
 		}
 		
+		
 		if(m == 0){
 			return;
 		}
@@ -366,15 +363,26 @@ void OfflineMap::CAAS(
 			DataArray1D<double> v(u.GetRows());
 			
 			if(m>0.0){
+				double mU = 0.0;
 				for (int i = 0; i < u.GetRows(); i++){
-					v[i] = (u[i]-x[i])/(m_dTargetAreas[i]*(u[i]-x[i]));
+					mU += m_dTargetAreas[i]*(u[i]-x[i]);
+				}
+				for (int i = 0; i < u.GetRows(); i++){
+					v[i] = (u[i]-x[i])/mU;
+					x[i]=x[i]+m*v[i];
 				}
 			}
 			else{
+				double mL = 0.0;
+				for (int i = 0; i < u.GetRows(); i++){
+					mL += m_dTargetAreas[i]*(x[i]-l[i]);
+				}
 				for (int i = 0; i < l.GetRows(); i++){
-					v[i] = (x[i] - l[i])/(m_dTargetAreas[i]*(x[i]-l[i]));
+					v[i] = (x[i]-l[i])/mL;
+					x[i] = x[i]+m*v[i];
 				}
 			}
+
 		}
 		
 		return;
