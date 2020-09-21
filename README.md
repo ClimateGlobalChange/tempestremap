@@ -125,25 +125,34 @@ Offline map generation is then performed as follows:
 
 For finite volume to finite volume remapping:
 ```
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_np <Remapping Order> --out_map <Output map>.nc
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_np <Remapping Order> \
+                     --out_map <Output map>.nc
 ```
 Monotone remapping in this case can be achieved with `--in_np 1`.
 
 For finite element to finite volume remapping:
 ```
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] --out_type fv --in_np <Input order> --out_map <Output map>.nc
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] \
+                     --out_type fv --in_np <Input order> --out_map <Output map>.nc
 ```
 Monotone remapping in this case can be achieved with argument `--mono`.
 
 For finite volume to finite element remapping:
 ```
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type fv --out_type [cgll|dgll] --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type fv --out_type [cgll|dgll] \
+                     --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
 ```
 Monotone remapping in this case requires `--mono` and `--in_np 1`.
 
 For finite element to finite element remapping:
 ```
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] --out_type [cgll|dgll] --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] \
+                     --out_type [cgll|dgll] --in_np <Input order> \
+                     --out_np <Output order> --out_map <Output map>.nc
 ```
 Monotone remapping in this case requires `--in_np 1` and `--out_np 1`.
 
@@ -157,7 +166,8 @@ Offline Map Application
 
 The offline map can be applied using the `ApplyOfflineMap` utility:
 ```
-./ApplyOfflineMap --map <Output map>.nc --var <Comma-separated list of variables> --in_data <Input data>.nc --out_data <Output data>.nc
+./ApplyOfflineMap --map <Output map>.nc --var <Comma-separated list of variables> \
+                  --in_data <Input data>.nc --out_data <Output data>.nc
 ```
 The remapped fields should then appear in `<Output data>.nc`.  Note that if your
 output mesh is rectilinear, such as a latitude-longitude mesh, the data will
