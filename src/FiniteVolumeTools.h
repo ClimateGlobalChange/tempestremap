@@ -50,7 +50,7 @@ inline Node GetFaceCentroid(
 	nodeRef.y = 0.0;
 	nodeRef.z = 0.0;
 
-	for (int i = 0; i < face.edges.size(); i++) {
+	for (size_t i = 0; i < face.edges.size(); i++) {
 		nodeRef.x += nodes[face[i]].x;
 		nodeRef.y += nodes[face[i]].y;
 		nodeRef.z += nodes[face[i]].z;
