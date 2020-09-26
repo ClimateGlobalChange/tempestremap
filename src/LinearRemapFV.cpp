@@ -165,7 +165,8 @@ void LinearRemapFVtoFV_np1(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
-	OfflineMap & mapRemap
+	OfflineMap & mapRemap,
+	bool verbose
 ) {
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.revnodearray.size() == 0) {
@@ -192,7 +193,7 @@ void LinearRemapFVtoFV_np1(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
@@ -206,11 +207,15 @@ void LinearRemapFVtoFV_np1(
 			int ixFirstFace = meshOverlap.vecSourceFaceIx[ixOverlap + j];
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
+            // signal to not participate, because this is an
+            // inactive (ghost) target region
+            if( ixSecondFace < 0 ) continue;  // do not do anything
+
 			smatMap(ixSecondFace, ixFirstFace) +=
 				meshOverlap.vecFaceArea[ixOverlap + j]
 				/ meshOutput.vecFaceArea[ixSecondFace];
 
-			if (smatMap(ixSecondFace, ixFirstFace) > 10.0) {
+			if (smatMap(ixSecondFace, ixFirstFace) > 10.0 && verbose) {
 				printf("%i %i %i\n", ixFirstFace, ixSecondFace, ixOverlap+j);
 				printf("Input:\n");
 				for (int i = 0; i < meshInput.faces[ixFirstFace].edges.size(); i++) {
@@ -252,7 +257,8 @@ void LinearRemapFVtoFV(
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	int nOrder,
-	OfflineMap & mapRemap
+	OfflineMap & mapRemap,
+	bool verbose
 ) {
 	// Use streamlined helper function for first order
 	if (nOrder == 1) {
@@ -278,7 +284,7 @@ void LinearRemapFVtoFV(
 #ifdef RECTANGULAR_TRUNCATION
 	const int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	const int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -289,11 +295,13 @@ void LinearRemapFVtoFV(
 	// Fit weight exponent
 	const int nFitWeightsExponent = nOrder + 2;
 
-	// Announcemnets
-	Announce("Triangular quadrature rule order %i", TriQuadRuleOrder);
-	Announce("Number of coefficients: %i", nCoefficients);
-	Announce("Required adjacency set size: %i", nRequiredFaceSetSize);
-	Announce("Fit weights exponent: %i", nFitWeightsExponent);
+	// Announcements
+	if (verbose) {
+		Announce("Triangular quadrature rule order %i", TriQuadRuleOrder);
+		Announce("Number of coefficients: %i", nCoefficients);
+		Announce("Required adjacency set size: %i", nRequiredFaceSetSize);
+		Announce("Fit weights exponent: %i", nFitWeightsExponent);
+	}
 
 	// Current overlap face
 	int ixOverlap = 0;
@@ -306,7 +314,7 @@ void LinearRemapFVtoFV(
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
-		if (ixFirst % 1000 == 0) {
+		if (ixFirst % 1000 == 0 && verbose) {
 			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
 
@@ -316,7 +324,7 @@ void LinearRemapFVtoFV(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
@@ -324,6 +332,8 @@ void LinearRemapFVtoFV(
 		}
 
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+        if( nOverlapFaces == 0 ) continue;
 
 		// Build integration array, which maps polynomial coefficients to
 		// area integrals.
@@ -435,6 +445,10 @@ void LinearRemapFVtoFV(
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixFirstFace = vecAdjFaces[i].first;
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+            // signal to not participate, because this is an
+			// inactive (ghost) target region
+            if( ixSecondFace < 0 ) continue;  // do not do anything
 
 			smatMap(ixSecondFace, ixFirstFace) +=
 				dComposedArray(i,j)
@@ -710,7 +724,7 @@ void LinearRemapFVtoGLL_Simple(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -826,7 +840,7 @@ void LinearRemapFVtoGLL_Simple(
 
 			for (int s = 0; s < nP; s++) {
 			for (int t = 0; t < nP; t++) {
-				
+
 				// Determine if this Node is in faceFirst
 				Node node;
 				Node dDx1G;
@@ -910,7 +924,7 @@ void LinearRemapFVtoGLL_Simple(
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder; q++) {
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder - p; q++) {
 #endif
@@ -982,7 +996,7 @@ void LinearRemapFVtoGLL_Volumetric(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -1130,7 +1144,7 @@ void LinearRemapFVtoGLL_Volumetric(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
@@ -1381,7 +1395,7 @@ void LinearRemapFVtoGLL(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -1588,7 +1602,7 @@ void LinearRemapFVtoGLL(
 						for (int p = 0; p < nOrder; p++) {
 						for (int q = 0; q < nOrder; q++) {
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 						for (int p = 0; p < nOrder; p++) {
 						for (int q = 0; q < nOrder - p; q++) {
 #endif
