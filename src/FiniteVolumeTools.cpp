@@ -360,15 +360,6 @@ void BuildIntegrationArray(
 	// Number of overlapping faces and triangles
 	int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
-	int nTotalOverlapTriangles = 0;
-
-	for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
-
-		const Face & faceOverlap = meshOverlap.faces[ixOverlapBegin + i];
-
-		nTotalOverlapTriangles += faceOverlap.edges.size() - 2; 
-	}
-
 	// Build integration array
 	dIntArray.Allocate(nCoefficients, nOverlapFaces);
 
