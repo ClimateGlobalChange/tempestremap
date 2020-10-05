@@ -364,9 +364,9 @@ void BuildIntegrationArray(
 
 	for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
 
-		const Face & faceOverlap = meshOverlap.faces[ixOverlapBegin + i];
+		const Face & faceOverlap = meshOverlap.faces[i];
 
-		nTotalOverlapTriangles += faceOverlap.edges.size() - 2; 
+		nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
 	}
 
 	// Build integration array
