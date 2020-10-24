@@ -155,6 +155,7 @@ class NcDim
     int the_id;
     char *the_name;
 
+  public:
     NcDim(NcFile*, int num);	// existing dimension
     NcDim(NcFile*, NcToken name, long sz); // defines a new dim
     virtual ~NcDim( void );
@@ -388,9 +389,12 @@ class NcVar : public NcTypedComponent
     char* the_name;
     long* cur_rec;
 
+  public:
+    NcVar(NcFile*, int);
+
+  protected:
     // private constructors because only an NcFile creates these
     NcVar( void );
-    NcVar(NcFile*, int);
 
     int attnum( NcToken attname ) const;
     NcToken attname( int attnum ) const;
@@ -422,8 +426,10 @@ class NcAtt : public NcTypedComponent
   private:
     const NcVar* the_variable;
     char* the_name;
-    // protected constructors because only NcVars and NcFiles create
-    // attributes
+
+  public:
+    // public constructors but only NcVars and NcFiles create
+    // attributes with valid NcFile objects
     NcAtt( NcFile*, const NcVar*, NcToken);
     NcAtt( NcFile*, NcToken); // global attribute
     

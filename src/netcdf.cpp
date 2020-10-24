@@ -498,15 +498,18 @@ NcBool NcDim::sync(void)
 NcDim::NcDim(NcFile* nc, int id)
 	: the_file(nc), the_id(id)
 {
-    char nam[NC_MAX_NAME];
-    if (the_file && NcError::set_err(
-				     nc_inq_dimname(the_file->id(), the_id, nam)
-				     ) == NC_NOERR) {
-	the_name = new char[strlen(nam) + 1]; 
-	strcpy(the_name, nam);
-    } else {
-	the_name = 0;
-    }
+  assert(nc != NULL);
+  assert(nc->is_valid());
+
+  char nam[NC_MAX_NAME];
+  if (the_file && NcError::set_err(
+            nc_inq_dimname(the_file->id(), the_id, nam)
+            ) == NC_NOERR) {
+    the_name = new char[strlen(nam) + 1]; 
+    strcpy(the_name, nam);
+  } else {
+    the_name = 0;
+  }
 }
 
 NcDim::NcDim(NcFile* nc, NcToken name, long sz)
@@ -556,7 +559,10 @@ char* NcTypedComponent::as_string( long n ) const
 
 NcTypedComponent::NcTypedComponent ( NcFile* nc )
 	: the_file(nc)
-{}
+{
+  assert(nc != NULL);
+  assert(nc->is_valid());
+}
 
 NcValues* NcTypedComponent::get_space( long numVals ) const
 {
