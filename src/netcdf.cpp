@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <iostream>
 
+#include "Exception.h"
+
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -498,8 +500,8 @@ NcBool NcDim::sync(void)
 NcDim::NcDim(NcFile* nc, int id)
 	: the_file(nc), the_id(id)
 {
-  assert(nc != NULL);
-  assert(nc->is_valid());
+  _ASSERT(nc != NULL);
+  _ASSERT(nc->is_valid());
 
   char nam[NC_MAX_NAME];
   if (the_file && NcError::set_err(
@@ -560,8 +562,8 @@ char* NcTypedComponent::as_string( long n ) const
 NcTypedComponent::NcTypedComponent ( NcFile* nc )
 	: the_file(nc)
 {
-  assert(nc != NULL);
-  assert(nc->is_valid());
+  _ASSERT(nc != NULL);
+  _ASSERT(nc->is_valid());
 }
 
 NcValues* NcTypedComponent::get_space( long numVals ) const
