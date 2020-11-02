@@ -1465,7 +1465,7 @@ NcBool NcVar::sync(void)
 NcVar::NcVar(NcFile* nc, int id)
    : NcTypedComponent(nc), the_id(id)
 {
-    char nam[NC_MAX_NAME];
+    char nam[NC_MAX_NAME]={0};
     if (the_file
 	&& NcError::set_err(
 			    nc_inq_varname(the_file->id(), the_id, nam)
