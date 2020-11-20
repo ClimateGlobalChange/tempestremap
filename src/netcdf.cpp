@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <iostream>
 
+#include "Exception.h"
+
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -19,7 +21,7 @@
 
 static const int ncGlobal = NC_GLOBAL; // psuedo-variable for global attributes
 
-static const int ncBad = -1;	// failure return for netCDF C interface 
+static const int ncBad = -1;	// failure return for netCDF C interface
 
 NcFile::~NcFile( void )
 {
@@ -296,7 +298,7 @@ NcBool NcFile::sync( void )
 NcBool NcFile::close( void )
 {
     int i;
-    
+
     if (the_id == ncBad)
       return 0;
     for (i = 0; i < num_dims(); i++)
@@ -353,7 +355,16 @@ int NcFile::id( void ) const
     return the_id;
 }
 
-NcFile::NcFile( const char* path, FileMode fmode, 
+NcFile::NcFile()
+{
+    the_id = -1;
+    the_fill_mode = Fill;
+    dimensions = 0;
+    variables = 0;
+    globalv = 0;
+}
+
+NcFile::NcFile( const char* path, FileMode fmode,
 		size_t* bufrsizeptr, size_t initialsize, FileFormat fformat  )
 {
     NcError err(NcError::silent_nonfatal); // constructor must not fail
@@ -361,7 +372,7 @@ NcFile::NcFile( const char* path, FileMode fmode,
     int mode = NC_NOWRITE;
     the_fill_mode = Fill;
     int status;
-    
+
     // If the user wants a 64-bit offset format, set that flag.
     if (fformat == Offset64Bits)
        mode |= NC_64BIT_OFFSET;
@@ -478,8 +489,8 @@ int NcDim::id( void ) const
     return the_id;
 }
 
-NcBool NcDim::sync(void) 
-{    
+NcBool NcDim::sync(void)
+{
     char nam[NC_MAX_NAME];
     if (the_name) {
 	delete [] the_name;
@@ -487,7 +498,7 @@ NcBool NcDim::sync(void)
     if (the_file && NcError::set_err(
 				     nc_inq_dimname(the_file->id(), the_id, nam)
 				     ) == NC_NOERR) {
-	the_name = new char[strlen(nam) + 1]; 
+	the_name = new char[strlen(nam) + 1];
 	strcpy(the_name, nam);
 	return TRUE;
     }
@@ -498,15 +509,18 @@ NcBool NcDim::sync(void)
 NcDim::NcDim(NcFile* nc, int id)
 	: the_file(nc), the_id(id)
 {
-    char nam[NC_MAX_NAME];
-    if (the_file && NcError::set_err(
-				     nc_inq_dimname(the_file->id(), the_id, nam)
-				     ) == NC_NOERR) {
-	the_name = new char[strlen(nam) + 1]; 
-	strcpy(the_name, nam);
-    } else {
-	the_name = 0;
-    }
+  _ASSERT(nc != NULL);
+  _ASSERT(nc->is_valid());
+
+  char nam[NC_MAX_NAME];
+  if (the_file && NcError::set_err(
+            nc_inq_dimname(the_file->id(), the_id, nam)
+            ) == NC_NOERR) {
+    the_name = new char[strlen(nam) + 1];
+    strcpy(the_name, nam);
+  } else {
+    the_name = 0;
+  }
 }
 
 NcDim::NcDim(NcFile* nc, NcToken name, long sz)
@@ -556,7 +570,10 @@ char* NcTypedComponent::as_string( long n ) const
 
 NcTypedComponent::NcTypedComponent ( NcFile* nc )
 	: the_file(nc)
-{}
+{
+  _ASSERT(nc != NULL);
+  _ASSERT(nc->is_valid());
+}
 
 NcValues* NcTypedComponent::get_space( long numVals ) const
 {
@@ -700,37 +717,37 @@ NcValues* NcVar::values( void ) const
     switch (type()) {
     case ncFloat:
 	status = NcError::set_err(
-				  nc_get_vara_float(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_float(the_file->id(), the_id, crnr, edgs,
 				   (float *)valp->base())
 				  );
 	break;
     case ncDouble:
 	status = NcError::set_err(
-				  nc_get_vara_double(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_double(the_file->id(), the_id, crnr, edgs,
 				    (double *)valp->base())
 				  );
 	break;
     case ncInt:
 	status = NcError::set_err(
-				  nc_get_vara_int(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_int(the_file->id(), the_id, crnr, edgs,
 				 (int *)valp->base())
 				  );
 	break;
     case ncShort:
 	status = NcError::set_err(
-				  nc_get_vara_short(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_short(the_file->id(), the_id, crnr, edgs,
 				   (short *)valp->base())
 				  );
 	break;
     case ncByte:
 	status = NcError::set_err(
-				  nc_get_vara_schar(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_schar(the_file->id(), the_id, crnr, edgs,
 				   (signed char *)valp->base())
 				  );
 	break;
     case ncChar:
 	status = NcError::set_err(
-				  nc_get_vara_text(the_file->id(), the_id, crnr, edgs, 
+				  nc_get_vara_text(the_file->id(), the_id, crnr, edgs,
 				   (char *)valp->base())
 				  );
 	break;
@@ -759,10 +776,10 @@ void NcVar::set_rec(NcDim *rdim, long slice)
   int i = dim_to_index(rdim);
   // we should fail and gripe about it here....
   if (slice >= get_dim(i)->size() && ! get_dim(i)->is_unlimited())
-	  return;  
+	  return;
   cur_rec[i] = slice;
   return;
-} 
+}
 
 void NcVar::set_rec(long rec)
 {
@@ -770,7 +787,7 @@ void NcVar::set_rec(long rec)
   // just assume [0] is it.....
   set_rec(get_dim(0),rec);
   return;
-} 
+}
 
 NcValues* NcVar::get_rec(void)
 {
@@ -813,37 +830,37 @@ NcValues* NcVar::get_rec(NcDim* rdim, long slice)
     switch (type()) {
     case ncFloat:
 	status = NcError::set_err(
-				  nc_get_vara_float(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_float(the_file->id(), the_id, start, edge,
 				   (float *)valp->base())
 				  );
 	break;
     case ncDouble:
 	status = NcError::set_err(
-				  nc_get_vara_double(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_double(the_file->id(), the_id, start, edge,
 				    (double *)valp->base())
 				  );
 	break;
     case ncInt:
 	status = NcError::set_err(
-				  nc_get_vara_int(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_int(the_file->id(), the_id, start, edge,
 				 (int *)valp->base())
 				  );
 	break;
     case ncShort:
 	status = NcError::set_err(
-				  nc_get_vara_short(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_short(the_file->id(), the_id, start, edge,
 				   (short *)valp->base())
 				  );
 	break;
     case ncByte:
 	status = NcError::set_err(
-				  nc_get_vara_schar(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_schar(the_file->id(), the_id, start, edge,
 				   (signed char *)valp->base())
 				  );
 	break;
     case ncChar:
 	status = NcError::set_err(
-				  nc_get_vara_text(the_file->id(), the_id, start, edge, 
+				  nc_get_vara_text(the_file->id(), the_id, start, edge,
 				   (char *)valp->base())
 				  );
 	break;
@@ -860,7 +877,7 @@ NcValues* NcVar::get_rec(NcDim* rdim, long slice)
 	return 0;
     }
     return valp;
-} 
+}
 
 
 #define NcVar_put_rec(TYPE)                                                   \
@@ -914,7 +931,7 @@ long NcVar::rec_size(void) {
 }
 
 long NcVar::rec_size(NcDim *rdim) {
-    int idx = dim_to_index(rdim); 
+    int idx = dim_to_index(rdim);
     long size = 1;
     long* edge = edges();
     for( int i = 0 ; i<num_dims() ; i++) {
@@ -963,9 +980,9 @@ NcVar_get_index(nclong)
 NcVar_get_index(long)
 NcVar_get_index(float)
 NcVar_get_index(double)
-    
+
 // Macros below work for short, nclong, long, float, and double, but for ncbyte
-// and char, we must use corresponding schar, uchar, or text C functions, so in 
+// and char, we must use corresponding schar, uchar, or text C functions, so in
 // these cases macros are expanded manually.
 #define NcVar_put_array(TYPE)						      \
 NcBool NcVar::put( const TYPE* vals,					      \
@@ -1430,7 +1447,7 @@ NcBool NcVar::sync(void)
 	delete [] cur_rec;
     }
     char nam[NC_MAX_NAME];
-    if (the_file 
+    if (the_file
 	&& NcError::set_err(
 			    nc_inq_varname(the_file->id(), the_id, nam)
 			    ) == NC_NOERR) {
@@ -1440,7 +1457,7 @@ NcBool NcVar::sync(void)
 	the_name = 0;
 	return FALSE;
     }
-    init_cur(); 
+    init_cur();
     return TRUE;
 }
 
@@ -1448,8 +1465,8 @@ NcBool NcVar::sync(void)
 NcVar::NcVar(NcFile* nc, int id)
    : NcTypedComponent(nc), the_id(id)
 {
-    char nam[NC_MAX_NAME];
-    if (the_file 
+    char nam[NC_MAX_NAME]={0};
+    if (the_file
 	&& NcError::set_err(
 			    nc_inq_varname(the_file->id(), the_id, nam)
 			    ) == NC_NOERR) {
@@ -1493,7 +1510,7 @@ void NcVar::init_cur( void )
 {
     the_cur = new long[NC_MAX_DIMS]; // *** don't know num_dims() yet?
     cur_rec = new long[NC_MAX_DIMS]; // *** don't know num_dims() yet?
-    for(int i = 0; i < NC_MAX_DIMS; i++) { 
+    for(int i = 0; i < NC_MAX_DIMS; i++) {
 	the_cur[i] = 0; cur_rec[i] = 0; }
 }
 
