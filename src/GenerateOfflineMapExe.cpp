@@ -119,6 +119,8 @@ int main(int argc, char** argv) {
 	double ub;
 	
 	bool fCAAS;
+	
+	bool fCAASLocal;
 
 	// Parse the command line
 	BeginCommandLine()
@@ -156,6 +158,7 @@ int main(int argc, char** argv) {
 		CommandLineDouble(lb, "lb", 0.0);
 		CommandLineDouble(ub, "ub", 1.0);
 		CommandLineBool(fCAAS,"f_CAAS");
+		CommandLineBool(fCAASLocal,"CAAS_local");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -191,7 +194,7 @@ int main(int argc, char** argv) {
 			strPreserveVariables,
 			fPreserveAll,
 			dFillValueOverride,
-			fInputConcave, fOutputConcave, lb, ub, fCAAS);
+			fInputConcave, fOutputConcave, lb, ub, fCAAS, fCAASLocal);
 
 	if (err) exit(err);
 
