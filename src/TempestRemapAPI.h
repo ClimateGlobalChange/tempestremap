@@ -178,7 +178,8 @@ extern "C" {
 		bool fOutputConcave = false,
 		double lb = 0.0,
 		double ub = 1.0,
-		bool fCAAS = false);
+		bool fCAAS = false,
+		bool fCAASLocal = false);
 
 	// Generate the OfflineMap between input and output meshes
 	int GenerateOfflineMapWithMeshes (
@@ -220,6 +221,11 @@ extern "C" {
 		std::string strOutputData,
 		std::string strOutputDataList,
 		std::string strNColName, 
+		std::string strInputMesh,
+		std::string strOutputMesh,
+		std::string strOverlapMesh,
+		int nPin,
+		int nPout,
 		bool fOutputDouble,
 		std::string strPreserveVariables,
 		bool fPreserveAll,
@@ -227,7 +233,10 @@ extern "C" {
 		std::string strLogDir,
 		double lb,
 		double ub,
-		bool fCAAS );
+		bool fCAAS,
+		bool fCAASLocal,
+		bool fContainsConcaveFaces,
+		bool fGLL );
 
 	// Generate the connectivity data for faces of the given Mesh
 	int GenerateConnectivityData(

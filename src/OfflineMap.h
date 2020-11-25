@@ -345,11 +345,17 @@ public:
 		const std::string & strTargetDataFile,
 		const std::vector<std::string> & vecVariables,
 		const std::string & strNColName,
+		Mesh & meshOverlap,
+		Mesh & meshInput,
+		int & nPin,
+		DataArray3D<int> & dataGLLNodesIn,
+		DataArray3D<int> & dataGLLNodesOut,
 		double lb,
 		double ub,
 		bool fTargetDouble = false,
 		bool fAppend = false,
-		bool fCAAS = false
+		bool fCAAS = false,
+		bool fCAASLocal = false
 	);
 
 	///	<summary>
