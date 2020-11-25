@@ -20,11 +20,16 @@
 #include "NetCDFUtilities.h"
 #include "GridElements.h"
 #include "FiniteElementTools.h"
+#include "FiniteVolumeTools.h"
 
 #include "Announce.h"
 #include "Exception.h"
 #include "DataArray1D.h"
 #include "DataArray2D.h"
+
+#include "DataArray3D.h"
+
+#include <list>
 
 #include <cmath>
 
@@ -344,12 +349,12 @@ void OfflineMap::CAAS(
 			x[i] = fmax(l[i],fmin(u[i],0.0));
 		}
 		
+		
 		double m = b;
 		
 		for (int i = 0; i<x.GetRows(); i++){
 			m -= m_dTargetAreas[i]*x[i];
 		}
-		
 		
 		if(m == 0){
 			return;
@@ -1094,11 +1099,17 @@ void OfflineMap::Apply(
 	const std::string & strTargetDataFile,
 	const std::vector<std::string> & vecVariables,
 	const std::string & strNColName,
+	Mesh & meshOverlap,
+	Mesh & meshInput,
+	int & nPin,
+	DataArray3D<int> & dataGLLNodesIn,
+	DataArray3D<int> & dataGLLNodesOut,
 	double lb,
 	double ub,
 	bool fTargetDouble,
 	bool fAppend,
-	bool fCAAS
+	bool fCAAS,
+	bool fCAASLocal
 ) {
 
 	// Check variable list for "lat" and "lon"
@@ -1495,13 +1506,15 @@ void OfflineMap::Apply(
 
 	// Loop through all variables
 	for (int v = 0; v < vecVariableList.size(); v++) {
+
 		NcVar * var = ncSource.get_var(vecVariableList[v].c_str());
 		if (var == NULL) {
 			_EXCEPTION1("Variable \"%s\" does not exist in source file",
 				vecVariableList[v].c_str());
 		}
-
+		
 		AnnounceStartBlock(vecVariableList[v].c_str());
+		
 
 		// Check for _FillValue
 		float flFillValue = m_flFillValueOverride;
@@ -1795,29 +1808,369 @@ void OfflineMap::Apply(
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
 			
-			if(fCAAS){
-				
-				//Define l, x, and u as vectors
+			
+			if(fCAASLocal || fCAAS){
 				DataArray1D<double> l = dataOutDouble;
 				DataArray1D<double> u = dataOutDouble;
 				DataArray1D<double> x(nTargetCount);
 				double b = dSourceMass;
+			
+				for (int i=0; i < l.GetRows(); i++){
+					b -= dataOutDouble[i]*m_dTargetAreas[i];
+				}
+			
+			
+			if(fCAASLocal){
+				int GLLSizeIn = dataGLLNodesIn.GetTotalSize();
+				int GLLSizeOut = dataGLLNodesOut.GetTotalSize();
+				int pOut = dataGLLNodesOut.GetSize(0);
+				int qOut = dataGLLNodesOut.GetSize(1);
+				int pIn = dataGLLNodesIn.GetSize(0);
+				int qIn = dataGLLNodesIn.GetSize(1);
+				double f_maxI = 0.0;
+				double f_minI = 0.0;
+				int nTargetFaces;
 				
+				
+				if(GLLSizeOut > 0){
+					nTargetFaces = dataGLLNodesOut.GetSize(2);
+				}
+				else{
+					nTargetFaces = nTargetCount;
+				}
+				
+				std::vector< std::vector<int> > SourceOvTarget(nTargetFaces);
+								
+				for (int i=0; i<meshOverlap.faces.size(); i++){
+					
+					int ixT = meshOverlap.vecTargetFaceIx[i];
+					int ixS = meshOverlap.vecSourceFaceIx[i];
+					SourceOvTarget[ixT].push_back(ixS);
+					
+				}
+				//std::vector<double> f_max(nTargetCount);
+				//std::vector<double> f_min(nTargetCount);
+				std::vector<double> local_UB(nTargetCount);
+				std::vector<double> local_LB(nTargetCount);
+				
+				//FvtoFv
+				if(GLLSizeIn == 0 && GLLSizeOut == 0){
+					for (int i=0; i < nTargetCount; i++){
+					
+						//f_maxI = 0.0;
+						//f_minI = dataInDouble[SourceOvTarget[i][0]];
+					
+						//for (int j=0; j < SourceOvTarget[i].size(); j++){
+						
+							//int k = SourceOvTarget[i][j];
+							//f_maxI=fmax(f_maxI,dataInDouble[k]);
+							//f_minI=fmin(f_minI,dataInDouble[k]);
+							
+						//}
+						
+						//Set the minimum to 0 if negative
+						//f_minI=fmax(f_minI,0.0);
+						
+						//local_UB[i] = f_maxI;
+						//local_LB[i] = f_minI;
+						
+						AdjacentFaceVector vecAdjFaces;
+						
+						GetAdjacentFaceVectorByEdge(meshInput,SourceOvTarget[i][0],2.0*(nPin+1)*(nPin+1),vecAdjFaces);
+						f_maxI=dataInDouble[vecAdjFaces[0].first];
+						f_minI=dataInDouble[vecAdjFaces[0].first];
+						for (int j=0; j<vecAdjFaces.size(); j++) {
+							int k = vecAdjFaces[j].first;
+							f_maxI=fmax(f_maxI,dataInDouble[k]);
+							f_minI=fmin(f_minI,dataInDouble[k]);
+						}
+						
+						for (int j = 0; j < SourceOvTarget[i].size(); j++){
+							
+							int k = SourceOvTarget[i][j];
+							f_maxI=fmax(f_maxI,dataInDouble[k]);
+							f_minI=fmin(f_minI,dataInDouble[k]);
+						}
+						
+						
+						//f_minI=fmax(f_minI,0.0);
+						
+						local_UB[i] = f_maxI;
+						local_LB[i] = f_minI;
+						
+					}
+										
+				}
+				//double mt = 0.0;
+				//for (int i=0; i<nTargetCount; i++){
+				//	mt+=m_dTargetAreas[i]*(local_LB[i]-dataOutDouble[i]);
+				//}
+				
+				
+				
+				//GLLtoGLL
+				else if(GLLSizeIn != 0 && GLLSizeOut != 0){
+					
+					std::vector< std::vector<double> > f_max(nTargetCount);
+					std::vector< std::vector<double> > f_min(nTargetCount);
+									
+					
+					for (int i = 0; i < dataGLLNodesOut.GetSize(2); i++){
+						//Reset max to 0
+						f_maxI = dataInDouble[SourceOvTarget[i][0]];;
+						f_minI = dataInDouble[SourceOvTarget[i][0]];
+						//Compute maximum over all source elements that intersect target element i
+						for (int j = 0; j < SourceOvTarget[i].size(); j++){
+							
+							for (int k = 0; k < pIn; k++){
+								for (int r = 0; r < qIn; r++){
+									
+									int m = SourceOvTarget[i][j];
+									int n = dataGLLNodesIn[k][r][m]-1;
+									
+									f_maxI = fmax(f_maxI,dataInDouble[n]);
+									f_minI = fmin(f_minI,dataInDouble[n]);
+									
+								}
+							}
+						}
+						
+						//Set the minimum to 0 if negative
+						//f_minI=fmax(f_minI,0.0);
+											
+						for (int l = 0; l < pOut; l++){
+							for (int s = 0; s < qOut; s++){
+								
+								int t = dataGLLNodesOut[l][s][i]-1;
+								
+								f_max[t].push_back(f_maxI);
+								f_min[t].push_back(f_minI);
+								
+							}
+						}
+						
+					}
+					
+					for (int i = 0; i<nTargetCount; i++){
+						
+						double face_max = f_max[i][0];
+						double face_min = f_min[i][0];
+						
+						for (int j = 0; j < f_max[i].size(); j++){
+							face_max = fmax(face_max,f_max[i][j]);
+							face_min = fmin(face_min,f_min[i][j]);
+						}
+						
+						local_UB[i] = face_max;
+						local_LB[i] = face_min;
+					}
+					
+				}
+				//FvtoGLL
+				else if(GLLSizeOut != 0){
+
+					std::vector< std::vector<double> > f_max(nTargetCount);
+					std::vector< std::vector<double> > f_min(nTargetCount);
+										
+					for (int i = 0; i < dataGLLNodesOut.GetSize(2); i++){
+						
+						//f_maxI = 0.0;
+						//f_minI = dataInDouble[SourceOvTarget[i][0]];;
+													
+						//for (int j = 0; j < SourceOvTarget[i].size(); j++){
+						
+							//int k = SourceOvTarget[i][j];
+							//f_maxI=fmax(f_maxI,dataInDouble[k]);
+							//f_minI=fmin(f_minI,dataInDouble[k]);
+						//}				
+						
+						
+						////Set the minimum to 0 if negative
+						//f_minI=fmax(f_minI,0.0);
+						
+						//for (int l = 0; l < pOut; l++){
+							//for (int s = 0; s < qOut; s++){
+									
+								//int t = dataGLLNodesOut[l][s][i]-1;
+								//f_max[t].push_back(f_maxI);
+								//f_min[t].push_back(f_minI);
+							//}
+						//}
+						//Dave adds this
+						AdjacentFaceVector vecAdjFaces;
+						
+						GetAdjacentFaceVectorByEdge(meshInput,SourceOvTarget[i][0],(nPin+1)*(nPin+1),vecAdjFaces);
+						f_maxI=0.0;
+						f_minI=dataInDouble[vecAdjFaces[0].first];
+						
+						
+						for (int j = 0; j < vecAdjFaces.size(); j++) {
+							
+							int k = vecAdjFaces[j].first;
+							f_maxI=fmax(f_maxI,dataInDouble[k]);
+							f_minI=fmin(f_minI,dataInDouble[k]);
+							
+						}
+						
+						for (int j = 0; j < SourceOvTarget[i].size(); j++) {
+							
+							int k = SourceOvTarget[i][j];
+							f_maxI=fmax(f_maxI,dataInDouble[k]);
+							f_minI=fmin(f_minI,dataInDouble[k]);
+							
+							
+						}
+						
+						for (int l = 0; l < pOut; l++){
+							for (int s = 0; s < qOut; s++){
+									
+								int t = dataGLLNodesOut[l][s][i]-1;
+								f_max[t].push_back(f_maxI);
+								f_min[t].push_back(f_minI);
+							}
+						}
+						
+					}
+					
+					for (int i = 0; i < nTargetCount; i++){
+						
+						double face_max = f_max[i][0];
+						double face_min = f_min[i][0];
+						
+						for (int j = 0; j < f_max[i].size(); j++){
+							face_max = fmax(face_max,f_max[i][j]);
+							face_min = fmin(face_min,f_min[i][j]);
+						}
+						
+						local_UB[i] = face_max;
+						local_LB[i] = face_min;
+					}
+						
+				}
+				//GLLtoFV
+				else{
+					for (int i = 0; i < nTargetCount; i++){
+						
+						f_maxI = 0.0;
+						f_minI = dataInDouble[SourceOvTarget[i][0]];;
+						
+						for (int j = 0; j < SourceOvTarget[i].size(); j++){
+							for (int k = 0; k < pIn; k++){
+								for (int r = 0; r < qIn; r++){
+									
+									int m = SourceOvTarget[i][j];
+									int n = dataGLLNodesIn[k][r][m]-1;
+									
+									f_maxI = fmax(f_maxI,dataInDouble[n]);
+									f_minI = fmin(f_minI,dataInDouble[n]);
+									
+								}
+							}							
+						}
+					
+					//Set the minimum to 0 if negative
+					//f_minI=fmax(f_minI,0.0);
+					
+					local_UB[i] = f_maxI;
+					local_LB[i] = f_minI;
+					
+					}
+				}
+				
+				
+				double mt = 0.0;
+				for (int i=0; i<nTargetCount; i++){
+					mt+=m_dTargetAreas[i]*(local_LB[i]-dataOutDouble[i]);
+				}
+				
+				
+				for (int i=0; i < l.GetRows(); i++){
+					l[i] = local_LB[i] - l[i];
+					u[i] = local_UB[i] - u[i];
+				}
+				
+				//Adjust mass of lower bound if greater than b
+				double mL = 0.0;
+				
+				for (int i = 0; i < nTargetCount; i++) {
+					mL+=m_dTargetAreas[i]*l[i];
+				}
+				if (mL > b) {
+					for (int i = 0; i < nTargetCount; i++) {
+						mL = mL - m_dTargetAreas[i]*l[i] + m_dTargetAreas[i]*(dSourceMin-dataOutDouble[i]);
+						l[i] = dSourceMin - dataOutDouble[i];
+						if(mL < b) {
+							break;
+						}
+					}
+				}
+				
+				//Adjust mass of upper bound if less than b
+				double mU = 0.0;
+				
+				if (mU < b) {
+					for (int i = 0; i < nTargetCount; i++) {
+						mU = mU - m_dTargetAreas[i]*u[i] + m_dTargetAreas[i]*(dSourceMax-dataOutDouble[i]);
+						u[i] = dSourceMax - dataOutDouble[i];
+						if(mU > b) {
+							break;
+						}
+					}
+				}
+			}
+			
+			else if(fCAAS){
 				for (int i=0; i < l.GetRows(); i++){
 					l[i] = lb - l[i];
 					u[i] = ub - u[i];
-					b -= dataOutDouble[i]*m_dTargetAreas[i];
 				}
-				
-				CAAS(x,l,u,b);
-				
-				// Add correction
-				for (int i = 0; i < l.GetRows(); i++){
-					dataOutDouble[i] += x[i];
-				}
-				
 			}
-
+			
+//			for (int i=0; i < l.GetRows(); i++){
+//				b -= dataOutDouble[i]*m_dTargetAreas[i];
+//			}
+			//double mL = 0.0;
+			
+			//for (int i = 0; i < nTargetCount; i++) {
+				//mL+=m_dTargetAreas[i]*l[i];
+			//}
+			
+			//if (mL > b) {
+				//for (int i = 0; i < nTargetCount; i++) {
+					//local_LB[i] = dSourceMin;
+					//mL = mL - m_dTargetAreas[i]*l[i] + m_dTargetAreas[i]*(dSourceMin-l[i]);
+					//if(mL < b) { 
+						//break;
+					//}
+				//}
+			//}
+			
+			CAAS(x,l,u,b);
+			
+			//Add correction
+			for (int i = 0; i < l.GetRows(); i++){
+					dataOutDouble[i] += x[i];
+			}
+			
+		}
+			
+			
+			
+			//for (int i=0; i < l.GetRows(); i++){
+			//	l[i] = lb - l[i];
+			//	u[i] = ub - u[i];
+			//	b -= dataOutDouble[i]*m_dTargetAreas[i];
+			//}
+			
+			//CAAS(x,l,u,b);
+			
+			// Add correction
+			//for (int i = 0; i < l.GetRows(); i++){
+				//dataOutDouble[i] += x[i];
+			//}
+				
+			
+			
 			// Announce output mass
 			double dTargetMass = 0.0;
 			double dTargetMin  = dataOutDouble[0];
@@ -1831,6 +2184,7 @@ void OfflineMap::Apply(
 					dTargetMax = dataOutDouble[i];
 				}
 			}
+						
 			Announce("Target Mass: %1.15e Min %1.10e Max %1.10e",
 				dTargetMass, dTargetMin, dTargetMax);
 
