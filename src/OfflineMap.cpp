@@ -1876,7 +1876,7 @@ void OfflineMap::Apply(
 						
 						AdjacentFaceVector vecAdjFaces;
 						
-						GetAdjacentFaceVectorByEdge(meshInput,SourceOvTarget[i][0],2.0*(nPin+1)*(nPin+1),vecAdjFaces);
+						GetAdjacentFaceVectorByEdge(meshInput,SourceOvTarget[i][0],(nPin+1)*(nPin+1),vecAdjFaces);
 						f_maxI=dataInDouble[vecAdjFaces[0].first];
 						f_minI=dataInDouble[vecAdjFaces[0].first];
 						for (int j=0; j<vecAdjFaces.size(); j++) {
