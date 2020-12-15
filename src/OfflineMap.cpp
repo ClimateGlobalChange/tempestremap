@@ -1849,30 +1849,30 @@ void OfflineMap::RetrieveFieldData(
 		}
 	}
 
-	DataArray1D<float> dataIn;
+	vecSolutions.resize(vecVariables.size());
 	if (context == "source")
 	{
 		if (m_vecSourceDimSizes.size() == 1) {
-			dataIn.Allocate(nSourceCount);
+      for (unsigned k = 0; k < vecVariables.size(); k++)
+        vecSolutions[k].Allocate(nSourceCount);
 		} else {
-			dataIn.Allocate(m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]);
+      for (unsigned k = 0; k < vecVariables.size(); k++)
+        vecSolutions[k].Allocate(m_vecSourceDimSizes[0] * m_vecSourceDimSizes[1]);
 		}
 	}
 	else
 	{
 		if (m_vecTargetDimSizes.size() == 1) {
-			dataIn.Allocate(nSourceCount);
+      for (unsigned k = 0; k < vecVariables.size(); k++)
+        vecSolutions[k].Allocate(nSourceCount);
 		} else {
-			dataIn.Allocate(m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
+			for (unsigned k = 0; k < vecVariables.size(); k++)
+        vecSolutions[k].Allocate(m_vecTargetDimSizes[0] * m_vecTargetDimSizes[1]);
 		}
 	}
 
 	// DataArray1D<double> vecSolutions(nSourceCount);
 	// DataArray1D<double> dataOutDouble(nTargetCount);
-
-	vecSolutions.resize(vecVariables.size());
-	for (unsigned k = 0; k < vecVariables.size(); k++)
-		vecSolutions[k].Allocate(nSourceCount);
 
 	// Generate variable list
 	std::vector<std::string> vecVariableList = vecVariables;
@@ -1889,12 +1889,22 @@ void OfflineMap::RetrieveFieldData(
 					NcDim * dimA = var->get_dim(var->num_dims()-2);
 					NcDim * dimB = var->get_dim(var->num_dims()-1);
 
-					if (dimA->size() != m_vecSourceDimSizes[0]) {
-						continue;
+					if (context == "source") {
+					  if (dimA->size() != m_vecSourceDimSizes[0]) {
+						  continue;
+					  }
+					  if (dimB->size() != m_vecSourceDimSizes[1]) {
+						  continue;
+					  }
 					}
-					if (dimB->size() != m_vecSourceDimSizes[1]) {
-						continue;
-					}
+          else {
+            if (dimA->size() != m_vecTargetDimSizes[0]) {
+						  continue;
+					  }
+					  if (dimB->size() != m_vecTargetDimSizes[1]) {
+						  continue;
+					  }
+          }
 				}
 
 			} else {
@@ -1909,8 +1919,8 @@ void OfflineMap::RetrieveFieldData(
 					}
 
 					bool fDimensionName = false;
-					for (int d = 0; d < m_vecTargetDimNames.size(); d++) {
-						const char * szDimName = m_vecTargetDimNames[d].c_str();
+					for (int d = 0; d < (context == "source" ? m_vecSourceDimNames.size() : m_vecTargetDimNames.size()); d++) {
+						const char * szDimName = (context == "source" ? m_vecSourceDimNames[d].c_str() : m_vecTargetDimNames[d].c_str());
 						if (strcmp(var->name(), szDimName) == 0) {
 							fDimensionName = true;
 							break;
