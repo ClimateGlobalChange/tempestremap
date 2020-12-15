@@ -113,6 +113,14 @@ int main(int argc, char** argv) {
 
 	// Output mesh contains concave elements
 	bool fOutputConcave;
+	
+	double lb;
+	
+	double ub;
+	
+	bool fCAAS;
+	
+	bool fCAASLocal;
 
 	// Parse the command line
 	BeginCommandLine()
@@ -147,6 +155,10 @@ int main(int argc, char** argv) {
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 		CommandLineBool(fInputConcave, "in_concave");
 		CommandLineBool(fOutputConcave, "out_concave");
+		CommandLineDouble(lb, "lb", 0.0);
+		CommandLineDouble(ub, "ub", 1.0);
+		CommandLineBool(fCAAS,"f_CAAS");
+		CommandLineBool(fCAASLocal,"CAAS_local");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -182,7 +194,7 @@ int main(int argc, char** argv) {
 			strPreserveVariables,
 			fPreserveAll,
 			dFillValueOverride,
-			fInputConcave, fOutputConcave);
+			fInputConcave, fOutputConcave, lb, ub, fCAAS, fCAASLocal);
 
 	if (err) exit(err);
 

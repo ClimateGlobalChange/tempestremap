@@ -66,6 +66,16 @@ int main(int argc, char** argv) {
 
 	// Name of the ncol variable
 	std::string strNColName;
+	
+	std::string strInputMesh;
+	
+	std::string strOutputMesh;
+	
+	std::string strOverlapMesh;
+	
+	int nPin;
+	
+	int nPout;
 
 	// Output as double
 	bool fOutputDouble;
@@ -81,7 +91,19 @@ int main(int argc, char** argv) {
 
 	// Log directory
 	std::string strLogDir;
-
+	
+	double lb;
+	
+	double ub;
+	
+	bool fCAAS;
+	
+	bool fCAASLocal;
+	
+	bool fContainsConcaveFaces;
+	
+	bool fGLL;
+	
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputData, "in_data", "");
@@ -94,11 +116,22 @@ int main(int argc, char** argv) {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strOutputDataList, "out_data_list", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineString(strInputMesh,"mesh_in","");
+		CommandLineString(strOutputMesh,"mesh_out","");
+		CommandLineString(strOverlapMesh,"mesh_ov","");
+		CommandLineInt(nPin, "in_np", 0);
+		CommandLineInt(nPout, "out_np", 0);
 		CommandLineBool(fOutputDouble, "out_double");
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 		CommandLineString(strLogDir, "logdir", "");
+		CommandLineDouble(lb, "lb", 0.0);
+		CommandLineDouble(ub, "ub", 1.0);
+		CommandLineBool(fCAAS,"f_CAAS");
+		CommandLineBool(fCAASLocal,"CAAS_local");
+		CommandLineBool(fContainsConcaveFaces,"concave");
+		CommandLineBool(fGLL,"gll");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -113,12 +146,23 @@ int main(int argc, char** argv) {
 		strVariables,
 		strOutputData,
 		strOutputDataList,
-		strNColName, 
+		strNColName,
+		strInputMesh,
+		strOutputMesh,
+		strOverlapMesh,
+		nPin,
+		nPout,
 		fOutputDouble,
 		strPreserveVariables,
 		fPreserveAll,
 		dFillValueOverride,
-		strLogDir );
+		strLogDir,
+		lb,
+		ub,
+		fCAAS,
+		fCAASLocal,
+		fContainsConcaveFaces,
+		fGLL );
 
 	// Done
 	AnnounceBanner();

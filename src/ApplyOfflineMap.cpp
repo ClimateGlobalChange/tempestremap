@@ -18,6 +18,8 @@
 #include "Exception.h"
 #include "OfflineMap.h"
 #include "netcdfcpp.h"
+#include "GridElements.h"
+#include "FiniteElementTools.h"
 
 #include <fstream>
 
@@ -103,12 +105,23 @@ int ApplyOfflineMap(
 	std::string strVariables,
 	std::string strOutputData,
 	std::string strOutputDataList,
-	std::string strNColName, 
+	std::string strNColName,
+	std::string strInputMesh,
+	std::string strOutputMesh,
+	std::string strOverlapMesh,
+	int nPin,
+	int nPout,
 	bool fOutputDouble,
 	std::string strPreserveVariables,
 	bool fPreserveAll,
 	double dFillValueOverride,
-	std::string strLogDir
+	std::string strLogDir,
+	double lb,
+	double ub,
+	bool fCAAS,
+	bool fCAASLocal,
+	bool fContainsConcaveFaces,
+	bool fGLL
 ) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -137,7 +150,23 @@ try {
 	if ((strInputDataList != "") && (strOutputDataList == "")) {
 		_EXCEPTIONT("If --in_data_list is specified then --out_data_list must also be specified");
 	}
-
+	//Check local bounds parameters
+	if ((fCAASLocal) && strOverlapMesh == "") {
+		_EXCEPTIONT("--mesh_ov must be specified for local bounds preservation");
+	}
+	if ((fCAASLocal) && ((nPin != 0) && (strInputMesh == ""))) {
+		_EXCEPTIONT("If --in_np is specified, then --mesh_in must also be specified");
+	}
+	if ((fCAASLocal) && ((nPout != 0) && (strOutputMesh == ""))) {
+		_EXCEPTIONT("If --out_np is specified, then --mesh_out must also be specified");
+	}
+	if ((fCAASLocal) && ((nPin == 0) && (fGLL))) {
+		_EXCEPTIONT("If --gll is specified, then --in_np must also be specified");
+	}
+	if ((fCAASLocal) && ((nPout == 0) && (strOutputMesh != ""))) {
+		_EXCEPTIONT("If --mesh_out is specified, then --out_np must also be specified");
+	}
+	
 	// Load input file list
 	std::vector<std::string> vecInputDataFiles;
 
@@ -282,6 +311,42 @@ try {
 		AnnounceStartBlock("Applying first offline map to data");
 	}
 */
+	
+		DataArray3D<int> dataGLLNodesIn;
+		DataArray3D<double> dataGLLJacobianIn;
+		
+		DataArray3D<int> dataGLLNodesOut;
+		DataArray3D<double> dataGLLJacobianOut;
+		Mesh OverlapMesh;
+		Mesh SourceMesh;
+			
+		//FV or FE input mesh
+		if(strInputMesh != ""){
+			Mesh meshSource(strInputMesh);
+			SourceMesh = meshSource;
+			SourceMesh.ConstructReverseNodeArray();
+			SourceMesh.ConstructEdgeMap();
+			//SourceMesh.RemoveZeroEdges();
+			if(fGLL){
+				double dTotalAreaInput = meshSource.CalculateFaceAreas(fContainsConcaveFaces);
+				double dNumericalAreaIn = GenerateMetaData(meshSource,nPin,false,dataGLLNodesIn,dataGLLJacobianIn);
+			}
+		}
+	
+		//FE output mesh
+		if(strOutputMesh != ""){
+			Mesh meshTarget(strOutputMesh);
+			meshTarget.RemoveZeroEdges();
+			double dTotalAreaOutput = meshTarget.CalculateFaceAreas(fContainsConcaveFaces);
+			double dNumericalAreaOut = GenerateMetaData(meshTarget,nPout,false,dataGLLNodesOut,dataGLLJacobianOut);
+		}
+	
+		if(strOverlapMesh != ""){
+			Mesh meshOverlap(strOverlapMesh);
+			OverlapMesh=meshOverlap;
+			OverlapMesh.RemoveZeroEdges();
+		}
+
 	// OfflineMap
 	AnnounceStartBlock("Loading offline map");
 
@@ -307,8 +372,15 @@ try {
 			vecOutputDataFiles[f],
 			vecVariableStrings,
 			strNColName,
+			OverlapMesh,
+			SourceMesh,
+			nPin,
+			dataGLLNodesIn,
+			dataGLLNodesOut,
+			lb,
+			ub,
 			fOutputDouble,
-			false);
+			false,fCAAS,fCAASLocal);
 	
 		// Copy variables from input file to output file
 		if (fPreserveAll) {

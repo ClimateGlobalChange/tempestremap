@@ -142,7 +142,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strNColName, bool fOutputDouble,
 	std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave
+	bool fSourceConcave, bool fTargetConcave, double lb, double ub, bool fCAAS, bool fCAASLocal
 ) {
 	NcError error(NcError::silent_nonfatal);
 
@@ -372,6 +372,10 @@ try {
         }
     }
 
+        DataArray3D<int> dataGLLNodes;
+		DataArray3D<int> dataGLLNodesIn;
+		DataArray3D<int> dataGLLNodesOut;
+
 /*
     // Recalculate input mesh area from overlap mesh
     if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
@@ -401,7 +405,7 @@ try {
 
     // Finite volume input / Finite element output
     } else if (eInputType == DiscretizationType_FV) {
-        DataArray3D<int> dataGLLNodes;
+        //DataArray3D<int> dataGLLNodes;
         DataArray3D<double> dataGLLJacobian;
 
         if (strTargetMeta != "") {
@@ -421,6 +425,7 @@ try {
 
             Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
             AnnounceEndBlock(NULL);
+            
         }
 
         // Initialize coordinates for map
@@ -484,7 +489,7 @@ try {
         (eInputType != DiscretizationType_FV) &&
         (eOutputType == DiscretizationType_FV)
     ) {
-        DataArray3D<int> dataGLLNodes;
+        //DataArray3D<int> dataGLLNodes;
         DataArray3D<double> dataGLLJacobian;
 
         if (strSourceMeta != "") {
@@ -561,10 +566,10 @@ try {
         (eInputType  != DiscretizationType_FV) &&
         (eOutputType != DiscretizationType_FV)
     ) {
-        DataArray3D<int> dataGLLNodesIn;
+        //DataArray3D<int> dataGLLNodesIn;
         DataArray3D<double> dataGLLJacobianIn;
 
-        DataArray3D<int> dataGLLNodesOut;
+        //DataArray3D<int> dataGLLNodesOut;
         DataArray3D<double> dataGLLJacobianOut;
 
         // Input metadata
@@ -618,6 +623,7 @@ try {
                     "numerical area and geometric area");
             }
         }
+        
 
         // Initialize coordinates for map
         mapRemap.InitializeSourceCoordinatesFromMeshFE(
@@ -742,13 +748,34 @@ try {
         AnnounceStartBlock("Applying offline map to data");
 
         mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
+        
+        //DAVE ADDS NEXT TWO CONDITIONALS
+        if((eInputType  == DiscretizationType_FV) &&
+        (eOutputType != DiscretizationType_FV)){
+			dataGLLNodesOut = dataGLLNodes;
+		}
+		
+		else if((eInputType  != DiscretizationType_FV) &&
+        (eOutputType == DiscretizationType_FV)){
+			dataGLLNodesIn = dataGLLNodes;
+		}
+        
         mapRemap.Apply(
             strInputData,
             strOutputData,
             vecVariableStrings,
             strNColName,
+            meshOverlap,
+            meshSource,
+            nPin,
+            dataGLLNodesIn,
+            dataGLLNodesOut,
+            lb,
+            ub,
             fOutputDouble,
-            false);
+            false,
+            fCAAS,
+            fCAASLocal);
         AnnounceEndBlock("Done");
     }
     AnnounceEndBlock(NULL);
@@ -807,7 +834,8 @@ int GenerateOfflineMap(
 	std::string strPreserveVariables,
 	bool fPreserveAll,
 	double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave )
+	bool fSourceConcave, bool fTargetConcave, double lb, double ub, bool fCAAS, bool fCAASLocal
+	 )
 {
 	NcError error(NcError::silent_nonfatal);
 
@@ -868,7 +896,7 @@ try {
                                             strInputData, strOutputData,
                                             strNColName, fOutputDouble, strOutputFormat,
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                            fSourceConcave, fTargetConcave );
+                                            fSourceConcave, fTargetConcave, lb, ub, fCAAS, fCAASLocal );
 
     return err;
 

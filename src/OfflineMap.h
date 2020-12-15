@@ -95,6 +95,22 @@ public:
     );
 
 protected:
+
+	///	Clip and assured sum function.
+	void CAAS(
+		DataArray1D<double> & x,
+		DataArray1D<double> & l,
+		DataArray1D<double> & u,
+		double & b
+		);
+
+	//double CAAS(
+		//double & l,
+		//double & u,
+		//double & b,
+		//int N
+	//);
+
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
 	///	</summary>
@@ -329,8 +345,17 @@ public:
 		const std::string & strTargetDataFile,
 		const std::vector<std::string> & vecVariables,
 		const std::string & strNColName,
+		Mesh & meshOverlap,
+		Mesh & meshInput,
+		int & nPin,
+		DataArray3D<int> & dataGLLNodesIn,
+		DataArray3D<int> & dataGLLNodesOut,
+		double lb,
+		double ub,
 		bool fTargetDouble = false,
-		bool fAppend = false
+		bool fAppend = false,
+		bool fCAAS = false,
+		bool fCAASLocal = false
 	);
 
 	///	<summary>
@@ -644,7 +669,7 @@ protected:
 	///		Matrix of vertex latitudes on source grid.
 	///	</summary>
 	DataArray2D<double> m_dTargetVertexLat;
-
+	
 	///	<summary>
 	///		Vector containing cell center longitude along "lon" dimension.
 	///	</sumamry>
