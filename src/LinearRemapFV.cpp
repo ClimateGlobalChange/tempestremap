@@ -284,7 +284,7 @@ void LinearRemapFVtoFV(
 
 //#pragma message "This should be a command-line parameter"
 	// Number of faces you need
-	const int nRequiredFaceSetSize = nCoefficients;
+	const int nRequiredFaceSetSize = 2*nCoefficients;
 
 	// Fit weight exponent
 	const int nFitWeightsExponent = nOrder + 2;
