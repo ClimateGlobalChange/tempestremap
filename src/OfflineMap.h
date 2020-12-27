@@ -94,7 +94,7 @@ public:
         const std::vector<int>& p_tgtDimSizes
     );
 
-protected:
+public:
 
 	///	Clip and assured sum function.
 	void CAAS(
@@ -110,6 +110,8 @@ protected:
 		//double & b,
 		//int N
 	//);
+
+protected:
 
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.

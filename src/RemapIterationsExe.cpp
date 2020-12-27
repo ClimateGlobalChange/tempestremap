@@ -74,7 +74,7 @@ void copy_tempest_sparsemat_to_eigen3(SparseMatrix<double>& trmat, WeightMatrix&
 // For CAAS
 double ApplyCAASLimiting( OfflineMap& mapOperator, Mesh& meshInput, Mesh& meshOverlap, const int nPin,
                         DataArray1D< double >& dataInDouble, DataArray1D< double >& dataOutDouble, bool useCAAS,
-                        bool useCAASLocal );
+                        bool useCAASLocal, bool fwdMode );
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,14 @@ int main(int argc, char** argv) {
     if (useCAAS)
     {
       meshInput.Read ( strSrcMesh );
+      meshInput.ConstructEdgeMap();
+      meshInput.RemoveZeroEdges();
+      // meshInput.ConstructReverseNodeArray();
       meshOutput.Read ( strTgtMesh );
+      meshOutput.ConstructEdgeMap();
+      meshOutput.RemoveZeroEdges();
+      // meshOutput.ConstructReverseNodeArray();
+
       if (skipMapGen) {
         meshOverlap.Read ( strOvMesh );
       }
@@ -418,7 +425,7 @@ int main(int argc, char** argv) {
           //                bool useCAASLocal );
           double glb_error_fwd = ApplyCAASLimiting ( mapFwdRemap, meshInput, meshOverlap, nPin, 
                                                      source_solutions[ivar], target_solutions[ivar],
-                                                     false, true );
+                                                     false, true, true );
         }
 
 
@@ -450,9 +457,9 @@ int main(int argc, char** argv) {
           // double ApplyCAASLimiting( OfflineMap& mapOperator, Mesh& meshInput, Mesh& meshOverlap, const int nPin,
           //                DataArray1D< double >& dataInDouble, DataArray1D< double >& dataOutDouble, bool useCAAS,
           //                bool useCAASLocal );
-          double glb_error_fwd = ApplyCAASLimiting ( mapRevRemap, meshOutput, meshOverlap, nPin, 
+          double glb_error_fwd = ApplyCAASLimiting ( mapRevRemap, meshOutput, meshOverlap, nPout, 
                                                      target_solutions[ivar], source_solutions[ivar],
-                                                     false, true );
+                                                     false, true, false );
         }
 
         const double* sdata = (double*)(source_solutions[ivar]);
@@ -492,13 +499,12 @@ int main(int argc, char** argv) {
 
 double ApplyCAASLimiting( OfflineMap& mapOperator, Mesh& meshInput, Mesh& meshOverlap, const int nPin,
                         DataArray1D< double >& dataInDouble, DataArray1D< double >& dataOutDouble, bool useCAAS,
-                        bool useCAASLocal )
+                        bool useCAASLocal, bool fwdMode )
 {
-
-    const int nSourceCount                      = dataInDouble.GetRows();
-    const int nTargetCount                      = dataOutDouble.GetRows();
     const DataArray1D< double >& m_dSourceAreas = mapOperator.GetSourceAreas();
     const DataArray1D< double >& m_dTargetAreas = mapOperator.GetTargetAreas();
+    const int nSourceCount                      = m_dSourceAreas.GetRows();
+    const int nTargetCount                      = m_dTargetAreas.GetRows();
 
     // Announce input mass
     double dSourceMass = 0.0;
@@ -510,6 +516,8 @@ double ApplyCAASLimiting( OfflineMap& mapOperator, Mesh& meshInput, Mesh& meshOv
         if( dataInDouble[i] < dSourceMin ) { dSourceMin = dataInDouble[i]; }
         if( dataInDouble[i] > dSourceMax ) { dSourceMax = dataInDouble[i]; }
     }
+    double lb = dSourceMin;
+    double ub = dSourceMax;
 
     // Apply the offline map to the data
 
@@ -542,8 +550,8 @@ double ApplyCAASLimiting( OfflineMap& mapOperator, Mesh& meshInput, Mesh& meshOv
 
             for( int i = 0; i < meshOverlap.faces.size(); i++ )
             {
-                int ixT = meshOverlap.vecTargetFaceIx[i];
-                int ixS = meshOverlap.vecSourceFaceIx[i];
+                int ixT = ( fwdMode ? meshOverlap.vecTargetFaceIx[i] : meshOverlap.vecSourceFaceIx[i] );
+                int ixS = ( fwdMode ? meshOverlap.vecSourceFaceIx[i] : meshOverlap.vecTargetFaceIx[i] );
                 SourceOvTarget[ixT].push_back( ixS );
             }
 
