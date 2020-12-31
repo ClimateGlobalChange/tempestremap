@@ -150,6 +150,10 @@ int main(int argc, char** argv) {
 	// Output data file
 	std::string strOutputData;
 
+  // Input data to handle mismatch in dimension data
+	std::string strDummyInputMapData;
+	bool dummyForTarget = false;
+
 	// Name of the ncol variable
 	std::string strNColName;
 
@@ -180,6 +184,11 @@ int main(int argc, char** argv) {
 		CommandLineString(strVariables, "var", "");
 		
 		CommandLineString(strOutputData, "out_data", "");
+
+    // Dummy data especially for ESMF map applications
+    CommandLineString(strDummyInputMapData, "dummy_data", "");
+    CommandLineBool(dummyForTarget, "dummy_tgt");
+
 		CommandLineString(strNColName, "ncol_name", "ncol");
 
 		ParseCommandLine(argc, argv);
@@ -275,6 +284,13 @@ int main(int argc, char** argv) {
                                   "", strReverseMap);
     }
 
+    OfflineMap *dummyMap = NULL;
+    if (strDummyInputMapData.size())
+    {
+      dummyMap = new OfflineMap();
+      dummyMap->Read(strDummyInputMapData);
+    }
+
     // Verify consistency of maps
     SparseMatrix<double> & smatRemap  = mapFwdRemap.GetSparseMatrix();
     SparseMatrix<double> & smatRemapReverse = mapRevRemap.GetSparseMatrix();
@@ -307,10 +323,24 @@ int main(int argc, char** argv) {
     // populate starting vectors for source and target
     if (iRestartOffset == 0) {
        // Read the solution data from source grid file
-       mapFwdRemap.RetrieveFieldData("source", strSrcMesh, vecVariableStrings, strNColName, source_solutions);
+       if (strDummyInputMapData.size() && !dummyForTarget)
+       {
+         dummyMap->RetrieveFieldData("source", strSrcMesh, vecVariableStrings, strNColName, source_solutions);
+       }
+       else
+       {
+         mapFwdRemap.RetrieveFieldData("source", strSrcMesh, vecVariableStrings, strNColName, source_solutions);
+       }
 
        // Read the solution data from target grid file
-       mapFwdRemap.RetrieveFieldData("target", strTgtMesh, vecVariableStrings, strNColName, target_solutions);
+       if (strDummyInputMapData.size() && dummyForTarget)
+       {
+         dummyMap->RetrieveFieldData("target", strTgtMesh, vecVariableStrings, strNColName, target_solutions);
+       }
+       else
+       {
+         mapFwdRemap.RetrieveFieldData("target", strTgtMesh, vecVariableStrings, strNColName, target_solutions);
+       }
     }
     else { // performing a restart
       fmode = NcFile::Write;
@@ -476,6 +506,8 @@ int main(int argc, char** argv) {
         ncOutput.sync();
 
     }
+
+    if(dummyMap) delete dummyMap;
 
     ncOutput.close();
 
