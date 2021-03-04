@@ -481,7 +481,7 @@ public:
 	// destructor restores previous error state
 	virtual ~NcError( void );
 
-	int get_err( void ); // returns most recent error number
+	static int get_err( void ); // returns most recent error number
 	const char* get_errmsg( void ) {return nc_strerror(get_err());}
 	static int set_err( int err );
 
