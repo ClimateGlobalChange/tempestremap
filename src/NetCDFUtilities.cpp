@@ -75,6 +75,14 @@ void CopyNcFileAttributes(
 			fileOut->add_att(att->name(), num_vals,
 				(const double*)(pValues->base()));
 
+		} else if (att->type() == ncInt64) {
+			fileOut->add_att(att->name(), num_vals,
+				(const ncint64*)(pValues->base()));
+
+		} else if (att->type() == ncUInt64) {
+			fileOut->add_att(att->name(), num_vals,
+				(const ncuint64*)(pValues->base()));
+
 		} else {
 			_EXCEPTIONT("Invalid attribute type");
 		}
@@ -134,6 +142,14 @@ void CopyNcVarAttributes(
 		} else if (att->type() == ncDouble) {
 			varOut->add_att(att->name(), num_vals,
 				(const double*)(pValues->base()));
+
+		} else if (att->type() == ncInt64) {
+			varOut->add_att(att->name(), num_vals,
+				(const ncint64*)(pValues->base()));
+
+		} else if (att->type() == ncUInt64) {
+			varOut->add_att(att->name(), num_vals,
+				(const ncuint64*)(pValues->base()));
 
 		} else {
 			_EXCEPTIONT("Invalid attribute type");
@@ -282,6 +298,40 @@ void CopyNcVar(
 	// ncDouble type
 	if (var->type() == ncDouble) {
 		DataArray1D<double> data(nDataSize);
+
+		varOut =
+			ncOut.add_var(
+				var->name(), var->type(),
+				dimOut.size(), (const NcDim**)&(dimOut[0]));
+
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
+		var->get(&(data[0]), &(counts[0]));
+		varOut->put(&(data[0]), &(counts[0]));
+	}
+
+	// ncInt64 type
+	if (var->type() == ncInt64) {
+		DataArray1D<ncint64> data(nDataSize);
+
+		varOut =
+			ncOut.add_var(
+				var->name(), var->type(),
+				dimOut.size(), (const NcDim**)&(dimOut[0]));
+
+		if (varOut == NULL) {
+			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
+		var->get(&(data[0]), &(counts[0]));
+		varOut->put(&(data[0]), &(counts[0]));
+	}
+
+	// ncUInt64 type
+	if (var->type() == ncUInt64) {
+		DataArray1D<ncuint64> data(nDataSize);
 
 		varOut =
 			ncOut.add_var(
