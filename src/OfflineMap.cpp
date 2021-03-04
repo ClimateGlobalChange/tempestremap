@@ -656,6 +656,28 @@ void OfflineMap::InitializeRectilinearCoordinateVector(
 			dCenterLat[i] = dVectorCenterLat[i%nLat];
 		}
 	}
+
+	// Monotonize
+	if ((dVectorCenterLon[1] > dVectorCenterLon[0]) &&
+		(dVectorCenterLon[0] > dVectorCenterLon[nLon-1])
+	) {
+		for (int i = 0; i < nLon; i++) {
+			if (dVectorCenterLon[i] > 180.0) {
+				dVectorCenterLon[i] -= 360.0;
+			}
+			if (dVectorBoundsLon[i][0] > 180.0) {
+				dVectorBoundsLon[i][0] -= 360.0;
+			}
+			if (dVectorBoundsLon[i][1] > 180.0) {
+				dVectorBoundsLon[i][1] -= 360.0;
+			}
+		}
+		for (int i = 0; i < nFaces; i++) {
+			if (dCenterLon[i] > 180.0) {
+				dCenterLon[i] -= 360.0;
+			}
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
