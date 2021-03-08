@@ -122,6 +122,9 @@ public:
 	int id( void ) const;                  // id used by C interface
 
   protected:
+  /* Let the derived class handle initializing all necessary data */
+  NcFile();
+
 	int the_id;
 	int in_define_mode;
 	FillMode the_fill_mode;
@@ -158,6 +161,7 @@ private:
 	int the_id;
 	char *the_name;
 
+public:
 	NcDim(NcFile*, int num);               // existing dimension
 	NcDim(NcFile*, NcToken name, long sz); // defines a new dim
 	virtual ~NcDim( void );
@@ -412,20 +416,21 @@ public:
 	int id( void ) const;   // rarely needed, C interface id
 	NcBool sync( void );
 
-private:
+protected:
 	int dim_to_index(NcDim* rdim);
 	int the_id;
 	long* the_cur;
 	char* the_name;
 	long* cur_rec;
 
-	// private constructors because only an NcFile creates these
-	NcVar( void );
-	NcVar(NcFile*, int);
-
 	int attnum( NcToken attname ) const;
 	NcToken attname( int attnum ) const;
 	void init_cur( void );
+
+public:
+	// Only an NcFile or derivatives create these with a valid handle
+	NcVar( void );
+	NcVar(NcFile*, int);
 
 	// to make variables, since constructor is private
 	friend class NcFile;
@@ -451,8 +456,8 @@ private:
 	const NcVar* the_variable;
 	char* the_name;
 
-	// protected constructors because only NcVars and NcFiles create
-	// attributes
+public:
+	// Only NcVars and NcFiles with a valid handle create attributes
 	NcAtt( NcFile*, const NcVar*, NcToken);
 	NcAtt( NcFile*, NcToken); // global attribute
 	
