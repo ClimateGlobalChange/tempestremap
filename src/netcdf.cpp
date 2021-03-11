@@ -23,6 +23,15 @@ static const int ncGlobal = NC_GLOBAL;
 // failure return for netCDF C interface
 static const int ncBad = -1;	 
 
+NcFile::NcFile()
+{
+	the_id = -1;
+	the_fill_mode = Fill;
+	dimensions = 0;
+	variables = 0;
+	globalv = 0;
+}
+
 NcFile::~NcFile( void ) {
 	(void) close();
 }
