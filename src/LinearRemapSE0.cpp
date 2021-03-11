@@ -14,6 +14,7 @@
 ///		or implied warranty.
 ///	</remarks>
 
+#include "Defines.h"
 #include "LinearRemapSE0.h"
 #include "OfflineMap.h"
 #include "FiniteElementTools.h"
@@ -1016,11 +1017,78 @@ void LinearRemapSE4(
 					dTargetArea);
 			}
 
-			ForceConsistencyConservation3(
-				vecSourceArea,
-				vecTargetArea,
-				dCoeff,
-				(nMonotoneType != 0));
+			// Force consistency and conservation (over all coefficients)
+			if ((FORCECC_MAX_TARGET_FACES == (-1)) || (nOverlapFaces <= FORCECC_MAX_TARGET_FACES)) {
+
+				ForceConsistencyConservation3(
+					vecSourceArea,
+					vecTargetArea,
+					dCoeff,
+					(nMonotoneType != 0));
+
+			// If too many target faces are included this can greatly slow down the computation and
+			// require a high memory footprint.  In this case only apply forcing to the first
+			// FORCECC_MAX_TARGET_FACES overlap faces.
+			} else {
+				DataArray1D<double> dSubsetTargetArea(FORCECC_MAX_TARGET_FACES);
+				DataArray2D<double> dSubsetCoeff(FORCECC_MAX_TARGET_FACES, nP * nP);
+
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					dSubsetTargetArea[j] = vecTargetArea[j];
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						dSubsetCoeff[j][p * nP + q] = dCoeff[j][p * nP + q];
+					}
+					}
+				}
+
+				for (int j = FORCECC_MAX_TARGET_FACES; j < nOverlapFaces; j++) {
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						vecSourceArea[p * nP + q] -= dCoeff[j][p * nP + q] * vecTargetArea[j];
+					}
+					}
+				}
+/*
+  				// DEBUGGING
+				double dJacobianAreaTot = 0.0;
+				double dSourceAreaTot = 0.0;
+				double dTargetAreaTot = 0.0;
+
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					//printf("%1.5e : %1.5e %1.5e\n", vecSourceArea[p * nP + q], dataGLLJacobian[p][q][ixFirst], meshInput.vecFaceArea[ixFirst]);
+					dSourceAreaTot += vecSourceArea[p * nP + q];
+					dJacobianAreaTot += dataGLLJacobian[p][q][ixFirst];
+					printf("%i %i %1.5e\n", p, q, vecSourceArea[p * nP + q]);
+					//if (vecSourceArea[p * nP + q] < 0.0) {
+					//	_EXCEPTIONT("Logic error:  Source face has negative area");
+					//}
+				}
+				}
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					dTargetAreaTot += dSubsetTargetArea[j];
+					printf("%i %1.5e\n", j, dSubsetTargetArea[j]);
+				}
+
+				printf("%1.15e %1.15e : %1.15e %1.15e\n", dSourceAreaTot, dTargetAreaTot, dJacobianAreaTot, meshInput.vecFaceArea[ixFirst]);
+*/
+				ForceConsistencyConservation3(
+					vecSourceArea,
+					dSubsetTargetArea,
+					dSubsetCoeff,
+					(nMonotoneType != 0));
+
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						dCoeff[j][p * nP + q] = dSubsetCoeff[j][p * nP + q];
+					}
+					}
+				}
+			}
+
+			//_EXCEPTION();
 
 			for (int j = 0; j < nOverlapFaces; j++) {
 			for (int p = 0; p < nP; p++) {

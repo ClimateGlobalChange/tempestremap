@@ -100,6 +100,13 @@ static const Real ReferenceTolerance = 1.0e-12;
 //#define USE_STEREOGRAPHIC_FITS
 
 ///////////////////////////////////////////////////////////////////////////////
+//
+// Maximum number of target faces per source face when imposing
+// consistency and conservation.
+//
+#define FORCECC_MAX_TARGET_FACES (-1)
+
+///////////////////////////////////////////////////////////////////////////////
 
 #endif
 
