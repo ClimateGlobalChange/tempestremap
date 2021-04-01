@@ -685,10 +685,14 @@ void ForceConsistencyConservation3(
 #ifdef DO_NOT_USE_DC_MATRIX
 
 	for (int i = 0; i < nCondConsistency; i++)
+	{
 	    for (int j = 0; j < nCondConservation - 1; j++)
 	        // R^_ij =  R_ij - lambda_i - kapa_j * JT_i
 	        dCoeff[i][j] =
 	                dCoeff[i][j] - localLK[i] - localLK[nCondConsistency + j] * vecTargetArea[i];
+	    // the last column still needs correction
+	    dCoeff[i][nCondConservation - 1] = dCoeff[i][nCondConservation - 1] - localLK[i];
+	}
 	// Obtain coefficients
 #else
 	trans = 't';
