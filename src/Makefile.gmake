@@ -42,7 +42,9 @@ UTIL_FILES= Announce.cpp \
             GenerateOverlapMesh.cpp \
             GenerateOverlapMesh_v1.cpp \
             GenerateRLLMesh.cpp \
+			GenerateRectilinearMeshFromFile.cpp \
             GenerateUTMMesh.cpp \
+			RestructureData.cpp \
             triangle.cpp \
             netcdf.cpp \
             ncvalues.cpp
@@ -50,6 +52,7 @@ UTIL_FILES= Announce.cpp \
 # Mesh generation drivers
 GenerateTestData_FILES= GenerateTestData.cpp
 GenerateRLLMesh_FILES= GenerateRLLMeshExe.cpp
+GenerateRectilinearMeshFromFile_FILES= GenerateRectilinearMeshFromFileExe.cpp
 GenerateUTMMesh_FILES= GenerateUTMMeshExe.cpp
 GenerateCSMesh_FILES= GenerateCSMeshExe.cpp
 GenerateTransectMesh_FILES= GenerateTransectMeshExe.cpp
@@ -74,6 +77,7 @@ CoarsenRectilinearData_FILES= CoarsenRectilinearData.cpp
 CalculateDiffNorms_FILES= CalculateDiffNorms.cpp
 AnalyzeMap_FILES= AnalyzeMap.cpp
 VerticalInterpolate_FILES= VerticalInterpolate.cpp
+RestructureData_FILES= RestructureDataExe.cpp
 
 MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
@@ -97,6 +101,7 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateOverlapMesh \
               GenerateOverlapMesh_v1 \
               GenerateRLLMesh \
+              GenerateRectilinearMeshFromFile \
               GenerateUTMMesh \
               GenerateTestData \
               GenerateTransposeMap \
@@ -106,7 +111,8 @@ EXEC_TARGETS= ApplyOfflineMap \
               ConvertExodusToSCRIP \
               ConvertSCRIPToExodus \
 			  AnalyzeMap \
-			  VerticalInterpolate
+			  VerticalInterpolate \
+			  RestructureData
 
 ########################################################################
 # Build rules. 
@@ -117,6 +123,7 @@ all: $(EXEC_TARGETS)
 
 GenerateTestData_EXE: $(GenerateTestData_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateRLLMesh_EXE:$(GenerateRLLMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateRectilinearMeshFromFile_EXE:$(GenerateRectilinearMeshFromFile_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateUTMMesh_EXE:$(GenerateUTMMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateCSMesh_EXE: $(GenerateCSMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateTransectMesh_EXE: $(GenerateTransectMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
@@ -138,6 +145,7 @@ MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
 ConvertSCRIPToExodus_EXE: $(ConvertSCRIPToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
+RestructureData_EXE: $(RestructureData_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE
 	-@$(CXX) $(LDFLAGS) -o $@ $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) $($*_FILES:%.cpp=$(BUILDDIR)/%.o) $(LIBRARIES)

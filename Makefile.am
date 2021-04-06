@@ -64,6 +64,7 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateStereographicMesh.cpp \
 	src/GenerateICOMesh.cpp \
 	src/GenerateRLLMesh.cpp \
+	src/GenerateRectilinearMeshFromFile.cpp \
 	src/GenerateUTMMesh.cpp \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
@@ -75,6 +76,7 @@ libTempestRemap_la_SOURCES = \
 	src/FiniteElementTools.cpp \
 	src/FiniteVolumeTools.cpp \
 	src/NetCDFUtilities.cpp \
+	src/RestructureData.cpp \
 	src/ncvalues.cpp \
 	src/netcdf.cpp \
 	src/OverlapMesh.cpp \
@@ -97,6 +99,7 @@ LDADD = libTempestRemap.la ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
 # Mesh generation drivers
 GenerateTestData_SOURCES = src/GenerateTestData.cpp
 GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
+GenerateRectilinearMeshFromFile_SOURCES = src/GenerateRectilinearMeshFromFileExe.cpp
 GenerateUTMMesh_SOURCES = src/GenerateUTMMeshExe.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
 GenerateTransectMesh_SOURCES = src/GenerateTransectMeshExe.cpp
@@ -120,6 +123,7 @@ CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
 CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
 AnalyzeMap_SOURCES = src/AnalyzeMap.cpp
 VerticalInterpolate_SOURCES = src/VerticalInterpolate.cpp
+RestructureData_SOURCES = src/RestructureDataExe.cpp
 
 MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
@@ -128,14 +132,14 @@ ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
-				GenerateUTMMesh GenerateICOMesh \
+				GenerateUTMMesh GenerateICOMesh GenerateRectilinearMeshFromFile \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \
 				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus \
-				AnalyzeMap VerticalInterpolate
+				AnalyzeMap VerticalInterpolate RestructureData
 
 
 # Utility target: build but don't run tests

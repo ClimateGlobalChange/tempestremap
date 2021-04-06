@@ -63,6 +63,30 @@ extern "C" {
 		std::string strOutputFormat,
 		bool fVerbose );
 
+	// Generate a rectilinear mesh from a file
+	int GenerateRectilinearMeshFromFile(
+		Mesh & mesh, 
+		std::string strInputFile,
+		std::string strInputFileLonName,
+		std::string strInputFileLatName,
+		std::string strOutputFile, 
+		std::string strOutputFormat,
+		bool fVerbose
+	);
+
+	// Restructure 2D data into 1D or vice versa
+	int RestructureData(
+		std::string strInputFile,
+		std::string strVariable,
+		std::string strFillValue,
+		std::string strRefFile,
+		std::string strRefFileLonName,
+		std::string strRefFileLatName,
+		std::string strOutputFile, 
+		std::string strOutputFormat,
+		bool fVerbose
+	);
+
 	// Generate a Latitude-Longitude mesh
 	int GenerateUTMMesh (
 		Mesh & meshOut,
