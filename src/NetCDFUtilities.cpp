@@ -97,6 +97,8 @@ void CopyNcVarAttributes(
 	NcVar * varIn,
 	NcVar * varOut
 ) {
+	bool fSuccess;
+
 	for (int a = 0; a < varIn->num_atts(); a++) {
 		NcAtt * att = varIn->get_att(a);
 		long num_vals = att->num_vals();
@@ -107,52 +109,70 @@ void CopyNcVarAttributes(
 				varIn->name(), att->name());
 		}
 
+		// Change _FillValue type to match variable type, if needed
 		if (strcmp(att->name(), "_FillValue") == 0) {
+
 			if ((att->type() == ncFloat) && (varOut->type() == ncDouble)) {
-				double dFillValue = *((const float *)pValues->base());
-				varOut->add_att(att->name(), 1, (const double*)(&dFillValue));
+				double dFillValue = static_cast<double>(*((const float *)pValues->base()));
+				fSuccess = varOut->add_att("_FillValue", dFillValue);
+				if (!fSuccess) {
+					_EXCEPTION1("Error creating attribute \"_FillValue\" for variable \"%s\" in output file", varOut->name());
+				}
+
+				delete pValues;
+				continue;
+
 			} else if ((att->type() == ncDouble) && (varOut->type() == ncFloat)) {
-				float dFillValue = *((const double *)pValues->base());
-				varOut->add_att(att->name(), 1, (const float*)(&dFillValue));
+				float dFillValue = static_cast<float>(*((const double *)pValues->base()));
+				fSuccess = varOut->add_att("_FillValue", dFillValue);
+				if (!fSuccess) {
+					_EXCEPTION1("Error creating attribute \"_FillValue\" for variable \"%s\" in output file", varOut->name());
+				}
+
+				delete pValues;
+				continue;
 			}
-			delete pValues;
-			continue;
 		}
 
 		if (att->type() == ncByte) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const ncbyte*)(pValues->base()));
 
 		} else if (att->type() == ncChar) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const char*)(pValues->base()));
 
 		} else if (att->type() == ncShort) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const short*)(pValues->base()));
 
 		} else if (att->type() == ncInt) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const int*)(pValues->base()));
 
 		} else if (att->type() == ncFloat) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const float*)(pValues->base()));
 
 		} else if (att->type() == ncDouble) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const double*)(pValues->base()));
 
 		} else if (att->type() == ncInt64) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const ncint64*)(pValues->base()));
 
 		} else if (att->type() == ncUInt64) {
-			varOut->add_att(att->name(), num_vals,
+			fSuccess = varOut->add_att(att->name(), num_vals,
 				(const ncuint64*)(pValues->base()));
 
 		} else {
 			_EXCEPTIONT("Invalid attribute type");
+		}
+
+		if (!fSuccess) {
+			_EXCEPTION2("Error creating attribute \"%s\" for variable \"%s\" in output file",
+				att->name(), varOut->name());
 		}
 
 		delete pValues;
@@ -239,6 +259,10 @@ void CopyNcVar(
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
 		}
 
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -254,6 +278,10 @@ void CopyNcVar(
 
 		if (varOut == NULL) {
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
 		}
 
 		var->get(&(data[0]), &(counts[0]));
@@ -273,6 +301,10 @@ void CopyNcVar(
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
 		}
 
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -288,6 +320,10 @@ void CopyNcVar(
 
 		if (varOut == NULL) {
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
 		}
 
 		var->get(&(data[0]), &(counts[0]));
@@ -308,6 +344,10 @@ void CopyNcVar(
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
 		}
 
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -323,6 +363,10 @@ void CopyNcVar(
 
 		if (varOut == NULL) {
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
+		}
+
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
 		}
 
 		var->get(&(data[0]), &(counts[0]));
@@ -342,6 +386,10 @@ void CopyNcVar(
 			_EXCEPTION1("Cannot create variable \"%s\"", var->name());
 		}
 
+		if (fCopyAttributes) {
+			CopyNcVarAttributes(var, varOut);
+		}
+
 		var->get(&(data[0]), &(counts[0]));
 		varOut->put(&(data[0]), &(counts[0]));
 	}
@@ -350,11 +398,6 @@ void CopyNcVar(
 	if (varOut == NULL) {
 		_EXCEPTION1("Unable to create output variable \"%s\"",
 			var->name());
-	}
-
-	// Copy attributes
-	if (fCopyAttributes) {
-		CopyNcVarAttributes(var, varOut);
 	}
 }
 
