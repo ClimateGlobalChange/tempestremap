@@ -501,13 +501,12 @@ void ForceConsistencyConservation2(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-#define DO_NOT_USE_DC_MATRIX
 
 void ForceConsistencyConservation3(
 	const DataArray1D<double> & vecSourceArea,
 	const DataArray1D<double> & vecTargetArea,
 	DataArray2D<double> & dCoeff,
-	bool fMonotone
+	bool fMonotone, bool useSparseConstraints = false
 ) {
 
 	// Number of free coefficients
@@ -522,44 +521,45 @@ void ForceConsistencyConservation3(
 
 	// Product matrix
 	DataArray2D<double> dCCt(nCond, nCond);
-#ifdef DO_NOT_USE_DC_MATRIX
-	//double * localLK = new double[nCond];
-	DataArray1D<double> localLK(nCond); // will store lagrange multipliers lambda(nCondConservation)
-	                                        // and kappa(nCond-1)
-#else
-	DataArray2D<double> dC(nCoeff, nCond);
-    // RHS
-	DataArray1D<double> dRHS(nCoeff + nCond);
-    int ix = 0;
-    for (int i = 0; i < dCoeff.GetRows(); i++) {
-    for (int j = 0; j < dCoeff.GetColumns(); j++) {
-        dRHS[ix] = dCoeff[i][j];
-        ix++;
-    }
-    }
-#endif
-
-#ifndef DO_NOT_USE_DC_MATRIX
-	// Consistency
-	ix = 0;
-	for (int i = 0; i < dCoeff.GetRows(); i++) {
-
-		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = 1.0;
-		}
-		dRHS[nCoeff + ix] = 1.0;
-		ix++;
-	}
-
-	// Conservation
-	for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
+	DataArray1D<double> localLK; // (nCond)
+	DataArray2D<double> dC; // (nCoeff, nCond);
+	// RHS
+	DataArray1D<double> dRHS; // (nCoeff + nCond);
+	int ix = 0;
+	if (useSparseConstraints) 
+		localLK.Allocate(nCond); // will store lagrange multipliers lambda(nCondConservation)
+	                         // and kappa(nCond-1)
+	else {
+		dC.Allocate(nCoeff, nCond);
+		dRHS.Allocate(nCoeff + nCond);
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = vecTargetArea[i];
+		for (int j = 0; j < dCoeff.GetColumns(); j++) {
+			dRHS[ix] = dCoeff[i][j];
+			ix++;
 		}
-		dRHS[nCoeff + ix] = vecSourceArea[j];
-		ix++;
+		}
 	}
-#endif
+	
+	if (!useSparseConstraints){
+		// Consistency
+		ix = 0;
+		for (int i = 0; i < dCoeff.GetRows(); i++) {
+			for (int j = 0; j < dCoeff.GetColumns(); j++) {
+				dC[i * dCoeff.GetColumns() + j][ix] = 1.0;
+			}
+			dRHS[nCoeff + ix] = 1.0;
+			ix++;
+		}
+
+		// Conservation
+		for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
+			for (int i = 0; i < dCoeff.GetRows(); i++) {
+				dC[i * dCoeff.GetColumns() + j][ix] = vecTargetArea[i];
+			}
+			dRHS[nCoeff + ix] = vecSourceArea[j];
+			ix++;
+		}
+	}
 	// Calculate CCt
 	double dP = 0.0;
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
@@ -607,23 +607,23 @@ void ForceConsistencyConservation3(
 	int incy = 1;
 	double posone = 1.0;
 	double negone = -1.0;
-#ifdef DO_NOT_USE_DC_MATRIX
-    for (int m=0; m < nCondConsistency; m++) // consistency condition
-    {
-        localLK[m] = 0;
-        for (int j=0; j<nCondConservation; j++)
-            localLK[m] += dCoeff[m][j];
-        localLK[m] += -1.;
-    }
-    for (int n=0; n<nCondConservation-1; n++) // conservation condition
-    {
-        localLK[nCondConsistency + n] = 0;
-        for (int i = 0; i < nCondConsistency; i++)
-            localLK[nCondConsistency + n] += dCoeff[i][n] * vecTargetArea[i];
-        localLK[nCondConsistency + n] += -vecSourceArea[n]; //
-    }
-#else
-	dgemv_(
+	if (useSparseConstraints)
+	{
+		for (int m=0; m < nCondConsistency; m++) { // consistency condition
+			localLK[m] = 0;
+			for (int j=0; j<nCondConservation; j++)
+				localLK[m] += dCoeff[m][j];
+			localLK[m] += -1.;
+		}
+		for (int n=0; n<nCondConservation-1; n++) { // conservation condition
+			localLK[nCondConsistency + n] = 0;
+			for (int i = 0; i < nCondConsistency; i++)
+				localLK[nCondConsistency + n] += dCoeff[i][n] * vecTargetArea[i];
+			localLK[nCondConsistency + n] += -vecSourceArea[n]; //
+		}
+	}
+	else {
+		dgemv_(
 		&trans,
 		&m,
 		&n,
@@ -635,9 +635,7 @@ void ForceConsistencyConservation3(
 		&negone,
 		&(dRHS[nCoeff]),
 		&incy);
-#endif
-	//
-
+	}
 
 	// Solve the general system
 	int nrhs = 1;
@@ -658,18 +656,18 @@ void ForceConsistencyConservation3(
 		&nInfo);
 */
 	char uplo = 'U';
-#ifdef DO_NOT_USE_DC_MATRIX
-	dposv_(
-        &uplo,
-        &m,
-        &nrhs,
-        &(dCCt[0][0]),
-        &lda,
-        &(localLK[0]),
-        &ldb,
-        &nInfo);
-#else
-	dposv_(
+	if (useSparseConstraints)
+		dposv_(
+		&uplo,
+		&m,
+		&nrhs,
+		&(dCCt[0][0]),
+		&lda,
+		&(localLK[0]),
+		&ldb,
+		&nInfo);
+	else
+		dposv_(
 		&uplo,
 		&m,
 		&nrhs,
@@ -678,25 +676,23 @@ void ForceConsistencyConservation3(
 		&(dRHS[nCoeff]),
 		&ldb,
 		&nInfo);
-#endif
 	if (nInfo != 0) {
 		_EXCEPTION1("Unable to solve SPD Schur system: %i\n", nInfo);
 	}
-#ifdef DO_NOT_USE_DC_MATRIX
-
-	for (int i = 0; i < nCondConsistency; i++)
-	{
-	    for (int j = 0; j < nCondConservation - 1; j++)
-	        // R^_ij =  R_ij - lambda_i - kapa_j * JT_i
-	        dCoeff[i][j] =
-	                dCoeff[i][j] - localLK[i] - localLK[nCondConsistency + j] * vecTargetArea[i];
-	    // the last column still needs correction
-	    dCoeff[i][nCondConservation - 1] = dCoeff[i][nCondConservation - 1] - localLK[i];
+	if (useSparseConstraints) {
+		for (int i = 0; i < nCondConsistency; i++) {
+			for (int j = 0; j < nCondConservation - 1; j++)
+			// R^_ij =  R_ij - lambda_i - kapa_j * JT_i
+				dCoeff[i][j] =
+				dCoeff[i][j] - localLK[i] - localLK[nCondConsistency + j] * vecTargetArea[i];
+			// the last column still needs correction
+			dCoeff[i][nCondConservation - 1] = dCoeff[i][nCondConservation - 1] - localLK[i];
+		}
 	}
 	// Obtain coefficients
-#else
-	trans = 't';
-	dgemv_(
+	else {
+		trans = 't';
+		dgemv_(
 		&trans,
 		&m,
 		&n,
@@ -708,16 +704,15 @@ void ForceConsistencyConservation3(
 		&posone,
 		&(dRHS[0]),
 		&incy);
-
-	// Store coefficients in array
-	ix = 0;
-	for (int i = 0; i < dCoeff.GetRows(); i++) {
-	for (int j = 0; j < dCoeff.GetColumns(); j++) {
-		dCoeff[i][j] = dRHS[ix];
-		ix++;
+	 	// Store coefficients in array
+		ix = 0;
+		for (int i = 0; i < dCoeff.GetRows(); i++) {
+			for (int j = 0; j < dCoeff.GetColumns(); j++) {
+				dCoeff[i][j] = dRHS[ix];
+				ix++;
+			}
+		}
 	}
-	}
-#endif
 	// Force monotonicity
 	if (fMonotone) {
 
