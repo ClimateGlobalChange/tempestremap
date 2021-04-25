@@ -54,6 +54,7 @@ void LinearRemapSE4(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fNoConservation,
+	bool useSparseConstraints,
 	OfflineMap & mapRemap
 );
 
@@ -77,6 +78,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool useSparseConstraints,
 	OfflineMap & mapRemap
 );
 
@@ -100,6 +102,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool useSparseConstraints,
 	OfflineMap & mapRemap
 );
 

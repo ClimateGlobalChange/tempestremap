@@ -704,7 +704,7 @@ void ForceConsistencyConservation3(
 		&posone,
 		&(dRHS[0]),
 		&incy);
-	 	// Store coefficients in array
+		// Store coefficients in array
 		ix = 0;
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
 			for (int j = 0; j < dCoeff.GetColumns(); j++) {
@@ -766,7 +766,7 @@ void LinearRemapSE4(
 	const DataArray3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
-	bool fNoConservation,
+	bool fNoConservation, bool useSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Order of the polynomial interpolant
@@ -1067,7 +1067,8 @@ void LinearRemapSE4(
 					vecSourceArea,
 					vecTargetArea,
 					dCoeff,
-					(nMonotoneType != 0));
+					(nMonotoneType != 0),
+					useSparseConstraints);
 
 			// If too many target faces are included this can greatly slow down the computation and
 			// require a high memory footprint.  In this case only apply forcing to the first
@@ -1120,7 +1121,8 @@ void LinearRemapSE4(
 					vecSourceArea,
 					dSubsetTargetArea,
 					dSubsetCoeff,
-					(nMonotoneType != 0));
+					(nMonotoneType != 0),
+					useSparseConstraints);
 
 				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
 					for (int p = 0; p < nP; p++) {
@@ -1194,6 +1196,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool useSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 
@@ -1563,7 +1566,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			useSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -1668,7 +1672,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			useSparseConstraints);
 
 /*
 		// Check column sums (conservation)
@@ -1807,6 +1812,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool useSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Triangular quadrature rule
@@ -2077,7 +2083,8 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			useSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -2182,7 +2189,8 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			useSparseConstraints);
 /*
 		// Check column sums (conservation)
 		for (int i = 0; i < dCoeff.GetColumns(); i++) {
