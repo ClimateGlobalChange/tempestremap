@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cfloat>
 #include <iostream>
+#include <sstream>
 
 #include "netcdfcpp.h"
 
@@ -66,12 +67,13 @@ try {
 		strRefFile = strInputFile;
 	}
 
+	Announce("WARNING: This executable has not been thoroughly tested.  Proceed with caution.");
 	AnnounceStartBlock("Loading Data");
 
 	// Load reference file
 	NcFile ncreffile(strRefFile.c_str(), NcFile::ReadOnly);
 	if (!ncreffile.is_valid()) {
-		_EXCEPTION1("Unable to load input file \"%s\"", strInputFile.c_str());
+		_EXCEPTION1("Unable to load reference file \"%s\"", strRefFile.c_str());
 	}
 
 	NcVar * varLon = ncreffile.get_var(strRefFileLonName.c_str());
@@ -181,13 +183,17 @@ try {
 
 	if (fVariable) {
 		lVariableDims = varIn->num_dims();
-		if (lVariableDims == 1) {
+		if (lVariableDims == 0) {
+			_EXCEPTIONT("Input variable has zero dimension");
+		}
+		if ((lVariableDims == 1) ||
+		    (std::string("ncol") == varIn->get_dim(lVariableDims-1)->name())
+		) {
 			dimVar0 = varIn->get_dim(lVariableDims-1);
-		} else if (lVariableDims == 2) {
+			lVariableDims = 1;
+		} else {
 			dimVar0 = varIn->get_dim(lVariableDims-2);
 			dimVar1 = varIn->get_dim(lVariableDims-1);
-		} else {
-			_EXCEPTIONT("Auxiliary dimensions in variable: Not implemented yet!");
 		}
 	}
 
@@ -199,13 +205,11 @@ try {
 		// 1D variable array -- convert to 2D
 		if (lVariableDims == 1) {
 
+			_ASSERT(dimVar0 != NULL);
+
 			AnnounceStartBlock("Converting 1D data to 2D");
 
-			DataArray1D<float> dData(lSpatialSize);
-			if (fVariable) {
-				varIn->get(&(dData[0]), dimVar0->size());
-			}
-
+			// Copy longitude/latitude variables
 			CopyNcVar(ncreffile, ncoutfile, varLon->name());
 			CopyNcVar(ncreffile, ncoutfile, varLat->name());
 
@@ -217,7 +221,7 @@ try {
 			NcVar * varLatOut = ncoutfile.get_var(varLat->name());
 			if (varLatOut == NULL) {
 				_EXCEPTION2("Unable to create variable \"%s\" in file \"%s\"",
-					strRefFileLatName.c_str(), strOutputFile.c_str());
+						strRefFileLatName.c_str(), strOutputFile.c_str());
 			}
 
 			_ASSERT(varLonOut->num_dims() == 2);
@@ -229,8 +233,52 @@ try {
 			_ASSERT(dimX != NULL);
 			_ASSERT(dimY != NULL);
 
+			DataArray1D<float> dData(dimVar0->size());
+			DataArray1D<float> dDataOut(dimX->size() * dimY->size());
+
+			// Count number of degrees of freedom
+			{
+				long ixDOF = 0;
+				for (long i = 0; i < lSpatialSize; i++) {
+					if (dLon[i] != dFillValueLon) {
+						ixDOF++;
+					}
+				}
+				Announce("%li / %li degrees of freedom found", ixDOF, dimX->size() * dimY->size());
+			}
+
+			// Process variables
 			if (fVariable) {
-				NcVar * varOut = ncoutfile.add_var(strVariable.c_str(), ncFloat, dimX, dimY);
+
+				// Create output dimension vector
+				long lAuxDimSize = 1;
+				std::vector<NcDim *> vecDimOut;
+				NcVar * varOut;
+
+				for (long d = 0; d < varIn->num_dims()-1; d++) {
+					NcDim * dimIn = varIn->get_dim(d);
+					NcDim * dimOut = ncoutfile.get_dim(dimIn->name());
+					if (dimOut != NULL) {
+						if (dimOut->size() != dimIn->size()) {
+							_EXCEPTION3("Size mismatch in dimension \"%s\" (in %lu / out %lu)",
+								dimIn->name(), dimIn->size(), dimOut->size());
+						}
+					} else {
+						dimOut = ncoutfile.add_dim(dimIn->name(), dimIn->size());
+						if (dimOut == NULL) {
+							_EXCEPTION1("Unable to create dimension \"%s\" in output file", dimIn->name());
+						}
+						CopyNcVarIfExists(ncinfile, ncoutfile, dimIn->name());
+					}
+					vecDimOut.push_back(dimOut);
+					lAuxDimSize *= dimOut->size();
+				}
+
+				vecDimOut.push_back(dimX);
+				vecDimOut.push_back(dimY);
+
+				// Create output variable
+				varOut = ncoutfile.add_var(strVariable.c_str(), ncFloat, vecDimOut.size(), const_cast<const NcDim**>(&(vecDimOut[0])));
 				if (varOut == NULL) {
 					_EXCEPTION2("Unable to create variable \"%s\" in file \"%s\"",
 						strVariable.c_str(), strOutputFile.c_str());
@@ -245,27 +293,77 @@ try {
 					}
 				}
 
-				DataArray1D<float> dDataOut(dimX->size() * dimY->size());
+				// Loop over all auxiliary indices and restructure
+				for (long s = 0; s < lAuxDimSize; s++) {
 
-				long ixDOF = 0;
-				for (long i = 0; i < lSpatialSize; i++) {
-					if (dLon[i] != dFillValueLon) {
-						dDataOut[i] = dData[ixDOF];
-						ixDOF++;
-					} else{
-						dDataOut[i] = static_cast<float>(dFillValueVar);
+					std::vector<long> vecVarInSize(varIn->num_dims(), 1);
+					std::vector<long> vecVarInPos(varIn->num_dims(), 0);
+
+					std::vector<long> vecVarOutSize(varIn->num_dims()+1, 1);
+					std::vector<long> vecVarOutPos(varIn->num_dims()+1, 0);
+
+					long lAuxDimSizeTemp = lAuxDimSize;
+					for (long d = varIn->num_dims()-2; d >= 0; d--) {
+						vecVarInPos[d] = s % vecDimOut[d]->size();
+						vecVarOutPos[d] = vecVarInPos[d];
+						lAuxDimSizeTemp = (lAuxDimSizeTemp - vecVarInPos[d]) / (vecDimOut[d]->size());
 					}
+					vecVarInSize[varIn->num_dims()-1] = varIn->get_dim(varIn->num_dims()-1)->size();
+					vecVarInPos[varIn->num_dims()-1] = 0;
+					vecVarOutSize[varIn->num_dims()-1] = dimX->size();
+					vecVarOutSize[varIn->num_dims()] = dimY->size();
+
+					if (lAuxDimSize > 0) {
+						std::stringstream ssPos;
+						for (long d = 0; d < varIn->num_dims()-1; d++) {
+							ssPos << vecDimOut[d]->name() << " (";
+							ssPos << vecVarInPos[d];
+							ssPos << "/";
+							ssPos << varIn->get_dim(d)->size();
+							ssPos << ")";
+							if (d != varIn->num_dims()-2) {
+								ssPos << ", ";
+							}
+						}
+						Announce("%s", ssPos.str().c_str());
+					}
+/*
+					std::cout << dData.GetRows() << std::endl;
+
+					for (int d = 0; d < vecVarInPos.size(); d++) {
+						printf("%li/%li ", vecVarInPos[d], vecVarInSize[d]);
+					}
+					printf("\n");
+					for (int d = 0; d < vecVarOutPos.size(); d++) {
+						printf("%li/%li ", vecVarOutPos[d], vecVarOutSize[d]);
+					}
+					printf("\n");
+*/
+					varIn->set_cur(&(vecVarInPos[0]));
+					varIn->get(&(dData[0]), &(vecVarInSize[0]));
+
+					long ixDOF = 0;
+					for (long i = 0; i < lSpatialSize; i++) {
+						if (dLon[i] != dFillValueLon) {
+							dDataOut[i] = dData[ixDOF];
+							ixDOF++;
+						} else{
+							dDataOut[i] = static_cast<float>(dFillValueVar);
+						}
+					}
+
+					varOut->set_cur(&(vecVarOutPos[0]));
+					varOut->put(&(dDataOut[0]), &(vecVarOutSize[0]));
 				}
-
-				Announce("%li / %li degrees of freedom found", ixDOF, dimX->size() * dimY->size());
-
-				varOut->put(&(dDataOut[0]), dimX->size(), dimY->size());
 			}
 
 			AnnounceEndBlock("Done");
 
 		// 2D variable array -- convert to 1D
 		} else if (lVariableDims == 2) {
+
+			_ASSERT(dimVar0 != NULL);
+			_ASSERT(dimVar1 != NULL);
 
 			AnnounceStartBlock("Converting 2D data to 1D");
 
