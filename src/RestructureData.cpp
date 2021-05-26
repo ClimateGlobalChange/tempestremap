@@ -48,8 +48,8 @@ int RestructureData(
 
 try {
 
-    // Output format
-    STLStringHelper::ToLower(strOutputFormat);
+	// Output format
+	STLStringHelper::ToLower(strOutputFormat);
 
 	NcFile::FileFormat eOutputFormat =
 		GetNcFileFormatFromString(strOutputFormat);
@@ -362,13 +362,12 @@ try {
 		// 2D variable array -- convert to 1D
 		} else if (lVariableDims == 2) {
 
-			_ASSERT(dimVar0 != NULL);
-			_ASSERT(dimVar1 != NULL);
-
 			AnnounceStartBlock("Converting 2D data to 1D");
 
 			DataArray1D<float> dData(lSpatialSize);
 			if (fVariable) {
+				_ASSERT(dimVar0 != NULL);
+				_ASSERT(dimVar1 != NULL);
 				varIn->get(&(dData[0]), dimVar0->size(), dimVar1->size());
 			}
 
@@ -429,6 +428,7 @@ try {
 						if (fVariable) {
 							dDataVectorized[ix] = dData[i];
 						}
+						ix++;
 					}
 				}
 				varLonOut->put(&(dLonVectorized[0]), lCount);
