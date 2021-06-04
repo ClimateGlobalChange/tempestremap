@@ -61,18 +61,6 @@ def create_results(res):
 
     return opts
 
-def build_mesh_args(value, type):
-    res = value
-    args=[]
-    args = " --res "+res
-    if type == "cs":
-        filename = "outCSMesh"+res+".g"
-        args+= " --file "+ filename
-    elif type == "icod":
-        filename = "outICOMesh"+res+".g"
-        args+= " --file "+ filename
-
-    return args, filename
 
 def build_mesh_args1(meshstr):
     if "cs" in meshstr:
@@ -120,7 +108,11 @@ if __name__ == '__main__':
     args=[]
     # space seperated table with keywords
     tm = pd.read_table('./test_matrix.ini', delim_whitespace=True)
+
     # figure out order of commands to call
+    # For each pipeline:
+    # this loop gets the commands to call and the arguments, size of both commands and arguments is same
+
     for i in range(len(tm.values)):
 # Command 1 & 2 for source/target mesh
         srcmesh_str =  tm.loc[i].at["srcmesh"]
@@ -187,22 +179,30 @@ if __name__ == '__main__':
 #TODO: can be parallized
     print("args =",args)
     print("commands:", command)
+
     # loop thru all commands and run
     # check if the same command has already been run
     #path = "../build/"
     num_commands = len(command)
     res = []
+    cmd_args_list = []
+    j=0
     for i in range(num_commands):
         cmd=path+command[i]
-        cmd_all = cmd+args[i]
-        res.append(run_command(cmd_all))
+        cmd_args = cmd+args[i]
+       # Actual run happens here
+        # Don't run cmd_args if already run
+        if cmd_args not in cmd_args_list:
+            res.append(run_command(cmd_args))
+            j+=1
+            print("-----DONE running command", j, "-----")
+
+    # now that we've run once put on list to not run the same command again
+        cmd_args_list.append(cmd_args)
+    # store output and compareds = []
         if command[i] == "ApplyOfflineMap":
-            results = create_results(res[i])
+            results = create_results(res[j-1])
             diff = float(results[0]) - float(results[1])
             percentage_diff = ( diff * 100 )/float(results[0])
             print("Percentage diff between source and target is ", percentage_diff)
-
-    #  # make args for call
-    #  # launch the commands
-    # store output and compareds = []
 
