@@ -1,6 +1,7 @@
 import subprocess
 import os
 import pandas as pd
+import sys
 
 # a function to run a command and
 # parse the output.
@@ -73,64 +74,63 @@ def build_mesh_args(value, type):
 
     return args, filename
 
+def build_mesh_args1(meshstr):
+    if "cs" in meshstr:
+        filename = "outCSMesh"
+        command = "GenerateCSMesh"
+        value = meshstr.partition("cs")[2]
+        args=""
+    elif "icod" in meshstr:
+        filename = "outICOMesh"
+        command = "GenerateICOMesh"
+        value = meshstr.partition("icod")[2]
+        args = " --dual"
+
+    res = value
+    filename+=res+".g"
+    args= " --file "+ filename
+    args+= " --res "+res
+    return command, args, filename
+
+
+
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: \npython regression_tests.py <location of executables>\n\n")
+        exit()
+    path = sys.argv[1] + "/"
 
     # These option are availble for checking and extending this regression testing commandline options
-    res = run_command('./GenerateCSMesh')
+    res = run_command('../build/GenerateCSMesh')
     gCSMesh_tokens = parse_help(res)
-    res = run_command('./GenerateICOMesh')
+    res = run_command('../build/GenerateICOMesh')
     gICOMesh_tokens = parse_help(res)
-    res = run_command('./GenerateOverlapMesh')
+    res = run_command('../build/GenerateOverlapMesh')
     gOverlapMesh_tokens = parse_help(res)
-    res = run_command('./GenerateOfflineMap')
+    res = run_command('../build/GenerateOfflineMap')
     gOfflineMap_tokens = parse_help(res)
-    res = run_command('./GenerateTestData')
+    res = run_command('../build/GenerateTestData')
     gTestData_tokens = parse_help(res)
-    res = run_command('./ApplyOfflineMap')
+    res = run_command('../build/ApplyOfflineMap')
     gApplyOfflineMap_tokens = parse_help(res)
 
     # Run a pipeline
     # read inputs
     command = []
     args=[]
-    # delim_whitespace=True is needed is text in csv file is seperated by just spaces
-    tm = pd.read_csv('./test_matrix.csv', delim_whitespace=True)
+    # space seperated table with keywords
+    tm = pd.read_table('./test_matrix.ini', delim_whitespace=True)
     # figure out order of commands to call
     for i in range(len(tm.values)):
-# Command 1
-        if "cs" in tm.loc[i].at["srcmesh"]:
-            # we have a CSMesh
-            command.append("GenerateCSMesh")
-    # Finalize parameters for the command
-            srcvalue = tm.loc[i].at["srcmesh"].partition("cs")[2]
-            arg, in_file = build_mesh_args(srcvalue, "cs")
-            args.append(arg)
-            flag_a = "cs"
-        elif "icod" in tm.loc[i].at["srcmesh"]:
-            command.append("GenerateICOMesh")
-            srcvalue = tm.loc[i].at["srcmesh"].partition("icod")[2]
-            arg, in_file = build_mesh_args(srcvalue, "icod")
-            arg+= " --dual "
-            args.append(arg)
-            flag_a = "icod"
-
-# Command 2
-        if "cs" in tm.loc[i].at["tgtmesh"]:
-            # we have a CSMesh
-            command.append("GenerateCSMesh")
-            tgtvalue = tm.loc[i].at["tgtmesh"].partition("cs")[2]
-            arg, out_file = build_mesh_args(tgtvalue, "cs")
-            args.append(arg)
-            flag_b = "cs"
-
-        elif "icod" in tm.loc[i].at["tgtmesh"]:
-            # we have a ICOMesh
-            command.append("GenerateICOMesh")
-            tgtvalue = tm.loc[i].at["tgtmesh"].partition("icod")[2]
-            arg, out_file = build_mesh_args(tgtvalue, "icod")
-            arg+= " --dual "
-            args.append(arg)
-            flag_b = "icod"
+# Command 1 & 2 for source/target mesh
+        srcmesh_str =  tm.loc[i].at["srcmesh"]
+        tgtmesh_str = tm.loc[i].at["tgtmesh"]
+        cmd, arg, in_file = build_mesh_args1(srcmesh_str)
+        command.append(cmd)
+        args.append(arg)
+        cmd, arg, out_file = build_mesh_args1(tgtmesh_str)
+        command.append(cmd)
+        args.append(arg)
 
 # Command 3
         command.append("GenerateOverlapMesh")
@@ -147,16 +147,7 @@ if __name__ == '__main__':
         arg+= " --in_np "+ order+ " --out_np "+ order
         arg+= " --out_mesh " + out_file+ " --in_mesh "+ in_file
         ofmap_out="mapNE-"
-        #srcmesh
-        if flag_a == "cs":
-            ofmap_out+= "CS"+srcvalue
-        elif flag_a == "icod":
-            ofmap_out+= "ICOD"+srcvalue
-        #tgtmesh
-        if flag_b == "cs":
-            ofmap_out+= "-CS"+tgtvalue
-        elif flag_b == "icod":
-            ofmap_out+= "-ICOD"+tgtvalue
+        ofmap_out+=srcmesh_str.upper()+"-"+tgtmesh_str.upper()
         ofmap_out+="-O"+order+".nc"
         arg+= " --out_map " + ofmap_out
 
@@ -169,11 +160,7 @@ if __name__ == '__main__':
         arg+= " --test "+ test
         out_td="test"
         #srcmesh
-        if flag_a == "cs":
-            out_td+= "CS"+srcvalue
-        elif flag_a == "icod":
-            out_td+= "ICOD"+srcvalue
-
+        out_td+=srcmesh_str.upper()
         out_td+="-F"+test+"-O"+order+".nc"
         arg+= " --out " + out_td
 
@@ -185,28 +172,24 @@ if __name__ == '__main__':
         arg+= " --map "+ ofmap_out
         arg+= " --var Psi"
         out_test="OutTest"
-        #srcmesh
-        if flag_a == "cs":
-            out_test+= "CS"+srcvalue
-        elif flag_a == "icod":
-            out_test+= "ICOD"+srcvalue
-
+        out_test+=srcmesh_str.upper()
         out_test+="-F"+test+"-O"+order+".nc"
         arg+= " --out_data " + out_test
 
         args.append(arg)
 
-
+#TODO: unused matrix options
 
 
         tm.loc[i].at["correctareas"]
         tm.loc[i].at["monotone"]
 
+#TODO: can be parallized
     print("args =",args)
     print("commands:", command)
     # loop thru all commands and run
     # check if the same command has already been run
-    path = "../build/"
+    #path = "../build/"
     num_commands = len(command)
     res = []
     for i in range(num_commands):
