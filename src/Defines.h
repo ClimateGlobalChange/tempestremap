@@ -107,6 +107,12 @@ static const Real ReferenceTolerance = 1.0e-12;
 #define FORCECC_MAX_TARGET_FACES (-1)
 
 ///////////////////////////////////////////////////////////////////////////////
+//
+// Maximum number of faces to search before giving up in GenerateOverlapMesh.
+//
+static const int OverlapFaceSearchMaximumFaces = 32;
+
+///////////////////////////////////////////////////////////////////////////////
 
 #endif
 
