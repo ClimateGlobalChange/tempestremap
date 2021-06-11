@@ -110,7 +110,7 @@ static const Real ReferenceTolerance = 1.0e-12;
 //
 // Maximum number of faces to search before giving up in GenerateOverlapMesh.
 //
-static const int OverlapFaceSearchMaximumFaces = 32;
+static const int OverlapFaceSearchMaximumFaces = (-1);
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -1600,7 +1600,7 @@ int FindFaceContainingNode(
 	int ixIterate = 0;
 	while (!queueTargetFaces.empty()) {
 
-		if (ixIterate > OverlapFaceSearchMaximumFaces) {
+		if ((OverlapFaceSearchMaximumFaces != (-1)) && (ixIterate > OverlapFaceSearchMaximumFaces)) {
 			Announce("Abandoning search after %i iterations", OverlapFaceSearchMaximumFaces);
 			return InvalidFace;
 		}
