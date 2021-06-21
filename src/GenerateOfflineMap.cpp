@@ -142,7 +142,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strNColName, bool fOutputDouble,
 	std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave, bool useSparseConstraints
+	bool fSourceConcave, bool fTargetConcave, bool fSparseConstraints
 ) {
 	NcError error(NcError::silent_nonfatal);
 
@@ -553,7 +553,7 @@ try {
             nMonotoneType,
             fContinuousIn,
             fNoConservation,
-            useSparseConstraints,
+            fSparseConstraints,
             mapRemap
         );
 
@@ -809,7 +809,7 @@ int GenerateOfflineMap(
 	bool fPreserveAll,
 	double dFillValueOverride,
 	bool fSourceConcave, bool fTargetConcave,
-	bool useSparseConstraints)
+	bool fSparseConstraints)
 {
 	NcError error(NcError::silent_nonfatal);
 
@@ -870,7 +870,7 @@ try {
                                             strInputData, strOutputData,
                                             strNColName, fOutputDouble, strOutputFormat,
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                            fSourceConcave, fTargetConcave, useSparseConstraints );
+                                            fSourceConcave, fTargetConcave, fSparseConstraints );
 
     return err;
 

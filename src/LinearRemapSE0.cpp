@@ -506,7 +506,7 @@ void ForceConsistencyConservation3(
 	const DataArray1D<double> & vecSourceArea,
 	const DataArray1D<double> & vecTargetArea,
 	DataArray2D<double> & dCoeff,
-	bool fMonotone, bool useSparseConstraints = false
+	bool fMonotone, bool fSparseConstraints = false
 ) {
 
 	// Number of free coefficients
@@ -526,7 +526,7 @@ void ForceConsistencyConservation3(
 	// RHS
 	DataArray1D<double> dRHS; // (nCoeff + nCond);
 	int ix = 0;
-	if (useSparseConstraints) 
+	if (fSparseConstraints)
 		localLK.Allocate(nCond); // will store lagrange multipliers lambda(nCondConservation)
 	                         // and kappa(nCond-1)
 	else {
@@ -540,7 +540,7 @@ void ForceConsistencyConservation3(
 		}
 	}
 	
-	if (!useSparseConstraints){
+	if (!fSparseConstraints){
 		// Consistency
 		ix = 0;
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
@@ -607,7 +607,7 @@ void ForceConsistencyConservation3(
 	int incy = 1;
 	double posone = 1.0;
 	double negone = -1.0;
-	if (useSparseConstraints)
+	if (fSparseConstraints)
 	{
 		for (int m=0; m < nCondConsistency; m++) { // consistency condition
 			localLK[m] = 0;
@@ -656,7 +656,7 @@ void ForceConsistencyConservation3(
 		&nInfo);
 */
 	char uplo = 'U';
-	if (useSparseConstraints)
+	if (fSparseConstraints)
 		dposv_(
 		&uplo,
 		&m,
@@ -679,7 +679,7 @@ void ForceConsistencyConservation3(
 	if (nInfo != 0) {
 		_EXCEPTION1("Unable to solve SPD Schur system: %i\n", nInfo);
 	}
-	if (useSparseConstraints) {
+	if (fSparseConstraints) {
 		for (int i = 0; i < nCondConsistency; i++) {
 			for (int j = 0; j < nCondConservation - 1; j++)
 			// R^_ij =  R_ij - lambda_i - kapa_j * JT_i
@@ -766,7 +766,7 @@ void LinearRemapSE4(
 	const DataArray3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
-	bool fNoConservation, bool useSparseConstraints,
+	bool fNoConservation, bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Order of the polynomial interpolant
@@ -1068,7 +1068,7 @@ void LinearRemapSE4(
 					vecTargetArea,
 					dCoeff,
 					(nMonotoneType != 0),
-					useSparseConstraints);
+					fSparseConstraints);
 
 			// If too many target faces are included this can greatly slow down the computation and
 			// require a high memory footprint.  In this case only apply forcing to the first
@@ -1122,7 +1122,7 @@ void LinearRemapSE4(
 					dSubsetTargetArea,
 					dSubsetCoeff,
 					(nMonotoneType != 0),
-					useSparseConstraints);
+					fSparseConstraints);
 
 				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
 					for (int p = 0; p < nP; p++) {
@@ -1196,7 +1196,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
-	bool useSparseConstraints,
+	bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 
@@ -1567,7 +1567,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dTargetArea,
 			dCoeff,
 			(nMonotoneType != 0),
-			useSparseConstraints);
+			fSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -1673,7 +1673,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dTargetArea,
 			dCoeff,
 			(nMonotoneType != 0),
-			useSparseConstraints);
+			fSparseConstraints);
 
 /*
 		// Check column sums (conservation)
@@ -1812,7 +1812,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
-	bool useSparseConstraints,
+	bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Triangular quadrature rule
@@ -2084,7 +2084,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			dTargetArea,
 			dCoeff,
 			(nMonotoneType != 0),
-			useSparseConstraints);
+			fSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -2190,7 +2190,7 @@ void LinearRemapGLLtoGLL_Integrated(
 			dTargetArea,
 			dCoeff,
 			(nMonotoneType != 0),
-			useSparseConstraints);
+			fSparseConstraints);
 /*
 		// Check column sums (conservation)
 		for (int i = 0; i < dCoeff.GetColumns(); i++) {
