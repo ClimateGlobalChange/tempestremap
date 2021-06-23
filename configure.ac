@@ -3,7 +3,7 @@
 # Usage: autoreconf -fi
 #
 AC_PREREQ([2.68])
-AC_INIT([TempestRemap], [2.0.6], [paullrich@ucdavis.edu])
+AC_INIT([TempestRemap], [2.1.0], [paullrich@ucdavis.edu])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 #AC_CONFIG_SRCDIR([test/optimtest.m])
@@ -25,7 +25,7 @@ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 
 # Check how to add C++0x flags
 # TODO: Should we check for partial C++11 support also ?
-AX_CXX_COMPILE_STDCXX_0X
+AX_CXX_COMPILE_STDCXX([11], [], [mandatory])
 
 # Checks for some standard libraries.
 AC_CHECK_LIB(dl, dlopen, LIBS="$LIBS -ldl")
@@ -42,6 +42,7 @@ AC_LANG_POP([C++])
 
 # Checks for header files.
 AC_CHECK_HEADERS([malloc.h stdlib.h string.h unistd.h])
+AC_CHECK_HEADER(unordered_map, [AC_DEFINE([OVERLAPMESH_USE_UNSORTED_MAP], [1], [Use unordered maps in Overlap mesh],[])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
