@@ -3,23 +3,62 @@ import os
 import pandas as pd
 import sys
 
+import multiprocessing as mp
+from multiprocessing import Pool
+
+bin_path = "../build/"
+
 # a function to run a command and
 # parse the output.
 def run_command(cmd):
 
-    # using the Popen function to execute the
-    # command and store the result in temp.
-    # it returns a tuple that contains the
-    # data and the error if any.
+    # using the Popen function to execute the command 
+    mycmd =""
+    # expand the list to form command to execute
+    for j in range(len(cmd)):
+        mycmd+=cmd[j]+" "
+
+    cmd = mycmd     
     print("cmd running:", cmd,)
     temp = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
 
-    # we use the communicate function
-    # to fetch the output
+    # TODO: dump each command line output to file(s)
+    res = []
+    # # use the communicate function to fetch the output
+    # output = str(temp.communicate())
+
+    # # splitting the output to parse ine by line
+    # output = output.split("\n")
+
+    # output = output[0].split('\\')
+
+    # # a variable to store the output
+    # res = []
+
+    # # iterate through the output line by line
+    # for line in output:
+    #     res.append(line)
+
+    return res
+
+
+
+# a function to run a command and parse result (Apply Offline Map)
+def run_command_results(cmd):
+
+    # using the Popen function to execute the command 
+    mycmd =""
+    for j in range(len(cmd)):
+        mycmd+=cmd[j]+" "
+
+    cmd = mycmd     
+    print("cmd running:", cmd,)
+    temp = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
+
+    # use the communicate function to fetch the output
     output = str(temp.communicate())
 
-    # splitting the output so that
-    # we can parse them line by line
+    # splitting the output to parse ine by line
     output = output.split("\n")
 
     output = output[0].split('\\')
@@ -27,182 +66,264 @@ def run_command(cmd):
     # a variable to store the output
     res = []
 
-    # iterate through the output
-    # line by line
+    # iterate line by line
     for line in output:
         res.append(line)
 
-    return res
-
-def parse_help(res):
     opts = []
+    print("\nTest Result\n")
+
     for i in range(1, len(res) - 1):
       line = res[i]
-      #print("line", i, line)
-      a = line.find("--")
-      if a != -1:
-        opt = line.partition("--")[2].split()[0]
-        opts.append(opt)
-        print("line is", opt)
-
-    return opts
-
-def create_results(res):
-    opts = []
-    for i in range(1, len(res) - 1):
-      line = res[i]
-      #print("line", i, line)
+      if "--in_data <string>" in line or "--map <string> " in line:
+          print(line)
       a = line.find("....")
       if a != -1:
         opt = line.partition("....")[2].split()[2]
 # ['Source', 'Mass:', '2.513274122871826e+01', 'Min', '1.0027367453e+00', 'Max', '2.9972632547e+00']
         opts.append(opt)
-        print(line.partition("....")[2].split()[0], " ", opt)
-
-    return opts
+        # print(line.partition("....")[2].split()[0], " ", opt)
 
 
-def build_mesh_args1(meshstr):
+    diff = float(opts[0]) - float(opts[1])
+    percentage_diff = ( diff * 100 )/float(opts[0])
+    print("Percentage diff between source and target is ", percentage_diff)
+
+    return res
+
+
+def generate_cs_mesh(res, filename):
+    command = []
+    command.append(bin_path+"GenerateCSMesh")
+    command.append("--file")
+    command.append(filename)
+    command.append("--res")
+    command.append(res)
+
+    return command
+
+def generate_ico_mesh(res, filename, dual=False):
+    command = []
+    command.append(bin_path+"GenerateICOMesh")
+    command.append("--dual")
+    # command.append(dual)
+    command.append("--res")
+    command.append(res)    
+    command.append("--file")
+    command.append(filename)
+
+    return command
+
+def generate_rll_mesh(lon, lat, filename):
+    command = []
+    command.append(bin_path+"GenerateRLLMesh")
+    command.append("--lon")
+    command.append(lon)
+    command.append("--lat")
+    command.append(lat)
+    command.append("--file")
+    command.append(filename)
+
+    return command
+
+def generate_overlap_mesh(inpfname1, inpfname2, method, out):
+    command = []
+    command.append(bin_path+"GenerateOverlapMesh")
+    command.append("--a")
+    command.append(inpfname1)
+    command.append("--b")
+    command.append(inpfname2)
+    command.append("--out")
+    command.append(out)    
+    command.append("--method")
+    command.append(method)
+
+    return command
+
+# order: list with 2 entries that is strtictly above 0: FV (1:4), SE==4
+# methods: list with 2 entries specifying one of fv, cgll, dgll
+def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders, methods, correct_areas=False, monotone=False):
+    command = []
+    command.append(bin_path+"GenerateOfflineMap")
+    command.append("--in_mesh")
+    command.append(inpfname1)
+    command.append("--ov_mesh")
+    command.append(inpoverlapmesh)
+    command.append("--in_np")
+    command.append(orders[0])
+    command.append("--out_np")
+    command.append(orders[1])
+    command.append("--in_type")
+    command.append(methods[0])
+    command.append("--out_type")
+    command.append(methods[1])
+    command.append("--correct_areas")
+    # command.append(correct_areas)
+    command.append("--mono")
+    # command.append(monotone)
+    command.append("--out_mesh")
+    command.append(inpfname2)
+    command.append("--out_map")
+    command.append(outputmap)    
+
+    return command
+
+def generate_test_data(inpfname, testname, out_test):
+    command = []
+    command.append(bin_path+"GenerateTestData")
+    command.append("--mesh")
+    command.append(inpfname)
+    command.append("--test")
+    command.append(testname)
+    command.append("--out")
+    command.append(out_test)             
+
+    return command
+
+def apply_offline_map(mapfile, inputdatafile, variablename, outfile):
+    command = []
+    command.append(bin_path+"ApplyOfflineMap")
+    command.append("--in_data")
+    command.append(inputdatafile)
+    command.append("--map")
+    command.append(mapfile)
+    command.append("--var")
+    command.append(variablename)    
+    command.append("--out_data")
+    command.append(outfile)    
+        
+    return command
+
+def generate_mesh(meshstr):
     if "cs" in meshstr:
         filename = "outCSMesh"
-        command = "GenerateCSMesh"
-        value = meshstr.partition("cs")[2]
-        args=""
+        res = meshstr.partition("cs-")[2]
+        filename+="-"+res+".g"
+
+        # call function to generate cs mesh command
+        command = generate_cs_mesh(res, filename)
+        #
     elif "icod" in meshstr:
         filename = "outICOMesh"
-        command = "GenerateICOMesh"
-        value = meshstr.partition("icod")[2]
-        args = " --dual"
+        res = meshstr.partition("icod-")[2]
+        filename+="-"+res+".g"
 
-    res = value
-    filename+=res+".g"
-    args= " --file "+ filename
-    args+= " --res "+res
-    return command, args, filename
+        # call function to generate cs mesh command        
+        command = generate_ico_mesh(res, filename)
+        #
+    elif "rll" in meshstr:
+        filename = "outRLLMesh"
+        tres = meshstr.partition("rll-")[2]
+        lon = tres.partition("-")[0]
+        lat = tres.partition("-")[2]
+        filename+="-"+lon+"-"+lat+".g"
 
+        # call function to generate cs mesh command
+        command = generate_rll_mesh(lon, lat, filename)
+        #
+
+    return command, filename
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: \npython regression_tests.py <location of executables>\n\n")
-        exit()
-    path = sys.argv[1] + "/"
-
-    # These option are availble for checking and extending this regression testing commandline options
-    res = run_command('../build/GenerateCSMesh')
-    gCSMesh_tokens = parse_help(res)
-    res = run_command('../build/GenerateICOMesh')
-    gICOMesh_tokens = parse_help(res)
-    res = run_command('../build/GenerateOverlapMesh')
-    gOverlapMesh_tokens = parse_help(res)
-    res = run_command('../build/GenerateOfflineMap')
-    gOfflineMap_tokens = parse_help(res)
-    res = run_command('../build/GenerateTestData')
-    gTestData_tokens = parse_help(res)
-    res = run_command('../build/ApplyOfflineMap')
-    gApplyOfflineMap_tokens = parse_help(res)
+    # if len(sys.argv) < 2:
+    #     print("Usage: \npython regression_tests.py <location of executables>\n\n")
+    #     exit()
+    # path = sys.argv[1] + "/"
 
     # Run a pipeline
     # read inputs
     command = []
     args=[]
     # space seperated table with keywords
-    tm = pd.read_table('./test_matrix.ini', delim_whitespace=True)
+    tm = pd.read_table('./test_matrix.ini', delim_whitespace=True, comment='#')
 
     # figure out order of commands to call
     # For each pipeline:
     # this loop gets the commands to call and the arguments, size of both commands and arguments is same
 
+    # collect all mesh generation commands
+    mesh_cmds = []
+    overlap_test_cmds = []
+    g_offmap_cmds = []
+    a_offmap_cmds = []
+
     for i in range(len(tm.values)):
-# Command 1 & 2 for source/target mesh
+
+# Generate Meshes
         srcmesh_str =  tm.loc[i].at["srcmesh"]
         tgtmesh_str = tm.loc[i].at["tgtmesh"]
-        cmd, arg, in_file = build_mesh_args1(srcmesh_str)
-        command.append(cmd)
-        args.append(arg)
-        cmd, arg, out_file = build_mesh_args1(tgtmesh_str)
-        command.append(cmd)
-        args.append(arg)
 
-# Command 3
-        command.append("GenerateOverlapMesh")
-        arg = " --a "+ in_file
-        arg+= " --b " + out_file
-        arg+= " --method exact"
+        cmd, in_file = generate_mesh(srcmesh_str)
+        mesh_cmds.append(cmd)
+        
+        cmd, out_file = generate_mesh(tgtmesh_str)
+        mesh_cmds.append(cmd)       
 
-        args.append(arg)
+# Generate Overlap Mesh
+        method = "exact"
 
-# Command 4
-        command.append("GenerateOfflineMap")
-        arg = " --ov_mesh overlap.g"
+        # call overlap mesh
+            # name overlap mesh as in+outfile.g
+        overlapmesh = in_file[:len(in_file)-2]+"-"+out_file
+
+        cmd = generate_overlap_mesh(in_file, out_file, method, overlapmesh)
+        overlap_test_cmds.append(cmd)
+
+# Generate Offline Map
         order = str(tm.loc[i].at["order"])
-        arg+= " --in_np "+ order+ " --out_np "+ order
-        arg+= " --out_mesh " + out_file+ " --in_mesh "+ in_file
         ofmap_out="mapNE-"
         ofmap_out+=srcmesh_str.upper()+"-"+tgtmesh_str.upper()
         ofmap_out+="-O"+order+".nc"
-        arg+= " --out_map " + ofmap_out
 
-        args.append(arg)
+        correct_areas = tm.loc[i].at["correctareas"]
+        monotone = tm.loc[i].at["monotone"]
 
-# Command 5
-        command.append("GenerateTestData")
-        arg = " --mesh "+ in_file
+        # specify two entries 1st for input and 2nd for output
+        orders = []
+        methods = []
+
+        orders.append(order)
+        orders.append(order)
+
+        methods.append("fv")
+        methods.append("fv")
+
+        inpoverlapmesh = overlapmesh 
+
+        # call generate offline map
+        cmd = generate_offline_map(in_file, out_file, inpoverlapmesh, ofmap_out, orders, methods, correct_areas, monotone)
+        g_offmap_cmds.append(cmd)
+
+# Generate Test Data
         test = str(tm.loc[i].at["test"])
-        arg+= " --test "+ test
         out_td="test"
         #srcmesh
         out_td+=srcmesh_str.upper()
         out_td+="-F"+test+"-O"+order+".nc"
-        arg+= " --out " + out_td
 
-        args.append(arg)
+        cmd = generate_test_data(in_file, test, out_td)
+        overlap_test_cmds.append(cmd)
 
-# Command 6
-        command.append("ApplyOfflineMap")
-        arg = " --in_data "+ out_td
-        arg+= " --map "+ ofmap_out
-        arg+= " --var Psi"
+# Apply Offline Map
+        variablename = "Psi"
         out_test="OutTest"
         out_test+=srcmesh_str.upper()
         out_test+="-F"+test+"-O"+order+".nc"
-        arg+= " --out_data " + out_test
 
-        args.append(arg)
+        cmd = apply_offline_map(ofmap_out, out_td, variablename, out_test)          
+        a_offmap_cmds.append(cmd)  
 
-#TODO: unused matrix options
+        # print(mesh_cmds)
+        # print(overlap_test_cmds)
+        # print(g_offmap_cmds)
+        # print(a_offmap_cmds)
 
-
-        tm.loc[i].at["correctareas"]
-        tm.loc[i].at["monotone"]
-
-#TODO: can be parallized
-    print("args =",args)
-    print("commands:", command)
-
-    # loop thru all commands and run
-    # check if the same command has already been run
-    #path = "../build/"
-    num_commands = len(command)
-    res = []
-    cmd_args_list = []
-    j=0
-    for i in range(num_commands):
-        cmd=path+command[i]
-        cmd_args = cmd+args[i]
-       # Actual run happens here
-        # Don't run cmd_args if already run
-        if cmd_args not in cmd_args_list:
-            res.append(run_command(cmd_args))
-            j+=1
-            print("-----DONE running command", j, "-----")
-
-    # now that we've run once put on list to not run the same command again
-        cmd_args_list.append(cmd_args)
-    # store output and compareds = []
-        if command[i] == "ApplyOfflineMap":
-            results = create_results(res[j-1])
-            diff = float(results[0]) - float(results[1])
-            percentage_diff = ( diff * 100 )/float(results[0])
-            print("Percentage diff between source and target is ", percentage_diff)
+# Running multiple processes in parallel and in sequence
+    total_cmds = len(mesh_cmds) + len(overlap_test_cmds) + len(g_offmap_cmds) + len(a_offmap_cmds)
+    pool = Pool(total_cmds)
+    pool.map(run_command, mesh_cmds)
+    pool.map(run_command, overlap_test_cmds)
+    pool.map(run_command, g_offmap_cmds)
+    pool.map(run_command_results, a_offmap_cmds)
 
