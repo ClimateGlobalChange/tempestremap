@@ -2,6 +2,7 @@ import subprocess
 import os
 import pandas as pd
 import sys
+import errno
 
 import multiprocessing as mp
 from multiprocessing import Pool
@@ -71,23 +72,41 @@ def run_command_results(cmd):
         res.append(line)
 
     opts = []
-    print("\nTest Result\n")
 
-    for i in range(1, len(res) - 1):
-      line = res[i]
-      if "--in_data <string>" in line or "--map <string> " in line:
-          print(line)
-      a = line.find("....")
-      if a != -1:
-        opt = line.partition("....")[2].split()[2]
-# ['Source', 'Mass:', '2.513274122871826e+01', 'Min', '1.0027367453e+00', 'Max', '2.9972632547e+00']
-        opts.append(opt)
-        # print(line.partition("....")[2].split()[0], " ", opt)
+    filename = "./data/regression_results.txt"
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+    with open(filename, "a") as f:
+        f.write("\nRegression Log\n")
+
+        print("\nTest Result\n")
+
+        for i in range(1, len(res) - 1):
+            line = res[i]
+            if "--in_data <string>" in line or "--map <string> " in line:
+                print(line)
+                f.write(line)
+                f.write("\n")
+            a = line.find("....")
+            if a != -1:
+                opt = line.partition("....")[2].split()[2]
+        # ['Source', 'Mass:', '2.513274122871826e+01', 'Min', '1.0027367453e+00', 'Max', '2.9972632547e+00']
+                opts.append(opt)
+                # print(line.partition("....")[2].split()[0], " ", opt)
 
 
-    diff = float(opts[0]) - float(opts[1])
-    percentage_diff = ( diff * 100 )/float(opts[0])
-    print("Percentage diff between source and target is ", percentage_diff)
+        diff = float(opts[0]) - float(opts[1])
+        percentage_diff = ( diff * 100 )/float(opts[0])
+        f.write("\n")
+        text = "Percentage diff between source and target is " + str(percentage_diff)
+        f.write("\n")
+        f.write(text)
+        print(text)
 
     return res
 
