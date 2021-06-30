@@ -7,7 +7,7 @@ import errno
 import multiprocessing as mp
 from multiprocessing import Pool
 
-bin_path = "../build/"
+bin_path = "../bin/"
 
 # a function to run a command and
 # parse the output.
@@ -25,8 +25,8 @@ def run_command(cmd):
 
     # TODO: dump each command line output to file(s)
     res = []
-    # # use the communicate function to fetch the output
-    # output = str(temp.communicate())
+    # use the communicate function to fetch the output
+    output = str(temp.communicate())
 
     # # splitting the output to parse ine by line
     # output = output.split("\n")
@@ -36,9 +36,9 @@ def run_command(cmd):
     # # a variable to store the output
     # res = []
 
-    # # iterate through the output line by line
-    # for line in output:
-    #     res.append(line)
+    # iterate through the output line by line
+    for line in output:
+        res.append(line)
 
     return res
 
@@ -149,11 +149,11 @@ def generate_overlap_mesh(inpfname1, inpfname2, method, out):
     command = []
     command.append(bin_path+"GenerateOverlapMesh")
     command.append("--a")
-    command.append(inpfname1)
+    command.append("meshes/"+inpfname1)
     command.append("--b")
-    command.append(inpfname2)
+    command.append("meshes/"+inpfname2)
     command.append("--out")
-    command.append(out)    
+    command.append("meshes/"+out)    
     command.append("--method")
     command.append(method)
 
@@ -165,9 +165,11 @@ def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders
     command = []
     command.append(bin_path+"GenerateOfflineMap")
     command.append("--in_mesh")
-    command.append(inpfname1)
+    command.append("meshes/"+inpfname1)
+    command.append("--out_mesh")
+    command.append("meshes/"+inpfname2)
     command.append("--ov_mesh")
-    command.append(inpoverlapmesh)
+    command.append("meshes/"+inpoverlapmesh)
     command.append("--in_np")
     command.append(orders[0])
     command.append("--out_np")
@@ -180,10 +182,8 @@ def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders
     # command.append(correct_areas)
     command.append("--mono")
     # command.append(monotone)
-    command.append("--out_mesh")
-    command.append(inpfname2)
     command.append("--out_map")
-    command.append(outputmap)    
+    command.append("maps/"+outputmap)    
 
     return command
 
@@ -191,11 +191,11 @@ def generate_test_data(inpfname, testname, out_test):
     command = []
     command.append(bin_path+"GenerateTestData")
     command.append("--mesh")
-    command.append(inpfname)
+    command.append("meshes/"+inpfname)
     command.append("--test")
     command.append(testname)
     command.append("--out")
-    command.append(out_test)             
+    command.append("data/"+out_test)             
 
     return command
 
@@ -203,13 +203,13 @@ def apply_offline_map(mapfile, inputdatafile, variablename, outfile):
     command = []
     command.append(bin_path+"ApplyOfflineMap")
     command.append("--in_data")
-    command.append(inputdatafile)
+    command.append("data/"+inputdatafile)
     command.append("--map")
-    command.append(mapfile)
+    command.append("maps/"+mapfile)
     command.append("--var")
     command.append(variablename)    
     command.append("--out_data")
-    command.append(outfile)    
+    command.append("data/"+outfile)    
         
     return command
 
@@ -220,7 +220,7 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate cs mesh command
-        command = generate_cs_mesh(res, filename)
+        command = generate_cs_mesh(res, "meshes/"+filename)
         #
     elif "icod" in meshstr:
         filename = "outICOMesh"
@@ -228,7 +228,7 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate cs mesh command        
-        command = generate_ico_mesh(res, filename)
+        command = generate_ico_mesh(res, "meshes/"+filename)
         #
     elif "rll" in meshstr:
         filename = "outRLLMesh"
@@ -238,7 +238,7 @@ def generate_mesh(meshstr):
         filename+="-"+lon+"-"+lat+".g"
 
         # call function to generate cs mesh command
-        command = generate_rll_mesh(lon, lat, filename)
+        command = generate_rll_mesh(lon, lat, "meshes/"+filename)
         #
 
     return command, filename
@@ -263,12 +263,14 @@ if __name__ == '__main__':
 
     # collect all mesh generation commands
     mesh_cmds = []
+    generate_test_cmds = []
     overlap_test_cmds = []
     g_offmap_cmds = []
     a_offmap_cmds = []
 
     for i in range(len(tm.values)):
 
+        print("Running test case ",  tm.loc[i].at["id"])
 # Generate Meshes
         srcmesh_str =  tm.loc[i].at["srcmesh"]
         tgtmesh_str = tm.loc[i].at["tgtmesh"]
@@ -322,7 +324,14 @@ if __name__ == '__main__':
         out_td+="-F"+test+"-O"+order+".nc"
 
         cmd = generate_test_data(in_file, test, out_td)
-        overlap_test_cmds.append(cmd)
+        generate_test_cmds.append(cmd)
+
+        out_td="test"
+        #srcmesh
+        out_td+=tgtmesh_str.upper()
+        out_td+="-F"+test+"-O"+order+".nc"
+        cmd = generate_test_data(out_file, test, out_td)
+        generate_test_cmds.append(cmd)
 
 # Apply Offline Map
         variablename = "Psi"
@@ -333,16 +342,23 @@ if __name__ == '__main__':
         cmd = apply_offline_map(ofmap_out, out_td, variablename, out_test)          
         a_offmap_cmds.append(cmd)  
 
-        # print(mesh_cmds)
-        # print(overlap_test_cmds)
-        # print(g_offmap_cmds)
-        # print(a_offmap_cmds)
+    print(mesh_cmds)
+    print(generate_test_cmds)
+    print(overlap_test_cmds)
+    print(g_offmap_cmds)
+    print(a_offmap_cmds)
 
 # Running multiple processes in parallel and in sequence
     total_cmds = len(mesh_cmds) + len(overlap_test_cmds) + len(g_offmap_cmds) + len(a_offmap_cmds)
-    pool = Pool(total_cmds)
+    pool = Pool(processes=2)
     pool.map(run_command, mesh_cmds)
+    pool.map(run_command, generate_test_cmds)
     pool.map(run_command, overlap_test_cmds)
     pool.map(run_command, g_offmap_cmds)
-    pool.map(run_command_results, a_offmap_cmds)
+    results = pool.map(run_command_results, a_offmap_cmds)
+    print(results)
+
+    pool.close()
+    pool.join()
+
 
