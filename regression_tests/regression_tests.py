@@ -1,13 +1,25 @@
 import subprocess
 import os
-import pandas as pd
 import sys
 import errno
+
+import numpy as np
+import pandas as pd
 
 import multiprocessing as mp
 from multiprocessing import Pool
 
+verbose = False
+generate_baseline = False
 bin_path = "../bin/"
+meshes_path = "meshes/"
+maps_path = "maps/"
+data_path = "data/"
+log_path = "logs/"
+baseline_path = "baseline/"
+
+# Global variable storing regression results
+regression_dict = {'id': [], 'source': [], 'target': [], 'error': []}
 
 # a function to run a command and
 # parse the output.
@@ -19,8 +31,9 @@ def run_command(cmd):
     for j in range(len(cmd)):
         mycmd+=cmd[j]+" "
 
-    cmd = mycmd     
-    print("cmd running:", cmd,)
+    cmd = mycmd
+    if verbose:
+        print("Running:", cmd,)
     temp = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
 
     # TODO: dump each command line output to file(s)
@@ -54,6 +67,31 @@ def run_command(cmd):
 
     return res, success
 
+def extract_results(res):
+    opts = []
+    for i in range(1, len(res) - 1):
+        line = res[i]
+        # if "--in_data <string>" in line or "--map <string> " in line:
+        #    print(line)
+        #    # f.write(line)
+        #    # f.write("\n")
+
+        #  look for the pattern below to find mass values
+        a = line.find("....")
+        if a != -1:
+            opt = line.partition("....")[2].split()[2]
+            # parse mass value for source and target both preceeded by .... eg. below value is 2.513274122871826e+01
+            # ['Source', 'Mass:', '2.513274122871826e+01', 'Min', '1.0027367453e+00', 'Max', '2.9972632547e+00']
+            opts.append(opt)
+            # print(line.partition("....")[2].split()[0], " ", opt)
+
+
+    #print('Found output: ', opts)
+    diff = np.abs(float(opts[0]) - float(opts[1]))
+    percentage_diff = 100 * ( diff )/float(opts[0])
+
+    return opts[0], opts[1], percentage_diff
+
 def create_baseline_results(id, res):
 
     opts = []
@@ -67,35 +105,22 @@ def create_baseline_results(id, res):
                 raise
 
     with open(filename, "a") as f:
-         for i in range(1, len(res) - 1):
-               line = res[i]
-               # if "--in_data <string>" in line or "--map <string> " in line:
-               #    print(line)
-               #    # f.write(line)
-               #    # f.write("\n")
-
-               #  look for the pattern below to find mass values
-               a = line.find("....")
-               if a != -1:
-                  opt = line.partition("....")[2].split()[2]
-                  # parse mass value for source and target both preceeded by .... eg. below value is 2.513274122871826e+01
-                  # ['Source', 'Mass:', '2.513274122871826e+01', 'Min', '1.0027367453e+00', 'Max', '2.9972632547e+00']
-                  opts.append(opt)
-                  # print(line.partition("....")[2].split()[0], " ", opt)
-
-
-         diff = float(opts[0]) - float(opts[1])
-         percentage_diff = ( diff * 100 )/float(opts[0])
+         srcVals, tgtVals, percDiff = extract_results(res)
          # f.write("\n")
          text = "CaseID: " + str(id) + ": src val, target val, err " 
          f.write("\n")
          f.write(text)
          f.write("\n")
-         vals =  str(id) + " " + str(opts[0]) + " " + str(opts[1]) + " " + str(percentage_diff)
+         vals =  str(id) + " " + str(srcVals) + " " + str(tgtVals) + " " + str(percDiff)
          f.write(vals)
          f.write("\n")
 
-         print(vals)   
+         print(vals)
+
+         regression_dict['id'].append(id)
+         regression_dict['source'].append(srcVals)
+         regression_dict['target'].append(tgtVals)
+         regression_dict['error'].append(percDiff)
 
 def generate_cs_mesh(res, filename):
     command = []
@@ -107,11 +132,11 @@ def generate_cs_mesh(res, filename):
 
     return command
 
-def generate_ico_mesh(res, filename, dual=False):
+def generate_ico_mesh(res, dual, filename):
     command = []
     command.append(bin_path+"GenerateICOMesh")
-    command.append("--dual")
-    # command.append(dual)
+    if dual:
+        command.append("--dual")
     command.append("--res")
     command.append(res)    
     command.append("--file")
@@ -135,11 +160,11 @@ def generate_overlap_mesh(inpfname1, inpfname2, method, out):
     command = []
     command.append(bin_path+"GenerateOverlapMesh")
     command.append("--a")
-    command.append("meshes/"+inpfname1)
+    command.append(meshes_path+inpfname1)
     command.append("--b")
-    command.append("meshes/"+inpfname2)
+    command.append(meshes_path+inpfname2)
     command.append("--out")
-    command.append("meshes/"+out)    
+    command.append(meshes_path+out)    
     command.append("--method")
     command.append(method)
 
@@ -150,26 +175,32 @@ def generate_overlap_mesh(inpfname1, inpfname2, method, out):
 def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders, methods, correct_areas=False, monotone=False):
     command = []
     command.append(bin_path+"GenerateOfflineMap")
+    
     command.append("--in_mesh")
-    command.append("meshes/"+inpfname1)
+    command.append(meshes_path+inpfname1)
     command.append("--out_mesh")
-    command.append("meshes/"+inpfname2)
+    command.append(meshes_path+inpfname2)
     command.append("--ov_mesh")
-    command.append("meshes/"+inpoverlapmesh)
+    command.append(meshes_path+inpoverlapmesh)
+    
     command.append("--in_np")
     command.append(orders[0])
     command.append("--out_np")
     command.append(orders[1])
+   
     command.append("--in_type")
     command.append(methods[0])
     command.append("--out_type")
     command.append(methods[1])
-    command.append("--correct_areas")
-    # command.append(correct_areas)
-    command.append("--mono")
-    # command.append(monotone)
+    
+    if correct_areas:
+        command.append("--correct_areas")
+    
+    if monotone:
+        command.append("--mono")
+    
     command.append("--out_map")
-    command.append("maps/"+outputmap)    
+    command.append(maps_path+outputmap)    
 
     return command
 
@@ -177,25 +208,29 @@ def generate_test_data(inpfname, testname, out_test):
     command = []
     command.append(bin_path+"GenerateTestData")
     command.append("--mesh")
-    command.append("meshes/"+inpfname)
+    command.append(meshes_path+inpfname)
     command.append("--test")
     command.append(testname)
     command.append("--out")
-    command.append("data/"+out_test)             
+    command.append(data_path+out_test)             
 
     return command
 
 def apply_offline_map(mapfile, inputdatafile, variablename, outfile):
     command = []
     command.append(bin_path+"ApplyOfflineMap")
+    
     command.append("--in_data")
-    command.append("data/"+inputdatafile)
+    command.append(data_path+inputdatafile)
+    
     command.append("--map")
-    command.append("maps/"+mapfile)
+    command.append(maps_path+mapfile)
+    
     command.append("--var")
     command.append(variablename)    
+    
     command.append("--out_data")
-    command.append("data/"+outfile)    
+    command.append(data_path+outfile)    
         
     return command
 
@@ -206,15 +241,23 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate cs mesh command
-        command = generate_cs_mesh(res, "meshes/"+filename)
+        command = generate_cs_mesh(res, meshes_path+filename)
         #
     elif "icod" in meshstr:
-        filename = "outICOMesh"
+        filename = "outICODMesh"
         res = meshstr.partition("icod-")[2]
         filename+="-"+res+".g"
 
-        # call function to generate cs mesh command        
-        command = generate_ico_mesh(res, "meshes/"+filename)
+        # call function to generate polygonal mesh command        
+        command = generate_ico_mesh(res, True, meshes_path+filename)
+        #
+    elif "ico" in meshstr:
+        filename = "outICOMesh"
+        res = meshstr.partition("ico-")[2]
+        filename+="-"+res+".g"
+
+        # call function to generate icosahedral mesh command        
+        command = generate_ico_mesh(res, False, meshes_path+filename)
         #
     elif "rll" in meshstr:
         filename = "outRLLMesh"
@@ -223,8 +266,8 @@ def generate_mesh(meshstr):
         lat = tres.partition("-")[2]
         filename+="-"+lon+"-"+lat+".g"
 
-        # call function to generate cs mesh command
-        command = generate_rll_mesh(lon, lat, "meshes/"+filename)
+        # call function to generate regular lat-lon mesh command
+        command = generate_rll_mesh(lon, lat, meshes_path+filename)
         #
 
     return command, filename
@@ -395,13 +438,33 @@ if __name__ == '__main__':
     pool.join()
 
     # create baseline results
-    count = 0
-    for i in range(len(tm.values)):
-      id = tm.loc[i].at["id"]
-      create_baseline_results(id, results[count])
-      count+=1
+    if generate_baseline:
+        count = 0
+        for i in range(len(tm.values)):
+            id = tm.loc[i].at["id"]
+            create_baseline_results(id, results[count])
+            count+=1
+
+        df = pd.DataFrame(regression_dict)
+         
+        # saving the dataframe
+        df.to_csv(baseline_path+'baseline_data.csv', index=False)
+    else:
+        df = pd.read_csv(baseline_path+'baseline_data.csv')
+        df = df.set_index(['id'])
+        count = 0
+        print('Difference against baselines')
+        for i in range(len(tm.values)):
+            id = tm.loc[i].at["id"]
+            #check_baseline_results(df, id, results[count])
+            srcVals, tgtVals, percDiff = extract_results(results[count])
+            #print('Baseline comparison', df.iloc[id]['source']-srcVals, df.iloc[id]['target']-tgtVals, df.iloc[id]['error']-percDiff)
+            print('Baseline comparison:', id, float(df.iloc[id]['source'])-float(srcVals), 
+                                              float(df.iloc[id]['target'])-float(tgtVals), 
+                                              float(df.iloc[id]['error'])-float(percDiff))
+            count += 1
+
 
     # TODO: compare new against baselines
-
 
 
