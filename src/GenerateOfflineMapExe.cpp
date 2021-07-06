@@ -114,6 +114,9 @@ int main(int argc, char** argv) {
 	// Output mesh contains concave elements
 	bool fOutputConcave;
 
+	// use sparse constraints when forcing conservation and consistency
+	bool fSparseConstraints;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputMesh, "in_mesh", "");
@@ -147,6 +150,7 @@ int main(int argc, char** argv) {
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 		CommandLineBool(fInputConcave, "in_concave");
 		CommandLineBool(fOutputConcave, "out_concave");
+		CommandLineBool(fSparseConstraints, "sparse_constraints");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -182,7 +186,8 @@ int main(int argc, char** argv) {
 			strPreserveVariables,
 			fPreserveAll,
 			dFillValueOverride,
-			fInputConcave, fOutputConcave);
+			fInputConcave, fOutputConcave,
+			fSparseConstraints);
 
 	if (err) exit(err);
 
