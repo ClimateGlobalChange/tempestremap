@@ -174,8 +174,14 @@ nobase_dist_bin_SCRIPTS = \
 	test/run_fvtofv_rll_diffnorms.sh \
 	test/run_fvtogll_ico.sh \
 	test/run_glltofv_rll.sh \
-	test/run_glltogll_cs_diffnorms.sh
+	test/run_glltogll_cs_diffnorms.sh \
+	test/too_many_targets/too_many_targets.sh
 
-EXTRA_DIST = $(doc_DATA) Makefile.gmake src/Makefile.gmake
+GMAKE_FILES = mk/config.make  mk/defs.make  mk/framework.make  mk/rules.make  mk/system.make \
+							mk/system/agri.make  mk/system/cheyenne.make  mk/system/cori.make  mk/system/example.make  \
+							mk/system/macosx.make
+
+EXTRA_DIST = $(doc_DATA) $(GMAKE_FILES) LICENSE Makefile.gmake src/Makefile.gmake \
+						 src/netcdf-cxx-4.2.COPYRIGHT src/netcdf-cxx-4.2.README src/netcdf-cxx-4.2.VERSION
 
 CLEANFILES = configs.sed
