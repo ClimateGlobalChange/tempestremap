@@ -3,6 +3,7 @@ import os
 import sys
 import errno
 
+from decimal import Decimal
 import numpy as np
 import pandas as pd
 
@@ -10,6 +11,7 @@ import multiprocessing as mp
 from multiprocessing import Pool
 
 verbose = False
+#generate_baseline = True
 generate_baseline = False
 bin_path = "../bin/"
 meshes_path = "meshes/"
@@ -67,6 +69,10 @@ def run_command(cmd):
 
     return res, success
 
+def to_float(inp):
+    #return Decimal(inp)
+    return np.float64(inp)
+
 def extract_results(res):
     opts = []
     for i in range(1, len(res) - 1):
@@ -87,10 +93,12 @@ def extract_results(res):
 
 
     #print('Found output: ', opts)
-    diff = np.abs(float(opts[0]) - float(opts[1]))
-    percentage_diff = 100 * ( diff )/float(opts[0])
+    srcV = to_float(opts[0])
+    tgtV = to_float(opts[1])
+    diff = abs(srcV - tgtV)
+    percentage_diff = 100 * ( diff / srcV )
 
-    return opts[0], opts[1], percentage_diff
+    return srcV, tgtV, percentage_diff
 
 def create_baseline_results(id, res):
 
@@ -106,14 +114,9 @@ def create_baseline_results(id, res):
 
     with open(filename, "a") as f:
          srcVals, tgtVals, percDiff = extract_results(res)
-         # f.write("\n")
-         text = "CaseID: " + str(id) + ": src val, target val, err " 
-         f.write("\n")
-         f.write(text)
-         f.write("\n")
          vals =  str(id) + " " + str(srcVals) + " " + str(tgtVals) + " " + str(percDiff)
-         f.write(vals)
-         f.write("\n")
+         f.write("{0}\n".format(vals))
+         f.close()
 
          print(vals)
 
@@ -121,6 +124,7 @@ def create_baseline_results(id, res):
          regression_dict['source'].append(srcVals)
          regression_dict['target'].append(tgtVals)
          regression_dict['error'].append(percDiff)
+
 
 def generate_cs_mesh(res, filename):
     command = []
@@ -280,7 +284,7 @@ def check_error(success):
        exit()   
 
 if __name__ == '__main__':
-    procs = 2
+    procs = 1
     print("Usage: \npython regression_tests.py <location of executables>  <number of procs>\n    Default <location of executables> is ../bin/ and <number of procs> is 2\n")
     if len(sys.argv) >= 2:
        bin_path = sys.argv[1] + "/"
@@ -437,6 +441,8 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
+    pd.options.display.float_format = '{:,2.16f}'.format
+
     # create baseline results
     if generate_baseline:
         count = 0
@@ -446,12 +452,20 @@ if __name__ == '__main__':
             count+=1
 
         df = pd.DataFrame(regression_dict)
-         
+        df['source'] = df['source'].astype(np.float64)
+        df['target'] = df['target'].astype(np.float64)
+        df['error'] = df['error'].astype(np.float64)
+
         # saving the dataframe
         df.to_csv(baseline_path+'baseline_data.csv', index=False)
     else:
         df = pd.read_csv(baseline_path+'baseline_data.csv')
         df = df.set_index(['id'])
+        df['source'] = df['source'].astype(np.float64)
+        df['target'] = df['target'].astype(np.float64)
+        df['error'] = df['error'].astype(np.float64)
+
+        df.to_csv(baseline_path+'baseline_data_repeat.csv')
         count = 0
         print('Difference against baselines')
         for i in range(len(tm.values)):
@@ -459,9 +473,9 @@ if __name__ == '__main__':
             #check_baseline_results(df, id, results[count])
             srcVals, tgtVals, percDiff = extract_results(results[count])
             #print('Baseline comparison', df.iloc[id]['source']-srcVals, df.iloc[id]['target']-tgtVals, df.iloc[id]['error']-percDiff)
-            print('Baseline comparison:', id, float(df.iloc[id]['source'])-float(srcVals), 
-                                              float(df.iloc[id]['target'])-float(tgtVals), 
-                                              float(df.iloc[id]['error'])-float(percDiff))
+            print('Baseline comparison:', id, df.iloc[id]['source']-to_float(srcVals).astype(np.float64), 
+                                              df.iloc[id]['target']-to_float(tgtVals).astype(np.float64), 
+                                              df.iloc[id]['error']-to_float(percDiff).astype(np.float64))
             count += 1
 
 
