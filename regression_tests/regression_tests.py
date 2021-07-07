@@ -394,7 +394,7 @@ if __name__ == '__main__':
     generate_test_cmds = [list(x) for x in set(tuple(x) for x in generate_test_cmds)] 
     overlap_test_cmds = [list(x) for x in set(tuple(x) for x in overlap_test_cmds)] 
     g_offmap_cmds = [list(x) for x in set(tuple(x) for x in g_offmap_cmds)] 
-    a_offmap_cmds = [list(x) for x in set(tuple(x) for x in a_offmap_cmds)]
+    # a_offmap_cmds = [list(x) for x in set(tuple(x) for x in a_offmap_cmds)]
    # 
 
     success = []
