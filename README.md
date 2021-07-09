@@ -25,45 +25,27 @@ Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1.
 [![Install with conda](https://anaconda.org/conda-forge/tempest-remap/badges/installer/conda.svg)](https://anaconda.org/conda-forge/tempest-remap)
 [![Platforms](https://anaconda.org/conda-forge/tempest-remap/badges/platforms.svg)]()
 
-Librarification for build with MOAB
------------------------------------
+Build Instructions with Autotools
+----------------------------------
 
-The original TempestRemap sources available at 
-https://github.com/ClimateGlobalChange/tempestremap have been modified to
-accomodate a robust autotools-based configuration/build system. Additional
-modifications include librarification of the TempestRemap sources to produce
-both a linkable library (enabled with `--enable-linkable-library`), and in the
-absence of such an option, the original TempestRemap drivers. These changes 
-should be considered more of a refactor of the sources and do not contain any
-functional or algorithmic changes.
+TempestRemap now supports a robust autotools-based configuration/build system. Building with the standard autotools toolchain simplifies the process of linking for downstream packages like [MOAB](https://bitbucket.org/fathomteam/moab), and in [conda feedstock](https://anaconda.org/conda-forge/tempest-remap). The builds produce both linkable TempestRemap libraries and several specialized tools (or drivers) that can be installed in user-specified installation directories.
 
-If you are working from the repository, please proceed with these new set of
-build instructions
+Please follow the build instructions below:
 
   1. `cd $TEMPESTREMAP_SRCDIR && autoreconf -fi`
   2. `mkdir -p build && cd build`
-  3. To build a linkable library:
+  3. Configure TempestRemap:
   ```
      ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
                   --with-blas=$BLAS_LIB \ # Path to BLAS libraries
                   --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
-                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
+                  --with-netcdf=$NETCDF_DIR \ # With NetCDF-C interfaces
                   --with-hdf5=$HDF5_DIR # If NetCDF was build with HDF5
   ```
-  4. To build the TempestRemap drivers:
-  ```
-     ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
-                  --with-blas=$BLAS_LIB \ # Path to BLAS libraries
-                  --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
-                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
-                  --with-hdf5=$HDF5_DIR # If NetCDF was build with HDF5
-  ```
-  5. `make all`
-  6. `make install`
+  5.  Build TempestRemap: `make all`
+  6.  Install TempestRemap: `make install`
 
-Additionally, a user can provide the appropriate compilers with the environmental
-flags (`CC`, `CXX`, `FC`, `F77`, etc.) and control the compilation/link flags (`CXXFLAGS`, 
-`CPPFLAGS`, `LDFLAGS`, `LIBS`) as necessary.
+Additionally, users can provide the appropriate compilers with the environmental flags (`CC`, `CXX`, `FC`, `F77`, etc.) and control the compilation/link flags (`CXXFLAGS`, `CPPFLAGS`, `LDFLAGS`, `LIBS`) as necessary.
 
 Build Instructions with make
 ----------------------------
