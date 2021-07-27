@@ -2,6 +2,7 @@ import subprocess
 import os
 import sys
 import errno
+import unittest
 
 from decimal import Decimal
 import numpy as np
@@ -10,8 +11,9 @@ import pandas as pd
 import multiprocessing as mp
 from multiprocessing import Pool
 
-verbose = False
-#generate_baseline = True
+# verbose = False
+verbose = True
+# generate_baseline = True
 generate_baseline = False
 bin_path = "../bin/"
 meshes_path = "meshes/"
@@ -73,14 +75,11 @@ def to_float(inp):
     #return Decimal(inp)
     return np.float64(inp)
 
-def extract_results(res):
+def extract_results(id, res):
+
     opts = []
     for i in range(1, len(res) - 1):
         line = res[i]
-        # if "--in_data <string>" in line or "--map <string> " in line:
-        #    print(line)
-        #    # f.write(line)
-        #    # f.write("\n")
 
         #  look for the pattern below to find mass values
         a = line.find("....")
@@ -91,40 +90,16 @@ def extract_results(res):
             opts.append(opt)
             # print(line.partition("....")[2].split()[0], " ", opt)
 
-
     #print('Found output: ', opts)
     srcV = to_float(opts[0])
     tgtV = to_float(opts[1])
     diff = abs(srcV - tgtV)
     percentage_diff = 100 * ( diff / srcV )
 
-    return srcV, tgtV, percentage_diff
-
-def create_baseline_results(id, res):
-
-    opts = []
-
-    filename = "./baseline/regression_results.txt"
-    if not os.path.exists(os.path.dirname(filename)):
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
-    with open(filename, "a") as f:
-         srcVals, tgtVals, percDiff = extract_results(res)
-         vals =  str(id) + " " + str(srcVals) + " " + str(tgtVals) + " " + str(percDiff)
-         f.write("{0}\n".format(vals))
-         f.close()
-
-         print(vals)
-
-         regression_dict['id'].append(id)
-         regression_dict['source'].append(srcVals)
-         regression_dict['target'].append(tgtVals)
-         regression_dict['error'].append(percDiff)
-
+    regression_dict['id'].append(id)
+    regression_dict['source'].append(srcV)
+    regression_dict['target'].append(tgtV)
+    regression_dict['error'].append(percentage_diff)
 
 def generate_cs_mesh(res, filename):
     command = []
@@ -448,7 +423,7 @@ if __name__ == '__main__':
         count = 0
         for i in range(len(tm.values)):
             id = tm.loc[i].at["id"]
-            create_baseline_results(id, results[count])
+            extract_results(id, results[count])
             count+=1
 
         df = pd.DataFrame(regression_dict)
@@ -458,27 +433,35 @@ if __name__ == '__main__':
 
         # saving the dataframe
         df.to_csv(baseline_path+'baseline_data.csv', index=False)
+
+    # compare against existing baseline
     else:
+        # read baseline results from baseline_data.csv file
         df = pd.read_csv(baseline_path+'baseline_data.csv')
         df = df.set_index(['id'])
         df['source'] = df['source'].astype(np.float64)
         df['target'] = df['target'].astype(np.float64)
         df['error'] = df['error'].astype(np.float64)
 
-        df.to_csv(baseline_path+'baseline_data_repeat.csv')
         count = 0
-        print('Difference against baselines')
+        print('Difference against baselines\n                      id, source-diff target-diff error-diff')
+
+        assert df.shape[0] >= len(tm.values), "baseline has fewer number of items than current run\n generate baselines first.."
+
+        # extract current results
         for i in range(len(tm.values)):
             id = tm.loc[i].at["id"]
-            #check_baseline_results(df, id, results[count])
-            srcVals, tgtVals, percDiff = extract_results(results[count])
-            #print('Baseline comparison', df.iloc[id]['source']-srcVals, df.iloc[id]['target']-tgtVals, df.iloc[id]['error']-percDiff)
-            print('Baseline comparison:', id, df.iloc[id]['source']-to_float(srcVals).astype(np.float64), 
-                                              df.iloc[id]['target']-to_float(tgtVals).astype(np.float64), 
-                                              df.iloc[id]['error']-to_float(percDiff).astype(np.float64))
+            extract_results(id, results[count])
+            df_current = pd.DataFrame(regression_dict)
+            df_current = df_current.set_index(['id'])
+            df_current['source'] = df_current['source'].astype(np.float64)
+            df_current['target'] = df_current['target'].astype(np.float64)
+            df_current['error'] = df_current['error'].astype(np.float64)
+
+            print('Baseline comparison: ', id, df['source'][id]-df_current['source'][id], 
+                                              df['target'][id]-df_current['target'][id], 
+                                              df['error'][id]-df_current['error'][id])
             count += 1
 
-
-    # TODO: compare new against baselines
-
-
+        # write current results to a file
+        df_current.to_csv(baseline_path+'baseline_data_repeat.csv')
