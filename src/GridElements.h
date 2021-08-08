@@ -1051,5 +1051,40 @@ inline Node InterpolateQuadrilateralNode(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Find the maximum edge length of an element.
+///	</summary>
+
+double MaxEdgeLength(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculates the area of an element; to be used in adaptive element area calculation.
+///	</summary>
+
+Real CalculateFaceAreaQuadrature(
+	const Face & face,
+	const NodeVector & nodes,
+	int nOrder
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Adaptive area calculation that refines an element based on the maximum edge length.
+///	</summary>
+
+Real CalculateFaceAreaQuadratureSplit(
+	const FaceVector & faces,
+	const NodeVector & nodes,
+	int & nOrder
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
 #endif
 
