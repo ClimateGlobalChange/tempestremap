@@ -2,6 +2,7 @@ import subprocess
 import os
 import sys
 import errno
+import pickle
 import unittest
 
 from decimal import Decimal
@@ -13,8 +14,8 @@ from multiprocessing import Pool
 
 # verbose = False
 verbose = True
-# generate_baseline = True
-generate_baseline = False
+generate_baseline = True
+# generate_baseline = False
 bin_path = "../bin/"
 meshes_path = "meshes/"
 maps_path = "maps/"
@@ -432,12 +433,18 @@ if __name__ == '__main__':
         df['error'] = df['error'].astype(np.float64)
 
         # saving the dataframe
-        df.to_csv(baseline_path+'baseline_data.csv', index=False)
+        base_pkl_file = baseline_path+'baseline_data.pkl'
+        pkl_file = open(base_pkl_file, 'wb')
+        pickle.dump(df, pkl_file)
+        print("\n Saved baseline/baseline_data.pkl file")
 
     # compare against existing baseline
     else:
         # read baseline results from baseline_data.csv file
-        df = pd.read_csv(baseline_path+'baseline_data.csv')
+        base_pkl_file = baseline_path+'baseline_data.pkl'
+        bpfile = open(base_pkl_file, 'rb')
+
+        df = pickle.load(bpfile)
         df = df.set_index(['id'])
         df['source'] = df['source'].astype(np.float64)
         df['target'] = df['target'].astype(np.float64)
@@ -464,4 +471,8 @@ if __name__ == '__main__':
             count += 1
 
         # write current results to a file
-        df_current.to_csv(baseline_path+'baseline_data_repeat.csv')
+        rpt_pkl_file = baseline_path+'baseline_data_repeat.pkl'
+        pkl_file = open(rpt_pkl_file, 'wb')
+        pickle.dump(df_current, pkl_file)
+        print("\n Saved baseline/baseline_data_repeat.pkl file")
+
