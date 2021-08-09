@@ -18,6 +18,7 @@
 #define _GAUSSQUADRATURE_H_
 
 #include "DataArray1D.h"
+#include "DataArray2D.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -46,6 +47,17 @@ public:
 		double dXi0,
 		double dXi1,
 		DataArray1D<double> & dG,
+		DataArray1D<double> & dW
+	);
+	
+	///	<summary>
+	///		Return the two-dimensional Gauss quadrature points and their corresponding
+	///		weights for the given number of points and reference element.
+	///	</summary>
+	
+	static void GetPoints(
+		int nCount,
+		DataArray2D<double> & dG,
 		DataArray1D<double> & dW
 	);
 };
