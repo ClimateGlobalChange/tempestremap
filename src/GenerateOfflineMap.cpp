@@ -142,7 +142,7 @@ int GenerateOfflineMapWithMeshes(
 	std::string strNColName, bool fOutputDouble,
 	std::string strOutputFormat,
 	std::string strPreserveVariables, bool fPreserveAll, double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave
+	bool fSourceConcave, bool fTargetConcave, bool fSparseConstraints
 ) {
 	NcError error(NcError::silent_nonfatal);
 
@@ -553,6 +553,7 @@ try {
             nMonotoneType,
             fContinuousIn,
             fNoConservation,
+            fSparseConstraints,
             mapRemap
         );
 
@@ -807,7 +808,8 @@ int GenerateOfflineMap(
 	std::string strPreserveVariables,
 	bool fPreserveAll,
 	double dFillValueOverride,
-	bool fSourceConcave, bool fTargetConcave )
+	bool fSourceConcave, bool fTargetConcave,
+	bool fSparseConstraints)
 {
 	NcError error(NcError::silent_nonfatal);
 
@@ -868,7 +870,7 @@ try {
                                             strInputData, strOutputData,
                                             strNColName, fOutputDouble, strOutputFormat,
                                             strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                            fSourceConcave, fTargetConcave );
+                                            fSourceConcave, fTargetConcave, fSparseConstraints );
 
     return err;
 
@@ -971,6 +973,8 @@ int main(int argc, char** argv) {
 	// Output mesh contains concave elements
 	bool fTargetConcave;
 
+	bool fSparseConstraints;
+
 	// Parse the command line
 	BeginCommandLine()
 		CommandLineString(strInputMesh, "in_mesh", "");
@@ -1003,6 +1007,7 @@ int main(int argc, char** argv) {
 		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
 		CommandLineBool(fSourceConcave, "in_concave");
 		CommandLineBool(fTargetConcave, "out_concave");
+		CommandLineBool(fSparseConstraints, "sparse_constraints");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -1015,7 +1020,7 @@ int main(int argc, char** argv) {
 	if (fMonotoneType3) fMonotoneTypeID=3;
 
 	// Call the actual mesh generator
-    OfflineMap mapRemap;
+	OfflineMap mapRemap;
 	int err = GenerateOfflineMap(  mapRemap, strInputMesh, strOutputMesh, strOverlapMesh,
                                     strSourceMeta, strTargetMeta,
                                     strSourceType, strTargetType,
@@ -1024,7 +1029,7 @@ int main(int argc, char** argv) {
                                     fVolumetric, fNoConservation, fNoCheck,
                                     strVariables, strOutputMap, strInputData, strOutputData,
                                     strNColName, fOutputDouble, strOutputFormat, strPreserveVariables, fPreserveAll, dFillValueOverride,
-                                    fSourceConcave, fTargetConcave );
+                                    fSourceConcave, fTargetConcave, fSparseConstraints );
 
 	if (err) exit(err);
 

@@ -1714,7 +1714,7 @@ void OfflineMap::Apply(
 				}
 
 			// Load data as Double
-			} else if (var->type() == ncDouble) {
+			} else {
 				var->get(&(dataInDouble[0]), &(nGet[0]));
 
 				if (dFillValue != 0.0) {
@@ -1724,9 +1724,6 @@ void OfflineMap::Apply(
 						}
 					}
 				}
-
-			} else {
-				_EXCEPTIONT("Invalid variable type");
 			}
 
 			// Announce input mass

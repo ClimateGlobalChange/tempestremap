@@ -199,7 +199,8 @@ extern "C" {
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
 		bool fInputConcave = false,
-		bool fOutputConcave = false );
+		bool fOutputConcave = false,
+		bool fSparseConstraints = false);
 
 	// Generate the OfflineMap between input and output meshes
 	int GenerateOfflineMapWithMeshes (
@@ -230,7 +231,8 @@ extern "C" {
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
 		bool fInputConcave = false,
-		bool fOutputConcave = false );
+		bool fOutputConcave = false,
+		bool fSparseConstraints = false);
 
 	// Apply an offline map to a datafile
 	int ApplyOfflineMap(
