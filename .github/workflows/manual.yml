@@ -29,7 +29,7 @@ jobs:
     - name: Send greeting
       run: echo "Hello ${{ github.event.inputs.name }}"
 
-  ubuntu-latest-spack-netcdf job:
+  ubuntu-latest-spack-netcdf-job:
     name: "ubuntu-latest spack-netcdf job"
     runs-on: ubuntu-latest
     steps:
