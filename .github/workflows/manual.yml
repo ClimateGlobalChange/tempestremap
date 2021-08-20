@@ -49,6 +49,9 @@ jobs:
         . share/spack/setup-env.sh #source the spack setup script
         spack list #shows available packages
         spack install blas lapack
-        spack install netcdf #Installing a package 
+        spack install tempestremap@master
+        pwd
+        # putthe install foler in path
+        which GenerateICOMesh
         
 
