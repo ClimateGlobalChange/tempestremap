@@ -30,13 +30,17 @@ jobs:
       run: echo "Hello ${{ github.event.inputs.name }}"
 
   ubuntu-latest-spack-netcdf-job:
-    name: "ubuntu-latest spack-netcdf job"
+    name: "ubuntu-latest-conda-tempestremap"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
     - name: "os fingerprinting"
       run: hostnamectl status  
-    - name: "deploy stack from git source"
+    - name: "basic commands"
       run: |
         set -o errexit
         set -o pipefail
@@ -44,14 +48,9 @@ jobs:
         set -o xtrace
         # set -eox pipefail #safety for script
         cd ~ && whoami 
-        git clone https://github.com/spack/spack ~/spack && cd ~/spack
-        git checkout releases/v0.16
-        . share/spack/setup-env.sh #source the spack setup script
-        spack list #shows available packages
-        spack install blas lapack
-        spack install tempestremap@master
-        pwd
-        # putthe install foler in path
-        which GenerateICOMesh
+        which conda
+    - name: "install dependencies"
+      run: apt-get install libnetcdf-dev libblas/liblapack libnetcdf-dev
+
         
 
