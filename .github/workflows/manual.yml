@@ -28,6 +28,7 @@ jobs:
     # Runs a single command using the runners shell
     - name: Send greeting
       run: echo "Hello ${{ github.event.inputs.name }}"
+      
 
   ubuntu-latest-spack-netcdf-job:
     name: "ubuntu-latest-conda-tempestremap"
@@ -45,15 +46,17 @@ jobs:
         # set -eox pipefail #safety for script
         cd ~ && whoami 
     - name: "install dependencies"
-        run: sudo apt-get install libnetcdf-dev libblas/liblapack libnetcdf-dev
+      run: |
+          sudo apt-get update
+          sudo apt-get install libnetcdf-dev libblas/liblapack libnetcdf-dev
     - name: Installation
       run: |
-         mydir="$PWD"
-         export TR_DIR=$mydir/tr/install
-         cd tempestremap
-         ./configure --prefix=$TR_DIR
-         make -j
-         make install
+        mydir="$PWD"
+        export TR_DIR=$mydir/tr/install
+        cd tempestremap
+        ./configure --prefix=$TR_DIR
+        make -j
+        make install
        
 
         
