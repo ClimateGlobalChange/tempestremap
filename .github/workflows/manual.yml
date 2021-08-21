@@ -48,7 +48,9 @@ jobs:
     - name: "install dependencies"
       run: |
           sudo apt-get update
-          sudo apt-get install libnetcdf-dev libblas/liblapack libnetcdf-dev
+          sudo apt-get install libblas-dev 
+          sudo apt-get install liblapack-dev
+          sudo apt-get install libnetcdf-dev
     - name: Installation
       run: |
         mydir="$PWD"
@@ -57,6 +59,9 @@ jobs:
         ./configure --prefix=$TR_DIR
         make -j
         make install
+        PATH=$TR_DIR/bin:$PATH
+        echo $PATH
+        
        
 
         
