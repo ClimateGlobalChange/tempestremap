@@ -34,10 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
     - name: "os fingerprinting"
       run: hostnamectl status  
     - name: "basic commands"
@@ -48,7 +44,6 @@ jobs:
         set -o xtrace
         # set -eox pipefail #safety for script
         cd ~ && whoami 
-        which conda
     - name: "install dependencies"
       run: apt-get install libnetcdf-dev libblas/liblapack libnetcdf-dev
 
