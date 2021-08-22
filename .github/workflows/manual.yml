@@ -62,7 +62,7 @@ jobs:
         cd $mydir
         ls -ltrh
         which autoreconf
-        ./autoreconf -fi
+        autoreconf -fi
         ls
         ./configure --prefix=$TR_DIR
         make -j
