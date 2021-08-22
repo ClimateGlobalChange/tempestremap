@@ -55,6 +55,8 @@ jobs:
           sudo apt-get install libblas-dev 
           sudo apt-get install liblapack-dev
           sudo apt-get install libnetcdf-dev
+          python -m pip install --upgrade pip
+          pip install numpy pandas pickle
     - name: Installation
       run: |
         mydir=/home/runner/work/tempestremap/tempestremap
@@ -62,6 +64,7 @@ jobs:
         cd $mydir
         ls -ltrh
         which autoreconf
+        git checkout vijaysm/new-fixes
         autoreconf -fi
         ls
         ./configure --prefix=$TR_DIR
