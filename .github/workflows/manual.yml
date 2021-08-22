@@ -36,7 +36,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: "os fingerprinting"
-      run: hostnamectl status  
+      run: |
+        pwd
+        ls
+        hostnamectl status  
     - name: "basic commands"
       run: |
         set -o errexit
@@ -53,8 +56,10 @@ jobs:
           sudo apt-get install libnetcdf-dev
     - name: Installation
       run: |
-        mydir="$PWD"
+        mydir=/home/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
+        cd $mydir
+        ls
         ./autoreconf -fi
         ./configure --prefix=$TR_DIR
         make -j
