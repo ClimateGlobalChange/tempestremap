@@ -51,6 +51,7 @@ jobs:
     - name: "install dependencies"
       run: |
           sudo apt-get update
+          sudo apt-get install libtool
           sudo apt-get install libblas-dev 
           sudo apt-get install liblapack-dev
           sudo apt-get install libnetcdf-dev
@@ -59,8 +60,10 @@ jobs:
         mydir=/home/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
         cd $mydir
-        ls
+        ls -ltrh
+        which autoreconf
         ./autoreconf -fi
+        ls
         ./configure --prefix=$TR_DIR
         make -j
         make install
