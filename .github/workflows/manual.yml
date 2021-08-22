@@ -31,7 +31,7 @@ jobs:
       
 
   ubuntu-latest-spack-netcdf-job:
-    name: "ubuntu-latest-conda-tempestremap"
+    name: "ubuntu-latest-tempestremap"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -55,13 +55,13 @@ jobs:
       run: |
         mydir="$PWD"
         export TR_DIR=$mydir/tr/install
-        cd tempestremap
+        ./autoreconf -fi
         ./configure --prefix=$TR_DIR
         make -j
         make install
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
-        
+        ls $TR_DIR/bin
        
 
         
