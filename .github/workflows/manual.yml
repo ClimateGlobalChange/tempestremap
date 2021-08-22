@@ -64,6 +64,8 @@ jobs:
         cd $mydir
         ls -ltrh
         which autoreconf
+        git branch -a
+        git pull
         git checkout vijaysm/new-fixes
         autoreconf -fi
         ls
