@@ -21,6 +21,7 @@
 
 #include "Defines.h"
 #include "CoordTransforms.h"
+#include "LatLonBox.h"
 
 #include <vector>
 #include <set>
@@ -205,10 +206,42 @@ public:
 	}
 
 	///	<summary>
+	///		Project node onto the unit sphere
+	///	</summary>
+	void NormalizeInPlace() {
+		Real mag = Magnitude();
+		x /= mag;
+		y /= mag;
+		z /= mag;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	Real Magnitude() const {
 		return sqrt(x * x + y * y + z * z);
+	}
+
+	///	<summary>
+	///		Lat/lon coordinates of this node in radians.
+	///		Return value of lat is in the interval [-0.5 * M_PI, 0.5 * M_PI]
+	///		Return value of lon is in the interval [0.0, 2.0 * M_PI)
+	///	</summary>
+	void ToLatLonRad(
+		double & lat,
+		double & lon
+	) const {
+		if (z > 1.0) {
+			lat = 0.5 * M_PI;
+		} else if (z < -1.0) {
+			lat = -0.5 * M_PI;
+		} else {
+			lat = asin(z);
+		}
+		lon = atan2(y,x);
+		if (lon < 0.0) {
+			lon += 2.0 * M_PI;
+		}
 	}
 
 	///	<summary>
@@ -745,6 +778,13 @@ public:
 	Real CalculateFaceAreasFromOverlap(
 		const Mesh & meshOverlap
 	);
+
+	///	<summary>
+	///		Generate the lat-lon rectangles for all faces in the mesh.
+	///	</summary>
+	void GenerateLatLonBoxes(
+		std::vector< LatLonBox<double> > & vecLatLonBoxes
+	) const;
 
 	///	<summary>
 	///		Sort Faces by the opposite source mesh.

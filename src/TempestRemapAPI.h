@@ -122,7 +122,7 @@ extern "C" {
 		std::string strOutputFile );
 
 	// Compute the overlap mesh given a source and target mesh file names
-	int GenerateOverlapMesh (
+	int GenerateOverlapMeshKdx (
 		std::string strMeshA,
 		std::string strMeshB,
 		Mesh & meshOverlap,
@@ -138,7 +138,7 @@ extern "C" {
 	// Compute the overlap mesh given a source and target mesh objects
 	// An overload method which takes as arguments the source and target
 	// meshes that are pre-loaded into memory
-	int GenerateOverlapWithMeshes (
+	int GenerateOverlapWithMeshesKdx (
 		Mesh & meshA,
 		Mesh & meshB,
 		Mesh& meshOverlap,
@@ -152,13 +152,28 @@ extern "C" {
 
 	// Old version of the implementation to compute the overlap mesh
 	// given a source and target mesh file names
-	int GenerateOverlapMesh_v1 (
+	int GenerateOverlapMeshEdge (
 		std::string strMeshA,
 		std::string strMeshB,
 		Mesh& meshOverlap,
 		std::string strOverlapMesh,
+		std::string strOutputFormat,
 		std::string strMethod,
 		const bool fNoValidate = true );
+
+	// Compute the overlap mesh given a source and target mesh file names
+	int GenerateOverlapMeshLint (
+		std::string strMeshA,
+		std::string strMeshB,
+		Mesh & meshOverlap,
+		std::string strOverlapMesh,
+		std::string strOutputFormat,
+		std::string strMethod,
+		bool fNoValidate,
+		bool fHasConcaveFacesA = false,
+		bool fHasConcaveFacesB = false,
+		bool fAllowNoOverlap = false,
+		bool fVerbose = true );
 
 	// Generate the Gauss-Lobatto-Legendre metadata for the given Mesh
 	int GenerateGLLMetaData (

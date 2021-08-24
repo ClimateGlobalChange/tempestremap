@@ -2,10 +2,10 @@
 ///
 ///	\file    OverlapMesh.cpp
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 19, 2021
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2020 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -22,6 +22,7 @@
 #include "Announce.h"
 
 #include "kdtree.h"
+#include "interval_tree.hpp"
 
 #include <unistd.h>
 #include <iostream>
@@ -1165,7 +1166,7 @@ ContinueToNextFace:
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void GenerateOverlapMesh_v1(
+void GenerateOverlapMeshEdge(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
@@ -1889,7 +1890,7 @@ void GenerateOverlapMeshFromFace(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void GenerateOverlapMesh_v2(
+void GenerateOverlapMeshKdx(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
@@ -1922,7 +1923,6 @@ void GenerateOverlapMesh_v2(
 
 	// Generate Overlap mesh for each Face
 	for (int i = 0; i < meshSource.faces.size(); i++) {
-	//for (int i = 3999555; i < 3999555+1; i++) {
         if (fVerbose) {
 			std::string strAnnounce = "Source Face " + std::to_string((long long)i);
 			AnnounceStartBlock(strAnnounce.c_str());
@@ -2012,6 +2012,394 @@ void GenerateOverlapMesh_v2(
 	}
 #endif
 
+/*
+	// Check concavity of overlap mesh
+	AnnounceStartBlock("Testing concavity of overlap mesh");
+	for (int i = 0; i < meshOverlap.faces.size(); i++) {
+		bool fIsConcave = meshOverlap.IsFaceConcave(i);
+		if (fIsConcave) {
+			_EXCEPTIONT("Concave element detected in overlap mesh");
+		}
+	}
+	AnnounceEndBlock("Done");
+*/
+	// Calculate Face areas
+	//if (fVerbose) {
+	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
+	//}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+class RectangleEdge {
+
+public:
+	RectangleEdge(
+		double _value,
+		int _ix,
+		bool _begin,
+		bool _source
+	) :
+		value(_value),
+		ix(_ix),
+		begin(_begin),
+		source(_source)
+	{ }
+
+	bool operator<(const RectangleEdge & redge) const {
+		// end edges always come before begin edges
+		if (value == redge.value) {
+			if (!begin && redge.begin) {
+				return true;
+			}
+			if (begin == redge.begin) {
+				return (ix < redge.ix);
+			}
+			return false;
+		}
+		return (value < redge.value);
+	}
+
+public:
+	double value;
+	int ix;
+	bool begin;
+	bool source;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GenerateOverlapMeshLint(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	Mesh & meshOverlap,
+    OverlapMeshMethod method,
+	const bool fAllowNoOverlap,
+    const bool fVerbose
+) {
+#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+	NodeMap nodemapOverlap;
+#endif
+#if defined(OVERLAPMESH_USE_UNSORTED_MAP)
+	NodeMap nodemapOverlap;
+#endif
+#if defined(OVERLAPMESH_USE_NODE_MULTIMAP)
+	NodeMap nodemapOverlap(ReferenceTolerance, OVERLAPMESH_BIN_WIDTH);
+#endif
+
+	// Generate lat-lon rectangles for each face on the source and target mesh
+	std::vector< LatLonBox<double> > vecMeshSourceLatLonBox;
+	std::vector< LatLonBox<double> > vecMeshTargetLatLonBox;
+
+	meshSource.GenerateLatLonBoxes(vecMeshSourceLatLonBox);
+	meshTarget.GenerateLatLonBoxes(vecMeshTargetLatLonBox);
+
+	// Define interval trees
+	// TODO: Change to open intervals
+	lib_interval_tree::interval_tree_t<double> inttreeSourceActive;
+	lib_interval_tree::interval_tree_t<double> inttreeTargetActive;
+
+	// Sort the longitude boundaries on the source and target mesh in order of increasing longitude
+	std::vector<RectangleEdge> vecSortedLon;
+	vecSortedLon.reserve(2 * (vecMeshSourceLatLonBox.size() + vecMeshTargetLatLonBox.size()));
+
+	for (int i = 0; i < vecMeshSourceLatLonBox.size(); i++) {
+		vecSortedLon.push_back({vecMeshSourceLatLonBox[i].lon[0], i, true, true});
+		vecSortedLon.push_back({vecMeshSourceLatLonBox[i].lon[1], i, false, true});
+
+		_ASSERT(vecMeshSourceLatLonBox[i].lon[0] != vecMeshSourceLatLonBox[i].lon[1]);
+		if (vecMeshSourceLatLonBox[i].lon[0] > vecMeshSourceLatLonBox[i].lon[1]) {
+			inttreeSourceActive.insert({vecMeshSourceLatLonBox[i].lat[0], vecMeshSourceLatLonBox[i].lat[1], i});
+		}
+	}
+	for (int i = 0; i < vecMeshTargetLatLonBox.size(); i++) {
+		vecSortedLon.push_back({vecMeshTargetLatLonBox[i].lon[0], i, true, false});
+		vecSortedLon.push_back({vecMeshTargetLatLonBox[i].lon[1], i, false, false});
+
+		_ASSERT(vecMeshTargetLatLonBox[i].lon[0] != vecMeshTargetLatLonBox[i].lon[1]);
+		if (vecMeshTargetLatLonBox[i].lon[0] > vecMeshTargetLatLonBox[i].lon[1]) {
+			inttreeTargetActive.insert({vecMeshTargetLatLonBox[i].lat[0], vecMeshTargetLatLonBox[i].lat[1], i});
+		}
+	}
+
+	//std::cout << inttreeSourceActive.size() << " " << inttreeTargetActive.size() << std::endl;
+	std::sort(vecSortedLon.begin(), vecSortedLon.end());
+	_ASSERT(vecSortedLon.size() == 2 * (vecMeshSourceLatLonBox.size() + vecMeshTargetLatLonBox.size()));
+
+	// Perform line search
+	std::set< std::pair<int,int> > setTested;
+
+	size_t iFace = 0;
+
+	for (auto it : vecSortedLon) {
+		iFace++;
+		if (!fVerbose && ((iFace % 10000) == 0)) {
+			double dFrac = 100.0*static_cast<double>(iFace)/static_cast<double>(vecSortedLon.size());
+			Announce("Fraction Complete %2.1f%%", dFrac);
+		}
+
+		// Vector containing indices of overlapped faces
+		std::vector< std::pair<int,int> > vecOverlapIx;
+
+		// Edge is of type source
+		if (it.source) {
+			if (it.begin) {
+/*
+				for (int iTarget = 0; iTarget < vecMeshTargetLatLonBox.size(); iTarget++) {
+					if (vecMeshTargetLatLonBox[iTarget].overlaps(vecMeshSourceLatLonBox[it.ix])) {
+						vecOverlapIx.push_back({it.ix, iTarget});
+					}
+				}
+*/
+
+				auto itinterval =
+					inttreeSourceActive.insert(
+						{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix});
+				_ASSERT(itinterval != inttreeSourceActive.end());
+/*
+				lib_interval_tree::interval<double> intSource({vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix});
+				for (auto itTargetInterval : inttreeTargetActive) {
+					if (itTargetInterval.overlaps(intSource)) {
+						vecOverlapIx.push_back({it.ix, itTargetInterval.data()});
+					}
+				}
+*/
+/*
+				lib_interval_tree::interval<double> intSource({vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix});
+				for (auto itTargetInterval : inttreeTargetActive) {
+					if (itTargetInterval.overlaps(intSource)) {
+						const LatLonBox<double> & boxTarget = vecMeshTargetLatLonBox[itTargetInterval.data()];
+						const LatLonBox<double> & boxSource = vecMeshSourceLatLonBox[it.ix];
+
+						if (boxSource.overlaps(boxTarget)) {
+							vecOverlapIx.push_back({it.ix, itTargetInterval.data()});
+						}
+					}
+				}
+*/
+
+				inttreeTargetActive.overlap_find_all(
+					{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix},
+					[&it, &vecOverlapIx](lib_interval_tree::interval_tree_t<double>::iterator ittarget){
+						vecOverlapIx.push_back({it.ix, ittarget->data()}); return true;},
+					false);
+
+/*
+				std::sort(vecOverlapIx.begin(), vecOverlapIx.end());
+				std::sort(vecOverlapIx2.begin(), vecOverlapIx2.end());
+				if (vecOverlapIx != vecOverlapIx2) {
+
+					printf("Contents of interval tree:\n");
+					lib_interval_tree::interval_tree_t<double> inttreeTargetCopy;
+					for (auto itTargetInterval : inttreeTargetActive) {
+						inttreeTargetCopy.insert(itTargetInterval);
+						printf("%1.15e %1.15e\n", itTargetInterval.low(), itTargetInterval.high());
+					}
+
+					std::vector< std::pair<int,int> > vecOverlapIx3;
+					inttreeTargetCopy.overlap_find_all(
+						{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix},
+						[&it, &vecOverlapIx3](lib_interval_tree::interval_tree_t<double>::iterator ittarget){
+							vecOverlapIx3.push_back({it.ix, ittarget->data()}); return true;},
+						false);
+					printf("%lu %lu %lu\n", vecOverlapIx.size(), vecOverlapIx2.size(), vecOverlapIx3.size());
+
+					printf("Search interval:\n");
+					printf("%1.15e %1.15e\n", vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1]);
+					for (auto it : vecOverlapIx) {
+						printf("A(%i,%i) %1.15e %1.15e\n", it.first, it.second, vecMeshTargetLatLonBox[it.second].lat[0], vecMeshTargetLatLonBox[it.second].lat[1]);
+					}
+					for (auto it : vecOverlapIx2) {
+						printf("B(%i,%i) %1.15e %1.15e\n", it.first, it.second, vecMeshTargetLatLonBox[it.second].lat[0], vecMeshTargetLatLonBox[it.second].lat[1]);
+					}
+					for (auto it : vecOverlapIx3) {
+						printf("C(%i,%i) %1.15e %1.15e\n", it.first, it.second, vecMeshTargetLatLonBox[it.second].lat[0], vecMeshTargetLatLonBox[it.second].lat[1]);
+					}
+
+					_EXCEPTION();
+				}
+*/
+			} else {
+				auto itinterval =
+					inttreeSourceActive.find(
+						{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix});
+				_ASSERT(itinterval->data() == it.ix);
+				_ASSERT(itinterval != inttreeSourceActive.end());
+				inttreeSourceActive.erase(itinterval);
+			}
+
+		// Edge is of type target
+		} else {
+			if (it.begin) {
+				auto itinterval =
+					inttreeTargetActive.insert(
+						{vecMeshTargetLatLonBox[it.ix].lat[0], vecMeshTargetLatLonBox[it.ix].lat[1], it.ix});
+				_ASSERT(itinterval != inttreeTargetActive.end());
+/*
+				lib_interval_tree::interval<double> intTarget({vecMeshTargetLatLonBox[it.ix].lat[0], vecMeshTargetLatLonBox[it.ix].lat[1], it.ix});
+				for (auto itSourceInterval : inttreeSourceActive) {
+					if (itSourceInterval.overlaps(intTarget)) {
+						const LatLonBox<double> & boxTarget = vecMeshTargetLatLonBox[it.ix];
+						const LatLonBox<double> & boxSource = vecMeshSourceLatLonBox[itSourceInterval.data()];
+
+						// Due to periodicity we may have tested this source/target pair already
+						if (boxTarget.lon[0] > boxTarget.lon[1]) {
+							if (boxTarget.lon[1] > boxSource.lon[0]) {
+								continue;
+							}
+						}
+
+						vecOverlapIx.push_back({itSourceInterval.data(), it.ix});
+					}
+				}
+*/
+
+				inttreeSourceActive.overlap_find_all(
+					{vecMeshTargetLatLonBox[it.ix].lat[0], vecMeshTargetLatLonBox[it.ix].lat[1], it.ix},
+					[&it, &vecOverlapIx, &vecMeshTargetLatLonBox, &vecMeshSourceLatLonBox](
+						lib_interval_tree::interval_tree_t<double>::iterator itsource
+					){
+						const LatLonBox<double> & boxTarget = vecMeshTargetLatLonBox[it.ix];
+						const LatLonBox<double> & boxSource = vecMeshSourceLatLonBox[itsource->data()];
+
+						// Due to periodicity we may have tested this source/target pair already
+						if ((boxTarget.lon[0] <= boxTarget.lon[1]) || (boxTarget.lon[1] <= boxSource.lon[0])) {
+							vecOverlapIx.push_back({itsource->data(), it.ix});
+						}
+
+						return true;
+					},
+					true);
+
+			} else {
+				auto itinterval =
+					inttreeTargetActive.find(
+						{vecMeshTargetLatLonBox[it.ix].lat[0], vecMeshTargetLatLonBox[it.ix].lat[1], it.ix});
+				_ASSERT(itinterval->data() == it.ix);
+				_ASSERT(itinterval != inttreeTargetActive.end());
+				inttreeTargetActive.erase(itinterval);
+			}
+		}
+/*
+		for (auto itoverlap : vecOverlapIx) {
+			auto itTested = setTested.find(itoverlap);
+			if (itTested != setTested.end()) {
+				std::cout << "X:" << itTested->first << " " << itTested->second << std::endl;
+				std::cout << it.value << " " << it.ix << " " << it.source << " " << it.begin << std::endl;
+				_EXCEPTION();
+			}
+			setTested.insert(itoverlap);
+		}
+*/
+		// Find the overlap polygons
+		for (auto itoverlap : vecOverlapIx) {
+
+			_ASSERT(vecMeshSourceLatLonBox[itoverlap.first].overlaps(vecMeshTargetLatLonBox[itoverlap.second]));
+
+			NodeVector nodevecOutput;
+
+			GenerateOverlapFace<MeshUtilitiesFuzzy, Node>(
+				meshSource,
+				meshTarget,
+				itoverlap.first,
+				itoverlap.second,
+				nodevecOutput
+			);
+
+			if (nodevecOutput.size() == 0) {
+				continue;
+
+			} else if (nodevecOutput.size() < 3) {
+				_EXCEPTIONT("Overlap polygon consists of fewer than 3 nodes");
+			}
+
+			// Calculate face area
+			Face faceTemp(nodevecOutput.size());
+			for (int i = 0; i < nodevecOutput.size(); i++) {
+				faceTemp.SetNode(i, i);
+			}
+			Real dArea = CalculateFaceArea(faceTemp, nodevecOutput);
+
+			if (dArea < 1.0e-13) {
+				continue;
+			}
+
+			// Insert Face into meshOverlap, using nodemapOverlap to remove redundant nodes
+			Face faceNew(nodevecOutput.size());
+			for (int i = 0; i < nodevecOutput.size(); i++) {
+#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+				faceNew.SetNode(i, meshOverlap.nodes.size());
+				meshOverlap.nodes.push_back(nodevecOutput[i]);
+#else
+				NodeMapConstIterator iter
+					= nodemapOverlap.find(nodevecOutput[i]);
+
+				if (iter != nodemapOverlap.end()) {
+					faceNew.SetNode(i, iter->second);
+				} else {
+					int iNextNodeMapOverlapIx = nodemapOverlap.size();
+					faceNew.SetNode(i, iNextNodeMapOverlapIx);
+					nodemapOverlap.insert(
+						NodeMapPair(nodevecOutput[i], iNextNodeMapOverlapIx));
+				}
+#endif
+
+			}
+			meshOverlap.faces.push_back(faceNew);
+
+			meshOverlap.vecSourceFaceIx.push_back(itoverlap.first);
+			meshOverlap.vecTargetFaceIx.push_back(itoverlap.second);
+		}
+	}
+
+	// Replace parent indices if meshSource has a MultiFaceMap
+	if (meshSource.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecSourceFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecSourceFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshTarget has a MultiFaceMap
+	if (meshTarget.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecTargetFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecTargetFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshSource has a MultiFaceMap
+	if (meshSource.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecSourceFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecSourceFaceIx[f]];
+		}
+	}
+
+	// Replace parent indices if meshTarget has a MultiFaceMap
+	if (meshTarget.vecMultiFaceMap.size() != 0) {
+		for (int f = 0; f < meshOverlap.faces.size(); f++) {
+			meshOverlap.vecTargetFaceIx[f] =
+				meshSource.vecMultiFaceMap[meshOverlap.vecTargetFaceIx[f]];
+		}
+	}
+
+#if !defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+	// Insert all Nodes from nodemapOverlap into meshOverlap.nodes
+	meshOverlap.nodes.resize(nodemapOverlap.size());
+
+	NodeMapConstIterator iter = nodemapOverlap.begin();
+	for (; iter != nodemapOverlap.end(); iter++) {
+		meshOverlap.nodes[iter->second] = iter->first;
+	}
+#endif
+
+/*
+#if !defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+	meshOverlap.RemoveCoincidentNodes(false);
+#endif
+*/
 /*
 	// Check concavity of overlap mesh
 	AnnounceStartBlock("Testing concavity of overlap mesh");

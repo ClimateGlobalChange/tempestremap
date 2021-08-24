@@ -17,6 +17,7 @@
 #include "Announce.h"
 #include "CommandLine.h"
 #include "GridElements.h"
+#include "STLStringHelper.h"
 
 #include "TempestRemapAPI.h"
 
@@ -38,6 +39,9 @@ int main(int argc, char** argv) {
 
 	// Overlap grid generation method
 	std::string strMethod;
+
+	// Overlap grid generation algorithm
+	std::string strAlgorithm;
 
 	// No validation of the meshes
 	bool fNoValidate;
@@ -62,6 +66,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strOverlapMesh, "out", "overlap.g");
 		CommandLineString(strOutputFormat, "out_format", "netcdf4");
 		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
+		CommandLineStringD(strAlgorithm, "alg", "kdx", "(edge|kdx|lint)");
 		CommandLineBool(fNoValidate, "novalidate");
 		CommandLineBool(fHasConcaveFacesA, "concavea");
 		CommandLineBool(fHasConcaveFacesB, "concaveb");
@@ -73,18 +78,65 @@ int main(int argc, char** argv) {
 
 	AnnounceBanner();
 
-	// Call the actual mesh generator
-    Mesh meshOverlap;
-    int err =
-		GenerateOverlapMesh(
-			strMeshA, strMeshB,
- 			meshOverlap, strOverlapMesh, strOutputFormat,
-			strMethod, fNoValidate,
-			fHasConcaveFacesA, fHasConcaveFacesB,
-			fAllowNoOverlap,
-			fVerbose);
+	// Change algorithm to lowercase
+	STLStringHelper::ToLower(strAlgorithm);
 
-	if (err) exit(err);
+	// Call the actual mesh generator
+	Mesh meshOverlap;
+
+	// Edge algorithm
+	if (strAlgorithm == "edge") {
+		if (fHasConcaveFacesA) {
+			Announce("WARNING: --alg \"edge\" does not support concave faces.  Argument --concavea ignored.");
+		}
+		if (fHasConcaveFacesB) {
+			Announce("WARNING: --alg \"edge\" does not support concave faces.  Argument --concaveb ignored.");
+		}
+		if (fAllowNoOverlap) {
+			Announce("WARNING: Argument --allow_no_overlap has no effect with --alg \"edge\"");
+		}
+
+		int err =
+			GenerateOverlapMeshEdge(
+				strMeshA, strMeshB,
+ 				meshOverlap, strOverlapMesh, strOutputFormat,
+				strMethod, fNoValidate);
+
+		if (err) exit(err);
+
+	// KD-tree search
+	} else if (strAlgorithm == "kdx" ) {
+		int err =
+			GenerateOverlapMeshKdx(
+				strMeshA, strMeshB,
+ 				meshOverlap, strOverlapMesh, strOutputFormat,
+				strMethod, fNoValidate,
+				fHasConcaveFacesA, fHasConcaveFacesB,
+				fAllowNoOverlap,
+				fVerbose);
+
+		if (err) exit(err);
+
+	// Line search with interval tree
+	} else if (strAlgorithm == "lint" ) {
+		if (fAllowNoOverlap) {
+			Announce("WARNING: Argument --allow_no_overlap has no effect with --alg \"lint\"");
+		}
+
+		int err =
+			GenerateOverlapMeshLint(
+				strMeshA, strMeshB,
+ 				meshOverlap, strOverlapMesh, strOutputFormat,
+				strMethod, fNoValidate,
+				fHasConcaveFacesA, fHasConcaveFacesB,
+				fAllowNoOverlap,
+				fVerbose);
+
+		if (err) exit(err);
+
+	} else {
+		_EXCEPTIONT("Invalid value of --alg, expected \"edge\", \"kdx\" or \"lint\"");
+	}
 
 	AnnounceBanner();
 

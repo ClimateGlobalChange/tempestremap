@@ -223,6 +223,293 @@ Real Mesh::CalculateFaceAreasFromOverlap(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::GenerateLatLonBoxes(
+	std::vector< LatLonBox<double> > & vecLatLonBoxes
+) const {
+	vecLatLonBoxes.resize(faces.size());
+
+	for (int i = 0; i < faces.size(); i++) {
+		const Face & face = faces[i];
+
+		// Check if face contains pole points (if so we should get iWindingNumber != 0)
+		int iWindingNumber = 0;
+		for (int j = 0; j < face.edges.size(); j++) {
+			const Edge & edge = face.edges[j];
+
+			const Node & n1 = nodes[edge[0]];
+			const Node & n2 = nodes[edge[1]];
+
+			// One of the edges crosses z=0; assume this does not contain the pole point
+			if ((n1.z <= -ReferenceTolerance) && (n2.z >= ReferenceTolerance)) {
+				iWindingNumber = 0;
+				break;
+			}
+			if ((n1.z >= ReferenceTolerance) && (n2.z <= -ReferenceTolerance)) {
+				iWindingNumber = 0;
+				break;
+			}
+
+			// One of the points on this edge is a pole point (counts as face including pole points)
+			if (fabs(fabs(n1.z) - 1.0) < ReferenceTolerance) {
+				iWindingNumber = 2000;
+				break;
+			}
+
+			// n1 is on the line of constant x (winding should be accounted for in previous step)
+			if (fabs(n1.y) < ReferenceTolerance) {
+
+				// edge passes through the pole
+				// TODO: This only works for great circle arcs.  Fix for lines of constant latitude.
+				if (fabs(n2.y) < ReferenceTolerance) {
+					if ((n1.x >= ReferenceTolerance) && (n1.x <= ReferenceTolerance)) {
+						iWindingNumber = 3000;
+						break;
+					}
+					if ((n1.x <= ReferenceTolerance) && (n1.x >= ReferenceTolerance)) {
+						iWindingNumber = 4000;
+						break;
+					}
+				}
+				continue;
+			}
+
+			// Both endpoints of line lay on same side of y = 0
+			if ((n1.y <= ReferenceTolerance) && (n2.y <= ReferenceTolerance)) {
+				continue;
+			}
+			if ((n1.y >= ReferenceTolerance) && (n2.y >= ReferenceTolerance)) {
+				continue;
+			}
+
+			// Determine intersection with line (x,y,z)=(x,0,1)
+			double dDenom = n1.y * n2.z - n2.y * n1.z;
+			if (fabs(dDenom) < ReferenceTolerance) {
+				continue;
+			}
+
+			double dXint = (n1.y * n2.x - n1.x * n2.y) / dDenom;
+			if (dXint > 0.0) {
+				if ((n1.y < ReferenceTolerance) && (n2.y > ReferenceTolerance)) {
+					iWindingNumber++;
+				} else {
+					iWindingNumber--;
+				}
+			} else {
+				if ((n1.y < ReferenceTolerance) && (n2.y > ReferenceTolerance)) {
+					iWindingNumber--;
+				} else {
+					iWindingNumber++;
+				}
+			}
+		}
+
+		// Face containing a pole point; latlon box determined by minimum/maximum latitude
+		if (abs(iWindingNumber) > 1) {
+
+			// TODO: Fix for faces that only contain the pole at one edge endpoint
+			double dLatExtentRad;
+
+			for (int j = 0; j < face.edges.size(); j++) {
+				const Edge & edge = face.edges[j];
+
+				const Node & n1 = nodes[edge[0]];
+				const Node & n2 = nodes[edge[1]];
+
+				double dLatRad;
+				double dLonRad;
+
+				// Set the latitude extent
+				if (j == 0) {
+					if (n1.z < 0.0) {
+						dLatExtentRad = -0.5 * M_PI;
+					} else {
+						dLatExtentRad = 0.5 * M_PI;
+					}
+				}
+
+				// Insert edge endpoint into box
+				nodes[edge[0]].ToLatLonRad(dLatRad, dLonRad);
+				if (fabs(dLatRad) < fabs(dLatExtentRad)) {
+					dLatExtentRad = dLatRad;
+				}
+
+				// Edges that are great circle arcs
+				if (edge.type == Edge::Type_GreatCircleArc) {
+
+					// Determine if latitude is maximized between endpoints
+					double dDotN1N2 = DotProduct(n1,n2);
+
+					double dDenom = (n1.z + n2.z) * (dDotN1N2 - 1.0);
+
+					// Either repeated point or Amax out of range
+					if (fabs(dDenom) < ReferenceTolerance) {
+						continue;
+					}
+
+					// Maximum latitude occurs between endpoints of edge
+					double dAmax = (n1.z * dDotN1N2 - n2.z) / dDenom;
+					if ((dAmax > 0.0) && (dAmax < 1.0)) {
+
+						Node n3 = n1 * (1.0 - dAmax) + n2 * dAmax;
+						n3.NormalizeInPlace();
+
+						dLatRad = n3.z;
+						if (dLatRad > 1.0) {
+							dLatRad = 0.5 * M_PI;
+						} else if (dLatRad < -1.0) {
+							dLatRad = -0.5 * M_PI;
+						} else {
+							dLatRad = asin(dLatRad);
+						}
+						if (fabs(dLatRad) < fabs(dLatExtentRad)) {
+							dLatExtentRad = dLatRad;
+						}
+					}
+
+				// Edges that are lines of constant latitude
+				} else if (edge.type == Edge::Type_ConstantLatitude) {
+
+				} else {
+					_EXCEPTION1("Unsupported edge type (%i)", edge.type);
+				}
+			}
+
+			// Define latlon box
+			if (dLatExtentRad < 0.0) {
+				vecLatLonBoxes[i].is_null = false;
+				vecLatLonBoxes[i].lon[0] = 0.0;
+				vecLatLonBoxes[i].lon[1] = 2.0 * M_PI;
+				vecLatLonBoxes[i].lat[0] = -0.5 * M_PI;
+				vecLatLonBoxes[i].lat[1] = dLatExtentRad;
+
+			} else {
+				vecLatLonBoxes[i].is_null = false;
+				vecLatLonBoxes[i].lon[0] = 0.0;
+				vecLatLonBoxes[i].lon[1] = 2.0 * M_PI;
+				vecLatLonBoxes[i].lat[0] = dLatExtentRad;
+				vecLatLonBoxes[i].lat[1] = 0.5 * M_PI;
+			}
+/*
+			printf("%1.5e %1.5e %1.5e %1.5e\n",
+				vecLatLonBoxes[i].lat[0],
+				vecLatLonBoxes[i].lat[1],
+				vecLatLonBoxes[i].lon[0],
+				vecLatLonBoxes[i].lon[1]);
+*/
+		// Normal face
+		} else {
+			for (int j = 0; j < face.edges.size(); j++) {
+				const Edge & edge = face.edges[j];
+
+				// Edges that are great circle arcs
+				if (edge.type == Edge::Type_GreatCircleArc) {
+
+					const Node & n1 = nodes[edge[0]];
+					const Node & n2 = nodes[edge[1]];
+
+					double dDotN1N2 = DotProduct(n1,n2);
+
+					double dDenom = (n1.z + n2.z) * (dDotN1N2 - 1.0);
+
+					double dLatRad;
+					double dLonRad;
+
+					// Insert first end points of the edge
+					nodes[edge[0]].ToLatLonRad(dLatRad, dLonRad);
+					vecLatLonBoxes[i].insert(dLatRad, dLonRad);
+
+					// Either repeated point or Amax out of range
+					if (fabs(dDenom) < ReferenceTolerance) {
+						continue;
+					}
+
+					// These points don't need to be inserted 
+					//nodes[edge[1]].ToLatLonRad(dLatRad, dLonRad);
+					//vecLatLonBoxes[i].insert(dLatRad, dLonRad);
+
+					// Maximum latitude occurs between endpoints of edge
+					double dAmax = (n1.z * dDotN1N2 - n2.z) / dDenom;
+					if ((dAmax > 0.0) && (dAmax < 1.0)) {
+
+						Node n3 = n1 * (1.0 - dAmax) + n2 * dAmax;
+						n3.NormalizeInPlace();
+
+						dLatRad = n3.z;
+						if (dLatRad > 1.0) {
+							dLatRad = 0.5 * M_PI;
+						} else if (dLatRad < -1.0) {
+							dLatRad = -0.5 * M_PI;
+						} else {
+							dLatRad = asin(dLatRad);
+						}
+						vecLatLonBoxes[i].insert(dLatRad, dLonRad);
+					}
+
+				// Edges that are lines of constant latitude
+				} else if (edge.type == Edge::Type_ConstantLatitude) {
+					const Node & n1 = nodes[edge[0]];
+					const Node & n2 = nodes[edge[0]];
+
+					double dLatRad;
+					double dLonRad;
+
+					n1.ToLatLonRad(dLatRad, dLonRad);
+					vecLatLonBoxes[i].insert(dLatRad, dLonRad);
+
+					n2.ToLatLonRad(dLatRad, dLonRad);
+					vecLatLonBoxes[i].insert(dLatRad, dLonRad);
+
+				} else {
+					_EXCEPTION1("Unsupported edge type (%i)", edge.type);
+				}
+			}
+		}
+
+		//vecLatLonBoxes[i].lon[0] = 0.0;
+		//vecLatLonBoxes[i].lon[1] = 2.0 * M_PI;
+		//vecLatLonBoxes[i].lat[0] = -0.5 * M_PI;
+		//vecLatLonBoxes[i].lat[1] = 0.5 * M_PI;
+
+		// Verify face is of non-zero size
+		_ASSERT(vecLatLonBoxes[i].lon[0] != vecLatLonBoxes[i].lon[1]);
+		_ASSERT(vecLatLonBoxes[i].lat[0] != vecLatLonBoxes[i].lat[1]);
+/*
+		// TODO: REMOVE AFTER TESTING
+		// DEBUG: Check edge points are all in latlon box 
+		for (int j = 0; j < face.edges.size(); j++) {
+			const Edge & edge = face.edges[j];
+
+			const Node & n1 = nodes[edge[0]];
+			const Node & n2 = nodes[edge[1]];
+
+			for (int k = 0; k < 11; k++) {
+				double dA = static_cast<double>(k)/10.0;
+
+				Node n3 = n1 * (1.0 - dA) + n2 * dA;
+
+				n3 = n3.Normalized();
+
+				double dLatRad;
+				double dLonRad;
+				n3.ToLatLonRad(dLatRad, dLonRad);
+
+				if (!vecLatLonBoxes[i].contains_eps(dLatRad, dLonRad, 1.0e-14)) {
+					printf("\nA: %1.15e lat: %1.15e lon: %1.15e\n", dA, dLatRad, dLonRad);
+					printf("lat [%1.15e, %1.15e] \nlon [%1.15e, %1.15e]\n",
+						vecLatLonBoxes[i].lat[0],
+						vecLatLonBoxes[i].lat[1],
+						vecLatLonBoxes[i].lon[0],
+						vecLatLonBoxes[i].lon[1]);
+					_EXCEPTION();
+				}
+			}
+		}
+*/
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::ExchangeFirstAndSecondMesh() {
 
 	// Verify all vectors are the same size
