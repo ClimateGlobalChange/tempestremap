@@ -69,7 +69,6 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
 	src/GenerateOverlapMesh.cpp \
-	src/GenerateOverlapMesh_v1.cpp \
 	src/GaussQuadrature.cpp \
 	src/GaussLobattoQuadrature.cpp \
 	src/LegendrePolynomial.cpp \
@@ -110,12 +109,10 @@ GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
 
 # Overlap mesh generators
 GenerateOverlapMesh_SOURCES = src/GenerateOverlapMeshExe.cpp
-GenerateOverlapMesh_v1_SOURCES = src/GenerateOverlapMeshExe_v1.cpp
 
 # Compute and apply the offline mapping weights
 ApplyOfflineMap_SOURCES = src/ApplyOfflineMapExe.cpp
 GenerateOfflineMap_SOURCES = src/GenerateOfflineMapExe.cpp 
-# GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp
 
 GenerateGLLMetaData_SOURCES = src/GenerateGLLMetaDataExe.cpp
 GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
@@ -134,7 +131,7 @@ bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
 				GenerateUTMMesh GenerateICOMesh GenerateRectilinearMeshFromFile \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
-				GenerateOverlapMesh GenerateOverlapMesh_v1 \
+				GenerateOverlapMesh \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \
