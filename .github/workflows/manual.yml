@@ -77,7 +77,7 @@ jobs:
         ls $TR_DIR/bin
         cd regression_tests
         # TODO: copy baselines from server, now run and compare against baseline
-        python regression_tests.py $TR_DIR/bin 3
+        python regression_tests.py -v -p $TR_DIR/bin -n 4
        
 
         
