@@ -3,6 +3,7 @@ import os
 import sys
 import errno
 import pickle
+import argparse
 import unittest
 
 from decimal import Decimal
@@ -12,11 +13,7 @@ import pandas as pd
 import multiprocessing as mp
 from multiprocessing import Pool
 
-# verbose = False
-verbose = True
-generate_baseline = True
-# generate_baseline = False
-bin_path = "../bin/"
+# some global paths for storing files
 meshes_path = "meshes/"
 maps_path = "maps/"
 data_path = "data/"
@@ -260,13 +257,44 @@ def check_error(success):
        exit()   
 
 if __name__ == '__main__':
-    procs = 1
-    print("Usage: \npython regression_tests.py <location of executables>  <number of procs>\n    Default <location of executables> is ../bin/ and <number of procs> is 2\n")
-    if len(sys.argv) >= 2:
-       bin_path = sys.argv[1] + "/"
 
-    if len(sys.argv) == 3:
-        procs= int (sys.argv[2])
+    assert sys.version_info >= (3,0) 
+
+    # default arguments
+    verbose=False
+    procs = 2
+    generate_baseline = False
+
+    parser=argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument("-g", "--generate_baseline", help="Generate new baseline for comparison (regression) later", action = "store_true")
+    parser.add_argument("-p", "--path", type=str, help="run parallel tests", default="../bin")
+    parser.add_argument("-n", "--procs", type=int, help="number of processors used for running regression tests",default=2)
+
+    # ex arguments:
+    # generate baselines:                   python regression_tests.py -v -g -n 3 -p ../bin/ 
+    # regression compare against baselines: python regression_tests.py -v -n 3 -p ../bin/ 
+    args = parser.parse_args()
+    if args.verbose:
+        print("verbose mode enabled")
+        verbose=True
+    if args.procs:
+        print("tasks specified=", args.procs)
+        if args.procs > 0: procs=args.procs
+    if args.generate_baseline:
+        print("Generating baseline")
+        generate_baseline=True
+    if args.path:
+        print("executable path specified =", args.path)
+        bin_path=args.path
+
+
+    # print("Usage: \npython regression_tests.py <location of executables>  <number of procs>\n    Default <location of executables> is ../bin/ and <number of procs> is 2\n")
+    # if len(sys.argv) >= 2:
+    #    bin_path = sys.argv[1] + "/"
+
+    # if len(sys.argv) == 3:
+    #     procs= int (sys.argv[2])
 
     # Run a pipeline
     # read inputs
@@ -344,13 +372,6 @@ if __name__ == '__main__':
         cmd = generate_test_data(in_file, test, out_td_src)
         generate_test_cmds.append(cmd)
 
-      #   out_td_tgt="test"
-      #   #tgtmesh
-      #   out_td_tgt+=tgtmesh_str.upper()
-      #   out_td_tgt+="-F"+test+"-O"+order+".nc"
-      #   cmd = generate_test_data(out_file, test, out_td_tgt)
-      #   generate_test_cmds.append(cmd)
-
 # Apply Offline Map
         variablename = "Psi"
         out_test="OutTest"
@@ -359,9 +380,7 @@ if __name__ == '__main__':
 
         cmd = apply_offline_map(ofmap_out, out_td_src, variablename, out_test)          
         a_offmap_cmds.append(cmd)  
-
-    
-
+  
 # Running multiple processes in parallel and in sequence
     pool = Pool(processes=procs)
    #  
@@ -370,8 +389,6 @@ if __name__ == '__main__':
     generate_test_cmds = [list(x) for x in set(tuple(x) for x in generate_test_cmds)] 
     overlap_test_cmds = [list(x) for x in set(tuple(x) for x in overlap_test_cmds)] 
     g_offmap_cmds = [list(x) for x in set(tuple(x) for x in g_offmap_cmds)] 
-    # a_offmap_cmds = [list(x) for x in set(tuple(x) for x in a_offmap_cmds)]
-   # 
 
     success = []
     results = []
