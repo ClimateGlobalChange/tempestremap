@@ -43,7 +43,7 @@ void GenerateOverlapMeshEdge(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-    const bool verbose = true
+    const bool fVerbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -75,7 +75,7 @@ void GenerateOverlapMeshKdx(
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
 	const bool fAllowNoOverlap,
-    const bool verbose = true
+    const bool fVerbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -89,8 +89,9 @@ void GenerateOverlapMeshLint(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-	const bool fAllowNoOverlap,
-    const bool verbose = true
+	const bool fParallel,
+	std::string strTempDir,
+    const bool fVerbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////

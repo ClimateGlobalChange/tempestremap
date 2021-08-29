@@ -109,6 +109,7 @@ GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
 
 # Overlap mesh generators
 GenerateOverlapMesh_SOURCES = src/GenerateOverlapMeshExe.cpp
+GenerateOverlapMeshParallel_SOURCES = src/GenerateOverlapMeshParallelExe.cpp
 
 # Compute and apply the offline mapping weights
 ApplyOfflineMap_SOURCES = src/ApplyOfflineMapExe.cpp
@@ -131,7 +132,7 @@ bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
 				GenerateUTMMesh GenerateICOMesh GenerateRectilinearMeshFromFile \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
-				GenerateOverlapMesh \
+				GenerateOverlapMesh GenerateOverlapMeshParallel \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \

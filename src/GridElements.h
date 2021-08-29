@@ -610,6 +610,13 @@ public:
 	}
 
 	///	<summary>
+	///		Face size.
+	///	</summary>
+	size_t size() const {
+		return edges.size();
+	}
+
+	///	<summary>
 	///		Set a node.
 	///	</summary>
 	void SetNode(int ixLocal, int ixNode) {
@@ -718,6 +725,11 @@ public:
 	DataArray1D<int> vecMask;
 
 	///	<summary>
+	///		A NodeMap used for appending Meshes.
+	///	</summary>
+	NodeMap nodemap;
+
+	///	<summary>
 	///		EdgeMap for this mesh.
 	///	</summary>
 	EdgeMap edgemap;
@@ -818,6 +830,34 @@ public:
 	///		Read the mesh from a NetCDF file.
 	///	</summary>
 	void Read(const std::string & strFile);
+
+	///	<summary>
+	///		Split the mesh into the given number of pieces and write it to
+	///		multiple files.
+	///	</summary>
+	void SplitAndWrite(
+		const std::string & strFilePrefix,
+		size_t sPieces
+	);
+
+	///	<summary>
+	///		Indicate that we are beginning to append other Meshes to this Mesh.
+	///		It is not mandatory to call this prior to calling Append(), but
+	///		it does improve performance.
+	///	</summary>
+	void BeginAppend();
+
+	///	<summary>
+	///		Append meshOther to this Mesh.
+	///	</summary>
+	void Append(
+		const Mesh & meshOther
+	);
+
+	///	<summary>
+	///		Indicate that we are done appending other Meshes to this Mesh.
+	///	</summary>
+	void EndAppend();
 
 	///	<summary>
 	///		Remove zero edges from all Faces.

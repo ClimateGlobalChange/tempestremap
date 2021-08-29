@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <queue>
 #include "netcdfcpp.h"
 
 #include "triangle.h"
@@ -634,7 +635,7 @@ void Mesh::Write(
 		vecBlockSizes.resize(mapBlockSizes.size());
 		vecBlockSizeFaces.resize(mapBlockSizes.size());
 
-		AnnounceStartBlock("Nodes per element");
+		AnnounceStartBlock("Nodes per element:");
 		iterBlockSize = mapBlockSizes.begin();
 		iBlock = 1;
 		for (; iterBlockSize != mapBlockSizes.end(); iterBlockSize++) {
@@ -1699,9 +1700,164 @@ void Mesh::Read(const std::string & strFile) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Mesh::RemoveZeroEdges() {
+void Mesh::SplitAndWrite(
+	const std::string & strFilePrefix,
+	size_t sPieces
+) {
+	_ASSERT(sPieces > 0);
 
-	// Remove zero edges from all Faces
+	ConstructReverseNodeArray();
+
+	size_t nSplitMeshSize;
+	if (faces.size() % sPieces == 0) {
+		nSplitMeshSize = faces.size() / sPieces;
+	} else {
+		nSplitMeshSize = faces.size() / sPieces + 1;
+	}
+	_ASSERT(nSplitMeshSize * sPieces >= faces.size());
+
+	int iRootIndex = 0;
+	std::vector<bool> vecFacesUsed(faces.size(), false);
+
+	for (size_t iCurrentPiece = 0; iCurrentPiece < sPieces; iCurrentPiece++) {
+		Mesh meshPiece;
+		std::map<Node, int> mapPieceNodes;
+
+		// Construct this piece of the mesh
+		while (meshPiece.faces.size() < nSplitMeshSize) {
+			if (iRootIndex == faces.size()) {
+				break;
+			}
+			if (vecFacesUsed[iRootIndex]) {
+				iRootIndex++;
+				continue;
+			}
+
+			std::queue<int> queueSearchFaces;
+			queueSearchFaces.push(iRootIndex);
+
+			while ((!queueSearchFaces.empty()) && (meshPiece.faces.size() < nSplitMeshSize)) {
+				int iNextFace = queueSearchFaces.front();
+				queueSearchFaces.pop();
+				if (vecFacesUsed[iNextFace]) {
+					continue;
+				}
+				vecFacesUsed[iNextFace] = true;
+
+				// Add this face to meshPiece, avoiding repeated nodes
+				const Face & face = faces[iNextFace];
+
+				Face faceCurrent(face.edges.size());
+				for (int iFaceNode = 0; iFaceNode < face.edges.size(); iFaceNode++) {
+					const Node & nodeCurrent = nodes[face[iFaceNode]];
+					auto it = mapPieceNodes.find(nodeCurrent);
+					if (it == mapPieceNodes.end()) {
+						int ixMeshNode = meshPiece.nodes.size();
+						mapPieceNodes.insert(
+							std::pair<Node, int>(
+								nodeCurrent,
+								ixMeshNode));
+						meshPiece.nodes.push_back(nodeCurrent);
+						faceCurrent.SetNode(iFaceNode, ixMeshNode);
+					} else {
+						faceCurrent.SetNode(iFaceNode, it->second);
+					}
+				}
+				meshPiece.faces.push_back(faceCurrent);
+
+				// Add all unused neighbors of this face's vertices to the search queue
+				for (int iFaceNode = 0; iFaceNode < face.edges.size(); iFaceNode++) {
+					const std::set<int> & setNodes = revnodearray[face[iFaceNode]];
+					for (auto it : setNodes) {
+						if (!vecFacesUsed[it]) {
+							queueSearchFaces.push(it);
+						}
+					}
+				}
+			}
+		}
+
+		// Write the mesh to disk
+		char szIndex[10];
+		snprintf(szIndex, 10, "%06lu", iCurrentPiece);
+		std::string strMeshFile = strFilePrefix + szIndex + std::string(".g");
+		AnnounceStartBlock("Writing \"%s\"", strMeshFile.c_str());
+		meshPiece.Write(strMeshFile, NcFile::Netcdf4);
+		AnnounceEndBlock(NULL);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::BeginAppend() {
+	nodemap.clear();
+	for (int i = 0; i < nodes.size(); i++) {
+		nodemap.insert(NodeMapPair(nodes[i], i));
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::Append(
+	const Mesh & meshOther
+) {
+	vecFaceArea.Allocate(0);
+	vecMask.Allocate(0);
+	edgemap.clear();
+	revnodearray.clear();
+	vecMultiFaceMap.clear();
+
+	if (nodemap.size() != nodes.size()) {
+		BeginAppend();
+	}
+
+	if ((vecSourceFaceIx.size() != 0) && (meshOther.vecSourceFaceIx.size() != 0)) {
+		vecSourceFaceIx.reserve(vecSourceFaceIx.size() + meshOther.vecSourceFaceIx.size());
+	}
+	if ((vecTargetFaceIx.size() != 0) && (meshOther.vecTargetFaceIx.size() != 0)) {
+		vecTargetFaceIx.reserve(vecTargetFaceIx.size() + meshOther.vecTargetFaceIx.size());
+	}
+
+	for (int i = 0; i < meshOther.faces.size(); i++) {
+		const Face & face = meshOther.faces[i];
+		Face faceNew(face.size());
+
+		for (int j = 0; j < face.size(); j++) {
+			const Node & node  = meshOther.nodes[face[j]];
+			int ixNode;
+			auto it = nodemap.find(node);
+			if (it == nodemap.end()) {
+				ixNode = nodes.size();
+				nodes.push_back(node);
+				nodemap.insert(NodeMapPair(node, ixNode));
+
+			} else {
+				ixNode = it->second;
+			}
+			faceNew.SetNode(j, ixNode);
+		}
+
+		int ixNewFace = face.size();
+		faces.push_back(faceNew);
+
+		if ((vecSourceFaceIx.size() != 0) && (meshOther.vecSourceFaceIx.size() != 0)) {
+			vecSourceFaceIx.push_back(meshOther.vecSourceFaceIx[i]);
+		}
+		if ((vecTargetFaceIx.size() != 0) && (meshOther.vecTargetFaceIx.size() != 0)) {
+			vecTargetFaceIx.push_back(meshOther.vecTargetFaceIx[i]);
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::EndAppend() {
+	nodemap.clear();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Mesh::RemoveZeroEdges() {
 	for (int i = 0; i < faces.size(); i++) {
 		faces[i].RemoveZeroEdges();
 	}

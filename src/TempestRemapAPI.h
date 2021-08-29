@@ -172,7 +172,8 @@ extern "C" {
 		bool fNoValidate,
 		bool fHasConcaveFacesA = false,
 		bool fHasConcaveFacesB = false,
-		bool fAllowNoOverlap = false,
+		bool fParallel = false,
+		std::string strTempDir = "/tmp",
 		bool fVerbose = true );
 
 	// Generate the Gauss-Lobatto-Legendre metadata for the given Mesh
@@ -268,7 +269,6 @@ extern "C" {
 	int GenerateConnectivityData(
 		const Mesh & meshIn,
 		std::vector< std::set<int> > & vecConnectivity);
-
 }
 
 #endif // TEMPESTREMAP_API_H

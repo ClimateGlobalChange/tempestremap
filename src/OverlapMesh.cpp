@@ -28,6 +28,10 @@
 #include <iostream>
 #include <queue>
 
+#if defined(TEMPEST_MPIOMP)
+#include <mpi.h>
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #define VERBOSE
@@ -2075,9 +2079,11 @@ void GenerateOverlapMeshLint(
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-	const bool fAllowNoOverlap,
+	const bool fParallel,
+	std::string strTempDir,
     const bool fVerbose
 ) {
+
 #if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
 	NodeMap nodemapOverlap;
 #endif
