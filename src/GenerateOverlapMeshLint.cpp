@@ -284,7 +284,7 @@ int GenerateOverlapMeshLint(
 			}
 
 			// Computer overlap meshes in parallel
-			AnnounceStartBlock("Computing overlap meshes");
+			AnnounceStartBlock("Computing overlap meshes (in parallel)");
 
 			int iPieceAB = 0;
 			for (int iPieceA = 0; iPieceA < nPiecesA; iPieceA++) {
@@ -377,8 +377,10 @@ int GenerateOverlapMeshLint(
 
 				meshCombined.EndAppend();
 
-				meshCombined.Write(strOverlapMesh);
+				AnnounceEndBlock("Done");
 
+				AnnounceStartBlock("Writing final overlap mesh");
+				meshCombined.Write(strOverlapMesh);
 				AnnounceEndBlock("Done");
 			}
 
@@ -428,6 +430,9 @@ int GenerateOverlapMeshLint(
 	catch ( Exception& e )
 	{
 		Announce ( e.ToString().c_str() );
+#if defined(TEMPEST_MPIOMP)
+		MPI_Abort(MPI_COMM_WORLD, -1);
+#endif
 		return ( 0 );
 
 	}
