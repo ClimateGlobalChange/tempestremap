@@ -431,7 +431,11 @@ int GenerateOverlapMeshLint(
 	{
 		Announce ( e.ToString().c_str() );
 #if defined(TEMPEST_MPIOMP)
-		MPI_Abort(MPI_COMM_WORLD, -1);
+		int flag;
+		MPI_Initialized(&flag);
+		if (flag) {
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
 #endif
 		return ( 0 );
 

@@ -2184,13 +2184,36 @@ void GenerateOverlapMeshLint(
 					}
 				}
 */
-
+/*
 				inttreeTargetActive.overlap_find_all(
 					{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix},
 					[&it, &vecOverlapIx](lib_interval_tree::interval_tree_t<double>::iterator ittarget){
 						vecOverlapIx.push_back({it.ix, ittarget->data()}); return true;},
 					false);
+*/
+				inttreeTargetActive.overlap_find_all(
+					{vecMeshSourceLatLonBox[it.ix].lat[0], vecMeshSourceLatLonBox[it.ix].lat[1], it.ix},
+					[&it, &vecOverlapIx, &vecMeshTargetLatLonBox, &vecMeshSourceLatLonBox](
+						lib_interval_tree::interval_tree_t<double>::iterator ittarget
+					){
+						const LatLonBox<double> & boxSource = vecMeshSourceLatLonBox[it.ix];
+						const LatLonBox<double> & boxTarget = vecMeshTargetLatLonBox[ittarget->data()];
 
+						// Due to periodicity we may have tested this source/target pair already
+						if ((boxSource.lon[0] <= boxSource.lon[1]) || (boxSource.lon[1] <= boxTarget.lon[0])) {
+							vecOverlapIx.push_back({it.ix, ittarget->data()});
+						}
+
+						return true;
+					},
+					true);
+/*
+				for (auto itxx : vecOverlapIx) {
+					if ((itxx.first == 18) && (itxx.second == 40)) {
+						std::cout << "TESTA" << it.value << std::endl;
+					}
+				}
+*/
 /*
 				std::sort(vecOverlapIx.begin(), vecOverlapIx.end());
 				std::sort(vecOverlapIx2.begin(), vecOverlapIx2.end());
@@ -2277,7 +2300,13 @@ void GenerateOverlapMeshLint(
 						return true;
 					},
 					true);
-
+/*
+				for (auto itxx : vecOverlapIx) {
+					if ((itxx.first == 18) && (itxx.second == 40)) {
+						std::cout << "TESTB " << it.value << std::endl;
+					}
+				}
+*/
 			} else {
 				auto itinterval =
 					inttreeTargetActive.find(
@@ -2291,8 +2320,19 @@ void GenerateOverlapMeshLint(
 		for (auto itoverlap : vecOverlapIx) {
 			auto itTested = setTested.find(itoverlap);
 			if (itTested != setTested.end()) {
-				std::cout << "X:" << itTested->first << " " << itTested->second << std::endl;
-				std::cout << it.value << " " << it.ix << " " << it.source << " " << it.begin << std::endl;
+				printf("\nERROR: Two faces already used for overlaps are being used again:\n");
+				printf("A: %i B: %i\n", itTested->first, itTested->second);
+
+				const LatLonBox<double> & boxSource = vecMeshSourceLatLonBox[itTested->first];
+				const LatLonBox<double> & boxTarget = vecMeshTargetLatLonBox[itTested->second];
+
+				printf("A: [%1.5f %1.5f] x [%1.5f %1.5f]\n",
+					boxSource.lat[0], boxSource.lat[1], boxSource.lon[0], boxSource.lon[1]);
+				printf("B: [%1.5f %1.5f] x [%1.5f %1.5f]\n",
+					boxTarget.lat[0], boxTarget.lat[1], boxTarget.lon[0], boxTarget.lon[1]);
+
+				printf("Value (%1.5f) Index (%i) Source (%i) Begin (%i)\n",
+					it.value, static_cast<int>(it.ix), static_cast<int>(it.source), static_cast<int>(it.begin));
 				_EXCEPTION();
 			}
 			setTested.insert(itoverlap);

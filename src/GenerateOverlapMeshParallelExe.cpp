@@ -128,7 +128,6 @@ int main(int argc, char** argv) {
 	AnnounceBanner();
 
 #if defined(TEMPEST_MPIOMP)
-	AnnounceOutputOnAllRanks();
 	MPI_Finalize();
 #endif
 
