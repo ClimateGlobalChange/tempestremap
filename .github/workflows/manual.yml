@@ -77,6 +77,10 @@ jobs:
         ls $TR_DIR/bin
         cd regression_tests
         # TODO: copy baselines from server, now run and compare against baseline
+        # get baseline tar files
+        wget https://web.cels.anl.gov/~jain/tar_files.tar.gz
+        tar -xvzf tar_files.tar.gz 
+        mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
        
 
