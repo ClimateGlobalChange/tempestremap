@@ -101,7 +101,7 @@ def extract_results(id, res):
 
 def generate_cs_mesh(res, filename):
     command = []
-    command.append(bin_path+"GenerateCSMesh")
+    command.append(bin_path+"/GenerateCSMesh")
     command.append("--file")
     command.append(filename)
     command.append("--res")
@@ -111,7 +111,7 @@ def generate_cs_mesh(res, filename):
 
 def generate_ico_mesh(res, dual, filename):
     command = []
-    command.append(bin_path+"GenerateICOMesh")
+    command.append(bin_path+"/GenerateICOMesh")
     if dual:
         command.append("--dual")
     command.append("--res")
@@ -123,7 +123,7 @@ def generate_ico_mesh(res, dual, filename):
 
 def generate_rll_mesh(lon, lat, filename):
     command = []
-    command.append(bin_path+"GenerateRLLMesh")
+    command.append(bin_path+"/GenerateRLLMesh")
     command.append("--lon")
     command.append(lon)
     command.append("--lat")
@@ -135,7 +135,7 @@ def generate_rll_mesh(lon, lat, filename):
 
 def generate_overlap_mesh(inpfname1, inpfname2, method, out):
     command = []
-    command.append(bin_path+"GenerateOverlapMesh")
+    command.append(bin_path+"/GenerateOverlapMesh")
     command.append("--a")
     command.append(meshes_path+inpfname1)
     command.append("--b")
@@ -151,7 +151,7 @@ def generate_overlap_mesh(inpfname1, inpfname2, method, out):
 # methods: list with 2 entries specifying one of fv, cgll, dgll
 def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders, methods, correct_areas=False, monotone=False):
     command = []
-    command.append(bin_path+"GenerateOfflineMap")
+    command.append(bin_path+"/GenerateOfflineMap")
     
     command.append("--in_mesh")
     command.append(meshes_path+inpfname1)
@@ -183,7 +183,7 @@ def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders
 
 def generate_test_data(inpfname, testname, out_test):
     command = []
-    command.append(bin_path+"GenerateTestData")
+    command.append(bin_path+"/GenerateTestData")
     command.append("--mesh")
     command.append(meshes_path+inpfname)
     command.append("--test")
@@ -195,7 +195,7 @@ def generate_test_data(inpfname, testname, out_test):
 
 def apply_offline_map(mapfile, inputdatafile, variablename, outfile):
     command = []
-    command.append(bin_path+"ApplyOfflineMap")
+    command.append(bin_path+"/ApplyOfflineMap")
     
     command.append("--in_data")
     command.append(data_path+inputdatafile)
