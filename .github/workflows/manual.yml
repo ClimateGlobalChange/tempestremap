@@ -74,6 +74,8 @@ jobs:
         make install
     - name: Regression 
       run: |
+        mydir=/home/runner/work/tempestremap/tempestremap
+        export TR_DIR=$mydir/tr/install      
         export TR_DIR=$mydir/tr/install
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
