@@ -57,7 +57,7 @@ jobs:
           sudo apt-get install libnetcdf-dev
           python -m pip install --upgrade pip
           pip install numpy pandas 
-    - name: Installation
+    - name: Tempest Build and Installation
       run: |
         mydir=/home/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
@@ -72,6 +72,9 @@ jobs:
         ./configure --prefix=$TR_DIR
         make -j
         make install
+    - name: Regression 
+      run: |
+        export TR_DIR=$mydir/tr/install
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
         ls $TR_DIR/bin
