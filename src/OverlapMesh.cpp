@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <queue>
+#include <algorithm>
 
 #if defined(TEMPEST_MPIOMP)
 #include <mpi.h>
