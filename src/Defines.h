@@ -68,7 +68,8 @@ static const Real ReferenceTolerance = 1.0e-12;
 // is the slowest).
 //
 //#define OVERLAPMESH_RETAIN_REPEATED_NODES
-#define OVERLAPMESH_USE_UNSORTED_MAP
+#define OVERLAPMESH_USE_SORTED_MAP
+//#define OVERLAPMESH_USE_UNSORTED_MAP
 //#define OVERLAPMESH_USE_NODE_MULTIMAP
 
 ///////////////////////////////////////////////////////////////////////////////

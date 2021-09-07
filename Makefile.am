@@ -23,6 +23,7 @@ libTempestRemap_la_include_HEADERS = \
 	src/TriangularQuadrature.h \
 	src/CommandLine.h \
 	src/Defines.h \
+	src/FunctionTimer.h \
 	src/GaussLobattoQuadrature.h \
 	src/kdtree.h \
 	src/order32.h \
@@ -55,6 +56,7 @@ libTempestRemap_la_include_HEADERS = \
 libTempestRemap_la_SOURCES = \
 	src/Announce.cpp \
 	src/PolynomialInterp.cpp \
+	src/FunctionTimer.cpp \
 	src/GridElements.cpp \
 	src/MeshUtilities.cpp \
 	src/MeshUtilitiesFuzzy.cpp \

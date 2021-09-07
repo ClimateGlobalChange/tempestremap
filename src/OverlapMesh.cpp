@@ -1400,9 +1400,18 @@ void GenerateOverlapFace(
 	const EdgeVector & evecSource = faceSource.edges;
 
 	// List outputList = subjectPolygon
+	nodevecOutput.reserve(evecSource.size() + evecTarget.size());
 	for (int i = 0; i < evecTarget.size(); i++) {
 		nodevecOutput.push_back(nodesTarget[evecTarget[i][0]]);
 	}
+
+	// Allocate space for intersections
+	std::vector<Node> vecIntersections;
+	vecIntersections.reserve(2);
+
+	// Input node vector
+	NodeVector nodevecInput;
+	nodevecInput.reserve(evecSource.size() + evecTarget.size());
 
 	// for (Edge clipEdge in clipPolygon) do
 	for (int i = 0; i < evecSource.size(); i++) {
@@ -1413,7 +1422,7 @@ void GenerateOverlapFace(
 		}
 
 		// List inputList = outputList;
-		NodeVector nodevecInput = nodevecOutput;
+		nodevecInput = nodevecOutput;
 
 		// outputList.clear();
 		nodevecOutput.clear();
@@ -1451,7 +1460,7 @@ void GenerateOverlapFace(
 				if (iNodeEdgeSideS < 0) {
 
 					// outputList.add(ComputeIntersection(S,E,clipEdge));
-					std::vector<Node> vecIntersections;
+					vecIntersections.clear();
 					bool fCoincident =
 						utils.CalculateEdgeIntersectionsSemiClip(
 							nodeS,
@@ -1491,7 +1500,7 @@ void GenerateOverlapFace(
 			} else if (iNodeEdgeSideS >= 0) {
 
 				// outputList.add(ComputeIntersection(S,E,clipEdge));
-				std::vector<Node> vecIntersections;
+				vecIntersections.clear();
 				bool fCoincident =
 					utils.CalculateEdgeIntersectionsSemiClip(
 						nodeS,
@@ -1602,6 +1611,9 @@ int FindFaceContainingNode(
 	queueTargetFaces.push(ixTargetFaceSeed);
 	setExaminedTargetFaces.insert(ixTargetFaceSeed);
 
+	NodeVector nodevecOverlap;
+	nodevecOverlap.reserve(16);
+
 	int ixIterate = 0;
 	while (!queueTargetFaces.empty()) {
 
@@ -1633,7 +1645,7 @@ int FindFaceContainingNode(
 
 		// Node on boundary of target face; check for overlap
 		if (loc != Face::NodeLocation_Exterior) {
-			NodeVector nodevecOverlap;
+			nodevecOverlap.clear();
 
 			GenerateOverlapFace<MeshUtilities, Node>(
 				meshSource,
@@ -1888,6 +1900,7 @@ void GenerateOverlapMeshFromFace(
 
 			meshOverlap.vecSourceFaceIx.push_back(ixSourceFace);
 			meshOverlap.vecTargetFaceIx.push_back(ixCurrentTargetFace);
+			meshOverlap.vecFaceArea.push_back(dArea);
 		}
 	}
 }
@@ -1902,7 +1915,7 @@ void GenerateOverlapMeshKdx(
 	const bool fAllowNoOverlap,
     const bool fVerbose
 ) {
-#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+#if defined(OVERLAPMESH_USE_SORTED_MAP)
 	NodeMap nodemapOverlap;
 #endif
 #if defined(OVERLAPMESH_USE_UNSORTED_MAP)
@@ -2029,7 +2042,7 @@ void GenerateOverlapMeshKdx(
 */
 	// Calculate Face areas
 	//if (fVerbose) {
-	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+	double dTotalAreaOverlap = meshOverlap.SumFaceAreas();
 	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
 	//}
 }
@@ -2084,7 +2097,7 @@ void GenerateOverlapMeshLint(
     const bool fVerbose
 ) {
 
-#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+#if defined(OVERLAPMESH_USE_SORTED_MAP)
 	NodeMap nodemapOverlap;
 #endif
 #if defined(OVERLAPMESH_USE_UNSORTED_MAP)
@@ -2129,7 +2142,6 @@ void GenerateOverlapMeshLint(
 		}
 	}
 
-	//std::cout << inttreeSourceActive.size() << " " << inttreeTargetActive.size() << std::endl;
 	std::sort(vecSortedLon.begin(), vecSortedLon.end());
 	_ASSERT(vecSortedLon.size() == 2 * (vecMeshSourceLatLonBox.size() + vecMeshTargetLatLonBox.size()));
 
@@ -2142,7 +2154,7 @@ void GenerateOverlapMeshLint(
 		iFace++;
 		if (!fVerbose && ((iFace % 10000) == 0)) {
 			double dFrac = 100.0*static_cast<double>(iFace)/static_cast<double>(vecSortedLon.size());
-			Announce("Fraction Complete %2.1f%%", dFrac);
+			Announce("Percent Complete %2.1f%%", dFrac);
 		}
 
 		// Vector containing indices of overlapped faces
@@ -2396,6 +2408,7 @@ void GenerateOverlapMeshLint(
 
 			meshOverlap.vecSourceFaceIx.push_back(itoverlap.first);
 			meshOverlap.vecTargetFaceIx.push_back(itoverlap.second);
+			meshOverlap.vecFaceArea.push_back(dArea);
 		}
 	}
 
@@ -2459,7 +2472,7 @@ void GenerateOverlapMeshLint(
 */
 	// Calculate Face areas
 	//if (fVerbose) {
-	double dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+	double dTotalAreaOverlap = meshOverlap.SumFaceAreas();
 	Announce("Overlap Mesh Geometric Area: %1.15e (%1.15e)", dTotalAreaOverlap, 4.0 * M_PI);
 	//}
 }

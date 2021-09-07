@@ -319,10 +319,10 @@ try {
 
 		_ASSERT(meshOverlap.vecSourceFaceIx.size() == meshOverlap.faces.size());
 		_ASSERT(meshOverlap.vecTargetFaceIx.size() == meshOverlap.faces.size());
-		_ASSERT(meshOverlap.vecFaceArea.GetRows() == meshOverlap.faces.size());
+		_ASSERT(meshOverlap.vecFaceArea.size() == meshOverlap.faces.size());
 
-		_ASSERT(meshSource.vecFaceArea.GetRows() == meshSource.faces.size());
-		_ASSERT(meshTarget.vecFaceArea.GetRows() == meshTarget.faces.size());
+		_ASSERT(meshSource.vecFaceArea.size() == meshSource.faces.size());
+		_ASSERT(meshTarget.vecFaceArea.size() == meshTarget.faces.size());
 
 		for (int i = 0; i < meshOverlap.faces.size(); i++) {
 			dSourceArea[ meshOverlap.vecSourceFaceIx[i] ] += meshOverlap.vecFaceArea[i];
@@ -345,7 +345,7 @@ try {
     // Set source mesh areas in map
     if (eInputType == DiscretizationType_FV) {
         mapRemap.SetSourceAreas(meshSource.vecFaceArea);
-		if (meshSource.vecMask.IsAttached()) {
+		if (meshSource.vecMask.size() != 0) {
 			mapRemap.SetSourceMask(meshSource.vecMask);
 		}
     }
@@ -353,7 +353,7 @@ try {
     // Set target mesh areas in map
     if (eOutputType == DiscretizationType_FV) {
         mapRemap.SetTargetAreas(meshTarget.vecFaceArea);
-		if (meshTarget.vecMask.IsAttached()) {
+		if (meshTarget.vecMask.size() != 0) {
 			mapRemap.SetTargetMask(meshTarget.vecMask);
 		}
     }

@@ -15,6 +15,7 @@ include $(TEMPESTREMAPDIR)/mk/framework.make
 UTIL_FILES= Announce.cpp \
             FiniteElementTools.cpp \
 			FiniteVolumeTools.cpp \
+			FunctionTimer.cpp \
             GaussLobattoQuadrature.cpp \
             GaussQuadrature.cpp \
             GridElements.cpp \

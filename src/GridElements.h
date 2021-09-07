@@ -261,7 +261,7 @@ typedef std::vector<Node> NodeVector;
 ///	<summary>
 ///		A map between Nodes and indices.
 ///	</summary>
-#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+#if defined(OVERLAPMESH_USE_SORTED_MAP)
 typedef std::map<Node, int> NodeMap;
 #endif
 
@@ -717,12 +717,12 @@ public:
 	///	<summary>
 	///		Vector of Face areas.
 	///	</summary>
-	DataArray1D<double> vecFaceArea;
+	std::vector<double> vecFaceArea;
 
 	///	<summary>
 	///		Vector storing mask variable for this mesh.
 	///	</summary>
-	DataArray1D<int> vecMask;
+	std::vector<int> vecMask;
 
 	///	<summary>
 	///		A NodeMap used for appending Meshes.
@@ -776,6 +776,11 @@ public:
 	///		Construct the ReverseNodeArray from the NodeVector and FaceVector.
 	///	</summary>
 	void ConstructReverseNodeArray();
+
+	///	<summary>
+	///		Sum the Face areas.
+	///	</summary>
+	Real SumFaceAreas() const;
 
 	///	<summary>
 	///		Calculate Face areas.

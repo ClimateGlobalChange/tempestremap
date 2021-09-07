@@ -347,6 +347,8 @@ int GenerateOverlapMeshLint(
 			if (fParallel) {
 				MPI_Barrier(MPI_COMM_WORLD);
 			}
+			
+
 
 			// Merge overlap meshes in serial (on MPI Rank 0)
 			if (nMPIRank == 0) {

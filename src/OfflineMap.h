@@ -457,15 +457,17 @@ public:
 	///	<summary>
 	///		Set the vector of areas associated with the source mesh.
 	///	</summary>
-	void SetSourceAreas(const DataArray1D<double> & dSourceAreas) {
-		m_dSourceAreas = dSourceAreas;
+	void SetSourceAreas(const std::vector<double> & dSourceAreas) {
+		m_dSourceAreas.Allocate(dSourceAreas.size());
+		memcpy(&(m_dSourceAreas[0]), &(dSourceAreas[0]), dSourceAreas.size() * sizeof(double));
 	}
 
 	///	<summary>
 	///		Set the vector of areas associated with the target mesh.
 	///	</summary>
-	void SetTargetAreas(const DataArray1D<double> & dTargetAreas) {
-		m_dTargetAreas = dTargetAreas;
+	void SetTargetAreas(const std::vector<double> & dTargetAreas) {
+		m_dTargetAreas.Allocate(dTargetAreas.size());
+		memcpy(&(m_dTargetAreas[0]), &(dTargetAreas[0]), dTargetAreas.size() * sizeof(double));
 	}
 
 public:
@@ -486,15 +488,17 @@ public:
 	///	<summary>
 	///		Set the mask vector associated with the source grid.
 	///	</summary>
-	void SetSourceMask(const DataArray1D<int> & iSourceMask) {
-		m_iSourceMask = iSourceMask;
+	void SetSourceMask(const std::vector<int> & iSourceMask) {
+		m_iSourceMask.Allocate(iSourceMask.size());
+		memcpy(&(m_iSourceMask[0]), &(iSourceMask[0]), iSourceMask.size() * sizeof(double));
 	}
 
 	///	<summary>
 	///		Set the mask vector associated with the target grid.
 	///	</summary>
-	void SetTargetMask(const DataArray1D<int> & iTargetMask) {
-		m_iTargetMask = iTargetMask;
+	void SetTargetMask(const std::vector<int> & iTargetMask) {
+		m_iTargetMask.Allocate(iTargetMask.size());
+		memcpy(&(m_iTargetMask[0]), &(iTargetMask[0]), iTargetMask.size() * sizeof(double));
 	}
 
 public:

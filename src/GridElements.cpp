@@ -126,6 +126,37 @@ void Mesh::ConstructReverseNodeArray() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real Mesh::SumFaceAreas() const {
+
+	// Calculate accumulated area carefully
+	static const int Jump = 10;
+	std::vector<double> vecFaceAreaBak;
+	vecFaceAreaBak.resize(vecFaceArea.size());
+	memcpy(&(vecFaceAreaBak[0]), &(vecFaceArea[0]),
+		vecFaceArea.size() * sizeof(double));
+
+	for (;;) {
+		if (vecFaceAreaBak.size() == 1) {
+			break;
+		}
+		for (int i = 0; i <= (vecFaceAreaBak.size()-1) / Jump; i++) {
+			int ixRef = Jump * i;
+			vecFaceAreaBak[i] = vecFaceAreaBak[ixRef];
+			for (int j = 1; j < Jump; j++) {
+				if (ixRef + j >= vecFaceAreaBak.size()) {
+					break;
+				}
+				vecFaceAreaBak[i] += vecFaceAreaBak[ixRef + j];
+			}
+		}
+		vecFaceAreaBak.resize((vecFaceAreaBak.size()-1) / Jump + 1);
+	}
+
+	return vecFaceAreaBak[0];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 Real Mesh::CalculateFaceAreas(
 	bool fContainsConcaveFaces
 ) {
@@ -136,7 +167,7 @@ Real Mesh::CalculateFaceAreas(
 
 	// Calculate areas
 	int nCount = 0;
-	vecFaceArea.Allocate(faces.size());
+	vecFaceArea.resize(faces.size(), 0);
 
 	// Calculate the area of each Face
 	if (fContainsConcaveFaces) {
@@ -166,31 +197,8 @@ Real Mesh::CalculateFaceAreas(
 		}
 	}
 
-	// Calculate accumulated area carefully
-	static const int Jump = 10;
-	std::vector<double> vecFaceAreaBak;
-	vecFaceAreaBak.resize(vecFaceArea.GetRows());
-	memcpy(&(vecFaceAreaBak[0]), &(vecFaceArea[0]),
-		vecFaceArea.GetRows() * sizeof(double));
-
-	for (;;) {
-		if (vecFaceAreaBak.size() == 1) {
-			break;
-		}
-		for (int i = 0; i <= (vecFaceAreaBak.size()-1) / Jump; i++) {
-			int ixRef = Jump * i;
-			vecFaceAreaBak[i] = vecFaceAreaBak[ixRef];
-			for (int j = 1; j < Jump; j++) {
-				if (ixRef + j >= vecFaceAreaBak.size()) {
-					break;
-				}
-				vecFaceAreaBak[i] += vecFaceAreaBak[ixRef + j];
-			}
-		}
-		vecFaceAreaBak.resize((vecFaceAreaBak.size()-1) / Jump + 1);
-	}
-
-	return vecFaceAreaBak[0];
+	// Return the sum of face areas
+	return SumFaceAreas();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,12 +206,12 @@ Real Mesh::CalculateFaceAreas(
 Real Mesh::CalculateFaceAreasFromOverlap(
 	const Mesh & meshOverlap
 ) {
-	if (meshOverlap.vecFaceArea.GetRows() == 0) {
+	if (meshOverlap.vecFaceArea.size() == 0) {
 		_EXCEPTIONT("MeshOverlap Face Areas have not been calculated");
 	}
 
 	// Set all Face areas to zero
-	vecFaceArea.Allocate(faces.size());
+	vecFaceArea.resize(faces.size(), 0);
 
 	// Loop over all Faces in meshOverlap
 	double dTotalArea = 0.0;
@@ -211,7 +219,7 @@ Real Mesh::CalculateFaceAreasFromOverlap(
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 		int ixFirstFace = meshOverlap.vecSourceFaceIx[i];
 
-		if (ixFirstFace >= vecFaceArea.GetRows()) {
+		if (ixFirstFace >= vecFaceArea.size()) {
 			_EXCEPTIONT("Overlap Mesh FirstFaceIx contains invalid "
 				"Face index");
 		}
@@ -1390,7 +1398,7 @@ void Mesh::Read(const std::string & strFile) {
 					"Expected int type");
 			}
 
-			vecMask.Allocate(nGridSize);
+			vecMask.resize(nGridSize);
 			varMask->get(&(vecMask[0]), nGridSize);
 		}
 
@@ -1801,8 +1809,8 @@ void Mesh::BeginAppend() {
 void Mesh::Append(
 	const Mesh & meshOther
 ) {
-	vecFaceArea.Allocate(0);
-	vecMask.Allocate(0);
+	vecFaceArea.clear();
+	vecMask.clear();
 	edgemap.clear();
 	revnodearray.clear();
 	vecMultiFaceMap.clear();
