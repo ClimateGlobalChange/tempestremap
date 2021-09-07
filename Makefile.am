@@ -68,7 +68,9 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateUTMMesh.cpp \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
-	src/GenerateOverlapMesh.cpp \
+	src/GenerateOverlapMeshEdge.cpp \
+	src/GenerateOverlapMeshKdx.cpp \
+	src/GenerateOverlapMeshLint.cpp \
 	src/GaussQuadrature.cpp \
 	src/GaussLobattoQuadrature.cpp \
 	src/LegendrePolynomial.cpp \

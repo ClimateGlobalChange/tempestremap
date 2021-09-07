@@ -251,7 +251,7 @@ int GenerateOverlapMeshLint(
 		} else {
 
 #if !defined(TEMPEST_MPIOMP)
-			_EXCEPTION("MPI not enabled: Cannot run in parallel");
+			_EXCEPTIONT("MPI not enabled: Cannot run in parallel");
 #else
 			// Number of pieces (used in parallel operation)
 			int nPiecesA = sqrt(nMPISize);
