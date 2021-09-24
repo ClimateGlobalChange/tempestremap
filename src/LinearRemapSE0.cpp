@@ -849,11 +849,44 @@ void LinearRemapSE4(
 		// Find the local remap coefficients
 		for (int j = 0; j < nOverlapFaces; j++) {
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+#define USE_CENTER_POLYGON
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
+#ifdef  USE_CENTER_POLYGON
+            int nOverlapTriangles = faceOverlap.edges.size();
+            Node center = nodesOverlap[faceOverlap[0]];
+            for (int i=1; i< nOverlapTriangles; i++)
+            {
+                const Node& node = nodesOverlap[faceOverlap[i]];
+                center = center + node;
+            }
+            center = center/nOverlapTriangles;
+            double magni = sqrt( center.x * center.x + center.y * center.y +
+                    center.z * center.z );
+            center = center/magni; // project back on sphere
+
+#else
+            int nOverlapTriangles = faceOverlap.edges.size() - 2;
+#endif
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int k = 0; k < nOverlapTriangles; k++) {
+#ifdef  USE_CENTER_POLYGON
+			    Face faceTri( 3 );
+                NodeVector nodes( 3 );
+                nodes[0] = center;
+                nodes[1] = nodesOverlap[faceOverlap[k]];
+                int k1 = (k+1)%nOverlapTriangles;
+                nodes[2] = nodesOverlap[faceOverlap[k1]];
+                faceTri.SetNode( 0, 0 );
+                faceTri.SetNode( 1, 1 );
+                faceTri.SetNode( 2, 2 );
+                // this should be simplified; we are forming these arrays just to compute area of a triangle
+                // face palm :(
+                double dTriangleArea = CalculateFaceArea( faceTri, nodes );
+                const Node& node0 = nodes[0];
+                const Node& node1 = nodes[1];
+                const Node& node2 = nodes[2];
+#else
 
 				// Cornerpoints of triangle
 				const Node & node0 = nodesOverlap[faceOverlap[0]];
@@ -868,7 +901,7 @@ void LinearRemapSE4(
 
 				double dTriangleArea =
 					CalculateFaceArea(faceTri, nodesOverlap);
-
+#endif
 				// Coordinates of quadrature Node
 				for (int l = 0; l < TriQuadraturePoints; l++) {
 					Node nodeQuadrature;
