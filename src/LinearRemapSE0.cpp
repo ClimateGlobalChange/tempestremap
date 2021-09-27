@@ -806,16 +806,6 @@ void LinearRemapSE4(
 	// Current Overlap Face
 	int ixOverlap = 0;
 
-	// generic triangle used for area computation, for triangles around the center of overlap face;
-	// used for overlap faces with more than 4 edges;
-	// nodes array will be set for each triangle;
-	// these triangles are not part of the mesh structure, they are just temporary during
-	//   aforementioned decomposition.
-	Face faceTri( 3 );
-	NodeVector nodes( 3 );
-    faceTri.SetNode( 0, 0 );
-    faceTri.SetNode( 1, 1 );
-    faceTri.SetNode( 2, 2 );
 	// Loop over all input Faces
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -882,7 +872,6 @@ void LinearRemapSE4(
                     node0 = nodesOverlap[faceOverlap[0]];
                     node1 = nodesOverlap[faceOverlap[1]];
                     node2 = nodesOverlap[faceOverlap[2]];
-                    dTriangleArea = CalculateFaceArea(faceOverlap, nodesOverlap);
                 }
                 else // decompose polygon in triangles around the center
                 {
@@ -890,12 +879,8 @@ void LinearRemapSE4(
                     node1 = nodesOverlap[faceOverlap[k]];
                     int k1 = (k + 1) % nbEdges;
                     node2 = nodesOverlap[faceOverlap[k1]];
-                    nodes[0] = center;
-                    nodes[1] = node1;
-                    nodes[2] = node2;
-                    dTriangleArea = CalculateFaceArea(faceTri, nodes);
 	            }
-
+                dTriangleArea = CalculateTriangleAreaQuadratureMethod(node0, node1, node2);
 				// Coordinates of quadrature Node
 				for (int l = 0; l < TriQuadraturePoints; l++) {
 					Node nodeQuadrature;
@@ -1250,17 +1235,6 @@ void LinearRemapGLLtoGLL_Pointwise(
 	// Number of overlap Faces per source Face
 	DataArray1D<int> nAllOverlapFaces(meshInput.faces.size());
 
-	// generic triangle used for area computation, for triangles around the center of overlap face;
-    // used for overlap faces with more than 4 edges;
-    // nodes array will be set for each triangle;
-    // these triangles are not part of the mesh structure, they are just temporary during
-    //   aforementioned decomposition.
-    Face faceTri( 3 );
-    NodeVector nodes( 3 );
-    faceTri.SetNode( 0, 0 );
-    faceTri.SetNode( 1, 1 );
-    faceTri.SetNode( 2, 2 );
-
 	int ixOverlap = 0;
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
@@ -1347,7 +1321,6 @@ void LinearRemapGLLtoGLL_Pointwise(
                     node0 = nodesOverlap[faceOverlap[0]];
                     node1 = nodesOverlap[faceOverlap[1]];
                     node2 = nodesOverlap[faceOverlap[2]];
-                    dTriArea = CalculateFaceArea(faceOverlap, nodesOverlap);
                 }
                 else // decompose polygon in triangles around the center
                 {
@@ -1355,12 +1328,8 @@ void LinearRemapGLLtoGLL_Pointwise(
                     node1 = nodesOverlap[faceOverlap[j]];
                     int j1 = (j + 1) % nbEdges;
                     node2 = nodesOverlap[faceOverlap[j1]];
-                    nodes[0] = center;
-                    nodes[1] = node1;
-                    nodes[2] = node2;
-                    dTriArea = CalculateFaceArea(faceTri, nodes);
                 }
-
+			    dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1, node2);
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
 					// Get the nodal location of this point
@@ -1927,17 +1896,6 @@ void LinearRemapGLLtoGLL_Integrated(
 
 	std::set< std::pair<int, int> > setFound;
 
-	// generic triangle used for area computation, for triangles around the center of overlap face;
-    // used for overlap faces with more than 4 edges;
-    // nodes array will be set for each triangle;
-    // these triangles are not part of the mesh structure, they are just temporary during
-    //   aforementioned decomposition.
-    Face faceTri( 3 );
-    NodeVector nodes( 3 );
-    faceTri.SetNode( 0, 0 );
-    faceTri.SetNode( 1, 1 );
-    faceTri.SetNode( 2, 2 );
-
     // Loop over all input Faces
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
@@ -1996,7 +1954,6 @@ void LinearRemapGLLtoGLL_Integrated(
                     node0 = nodesOverlap[faceOverlap[0]];
                     node1 = nodesOverlap[faceOverlap[1]];
                     node2 = nodesOverlap[faceOverlap[2]];
-                    dTriArea = CalculateFaceArea(faceOverlap, nodesOverlap);
                 }
                 else // decompose polygon in triangles around the center
                 {
@@ -2004,11 +1961,8 @@ void LinearRemapGLLtoGLL_Integrated(
                     node1 = nodesOverlap[faceOverlap[k]];
                     int k1 = (k + 1) % nbEdges;
                     node2 = nodesOverlap[faceOverlap[k1]];
-                    nodes[0] = center;
-                    nodes[1] = node1;
-                    nodes[2] = node2;
-                    dTriArea = CalculateFaceArea(faceTri, nodes);
                 }
+                dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1, node2);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 

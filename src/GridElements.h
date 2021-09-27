@@ -1022,6 +1022,12 @@ Real CalculateFaceArea(
 	const NodeVector & nodes
 );
 
+/// <summary>
+///     Calculate triangle area, quadrature.
+/// </summary>
+Real CalculateTriangleAreaQuadratureMethod(
+    Node node1, Node node2, Node node3
+);
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>

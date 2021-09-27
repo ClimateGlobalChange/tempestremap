@@ -1683,17 +1683,6 @@ void LinearRemapFVtoGLL(
 	// Loop through all faces on meshInput
 	ixOverlap = 0;
 
-    // generic triangle used for area computation, for triangles around the center of overlap face;
-    // used for overlap faces with more than 4 edges;
-    // nodes array will be set for each triangle;
-    // these triangles are not part of the mesh structure, they are just temporary during
-    //   aforementioned decomposition.
-    Face faceTri( 3 );
-    NodeVector nodes( 3 );
-    faceTri.SetNode( 0, 0 );
-    faceTri.SetNode( 1, 1 );
-    faceTri.SetNode( 2, 2 );
-
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
@@ -1766,7 +1755,6 @@ void LinearRemapFVtoGLL(
                     node0 = nodesOverlap[faceOverlap[0]];
                     node1 = nodesOverlap[faceOverlap[1]];
                     node2 = nodesOverlap[faceOverlap[2]];
-                    dTriArea = CalculateFaceArea(faceOverlap, nodesOverlap);
                 }
                 else // decompose polygon in triangles around the center
                 {
@@ -1774,12 +1762,8 @@ void LinearRemapFVtoGLL(
                     node1 = nodesOverlap[faceOverlap[j]];
                     int j1 = (j + 1) % nbEdges;
                     node2 = nodesOverlap[faceOverlap[j1]];
-                    nodes[0] = center;
-                    nodes[1] = node1;
-                    nodes[2] = node2;
-                    dTriArea = CalculateFaceArea(faceTri, nodes);
                 }
-
+			    dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1, node2);
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
 					// Get the nodal location of this point
@@ -2401,17 +2385,6 @@ void LinearRemapGLLtoGLL2(
 	// Loop through all faces on meshInput
 	ixOverlap = 0;
 
-	// generic triangle used for area computation, for triangles around the center of overlap face;
-    // used for overlap faces with more than 4 edges;
-    // nodes array will be set for each triangle;
-    // these triangles are not part of the mesh structure, they are just temporary during
-    //   aforementioned decomposition.
-    Face faceTri( 3 );
-    NodeVector nodes( 3 );
-    faceTri.SetNode( 0, 0 );
-    faceTri.SetNode( 1, 1 );
-    faceTri.SetNode( 2, 2 );
-
 	Announce("Building conservative distribution maps");
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -2478,7 +2451,6 @@ void LinearRemapGLLtoGLL2(
                     node0 = nodesOverlap[faceOverlap[0]];
                     node1 = nodesOverlap[faceOverlap[1]];
                     node2 = nodesOverlap[faceOverlap[2]];
-                    dTriArea = CalculateFaceArea(faceOverlap, nodesOverlap);
                 }
                 else // decompose polygon in triangles around the center
                 {
@@ -2486,11 +2458,8 @@ void LinearRemapGLLtoGLL2(
                     node1 = nodesOverlap[faceOverlap[j]];
                     int j1 = (j + 1) % nbEdges;
                     node2 = nodesOverlap[faceOverlap[j1]];
-                    nodes[0] = center;
-                    nodes[1] = node1;
-                    nodes[2] = node2;
-                    dTriArea = CalculateFaceArea(faceTri, nodes);
                 }
+			    dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1, node2);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
