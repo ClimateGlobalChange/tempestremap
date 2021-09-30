@@ -1,6 +1,7 @@
 import subprocess
 import os
 import sys
+import time
 import errno
 import pickle
 import argparse
@@ -23,8 +24,62 @@ baseline_path = "baseline/"
 # Global variable storing regression results
 regression_dict = {'id': [], 'source': [], 'target': [], 'error': []}
 
+timing_dict = {'command':[], 'average_time': [], 'num_runs': []}
+
+time_pkl_file = baseline_path+'timing_data.pkl'
+
+objects = []
+generate_baseline = False
+
+p =True
+# time_pkl_file = 'baseline/timing_data.pkl'
+try:
+    time_file = pickle.load(open(time_pkl_file, 'rb+'))
+
+    with (open(time_pkl_file , "rb+")) as openfile:
+        while True:
+            try:
+                objects.append(pickle.load(openfile))
+            except EOFError:
+                break
+    df_timingfile = objects[0]
+
+except (OSError, EOFError, IOError) as e:
+    p = False
+    print("opening new file")
+    time_file = open(time_pkl_file, 'wb')
+
+
+def populate_timing_data(cmd, t, loc):
+    mycmd =""
+    # expand the list to form command to execute
+    for j in range(len(cmd)):
+        # just to remove the bin path from the command that is run
+        if(j==0):
+            cmd[j] = cmd[j].split(loc)[1]
+        mycmd+=cmd[j]+" "
+
+    # timing file is created from the first time object read from timing file is empty
+    if objects == []:
+        timing_dict['command'].append(mycmd)
+        timing_dict['average_time'].append(t)
+        timing_dict['num_runs'].append(1)
+    # use df_timingfile datafram read from previous timing
+    elif generate_baseline == True:
+        m = np.where(df_timingfile['command']==mycmd)
+        val=np.asscalar(m[0])
+
+        # update the loaded file dataframe to put average time and number of runs for the command
+        df_timingfile.iat[val, df_timingfile.columns.get_loc('num_runs')] = df_timingfile['num_runs'][val]+1
+        df_timingfile.iat[val, df_timingfile.columns.get_loc('average_time')] = (df_timingfile['average_time'][val]+t)/2.0
+    # no need to add timing to baselines, just compare and report differences  
+    else:
+        timing_dict['command'].append(mycmd)
+        timing_dict['average_time'].append(t)
+        timing_dict['num_runs'].append(1)
+
 # a function to run a command and
-# parse the output.
+# parse the output. 
 def run_command(cmd):
 
     # using the Popen function to execute the command 
@@ -34,9 +89,12 @@ def run_command(cmd):
         mycmd+=cmd[j]+" "
 
     cmd = mycmd
+    # # use time command to measure the time take to run the task
+    # cmd = "time "+ cmd
     if verbose:
         print("Running:", cmd,)
     temp = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
+    timeStarted = time.time()         
 
     # TODO: dump each command line output to file(s)
     res = []
@@ -44,7 +102,18 @@ def run_command(cmd):
 
     # use the communicate function to fetch the output
     output, errs = temp.communicate()
-   
+    timeDelta = time.time() - timeStarted                     # Get execution time.
+
+    # parse pickle file for getting old counter and command
+    counter = 0
+
+    timing_dict['command'].append(cmd)
+    timing_dict['average_time'].append(timeDelta)
+    timing_dict['num_runs'].append(counter)
+
+
+    # print("now timing: ", timing_dict)
+
    # if the output is empty - executables not found then return False   
     if output == b'':
        success = False
@@ -60,14 +129,15 @@ def run_command(cmd):
 
     # iterate line by line
     for line in output:
-      #   print (line)
       #  if we find the word EXCEPTION in the output report Failure
         if "EXCEPTION" in line:
            print("Error running ", cmd, "\n\n", line)
            success = False 
         res.append(line)
 
-    return res, success
+
+
+    return res, success, timeDelta
 
 def to_float(inp):
     #return Decimal(inp)
@@ -263,7 +333,6 @@ if __name__ == '__main__':
     # default arguments
     verbose=False
     procs = 2
-    generate_baseline = False
 
     parser=argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
@@ -390,43 +459,64 @@ if __name__ == '__main__':
     overlap_test_cmds = [list(x) for x in set(tuple(x) for x in overlap_test_cmds)] 
     g_offmap_cmds = [list(x) for x in set(tuple(x) for x in g_offmap_cmds)] 
 
+    splitLoc = bin_path + "/"
     success = []
     results = []
     count = 0
-   #  print(mesh_cmds)
-    for result, ss in pool.map(run_command, mesh_cmds):
-       results.append(result)
-       success.append(ss)
+    #  print(mesh_cmds)
+    for result, ss, timeDelta in pool.map(run_command, mesh_cmds):
+
+        populate_timing_data(mesh_cmds[count], timeDelta, splitLoc)
+        count=count+1
+
+        results.append(result)
+        success.append(ss)
     check_error(success)
    #  
     success = []
     results = []
+    count =0
    #  print(generate_test_cmds) 
-    for result, ss in pool.map(run_command, generate_test_cmds):
+    for result, ss, timeDelta in pool.map(run_command, generate_test_cmds):
+
+       populate_timing_data(generate_test_cmds[count], timeDelta, splitLoc)
+       count=count+1
        results.append(result)
        success.append(ss)    
     check_error(success)
    #
     success = []
     results = [] 
+    count = 0
    #  print(overlap_test_cmds)
-    for result, ss in pool.map(run_command, overlap_test_cmds):
+    for result, ss, timeDelta in pool.map(run_command, overlap_test_cmds):
+
+       populate_timing_data(overlap_test_cmds[count], timeDelta, splitLoc)
+       count=count+1
        results.append(result)
        success.append(ss)    
     check_error(success)
    # 
     success = []
     results = []    
+    count = 0
    #  print(g_offmap_cmds)
-    for result, ss in pool.map(run_command, g_offmap_cmds):
+    for result, ss, timeDelta in pool.map(run_command, g_offmap_cmds):
+
+       populate_timing_data(g_offmap_cmds[count], timeDelta, splitLoc)
+       count=count+1
        results.append(result)
        success.append(ss)    
     check_error(success)
    # 
     success = []
-    results = []    
+    results = []   
+    count =0 
    #  print(a_offmap_cmds)
-    for result, ss in pool.map(run_command, a_offmap_cmds):
+    for result, ss, timeDelta in pool.map(run_command, a_offmap_cmds):
+
+       populate_timing_data(a_offmap_cmds[count], timeDelta, splitLoc)
+       count=count+1
        results.append(result)
        success.append(ss)       
     check_error(success)
@@ -454,6 +544,18 @@ if __name__ == '__main__':
         pkl_file = open(base_pkl_file, 'wb')
         pickle.dump(df, pkl_file)
         print("\n Saved baseline/baseline_data.pkl file")
+
+        # write current results to a file
+        #  check if objects populated from existing timing file is available
+        if objects == []:
+            df_t = pd.DataFrame(timing_dict)
+            pickle.dump(df_t, time_file)
+            print("\n Saved baseline/timing_data.pkl file")
+        else:
+            # open the file again with write mode
+            with open(time_pkl_file, 'wb') as time_file:
+                pickle.dump(df_timingfile, time_file)  
+                print("\n Updated baseline/timing_data.pkl file")
 
     # compare against existing baseline
     else:
@@ -493,3 +595,48 @@ if __name__ == '__main__':
         pickle.dump(df_current, pkl_file)
         print("\n Saved baseline/baseline_data_repeat.pkl file")
 
+        # write a new timing pickle file that compares against the previous run
+        # cmd avg/time_baseline  current_average_time  percentage_difference
+        # cmd, num_baseline_runs, baseline_time, time, per_diff
+        comptime_dict = {'command':[], 'num_runs':[], 'average_time': [], 'time': [], 'per_diff':[]}
+
+        # timing_dict has current timing  
+        # df_timingfile has results from old file.
+        # print(timing_dict['average_time'])
+        dlength=len(timing_dict['average_time'])
+        # print(dlength)
+        # print(df_timingfile.shape[0], df_timingfile.shape[1])
+        # print("old_results")
+        print(df_timingfile['average_time'][0])
+        for j in range(dlength):
+            m = np.where(df_timingfile['command']==timing_dict['command'][j])
+            # assuming there are no repetitions and there is one unique cmd
+            val=np.asscalar(m[0])
+            # print(val)
+            comptime_dict['command'].append(timing_dict['command'][j])
+            comptime_dict['num_runs'].append(df_timingfile['num_runs'][val])
+            comptime_dict['average_time'].append(df_timingfile['average_time'][val])
+            comptime_dict['time'].append(timing_dict['average_time'][j])
+            
+            per_diff = (timing_dict['average_time'][j] - df_timingfile['average_time'][val])*100/df_timingfile['average_time'][val]
+
+            comptime_dict['per_diff'].append(per_diff)
+        
+        
+        dfcomp = pd.DataFrame(comptime_dict)
+        dfcomp['command'] = dfcomp['command'].astype(np.str)
+        dfcomp['num_runs'] = dfcomp['num_runs'].astype(np.int)
+        dfcomp['average_time'] = dfcomp['average_time'].astype(np.float64)
+        dfcomp['time'] = dfcomp['time'].astype(np.float64)
+        dfcomp['per_diff'] = dfcomp['per_diff'].astype(np.float64)
+
+
+        # saving the dataframe
+        regtime_pkl_file = baseline_path+'regtime.pkl'
+        regt_file = open(regtime_pkl_file, 'wb')
+        pickle.dump(dfcomp, regt_file)
+        print("\n Saved baseline/regtime.pkl file")
+
+
+
+        print(comptime_dict)
