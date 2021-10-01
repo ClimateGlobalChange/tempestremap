@@ -25,14 +25,13 @@ baseline_path = "baseline/"
 regression_dict = {'id': [], 'source': [], 'target': [], 'error': []}
 
 timing_dict = {'command':[], 'average_time': [], 'num_runs': []}
-
 time_pkl_file = baseline_path+'timing_data.pkl'
 
 objects = []
 generate_baseline = False
 
 p =True
-# time_pkl_file = 'baseline/timing_data.pkl'
+
 try:
     time_file = pickle.load(open(time_pkl_file, 'rb+'))
 
@@ -47,6 +46,7 @@ try:
 except (OSError, EOFError, IOError) as e:
     p = False
     print("opening new file")
+    # with (open(time_pkl_file , "wb")) as time_file
     time_file = open(time_pkl_file, 'wb')
 
 
@@ -67,7 +67,7 @@ def populate_timing_data(cmd, t, loc):
     # use df_timingfile datafram read from previous timing
     elif generate_baseline == True:
         m = np.where(df_timingfile['command']==mycmd)
-        val=np.asscalar(m[0])
+        val=(m[0]).item()
 
         # update the loaded file dataframe to put average time and number of runs for the command
         df_timingfile.iat[val, df_timingfile.columns.get_loc('num_runs')] = df_timingfile['num_runs'][val]+1
@@ -384,9 +384,8 @@ if __name__ == '__main__':
     a_offmap_cmds = []
 
     for i in range(len(tm.values)):
-
         print("Running test case ",  tm.loc[i].at["id"])
-# Generate Meshes
+        # Generate Meshes
         srcmesh_str =  tm.loc[i].at["srcmesh"]
         tgtmesh_str = tm.loc[i].at["tgtmesh"]
 
@@ -396,7 +395,7 @@ if __name__ == '__main__':
         cmd, out_file = generate_mesh(tgtmesh_str)
         mesh_cmds.append(cmd)       
 
-# Generate Overlap Mesh
+        # Generate Overlap Mesh
         method = "exact"
 
         # call overlap mesh
@@ -406,7 +405,7 @@ if __name__ == '__main__':
         cmd = generate_overlap_mesh(in_file, out_file, method, overlapmesh)
         overlap_test_cmds.append(cmd)
 
-# Generate Offline Map
+        # Generate Offline Map
         order = str(tm.loc[i].at["order"])
         ofmap_out="mapNE-"
         ofmap_out+=srcmesh_str.upper()+"-"+tgtmesh_str.upper()
@@ -431,7 +430,7 @@ if __name__ == '__main__':
         cmd = generate_offline_map(in_file, out_file, inpoverlapmesh, ofmap_out, orders, methods, correct_areas, monotone)
         g_offmap_cmds.append(cmd)
 
-# Generate Test Data
+        # Generate Test Data
         test = str(tm.loc[i].at["test"])
         out_td_src="test"
         #srcmesh
@@ -441,7 +440,7 @@ if __name__ == '__main__':
         cmd = generate_test_data(in_file, test, out_td_src)
         generate_test_cmds.append(cmd)
 
-# Apply Offline Map
+        # Apply Offline Map
         variablename = "Psi"
         out_test="OutTest"
         out_test+=srcmesh_str.upper()
@@ -449,21 +448,24 @@ if __name__ == '__main__':
 
         cmd = apply_offline_map(ofmap_out, out_td_src, variablename, out_test)          
         a_offmap_cmds.append(cmd)  
-  
-# Running multiple processes in parallel and in sequence
+
+    # Running multiple processes in parallel and in sequence
     pool = Pool(processes=procs)
-   #  
-   # get unique commands to run, convert list to set and back
+    #  
+    # get unique commands to run, convert list to set and back
     mesh_cmds = [list(x) for x in set(tuple(x) for x in mesh_cmds)] 
     generate_test_cmds = [list(x) for x in set(tuple(x) for x in generate_test_cmds)] 
     overlap_test_cmds = [list(x) for x in set(tuple(x) for x in overlap_test_cmds)] 
     g_offmap_cmds = [list(x) for x in set(tuple(x) for x in g_offmap_cmds)] 
 
+    # this is used to remove the path from the command later for storing timing results
     splitLoc = bin_path + "/"
+
     success = []
     results = []
     count = 0
     #  print(mesh_cmds)
+    # Each for loop below runs the commands to create results
     for result, ss, timeDelta in pool.map(run_command, mesh_cmds):
 
         populate_timing_data(mesh_cmds[count], timeDelta, splitLoc)
@@ -472,11 +474,11 @@ if __name__ == '__main__':
         results.append(result)
         success.append(ss)
     check_error(success)
-   #  
+    #  
     success = []
     results = []
     count =0
-   #  print(generate_test_cmds) 
+    #  print(generate_test_cmds) 
     for result, ss, timeDelta in pool.map(run_command, generate_test_cmds):
 
        populate_timing_data(generate_test_cmds[count], timeDelta, splitLoc)
@@ -484,11 +486,11 @@ if __name__ == '__main__':
        results.append(result)
        success.append(ss)    
     check_error(success)
-   #
+    #
     success = []
     results = [] 
     count = 0
-   #  print(overlap_test_cmds)
+    #  print(overlap_test_cmds)
     for result, ss, timeDelta in pool.map(run_command, overlap_test_cmds):
 
        populate_timing_data(overlap_test_cmds[count], timeDelta, splitLoc)
@@ -496,11 +498,11 @@ if __name__ == '__main__':
        results.append(result)
        success.append(ss)    
     check_error(success)
-   # 
+    # 
     success = []
     results = []    
     count = 0
-   #  print(g_offmap_cmds)
+    #  print(g_offmap_cmds)
     for result, ss, timeDelta in pool.map(run_command, g_offmap_cmds):
 
        populate_timing_data(g_offmap_cmds[count], timeDelta, splitLoc)
@@ -508,11 +510,11 @@ if __name__ == '__main__':
        results.append(result)
        success.append(ss)    
     check_error(success)
-   # 
+    # 
     success = []
     results = []   
     count =0 
-   #  print(a_offmap_cmds)
+    #  print(a_offmap_cmds)
     for result, ss, timeDelta in pool.map(run_command, a_offmap_cmds):
 
        populate_timing_data(a_offmap_cmds[count], timeDelta, splitLoc)
@@ -520,7 +522,7 @@ if __name__ == '__main__':
        results.append(result)
        success.append(ss)       
     check_error(success)
-   #  print(results)
+    #  print(results)
     pool.close()
     pool.join()
 
@@ -556,7 +558,6 @@ if __name__ == '__main__':
             with open(time_pkl_file, 'wb') as time_file:
                 pickle.dump(df_timingfile, time_file)  
                 print("\n Updated baseline/timing_data.pkl file")
-
     # compare against existing baseline
     else:
         # read baseline results from baseline_data.csv file
