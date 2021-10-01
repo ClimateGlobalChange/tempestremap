@@ -30,8 +30,8 @@ time_pkl_file = baseline_path+'timing_data.pkl'
 objects = []
 generate_baseline = False
 
-p =True
-
+exitsTimeFile = True
+#  Open timingfile
 try:
     time_file = pickle.load(open(time_pkl_file, 'rb+'))
 
@@ -42,9 +42,11 @@ try:
             except EOFError:
                 break
     df_timingfile = objects[0]
+    print("opened existing timing file: ", time_pkl_file)
 
 except (OSError, EOFError, IOError) as e:
-    p = False
+
+    exitsTimeFile = False
     print("opening new file")
     # with (open(time_pkl_file , "wb")) as time_file
     time_file = open(time_pkl_file, 'wb')
@@ -637,7 +639,5 @@ if __name__ == '__main__':
         regt_file = open(regtime_pkl_file, 'wb')
         pickle.dump(dfcomp, regt_file)
         print("\n Saved baseline/regtime.pkl file")
-
-
 
         print(comptime_dict)
