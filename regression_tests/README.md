@@ -85,33 +85,33 @@ id     source     target         error
 
 #### baseline/regtime.pkl
 ```
-                                              command  num_runs  average_time       time    per_diff
-0   GenerateCSMesh --file meshes/outCSMesh-30.g --...         5      0.087082   0.223496  156.651384
-1   GenerateRLLMesh --lon 30 --lat 60 --file meshe...         5      0.086561   0.212475  145.463647
-2   GenerateICOMesh --dual --res 30 --file meshes/...         5      0.277692   0.261011   -6.007078
-3   GenerateICOMesh --dual --res 60 --file meshes/...         5      0.717480   0.613342  -14.514360
-4   GenerateCSMesh --file meshes/outCSMesh-11.g --...         5      0.059156   0.048707  -17.663702
-5   GenerateTestData --mesh meshes/outCSMesh-11.g ...         5      0.110063   0.155130   40.947451
-6   GenerateTestData --mesh meshes/outCSMesh-30.g ...         5      0.519196   0.398670  -23.213861
-7   GenerateTestData --mesh meshes/outCSMesh-30.g ...         5      0.463584   0.470161    1.418859
-8   GenerateTestData --mesh meshes/outCSMesh-30.g ...         5      0.432348   0.460484    6.507617
-9   GenerateTestData --mesh meshes/outCSMesh-30.g ...         5      0.451841   0.530935   17.504841
-10  GenerateTestData --mesh meshes/outCSMesh-11.g ...         5      0.121148   0.115940   -4.298604
-11  GenerateTestData --mesh meshes/outCSMesh-30.g ...         5      0.485198   0.330369  -31.910593
-12  GenerateOverlapMesh --a meshes/outCSMesh-11.g ...         5      0.562449   0.546039   -2.917613
-13  GenerateOverlapMesh --a meshes/outCSMesh-11.g ...         5      1.948958   1.901371   -2.441649
-14  GenerateOverlapMesh --a meshes/outCSMesh-30.g ...         5      6.236995   5.923357   -5.028666
-15  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5     22.833240  25.009068    9.529213
-16  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5      1.096764   1.135980    3.575616
-17  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5      0.388046   0.367089   -5.400683
-18  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5     10.007985  10.073919    0.658807
-19  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5     14.706096  15.428331    4.911131
-20  GenerateOfflineMap --in_mesh meshes/outCSMesh-...         5      4.613005   3.326606  -27.886356
-21  ApplyOfflineMap --in_data data/testCS-30-F1-O1...         5      0.263598   0.492674   86.903816
-22  ApplyOfflineMap --in_data data/testCS-11-F2-O1...         5      0.121074   0.210612   73.953442
-23  ApplyOfflineMap --in_data data/testCS-30-F1-O2...         5      0.947658   1.715561   81.031617
-24  ApplyOfflineMap --in_data data/testCS-30-F1-O3...         5      1.956097   2.706602   38.367462
-25  ApplyOfflineMap --in_data data/testCS-30-F1-O4...         5      2.604080   2.677558    2.821637
-26  ApplyOfflineMap --in_data data/testCS-30-F2-O1...         5      0.317955   0.310593   -2.315633
-27  ApplyOfflineMap --in_data data/testCS-11-F1-O1...         5      0.077363   0.329290  325.643913
+                                              command  average_time       time   per_diff
+0   GenerateICOMesh --dual --res 60 --file meshes/...      0.528843   0.590863  11.727343
+1   GenerateICOMesh --dual --res 30 --file meshes/...      0.185874   0.317657  70.898803
+2   GenerateRLLMesh --lon 30 --lat 60 --file meshe...      0.107245   0.085638 -20.147216
+3   GenerateCSMesh --file meshes/outCSMesh-30.g --...      0.085278   0.073856 -13.393983
+4   GenerateCSMesh --file meshes/outCSMesh-11.g --...      0.074093   0.077373   4.426439
+5   GenerateTestData --mesh meshes/outCSMesh-30.g ...      0.374052   0.348378  -6.863562
+6   GenerateTestData --mesh meshes/outCSMesh-30.g ...      0.353323   0.379395   7.379042
+7   GenerateTestData --mesh meshes/outCSMesh-11.g ...      0.125419   0.126770   1.077144
+8   GenerateTestData --mesh meshes/outCSMesh-30.g ...      0.358127   0.353689  -1.239302
+9   GenerateTestData --mesh meshes/outCSMesh-30.g ...      0.353208   0.339167  -3.975133
+10  GenerateTestData --mesh meshes/outCSMesh-30.g ...      0.364196   0.396182   8.782643
+11  GenerateTestData --mesh meshes/outCSMesh-11.g ...      0.119653   0.111271  -7.004956
+12  GenerateOverlapMesh --a meshes/outCSMesh-11.g ...      0.400103   0.396702  -0.850087
+13  GenerateOverlapMesh --a meshes/outCSMesh-11.g ...      0.976406   0.994665   1.870063
+14  GenerateOverlapMesh --a meshes/outCSMesh-30.g ...      4.320410   4.122126  -4.589466
+15  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      2.049918   2.537829  23.801490
+16  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      6.204872   6.895231  11.126073
+17  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      4.293806   4.947679  15.228294
+18  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      9.828979  10.430620   6.121086
+19  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      0.788326   0.697766 -11.487678
+20  GenerateOfflineMap --in_mesh meshes/outCSMesh-...      0.317520   0.276900 -12.793041
+21  ApplyOfflineMap --in_data data/testCS-30-F1-O1...      0.250403   0.275291   9.939475
+22  ApplyOfflineMap --in_data data/testCS-11-F2-O1...      0.106467   0.120101  12.805211
+23  ApplyOfflineMap --in_data data/testCS-30-F1-O2...      0.574752   0.584282   1.658107
+24  ApplyOfflineMap --in_data data/testCS-30-F1-O3...      1.084466   1.001624  -7.638974
+25  ApplyOfflineMap --in_data data/testCS-30-F1-O4...      1.718680   1.746691   1.629851
+26  ApplyOfflineMap --in_data data/testCS-30-F2-O1...      0.227098   0.194578 -14.319624
+27  ApplyOfflineMap --in_data data/testCS-11-F1-O1...      0.067408   0.073388   8.871458
 ```

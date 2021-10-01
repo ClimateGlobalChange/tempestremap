@@ -602,6 +602,7 @@ if __name__ == '__main__':
         # cmd avg/time_baseline  current_average_time  percentage_difference
         # cmd, num_baseline_runs, baseline_time, time, per_diff
         comptime_dict = {'command':[], 'num_runs':[], 'average_time': [], 'time': [], 'per_diff':[]}
+        comptime_dict = {'command':[], 'average_time': [], 'time': [], 'per_diff':[]}
 
         # timing_dict has current timing  
         # df_timingfile has results from old file.
@@ -617,7 +618,7 @@ if __name__ == '__main__':
             val=np.asscalar(m[0])
             # print(val)
             comptime_dict['command'].append(timing_dict['command'][j])
-            comptime_dict['num_runs'].append(df_timingfile['num_runs'][val])
+            # comptime_dict['num_runs'].append(df_timingfile['num_runs'][val])
             comptime_dict['average_time'].append(df_timingfile['average_time'][val])
             comptime_dict['time'].append(timing_dict['average_time'][j])
             
@@ -628,7 +629,7 @@ if __name__ == '__main__':
         
         dfcomp = pd.DataFrame(comptime_dict)
         dfcomp['command'] = dfcomp['command'].astype(np.str)
-        dfcomp['num_runs'] = dfcomp['num_runs'].astype(np.int)
+        # dfcomp['num_runs'] = dfcomp['num_runs'].astype(np.int)
         dfcomp['average_time'] = dfcomp['average_time'].astype(np.float64)
         dfcomp['time'] = dfcomp['time'].astype(np.float64)
         dfcomp['per_diff'] = dfcomp['per_diff'].astype(np.float64)
