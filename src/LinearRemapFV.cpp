@@ -20,6 +20,7 @@
 #include "GridElements.h"
 #include "OfflineMap.h"
 #include "FiniteElementTools.h"
+#include "GaussQuadrature.h"
 #include "GaussLobattoQuadrature.h"
 #include "TriangularQuadrature.h"
 #include "MeshUtilitiesFuzzy.h"
@@ -27,6 +28,7 @@
 
 #include "Announce.h"
 #include "MathHelper.h"
+#include "kdtree.h"
 
 #include <cstring>
 #include <map>
@@ -341,7 +343,12 @@ void LinearRemapFVtoFV(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -444,6 +451,239 @@ void LinearRemapFVtoFV(
 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void LinearRemapFVtoFVInvDist(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+) {
+	// Order of triangular quadrature rule
+	const int TriQuadRuleOrder = 4;
+
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.revnodearray.size() == 0) {
+		_EXCEPTIONT("ReverseNodeArray has not been calculated for meshInput");
+	}
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
+
+	// Get SparseMatrix represntation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+
+	// Get Gauss quadrature nodes
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
+
+	GaussQuadrature::GetPoints(TriQuadRuleOrder, 0.0, 1.0, dG, dW);
+
+    kdtree * kdTarget = kd_create(3);
+
+	// Vectors used in determining contributions from each Face
+	std::vector<int> vecContributingFaces;
+	NodeVector nodeCenters;
+    
+    // Vector of centers of the source mesh
+    for (int i = 0; i < meshInput.faces.size(); i++){
+
+		const Face & face = meshInput.faces[i];
+
+		const Node & node_center = GetFaceCentroid(face, meshInput.nodes);
+
+		kd_insert3(
+			kdTarget,
+			node_center.x,
+			node_center.y,
+			node_center.z,
+			(void*)(&(meshInput.faces[i])));
+	}
+
+	for (int ixFirst = 0; ixFirst < meshOverlap.faces.size(); ixFirst++) {
+
+		const Face & faceOverlap = meshOverlap.faces[ixFirst];
+
+		const NodeVector & nodesOverlap = meshOverlap.nodes;
+
+		int IxT = meshOverlap.vecTargetFaceIx[ixFirst];
+
+		int nSubTriangles = faceOverlap.edges.size() - 2;
+
+		DataArray3D<double> dJacobianMat(nSubTriangles, dW.GetRows(), dW.GetRows());
+
+		// Compute quadrature area of each overlap face
+		double dQuadratureArea = 0.0;
+
+		for (int k = 0; k < nSubTriangles; k++) {
+
+			// Define degenerate quadrilateral for use in ApplyLocalMap
+			Face FaceQuad(4);
+
+			FaceQuad.SetNode(0, faceOverlap[0]);
+			FaceQuad.SetNode(1, faceOverlap[k+1]);
+			FaceQuad.SetNode(2, faceOverlap[k+2]);
+			FaceQuad.SetNode(3, faceOverlap[k+2]);
+
+			for (int p = 0; p < dW.GetRows(); p++) {
+				for (int q = 0; q < dW.GetRows(); q++) {
+
+					Node node;
+					Node dDx1G;
+					Node dDx2G;
+
+					ApplyLocalMap(
+						FaceQuad,
+						nodesOverlap,
+						dG[p],
+						dG[q],
+						node,
+						dDx1G,
+						dDx2G);
+
+					// Cross product gives local Jacobian
+					Node nodeCross = CrossProduct(dDx1G, dDx2G);
+
+					double dJacobian = nodeCross.Magnitude();
+
+					dQuadratureArea += dW[p] * dW[q] * dJacobian;
+
+					dJacobianMat(k,p,q) = dJacobian;
+				}
+			}
+		}
+
+		for (int k = 0; k < nSubTriangles; k++){			
+			for (int p = 0; p < dW.GetRows(); p++) {
+			for (int q = 0; q < dW.GetRows(); q++) {
+
+				// Cartesian coordinates of quadrature point
+				double dX[3];
+
+				double dA = dG[p];
+				double dB = dG[q];
+
+				Node node0 = nodesOverlap[faceOverlap[0]];
+				Node node1 = nodesOverlap[faceOverlap[k+1]];
+				Node node2 = nodesOverlap[faceOverlap[k+2]];
+
+				dX[0] =   (1.0 - dA) * (1.0 - dB) * node0.x
+				        + (1.0 - dA) *        dB  * node1.x
+				        +        dA  *        dB  * node2.x
+				        +        dA  * (1.0 - dB) * node2.x;
+
+				dX[1] =   (1.0 - dA) * (1.0 - dB) * node0.y
+				        + (1.0 - dA) *        dB  * node1.y
+				        +        dA  *        dB  * node2.y
+				        +        dA  * (1.0 - dB) * node2.y;
+
+				dX[2] =   (1.0 - dA) * (1.0 - dB) * node0.z
+				        + (1.0 - dA) *        dB  * node1.z
+				        +        dA  *        dB  * node2.z
+				        +        dA  * (1.0 - dB) * node2.z;
+
+				double dMag =
+					sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
+
+				dX[0] /= dMag;
+				dX[1] /= dMag;
+				dX[2] /= dMag;
+
+				// Find nearest source mesh face
+				kdres * kdresTarget =
+					kd_nearest3(
+						kdTarget,
+						dX[0],
+						dX[1],
+						dX[2]);
+
+				Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+
+				int iTargetFace = pFace - &(meshInput.faces[0]);
+
+				const Face & faceCurrent = meshInput.faces[iTargetFace];
+
+				vecContributingFaces.clear();
+				nodeCenters.clear();
+
+				Node nodeCenter1 =
+					GetFaceCentroid(
+						meshInput.faces[iTargetFace],
+						meshInput.nodes);
+
+				nodeCenter1.x -= dX[0];
+				nodeCenter1.y -= dX[1];
+				nodeCenter1.z -= dX[2];
+
+				nodeCenters.push_back(nodeCenter1);
+				vecContributingFaces.push_back(iTargetFace);
+
+				double dInvWeightSum = 0.0;
+
+				// TODO: Switch to using great circle distance rather than chord dist
+				dInvWeightSum += 1.0 / nodeCenter1.Magnitude();
+
+				// Push neighboring face if it is on the correct side
+				for (int i = 0; i < faceCurrent.edges.size(); i++) {
+
+					const FacePair & facepair =
+							meshInput.edgemap.find(faceCurrent.edges[i])->second;
+
+					if (iTargetFace == facepair[0]){
+						Node nodeCenter2 =
+							GetFaceCentroid(
+								meshInput.faces[facepair[1]],
+								meshInput.nodes);
+
+						nodeCenter2.x -= dX[0];
+						nodeCenter2.y -= dX[1];
+						nodeCenter2.z -= dX[2];
+
+						if (DotProduct(nodeCenter1,nodeCenter2) > 0) {
+							vecContributingFaces.push_back(facepair[1]);
+							nodeCenters.push_back(nodeCenter2);
+
+							dInvWeightSum += 1.0 / nodeCenter2.Magnitude();
+						}
+
+					} else {
+						Node nodeCenter2 =
+							GetFaceCentroid(
+								meshInput.faces[facepair[0]],
+								meshInput.nodes);
+
+						nodeCenter2.x -= dX[0];
+						nodeCenter2.y -= dX[1];
+						nodeCenter2.z -= dX[2];
+
+						if (DotProduct(nodeCenter1,nodeCenter2) > 0){
+							vecContributingFaces.push_back(facepair[0]);
+							nodeCenters.push_back(nodeCenter2);
+
+							dInvWeightSum += 1.0 / nodeCenter2.Magnitude();
+						}
+					}
+				}
+
+				// Contribution of each source element to weight
+				for (int i = 0; i < vecContributingFaces.size(); i++){
+
+					double dInvDist = 1.0 / nodeCenters[i].Magnitude();
+
+					smatMap(IxT,vecContributingFaces[i]) +=
+						(1.0 / dInvWeightSum)
+						* dW[p] * dW[q] * dJacobianMat(k,p,q)
+						* dInvDist
+						/ meshOutput.vecFaceArea[IxT]
+						* meshOverlap.vecFaceArea[ixFirst]
+						/ dQuadratureArea;
+				}
+			}
+			}
+		}
 	}
 }
 
@@ -754,7 +994,12 @@ void LinearRemapFVtoGLL_Simple(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -1224,7 +1469,12 @@ void LinearRemapFVtoGLL_Volumetric(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -1922,7 +2172,12 @@ void LinearRemapFVtoGLL(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
