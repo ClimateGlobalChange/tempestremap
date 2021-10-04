@@ -20,6 +20,7 @@
 #include "NetCDFUtilities.h"
 #include "GridElements.h"
 #include "FiniteElementTools.h"
+#include "STLStringHelper.h"
 
 #include "Announce.h"
 #include "Exception.h"
@@ -27,6 +28,115 @@
 #include "DataArray2D.h"
 
 #include <cmath>
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ParseEnforceBounds(
+	const std::string & strEnforceBounds,
+	EnforceBoundsVector & vecEnforceBounds
+) {
+	enum ParseMode {
+		ParseMode_Variable,
+		ParseMode_LowerBound,
+		ParseMode_UpperBound
+	} eParseMode = ParseMode_Variable;
+
+	if (strEnforceBounds.length() == 0) {
+		return;
+	}
+
+	int iCommaCount = 0;
+	int iLastComma = 0;
+	for (int i = 0; i < strEnforceBounds.length(); i++) {
+		if (strEnforceBounds[i] == ',') {
+			iCommaCount++;
+			iLastComma = i;
+		}
+	}
+
+	EnforceBounds enfbnds;
+
+	// Parse string of the form "<lb>,<ub>"
+	if (iCommaCount == 1) {
+		enfbnds.strVariable = "";
+		enfbnds.strLowerBound = strEnforceBounds.substr(0,iLastComma);
+		enfbnds.strUpperBound = strEnforceBounds.substr(iLastComma+1);
+		vecEnforceBounds.push_back(enfbnds);
+
+	// Parse string of the form "<var>,<lb>,<ub>[;...]"
+	} else {
+		int iLast = 0;
+		for (int i = 0; i <= strEnforceBounds.length(); i++) {
+			if ((i == strEnforceBounds.length()) || (strEnforceBounds[i] == ';')) {
+				if (eParseMode != ParseMode_UpperBound) {
+					_EXCEPTION1("Malformed bounds string \"%s\", expected \"<var>,<lb>,<ub>[;...]\"",
+						strEnforceBounds.c_str());
+				}
+				enfbnds.strUpperBound = strEnforceBounds.substr(iLast, i-iLast);
+				vecEnforceBounds.push_back(enfbnds);
+				if (i == strEnforceBounds.length()) {
+					break;
+				}
+				eParseMode = ParseMode_Variable;
+				iLast = i+1;
+			}
+			if (strEnforceBounds[i] == ',') {
+				if (eParseMode == ParseMode_Variable) {
+					enfbnds.strVariable = strEnforceBounds.substr(iLast, i-iLast);
+					eParseMode = ParseMode_LowerBound;
+					iLast = i+1;
+
+				} else if (eParseMode == ParseMode_LowerBound) {
+					enfbnds.strLowerBound = strEnforceBounds.substr(iLast, i-iLast);
+					eParseMode = ParseMode_UpperBound;
+					iLast = i+1;
+
+				} else {
+					_EXCEPTION1("Malformed bounds string \"%s\", expected \"<var>,<lb>,<ub>[;...]\"",
+						strEnforceBounds.c_str());
+				}
+			}
+		}
+	}
+
+	// Validate
+	for (auto it : vecEnforceBounds) {
+		if ((it.strVariable == "") && (vecEnforceBounds.size() != 1)) {
+			_EXCEPTIONT("No variable specified in bounds string \"\"");
+		}
+		if (it.strLowerBound == "") {
+			it.strLowerBound = "n";
+		}
+		if (it.strUpperBound == "") {
+			it.strUpperBound = "n";
+		}
+
+		bool fLowerBoundIsFloat = STLStringHelper::IsFloat(it.strLowerBound);
+		bool fUpperBoundIsFloat = STLStringHelper::IsFloat(it.strUpperBound);
+
+		if ((it.strLowerBound != "n") && (it.strLowerBound != "l") && (it.strLowerBound != "g") && (!fLowerBoundIsFloat)) {
+			_EXCEPTION1("Invalid lower bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", or floating point value",
+				it.strLowerBound.c_str());
+		}
+		if ((it.strUpperBound != "n") && (it.strUpperBound != "l") && (it.strUpperBound != "g") && (!fUpperBoundIsFloat)) {
+			_EXCEPTION1("Invalid upper bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", or floating point value",
+				it.strUpperBound.c_str());
+		}
+		if (fLowerBoundIsFloat && fUpperBoundIsFloat) {
+			double dLowerBound = std::stof(it.strLowerBound);
+			double dUpperBound = std::stof(it.strUpperBound);
+
+			if (dLowerBound > dUpperBound) {
+				_EXCEPTION2("Lower bound \"%s\" must be less than upper bound \"%s\" in bounds string",
+					it.strLowerBound.c_str(), it.strUpperBound.c_str());
+			}
+		}
+	}
+	//for (auto it : vecEnforceBounds) {
+	//	printf("%s %s %s\n", it.strVariable.c_str(), it.strLowerBound.c_str(), it.strUpperBound.c_str());
+	//}
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -243,6 +243,7 @@ extern "C" {
 		std::string strOutputData,
 		std::string strOutputDataList,
 		std::string strNColName, 
+		std::string strEnforceBounds,
 		bool fOutputDouble,
 		std::string strPreserveVariables,
 		bool fPreserveAll,

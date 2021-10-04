@@ -67,6 +67,9 @@ int main(int argc, char** argv) {
 	// Name of the ncol variable
 	std::string strNColName;
 
+	// Enforce bounds
+	std::string strEnforceBounds;
+
 	// Output as double
 	bool fOutputDouble;
 
@@ -94,6 +97,7 @@ int main(int argc, char** argv) {
 		CommandLineString(strOutputData, "out_data", "");
 		CommandLineString(strOutputDataList, "out_data_list", "");
 		CommandLineString(strNColName, "ncol_name", "ncol");
+		CommandLineString(strEnforceBounds, "bounds", "");
 		CommandLineBool(fOutputDouble, "out_double");
 		CommandLineString(strPreserveVariables, "preserve", "");
 		CommandLineBool(fPreserveAll, "preserveall");
@@ -113,7 +117,8 @@ int main(int argc, char** argv) {
 		strVariables,
 		strOutputData,
 		strOutputDataList,
-		strNColName, 
+		strNColName,
+		strEnforceBounds,
 		fOutputDouble,
 		strPreserveVariables,
 		fPreserveAll,
