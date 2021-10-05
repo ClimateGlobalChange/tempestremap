@@ -7,7 +7,7 @@ name: Manual workflow
 on:
   workflow_dispatch:
    
-  ubuntu-latest-spack-netcdf-job:
+  label:
     name: "ubuntu-latest-tempestremap"
     runs-on: ubuntu-latest
     steps:
