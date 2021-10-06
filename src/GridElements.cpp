@@ -1790,6 +1790,149 @@ int BuildCoincidentNodeVector(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real CalculateSphericalTriangleJacobian(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode
+) {
+
+	Node dF(
+		(1.0 - dB) * ((1.0 - dA) * node1.x + dA * node2.x) + dB * node3.x,
+		(1.0 - dB) * ((1.0 - dA) * node1.y + dA * node2.y) + dB * node3.y,
+		(1.0 - dB) * ((1.0 - dA) * node1.z + dA * node2.z) + dB * node3.z);
+
+	Node dDaF(
+		(1.0 - dB) * (node2.x - node1.x),
+		(1.0 - dB) * (node2.y - node1.y),
+		(1.0 - dB) * (node2.z - node1.z));
+
+	Node dDbF(
+		- (1.0 - dA) * node1.x - dA * node2.x + node3.x,
+		- (1.0 - dA) * node1.y - dA * node2.y + node3.y,
+		- (1.0 - dA) * node1.z - dA * node2.z + node3.z);
+
+	double dInvR = 1.0 / sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
+
+	if (pnode != NULL) {
+		pnode->x = dF.x * dInvR;
+		pnode->y = dF.y * dInvR;
+		pnode->z = dF.z * dInvR;
+	}
+
+	Node dDaG(
+		dDaF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
+		dDaF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
+		dDaF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
+
+	Node dDbG(
+		dDbF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
+		dDbF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
+		dDbF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
+
+	double dDenomTerm = dInvR * dInvR * dInvR;
+
+	dDaG.x *= dDenomTerm;
+	dDaG.y *= dDenomTerm;
+	dDaG.z *= dDenomTerm;
+
+	dDbG.x *= dDenomTerm;
+	dDbG.y *= dDenomTerm;
+	dDbG.z *= dDenomTerm;
+
+	// Cross product gives local Jacobian
+	Node nodeCross = CrossProduct(dDaG, dDbG);
+
+	double dJacobian = sqrt(
+		  nodeCross.x * nodeCross.x
+		+ nodeCross.y * nodeCross.y
+		+ nodeCross.z * nodeCross.z);
+
+	return dJacobian;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateSphericalTriangleJacobianBarycentric(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode
+) {
+	double dC = 1.0 - dA - dB;
+
+	Node dF(
+		dA * node1.x + dB * node2.x + dC * node3.x,
+		dA * node1.y + dB * node2.y + dC * node3.y,
+		dA * node1.z + dB * node2.z + dC * node3.z);
+
+	Node dDaF(
+		node1.x - node3.x,
+		node1.y - node3.y,
+		node1.z - node3.z);
+
+	Node dDbF(
+		node2.x - node3.x,
+		node2.y - node3.y,
+		node2.z - node3.z);
+
+	double dInvR = 1.0 / sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
+
+	if (pnode != NULL) {
+		pnode->x = dF.x * dInvR;
+		pnode->y = dF.y * dInvR;
+		pnode->z = dF.z * dInvR;
+	}
+
+	Node dDaG(
+		dDaF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
+		dDaF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
+		dDaF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
+
+	Node dDbG(
+		dDbF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
+		dDbF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
+		dDbF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
+
+	double dDenomTerm = dInvR * dInvR * dInvR;
+
+	dDaG.x *= dDenomTerm;
+	dDaG.y *= dDenomTerm;
+	dDaG.z *= dDenomTerm;
+
+	dDbG.x *= dDenomTerm;
+	dDbG.y *= dDenomTerm;
+	dDbG.z *= dDenomTerm;
+
+	// Cross product gives local Jacobian
+	Node nodeCross = CrossProduct(dDaG, dDbG);
+
+	double dJacobian = sqrt(
+		  nodeCross.x * nodeCross.x
+		+ nodeCross.y * nodeCross.y
+		+ nodeCross.z * nodeCross.z);
+
+	return 0.5 * dJacobian;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 Real CalculateFaceAreaQuadratureMethod(
 	const Face & face,
 	const NodeVector & nodes
@@ -1819,72 +1962,11 @@ Real CalculateFaceAreaQuadratureMethod(
 			double dA = dG[p];
 			double dB = dG[q];
 
-			Node dF(
-				(1.0 - dB) * ((1.0 - dA) * node1.x + dA * node2.x) + dB * node3.x,
-				(1.0 - dB) * ((1.0 - dA) * node1.y + dA * node2.y) + dB * node3.y,
-				(1.0 - dB) * ((1.0 - dA) * node1.z + dA * node2.z) + dB * node3.z);
+			double dJacobian =
+				CalculateSphericalTriangleJacobian(
+					node1, node2, node3,
+					dA, dB);
 
-			Node dDaF(
-				(1.0 - dB) * (node2.x - node1.x),
-				(1.0 - dB) * (node2.y - node1.y),
-				(1.0 - dB) * (node2.z - node1.z));
-
-			Node dDbF(
-				- (1.0 - dA) * node1.x - dA * node2.x + node3.x,
-				- (1.0 - dA) * node1.y - dA * node2.y + node3.y,
-				- (1.0 - dA) * node1.z - dA * node2.z + node3.z);
-
-			double dR = sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
-
-			Node dDaG(
-				dDaF.x * (dF.y * dF.y + dF.z * dF.z)
-					- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
-				dDaF.y * (dF.x * dF.x + dF.z * dF.z)
-					- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
-				dDaF.z * (dF.x * dF.x + dF.y * dF.y)
-					- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
-
-			Node dDbG(
-				dDbF.x * (dF.y * dF.y + dF.z * dF.z)
-					- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
-				dDbF.y * (dF.x * dF.x + dF.z * dF.z)
-					- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
-				dDbF.z * (dF.x * dF.x + dF.y * dF.y)
-					- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
-
-			double dDenomTerm = 1.0 / (dR * dR * dR);
-
-			dDaG.x *= dDenomTerm;
-			dDaG.y *= dDenomTerm;
-			dDaG.z *= dDenomTerm;
-
-			dDbG.x *= dDenomTerm;
-			dDbG.y *= dDenomTerm;
-			dDbG.z *= dDenomTerm;
-/*
-			Node node;
-			Node dDx1G;
-			Node dDx2G;
-
-			ApplyLocalMap(
-				faceQuad,
-				nodes,
-				dG[p],
-				dG[q],
-				node,
-				dDx1G,
-				dDx2G);
-*/
-			// Cross product gives local Jacobian
-			Node nodeCross = CrossProduct(dDaG, dDbG);
-
-			double dJacobian = sqrt(
-				  nodeCross.x * nodeCross.x
-				+ nodeCross.y * nodeCross.y
-				+ nodeCross.z * nodeCross.z);
-
-			//dFaceArea += 2.0 * dW[p] * dW[q] * (1.0 - dG[q]) * dJacobian;
-			
 			dFaceArea += dW[p] * dW[q] * dJacobian;
 		}
 		}

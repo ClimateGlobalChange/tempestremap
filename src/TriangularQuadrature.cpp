@@ -30,8 +30,8 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 	GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
 
 	m_nPoints = nOrder * nOrder;
-	m_dG.Initialize(nOrder * nOrder, 3);
-	m_dW.Initialize(nOrder * nOrder);
+	m_dG.Allocate(nOrder * nOrder, 3);
+	m_dW.Allocate(nOrder * nOrder);
 
 	for (int i = 0; i < nOrder; i++) {
 	for (int j = 0; j < nOrder; j++) {
@@ -43,7 +43,6 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 	}
 	}
 */
-
 	// 12th order quadrature rule (33 points)
 	if (nOrder == 12) {
 		const double TriQuadratureG[33][3] = {
@@ -224,6 +223,7 @@ TriangularQuadratureRule::TriangularQuadratureRule(
 		m_dG[0][1] = 0.333333333333333;
 		m_dG[0][2] = 0.333333333333333;
 
+		m_dW.Allocate(1);
 		m_dW[0] = 1.000000000000000;
 
 	// Unsupported order
