@@ -6,12 +6,14 @@ name: Manual workflow
 # or API.
 on:
   workflow_dispatch:
-   
-  label:
+
+jobs:
+  ubuntu-latest-tempestremap:
     name: "ubuntu-latest-tempestremap"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latestubuntu-latest-tempestremap
     steps:
     - uses: actions/checkout@v2
+    - uses: conda-incubator/setup-miniconda@v2
     - name: "os fingerprinting"
       run: |
         pwd
@@ -19,6 +21,9 @@ on:
         hostnamectl status  
     - name: "basic commands"
       run: |
+        conda install -y -c conda-forge lapack libnetcdf
+        which python
+        pip install numpy pandas
         set -o errexit
         set -o pipefail
         set -o nounset
@@ -64,7 +69,3 @@ on:
         tar -xvzf tar_files.tar.gz 
         mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
-       
-
-        
-
