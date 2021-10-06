@@ -10,7 +10,7 @@ on:
 jobs:
   ubuntu-latest-tempestremap:
     name: "ubuntu-latest-tempestremap"
-    runs-on: ubuntu-latestubuntu-latest-tempestremap
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: conda-incubator/setup-miniconda@v2
