@@ -462,228 +462,226 @@ void LinearRemapFVtoFVInvDist(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
+	}
+
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 4;
-
-	// Verify ReverseNodeArray has been calculated
-	if (meshInput.revnodearray.size() == 0) {
-		_EXCEPTIONT("ReverseNodeArray has not been calculated for meshInput");
-	}
 
 	// Triangular quadrature rule
 	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
 
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
+
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 
-	// Get Gauss quadrature nodes
-	DataArray1D<double> dG;
-	DataArray1D<double> dW;
-
-	GaussQuadrature::GetPoints(TriQuadRuleOrder, 0.0, 1.0, dG, dW);
-
+	// kd-tree for nearest neighbor search
     kdtree * kdTarget = kd_create(3);
 
 	// Vectors used in determining contributions from each Face
-	std::vector<int> vecContributingFaces;
-	NodeVector nodeCenters;
-    
-    // Vector of centers of the source mesh
-    for (int i = 0; i < meshInput.faces.size(); i++){
+	std::vector<int> vecContributingFaceIxs;
+	std::vector<double> vecContributingFaceWeights;
+
+	// Vector of centers of the source mesh
+	for (int i = 0; i < meshInput.faces.size(); i++){
 
 		const Face & face = meshInput.faces[i];
 
-		const Node & node_center = GetFaceCentroid(face, meshInput.nodes);
+		Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
 
 		kd_insert3(
 			kdTarget,
-			node_center.x,
-			node_center.y,
-			node_center.z,
+			nodeCentroid.x,
+			nodeCentroid.y,
+			nodeCentroid.z,
 			(void*)(&(meshInput.faces[i])));
 	}
 
-	for (int ixFirst = 0; ixFirst < meshOverlap.faces.size(); ixFirst++) {
+	// Overlap face index
+	int ixOverlap = 0;
 
-		const Face & faceOverlap = meshOverlap.faces[ixFirst];
+	// Loop through all source faces
+	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
-		const NodeVector & nodesOverlap = meshOverlap.nodes;
+		// Output every 1000 overlap elements
+		if (ixFirst % 1000 == 0) {
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+		}
 
-		int IxT = meshOverlap.vecTargetFaceIx[ixFirst];
+		// This Face
+		const Face & faceFirst = meshInput.faces[ixFirst];
 
-		int nSubTriangles = faceOverlap.edges.size() - 2;
-
-		DataArray3D<double> dJacobianMat(nSubTriangles, dW.GetRows(), dW.GetRows());
-
-		// Compute quadrature area of each overlap face
-		double dQuadratureArea = 0.0;
-
-		for (int k = 0; k < nSubTriangles; k++) {
-
-			// Define degenerate quadrilateral for use in ApplyLocalMap
-			Face FaceQuad(4);
-
-			FaceQuad.SetNode(0, faceOverlap[0]);
-			FaceQuad.SetNode(1, faceOverlap[k+1]);
-			FaceQuad.SetNode(2, faceOverlap[k+2]);
-			FaceQuad.SetNode(3, faceOverlap[k+2]);
-
-			for (int p = 0; p < dW.GetRows(); p++) {
-				for (int q = 0; q < dW.GetRows(); q++) {
-
-					Node node;
-					Node dDx1G;
-					Node dDx2G;
-
-					ApplyLocalMap(
-						FaceQuad,
-						nodesOverlap,
-						dG[p],
-						dG[q],
-						node,
-						dDx1G,
-						dDx2G);
-
-					// Cross product gives local Jacobian
-					Node nodeCross = CrossProduct(dDx1G, dDx2G);
-
-					double dJacobian = nodeCross.Magnitude();
-
-					dQuadratureArea += dW[p] * dW[q] * dJacobian;
-
-					dJacobianMat(k,p,q) = dJacobian;
-				}
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+				break;
 			}
 		}
 
-		for (int k = 0; k < nSubTriangles; k++){			
-			for (int p = 0; p < dW.GetRows(); p++) {
-			for (int q = 0; q < dW.GetRows(); q++) {
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
-				// Cartesian coordinates of quadrature point
-				double dX[3];
+		// Loop through all overlap faces associated with this source face
+		for (int j = 0; j < nOverlapFaces; j++) {
+			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
-				double dA = dG[p];
-				double dB = dG[q];
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 
-				Node node0 = nodesOverlap[faceOverlap[0]];
-				Node node1 = nodesOverlap[faceOverlap[k+1]];
-				Node node2 = nodesOverlap[faceOverlap[k+2]];
+			int nSubTriangles = faceOverlap.edges.size() - 2;
 
-				dX[0] =   (1.0 - dA) * (1.0 - dB) * node0.x
-				        + (1.0 - dA) *        dB  * node1.x
-				        +        dA  *        dB  * node2.x
-				        +        dA  * (1.0 - dB) * node2.x;
+			// Jacobian at each quadrature point
+			DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+			DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
 
-				dX[1] =   (1.0 - dA) * (1.0 - dB) * node0.y
-				        + (1.0 - dA) *        dB  * node1.y
-				        +        dA  *        dB  * node2.y
-				        +        dA  * (1.0 - dB) * node2.y;
+			// Compute quadrature area of each overlap face
+			double dQuadratureArea = 0.0;
 
-				dX[2] =   (1.0 - dA) * (1.0 - dB) * node0.z
-				        + (1.0 - dA) *        dB  * node1.z
-				        +        dA  *        dB  * node2.z
-				        +        dA  * (1.0 - dB) * node2.z;
+			for (int k = 0; k < nSubTriangles; k++) {
+				for (int p = 0; p < dW.GetRows(); p++) {
 
-				double dMag =
-					sqrt(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
+					dQuadPtWeight(k,p) =
+						CalculateSphericalTriangleJacobianBarycentric(
+							meshOverlap.nodes[faceOverlap[0]],
+							meshOverlap.nodes[faceOverlap[k+1]],
+							meshOverlap.nodes[faceOverlap[k+2]],
+							dG(p,0), dG(p,1),
+							&(dQuadPtNodes(k,p)));
 
-				dX[0] /= dMag;
-				dX[1] /= dMag;
-				dX[2] /= dMag;
+					dQuadPtWeight(k,p) *= dW[p];
 
-				// Find nearest source mesh face
-				kdres * kdresTarget =
-					kd_nearest3(
-						kdTarget,
-						dX[0],
-						dX[1],
-						dX[2]);
+					dQuadratureArea += dQuadPtWeight(k,p);
+				}
+			}
 
-				Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+			//printf("%1.15e %1.15e %1.15e %1.15e\n", meshOverlap.vecFaceArea[ixOverlap + j], dQuadratureArea, CalculateFaceAreaKarneysMethod(faceOverlap, meshOverlap.nodes), dQuadratureArea / meshOverlap.vecFaceArea[ixOverlap + j]);
 
-				int iTargetFace = pFace - &(meshInput.faces[0]);
+			// Loop through all sub-triangles of this overlap Face
+			for (int k = 0; k < nSubTriangles; k++) {
 
-				const Face & faceCurrent = meshInput.faces[iTargetFace];
+				// Loop through all quadrature nodes on this overlap Face
+				for (int p = 0; p < dW.GetRows(); p++) {
 
-				vecContributingFaces.clear();
-				nodeCenters.clear();
+					// Get quadrature node and pointwise Jacobian
+					const Node & nodeQ = dQuadPtNodes(k,p);
 
-				Node nodeCenter1 =
-					GetFaceCentroid(
-						meshInput.faces[iTargetFace],
-						meshInput.nodes);
+					// Find nearest source mesh face and add its contribution
+					// to the inverse distance.
+					kdres * kdresTarget =
+						kd_nearest3(
+							kdTarget,
+							nodeQ.x,
+							nodeQ.y,
+							nodeQ.z);
 
-				nodeCenter1.x -= dX[0];
-				nodeCenter1.y -= dX[1];
-				nodeCenter1.z -= dX[2];
+					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
-				nodeCenters.push_back(nodeCenter1);
-				vecContributingFaces.push_back(iTargetFace);
+					int iNearestFace = pFace - &(meshInput.faces[0]);
 
-				double dInvWeightSum = 0.0;
+					const Face & faceCurrent = meshInput.faces[iNearestFace];
 
-				// TODO: Switch to using great circle distance rather than chord dist
-				dInvWeightSum += 1.0 / nodeCenter1.Magnitude();
+					// TODO: Precompute face centroids on input mesh
+					Node nodeX1 =
+						GetFaceCentroid(
+							meshInput.faces[iNearestFace],
+							meshInput.nodes);
 
-				// Push neighboring face if it is on the correct side
-				for (int i = 0; i < faceCurrent.edges.size(); i++) {
+					Node nodeX1minusQ = nodeX1;
+					nodeX1minusQ.x -= nodeQ.x;
+					nodeX1minusQ.y -= nodeQ.y;
+					nodeX1minusQ.z -= nodeQ.z;
 
-					const FacePair & facepair =
-							meshInput.edgemap.find(faceCurrent.edges[i])->second;
+					vecContributingFaceIxs.clear();
+					vecContributingFaceWeights.clear();
 
-					if (iTargetFace == facepair[0]){
-						Node nodeCenter2 =
-							GetFaceCentroid(
-								meshInput.faces[facepair[1]],
-								meshInput.nodes);
+					// TODO: Switch to using great circle distance rather than chord dist
+					// TODO: Be careful about nodeCenter1 being zero
+					double dInvDist1 = 1.0 / nodeX1minusQ.Magnitude();
+					vecContributingFaceIxs.push_back(iNearestFace);
+					vecContributingFaceWeights.push_back(dInvDist1);
 
-						nodeCenter2.x -= dX[0];
-						nodeCenter2.y -= dX[1];
-						nodeCenter2.z -= dX[2];
+					// Push neighboring face if it is on the correct side
+					for (int i = 0; i < faceCurrent.edges.size(); i++) {
 
-						if (DotProduct(nodeCenter1,nodeCenter2) > 0) {
-							vecContributingFaces.push_back(facepair[1]);
-							nodeCenters.push_back(nodeCenter2);
+						const FacePair & facepair =
+								meshInput.edgemap.find(faceCurrent.edges[i])->second;
 
-							dInvWeightSum += 1.0 / nodeCenter2.Magnitude();
-						}
+						if (iNearestFace == facepair[0]){
+							Node nodeX2 =
+								GetFaceCentroid(
+									meshInput.faces[facepair[1]],
+									meshInput.nodes);
 
-					} else {
-						Node nodeCenter2 =
-							GetFaceCentroid(
-								meshInput.faces[facepair[0]],
-								meshInput.nodes);
+							Node nodeX1minusX2 = nodeX1;
+							nodeX1minusX2.x -= nodeX2.x;
+							nodeX1minusX2.y -= nodeX2.y;
+							nodeX1minusX2.z -= nodeX2.z;
 
-						nodeCenter2.x -= dX[0];
-						nodeCenter2.y -= dX[1];
-						nodeCenter2.z -= dX[2];
+							if (DotProduct(nodeX1minusX2, nodeX1minusQ) > 0.0) {
+								Node nodeX2minusQ = nodeX2;
+								nodeX2minusQ.x -= nodeQ.x;
+								nodeX2minusQ.y -= nodeQ.y;
+								nodeX2minusQ.z -= nodeQ.z;
 
-						if (DotProduct(nodeCenter1,nodeCenter2) > 0){
-							vecContributingFaces.push_back(facepair[0]);
-							nodeCenters.push_back(nodeCenter2);
+								double dInvDist2 = 1.0 / nodeX2minusQ.Magnitude();
+								vecContributingFaceIxs.push_back(facepair[1]);
+								vecContributingFaceWeights.push_back(dInvDist2);
+							}
 
-							dInvWeightSum += 1.0 / nodeCenter2.Magnitude();
+						} else if (iNearestFace == facepair[1]) {
+							Node nodeX2 =
+								GetFaceCentroid(
+									meshInput.faces[facepair[0]],
+									meshInput.nodes);
+
+							Node nodeX1minusX2 = nodeX1;
+							nodeX1minusX2.x -= nodeX2.x;
+							nodeX1minusX2.y -= nodeX2.y;
+							nodeX1minusX2.z -= nodeX2.z;
+
+							if (DotProduct(nodeX1minusX2, nodeX1minusQ) > 0.0){
+								Node nodeX2minusQ = nodeX2;
+								nodeX2minusQ.x -= nodeQ.x;
+								nodeX2minusQ.y -= nodeQ.y;
+								nodeX2minusQ.z -= nodeQ.z;
+
+								double dInvDist2 = 1.0 / nodeX2minusQ.Magnitude();
+								vecContributingFaceIxs.push_back(facepair[0]);
+								vecContributingFaceWeights.push_back(dInvDist2);
+							}
+
+						} else {
+							_EXCEPTIONT("Logic error");
 						}
 					}
+
+					// Total contributions
+					double dInvWeightSum = 0.0;
+					for (int i = 0; i < vecContributingFaceWeights.size(); i++){
+						dInvWeightSum += vecContributingFaceWeights[i];
+					}
+
+					// Contribution of this quadrature point to the map
+					for (int i = 0; i < vecContributingFaceIxs.size(); i++){
+						smatMap(iTargetFace, vecContributingFaceIxs[i]) +=
+							vecContributingFaceWeights[i]
+							/ dInvWeightSum
+							* dQuadPtWeight(k,p)
+							* meshOverlap.vecFaceArea[ixOverlap + j]
+							/ dQuadratureArea
+							/ meshOutput.vecFaceArea[iTargetFace];
+					}
 				}
-
-				// Contribution of each source element to weight
-				for (int i = 0; i < vecContributingFaces.size(); i++){
-
-					double dInvDist = 1.0 / nodeCenters[i].Magnitude();
-
-					smatMap(IxT,vecContributingFaces[i]) +=
-						(1.0 / dInvWeightSum)
-						* dW[p] * dW[q] * dJacobianMat(k,p,q)
-						* dInvDist
-						/ meshOutput.vecFaceArea[IxT]
-						* meshOverlap.vecFaceArea[ixFirst]
-						/ dQuadratureArea;
-				}
-			}
 			}
 		}
+
+		// Increment the current overlap index
+		ixOverlap += nOverlapFaces;
 	}
 }
 

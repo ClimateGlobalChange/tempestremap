@@ -936,6 +936,65 @@ int BuildCoincidentNodeVector(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Calculate the Jacobian (infinitesmal local area element) for a
+///		spherical triangle.  Variables dA and dB specify the coordinates
+///		within the spherical triangle:
+///		  (dA,dB)=(0,0) corresponds to node1
+///		  (dA,dB)=(1,0) corresponds to node2
+///		  (dA,dB)=(0,1)=(1,1) corresponds to node3
+///	</summary>
+Real CalculateSphericalTriangleJacobian(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode = NULL
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the Jacobian (infinitesmal local area element) for a
+///		spherical triangle.  Variables dA and dB specify the barycentric
+///		coordinates within the spherical triangle:
+///		  (dA,dB)=(0,0) corresponds to node3
+///		  (dA,dB)=(1,0) corresponds to node2
+///		  (dA,dB)=(0,1) corresponds to node1
+///	</summary>
+Real CalculateSphericalTriangleJacobianBarycentric(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode = NULL
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a Face using quadrature.
+///	</summary>
+Real CalculateFaceAreaQuadratureMethod(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a Face using Karney's method (may be poorly
+///		conditioned at higher resolutions).
+///	</summary>
+Real CalculateFaceAreaKarneysMethod(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Check if the specified Face is concave.
 ///	</summary>
 bool IsFaceConcave(

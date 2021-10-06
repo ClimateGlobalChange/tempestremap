@@ -397,7 +397,8 @@ try {
 
         // Construct OfflineMap
         AnnounceStartBlock("Calculating offline map");
-        LinearRemapFVtoFV(meshSource, meshTarget, meshOverlap, nPin, mapRemap);
+        LinearRemapFVtoFVInvDist(meshSource, meshTarget, meshOverlap, mapRemap);
+        //LinearRemapFVtoFV(meshSource, meshTarget, meshOverlap, nPin, mapRemap);
 
     // Finite volume input / Finite element output
     } else if (eInputType == DiscretizationType_FV) {
