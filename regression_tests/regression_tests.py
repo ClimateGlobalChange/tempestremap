@@ -365,13 +365,6 @@ if __name__ == '__main__':
         bin_path=args.path
 
 
-    # print("Usage: \npython regression_tests.py <location of executables>  <number of procs>\n    Default <location of executables> is ../bin/ and <number of procs> is 2\n")
-    # if len(sys.argv) >= 2:
-    #    bin_path = sys.argv[1] + "/"
-
-    # if len(sys.argv) == 3:
-    #     procs= int (sys.argv[2])
-
     # Run a pipeline
     # read inputs
     command = []
@@ -657,4 +650,4 @@ if __name__ == '__main__':
         pickle.dump(dfcomp, regt_file)
         print("\n Saved baseline/regtime.pkl file")
 
-        print(comptime_dict)
+        # print(comptime_dict)
