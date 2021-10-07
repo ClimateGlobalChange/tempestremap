@@ -777,6 +777,17 @@ void Mesh::Write(
 		varNodes->set_cur(2, 0);
 		varNodes->put(dCoord, 1, nNodeCount);
 	}
+
+	// Grid dimensions
+	if (vecGridDimSize.size() == 2) {
+		_ASSERT(vecGridDimName.size() == 2);
+
+		ncOut.add_att("rectilinear", "true");
+		ncOut.add_att("rectilinear_dim0_size", vecGridDimSize[0]);
+		ncOut.add_att("rectilinear_dim1_size", vecGridDimSize[1]);
+		ncOut.add_att("rectilinear_dim0_name", vecGridDimName[0].c_str());
+		ncOut.add_att("rectilinear_dim1_name", vecGridDimName[1].c_str());
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -790,7 +801,6 @@ void Mesh::WriteScrip(
 	// Temporarily change error reporting
 	NcError error_temp(NcError::verbose_fatal);
 
-	//---------------------------------------------------------------------------
 	// Determine block sizes
 	std::vector<int> vecBlockSizes;
 	std::vector<int> vecBlockSizeFaces;
@@ -828,29 +838,38 @@ void Mesh::WriteScrip(
 		}
 		AnnounceEndBlock(NULL);
 	}
-	//---------------------------------------------------------------------------
+
 	// Output to a NetCDF SCRIP file
 	NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
 	if (!ncOut.is_valid()) {
 		_EXCEPTION1("Unable to open grid file \"%s\" for writing",
 			strFile.c_str());
 	}
+
 	// Find max number of corners oer all faces
 	int nElementCount = faces.size();
 	int nCornersMax = 0;
-	for (int i=0; i<nElementCount; i++) {
+	for (int i = 0; i < nElementCount; i++) {
 		nCornersMax = std::max( nCornersMax, (int)(faces[i].edges.size()) );
 	}
+
 	// SCRIP dimensions
-	NcDim * dimGridSize   = ncOut.add_dim("grid_size",    nElementCount);
+	NcDim * dimGridSize   = ncOut.add_dim("grid_size", nElementCount);
 	NcDim * dimGridCorner = ncOut.add_dim("grid_corners", nCornersMax);
-	NcDim * dimGridRank   = ncOut.add_dim("grid_rank",    1);
+
+	NcDim * dimGridRank;
+	if (vecGridDimSize.size() <= 1) {
+		dimGridRank = ncOut.add_dim("grid_rank", 1);
+	} else {
+		dimGridRank = ncOut.add_dim("grid_rank", vecGridDimSize.size());
+	}
+
 	// Global attributes
 	ncOut.add_att("api_version", 5.00f);
 	ncOut.add_att("version", 5.00f);
 	ncOut.add_att("floating_point_word_size", 8);
 	ncOut.add_att("file_size", 0);
-	//---------------------------------------------------------------------------
+
 	// Grid Area
 	{
 		NcVar * varArea = ncOut.add_var("grid_area", ncDouble, dimGridSize);
@@ -858,14 +877,14 @@ void Mesh::WriteScrip(
 			_EXCEPTIONT("Error creating variable \"grid_area\"");
 		}
 		DataArray1D<double> area(nElementCount);
-		for (int i=0; i<nElementCount; i++) {
+		for (int i = 0; i < nElementCount; i++) {
 			area[i] = static_cast<double>( CalculateFaceArea(faces[i], nodes) );
 		}
 		varArea->set_cur((long)0);
 		varArea->put(area, nElementCount);
 		varArea->add_att("units", "radians^2");
 	}
-	//---------------------------------------------------------------------------
+
 	// Grid center and corner coordinates
 	{
 		NcVar * varCenterLat = ncOut.add_var("grid_center_lat", ncDouble, dimGridSize);
@@ -890,11 +909,12 @@ void Mesh::WriteScrip(
 		DataArray2D<double> cornerLat(nElementCount, nCornersMax);
 		DataArray2D<double> cornerLon(nElementCount, nCornersMax);
 		Node corner(0,0,0);
-		for (int i=0; i<nElementCount; i++) {
+		for (int i = 0; i < nElementCount; i++) {
 			Node center(0,0,0);
+
 			// int nCorners = faces[i].edges.size()+1;
 			int nCorners = faces[i].edges.size();
-			for (int j=0; j<nCorners; ++j) {
+			for (int j = 0; j < nCorners; j++) {
 				corner = nodes[ faces[i][j] ];
 				XYZtoRLL_Deg(
 					corner.x, corner.y, corner.z,
@@ -902,41 +922,49 @@ void Mesh::WriteScrip(
 					cornerLat[i][j]);
 				center = center + corner;
 			}
+
 			center = center / nCorners;
+
 			double dMag = sqrt(center.x * center.x + 
 							   center.y * center.y + 
 							   center.z * center.z);
 			center.x /= dMag;
 			center.y /= dMag;
 			center.z /= dMag;
+
 			XYZtoRLL_Deg(
 				center.x, center.y, center.z,
 				centerLon[i],
 				centerLat[i]);
+
 			// Adjust corner logitudes
 			double lonDiff;
-			for (int j=0; j<nCorners; ++j) {
+			for (int j = 0; j < nCorners; j++) {
+
 				// First check for polar point
 				if (cornerLat[i][j]==90. || cornerLat[i][j]==-90.) {
 					cornerLon[i][j] = centerLon[i];
 				}
+
 				// Next check for corners that wrap around prime meridian
 				lonDiff = centerLon[i] - cornerLon[i][j];
 				if (lonDiff>180) {
 					cornerLon[i][j] = cornerLon[i][j] + (double)360.0;
 				}
+
 				if (lonDiff<-180) {
 					cornerLon[i][j] = cornerLon[i][j] - (double)360.0;
 				}
 			}
 			// Make sure the padded coordinate data is same as last vertex
-			for (int j=nCorners; j<nCornersMax; ++j) {
+			for (int j = nCorners; j < nCornersMax; j++) {
 				cornerLon[i][j] = cornerLon[i][nCorners-1];
 				cornerLat[i][j] = cornerLat[i][nCorners-1];
 			}
 		}
+
 		varCenterLat->add_att("_FillValue", 9.96920996838687e+36 );
-                varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
+		varCenterLon->add_att("_FillValue", 9.96920996838687e+36 );
 		varCornerLat->add_att("_FillValue", 9.96920996838687e+36 );
 		varCornerLon->add_att("_FillValue", 9.96920996838687e+36 );
 
@@ -958,7 +986,7 @@ void Mesh::WriteScrip(
 		varCornerLat->add_att("units", "degrees");
 		varCornerLon->add_att("units", "degrees");
 	}
-	//---------------------------------------------------------------------------
+
 	// Grid mask
 	{
 		NcVar * varMask = ncOut.add_var("grid_imask", ncInt, dimGridSize);
@@ -974,19 +1002,22 @@ void Mesh::WriteScrip(
 		varMask->put(mask, nElementCount);
 
 	}
-	//---------------------------------------------------------------------------
+
 	// Grid dims
 	{
 		NcVar * varDims = ncOut.add_var("grid_dims", ncInt, dimGridRank);
 		if (varDims == NULL) {
 			_EXCEPTIONT("Error creating variable \"grid_dims\"");
 		}
-		DataArray1D<int> rank(1);
-		rank(0) = 1;
-		varDims->set_cur((long)0);
-		varDims->put(rank, 1);
+		if (vecGridDimSize.size() <= 1) {
+			int nSize = faces.size();
+			varDims->set_cur((long)0);
+			varDims->put(&nSize, 1);
+		} else {
+			varDims->set_cur((long)0);
+			varDims->put(&(vecGridDimSize[0]), (long)vecGridDimSize.size());
+		}
 	}
-	//---------------------------------------------------------------------------
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1031,9 +1062,6 @@ void Mesh::Read(const std::string & strFile) {
 
 		NcDim * dimGridSize = ncFile.get_dim("grid_size");
 		NcDim * dimGridCorners = ncFile.get_dim("grid_corners");
-
-		// Check rank
-		NcDim * dimGridRank = ncFile.get_dim("grid_rank");
 
 		// Get the grid corners
 		NcVar * varGridCornerLat = ncFile.get_var("grid_corner_lat");
@@ -1145,6 +1173,38 @@ void Mesh::Read(const std::string & strFile) {
 			}
 		}
 
+		// grid_rank
+		NcDim * dimGridRank = ncFile.get_dim("grid_rank");
+		if (dimGridRank != NULL) {
+			if (dimGridRank->size() == 2) {
+				NcVar * varGridDims = ncFile.get_var("grid_dims");
+				if (varGridDims == NULL) {
+					_EXCEPTION1("SCRIP grid file \"%s\" has grid_rank 2 but does not contain variable grid_dims",
+						strFile.c_str());
+				}
+				if (varGridDims->num_dims() != 0) {
+					_EXCEPTION1("SCRIP grid file \"%s\" variable grid_dims has more than one dimension",
+						strFile.c_str());
+				}
+				if (varGridDims->get_dim(0)->size() != dimGridRank->size()) {
+					_EXCEPTION1("SCRIP grid file \"%s\" variable grid_dims size does not match grid_rank",
+						strFile.c_str());
+				}
+
+				vecGridDimSize.resize(2);
+				vecGridDimName.resize(2);
+
+				varGridDims->get(&(vecGridDimSize[0]), 2);
+				vecGridDimName[0] = "griddim0";
+				vecGridDimName[1] = "griddim1";
+
+				if (vecGridDimSize[0] * vecGridDimSize[1] != faces.size()) {
+					_EXCEPTION4("SCRIP grid file \"%s\" grid_dims (%i,%i) do not agree with grid_size (%i)",
+						strFile.c_str(), vecGridDimSize[0], vecGridDimSize[1], faces.size());
+				}
+			}
+		}
+
 		// SCRIP does not reference a node table, so we must remove
 		// coincident nodes.
 		RemoveCoincidentNodes();
@@ -1187,20 +1247,21 @@ void Mesh::Read(const std::string & strFile) {
 		int nTotalElementCount = 0;
 		NcDim * dimElements = ncFile.get_dim("num_elem");
 		if (dimElements == NULL) {
-		  for (unsigned ib = 1; ib <= nElementBlocks; ++ib)
-		  {
-        std::string numelblk = std::string("num_el_in_blk"+std::to_string(ib));
-		    NcDim * dimElementBlockElems = ncFile.get_dim(numelblk.c_str());
-        nTotalElementCount += (dimElementBlockElems != NULL ? dimElementBlockElems->size() : 0);
-      }
-			if (nTotalElementCount == 0)
-			  _EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
+			for (int ib = 1; ib <= nElementBlocks; ib++) {
+				std::string numelblk = std::string("num_el_in_blk" + std::to_string(ib));
+				NcDim * dimElementBlockElems = ncFile.get_dim(numelblk.c_str());
+				if (dimElementBlockElems != NULL) {
+					nTotalElementCount += dimElementBlockElems->size();
+				}
+			}
+			if (nTotalElementCount == 0) {
+				_EXCEPTION1("Exodus Grid file \"%s\" is missing dimension "
 					"\"num_elem\"", strFile.c_str());
+			}
+
+		} else {
+			nTotalElementCount = dimElements->size();
 		}
-    else
-    {
-		  nTotalElementCount = dimElements->size();
-    }
 
 		// Output size
 		Announce("Mesh size: Nodes [%i] Elements [%i]",
@@ -1402,6 +1463,47 @@ void Mesh::Read(const std::string & strFile) {
 				nodes[i].x = static_cast<Real>(dNodeCoords[0][i]);
 				nodes[i].y = static_cast<Real>(dNodeCoords[1][i]);
 				nodes[i].z = static_cast<Real>(dNodeCoords[2][i]);
+			}
+		}
+
+		// Load in dimension information
+		NcAtt * attRectilinear = ncFile.get_att("rectilinear");
+		if (attRectilinear != NULL) {
+			NcAtt * attDim0Size = ncFile.get_att("rectilinear_dim0_size");
+			if (attDim0Size == NULL) {
+				_EXCEPTION1("Exodus Grid file \"%s\" has rectilinear attribute set, "
+					"but is missing attribute \"rectilinear_dim0_size\"", strFile.c_str());
+			}
+
+			NcAtt * attDim1Size = ncFile.get_att("rectilinear_dim1_size");
+			if (attDim1Size == NULL) {
+				_EXCEPTION1("Exodus Grid file \"%s\" has rectilinear attribute set, "
+					"but is missing attribute \"rectilinear_dim1_size\"", strFile.c_str());
+			}
+
+			NcAtt * attDim0Name = ncFile.get_att("rectilinear_dim0_name");
+			if (attDim0Size == NULL) {
+				_EXCEPTION1("Exodus Grid file \"%s\" has rectilinear attribute set, "
+					"but is missing attribute \"rectilinear_dim0_name\"", strFile.c_str());
+			}
+
+			NcAtt * attDim1Name = ncFile.get_att("rectilinear_dim1_name");
+			if (attDim0Size == NULL) {
+				_EXCEPTION1("Exodus grid file \"%s\" has rectilinear attribute set, "
+					"but is missing attribute \"rectilinear_dim1_name\"", strFile.c_str());
+			}
+
+			vecGridDimSize.resize(2);
+			vecGridDimName.resize(2);
+
+			vecGridDimSize[0] = attDim0Size->as_int(0);
+			vecGridDimSize[1] = attDim1Size->as_int(0);
+			vecGridDimName[0] = attDim0Name->as_string(0);
+			vecGridDimName[1] = attDim1Name->as_string(0);
+
+			if (vecGridDimSize[0] * vecGridDimSize[1] != faces.size()) {
+				_EXCEPTION4("Exodus grid file \"%s\" grid_dims (%i,%i) do not agree with grid_size (%i)",
+					strFile.c_str(), vecGridDimSize[0], vecGridDimSize[1], faces.size());
 			}
 		}
 
