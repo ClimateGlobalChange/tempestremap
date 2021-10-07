@@ -9,14 +9,18 @@
 
 extern "C" {
 
-	// Generate a Cubed-Sphere mesh
+	///	<summary>
+	///		Generate a cubed-sphere mesh.
+	///	</summary>
 	int GenerateCSMesh (
 		Mesh & meshOut,
 		int nResolution,
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
-	// Generate a transect mesh
+	///	<summary>
+	///		Generate a transect mesh.
+	///	</summary>
 	int GenerateTransectMesh(
 		Mesh & mesh,
 		double dLonDeg0,
@@ -29,7 +33,9 @@ extern "C" {
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
-	// Generate a polar stereographic mesh
+	///	<summary>
+	///		Generate a polar stereographic mesh.
+	///	</summary>
 	int GenerateStereographicMesh(
 		Mesh & mesh,
 		double dLonDegP,
@@ -44,7 +50,9 @@ extern "C" {
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
-	// Generate a Latitude-Longitude mesh
+	///	<summary>
+	///		Generate a Latitude-Longitude mesh.
+	///	</summary>
 	int GenerateRLLMesh (
 		Mesh & meshOut,
 		int nLongitudes,
@@ -63,7 +71,9 @@ extern "C" {
 		std::string strOutputFormat,
 		bool fVerbose );
 
-	// Generate a rectilinear mesh from a file
+	///	<summary>
+	///		Generate a rectilinear mesh from a file.
+	///	</summary>
 	int GenerateRectilinearMeshFromFile(
 		Mesh & mesh, 
 		std::string strInputFile,
@@ -74,7 +84,9 @@ extern "C" {
 		bool fVerbose
 	);
 
-	// Restructure 2D data into 1D or vice versa
+	///	<summary>
+	///		Restructure 2D data into 1D or vice versa.
+	///	</summary>
 	int RestructureData(
 		std::string strInputFile,
 		std::string strVariable,
@@ -87,7 +99,9 @@ extern "C" {
 		bool fVerbose
 	);
 
-	// Generate a Latitude-Longitude mesh
+	///	<summary>
+	///		Generate a Universal Transverse Mercator mesh.
+	///	</summary>
 	int GenerateUTMMesh (
 		Mesh & meshOut,
 		int nZone,
@@ -99,7 +113,9 @@ extern "C" {
 		std::string strOutputFile,
 		bool fVerbose );
 
-	// Generate a Icosahedral-Sphere mesh
+	///	<summary>
+	///		Generate a Icosahedral-Sphere mesh.
+	///	</summary>
 	int GenerateICOMesh (
 		Mesh & meshOut,
 		int nResolution,
@@ -107,7 +123,9 @@ extern "C" {
 		std::string strOutputFile,
 		std::string strOutputFormat );
 
-	// Generate Lambert-Conic mesh
+	///	<summary>
+	///		Generate a Lambert-Conic mesh.
+	///	</summary>
 	int GenerateLambertConfConicMesh (
 		Mesh & meshOut,
 		int nNCol,
@@ -121,7 +139,9 @@ extern "C" {
 		double dDX,
 		std::string strOutputFile );
 
-	// Compute the overlap mesh given a source and target mesh file names
+	///	<summary>
+	///		Compute the overlap mesh given a source and target mesh file names.
+	///	</summary>
 	int GenerateOverlapMesh (
 		std::string strMeshA,
 		std::string strMeshB,
@@ -135,9 +155,11 @@ extern "C" {
 		bool fAllowNoOverlap = false,
 		bool fVerbose = true );
 
-	// Compute the overlap mesh given a source and target mesh objects
-	// An overload method which takes as arguments the source and target
-	// meshes that are pre-loaded into memory
+	///	<summary>
+	///		Compute the overlap mesh given two mesh objects.
+	///		This is an overloaded method which takes as arguments the source and target
+	///		meshes that are pre-loaded into memory.
+	///	</summary>
 	int GenerateOverlapWithMeshes (
 		Mesh & meshA,
 		Mesh & meshB,
@@ -170,16 +192,135 @@ extern "C" {
 		DataArray3D<int> & dataGLLnodes,
 		DataArray3D<double> & dataGLLJacobian );
 
-	// Generate the OfflineMap between input and output meshes (read from file)
+	///	<summary>
+	///		A structure containing optional arguments for GenerateOfflineMap.
+	///	</summary>
+	struct GenerateOfflineMapAlgorithmOptions {
+
+	public:
+		///	<summary>
+		///		Constructor.
+		///	</summary>
+		GenerateOfflineMapAlgorithmOptions() :
+			strOutputMapFile(""),
+			strOutputFormat("Netcdf4"),
+			strSourceMeta(""),
+			strTargetMeta(""),
+			fSourceConcave(false),
+			fTargetConcave(false),
+			nPin(4),
+			nPout(4),
+			strMethod(""),
+			fMonotone(false),
+			fNoBubble(false),
+			fNoCorrectAreas(false),
+			fNoConservation(false),
+			fNoCheck(false),
+			fSparseConstraints(false)
+		{ }
+
+	public:
+		///	<summary>
+		///		A filename for the output map after its generation.
+		///	</summary>
+		std::string strOutputMapFile;
+
+		///	<summary>
+		///		NetCDF format to use for output.
+		///	</summary>
+		std::string strOutputFormat;
+
+		///	<summary>
+		///		A filename containing source mesh metadata.
+		///	</summary>
+		std::string strSourceMeta;
+
+		///	<summary>
+		///		A filename containing target mesh metadata.
+		///	</summary>
+		std::string strTargetMeta;
+
+		///	<summary>
+		///		Source mesh contains concave Faces.
+		///	</summary>
+		bool fSourceConcave;
+
+		///	<summary>
+		///		Target mesh contains concave Faces.
+		///	</summary>
+		bool fTargetConcave;
+		
+		///	<summary>
+		///		Input polynomial order.
+		///	</summary>
+		int nPin;
+
+		///	<summary>
+		///		Output polynomial order (only used for finite element output).
+		///	</summary>
+		int nPout;
+
+		///	<summary>
+		///		Method arguments.
+		///	</summary>
+		std::string strMethod;
+
+		///	<summary>
+		///		Generate a monotone map.
+		///	</summary>
+		bool fMonotone;
+
+		///	<summary>
+		///		Do not use a bubble correction for finite elements.
+		///	</summary>
+		bool fNoBubble;
+
+		///	<summary>
+		///		Do not correct the Face areas on the input and output meshes to match
+		///		the Face areas on the overlap mesh.
+		///	</summary>
+		bool fNoCorrectAreas;
+
+		///	<summary>
+		///		Do not correct conservation errors.
+		///	</summary>
+		bool fNoConservation;
+
+		///	<summary>
+		///		Do not check the final map.
+		///	</summary>
+		bool fNoCheck;
+
+		///	<summary>
+		///		Use sparse constraints.
+		///	</summary>
+		bool fSparseConstraints;
+	};
+
+	///	<summary>
+	///		Generate the OfflineMap between input and output meshes.
+	///	</summary>
+	int GenerateOfflineMapWithMeshes (
+		Mesh & meshSource,
+		Mesh & meshTarget,
+		Mesh & meshOverlap,
+		std::string strSourceType,
+		std::string strTargetType,
+		const GenerateOfflineMapAlgorithmOptions & optsAlg,
+		OfflineMap & mapRemap );
+
+	///	<summary>
+	///		Generate the OfflineMap between input and output meshes.
+	///	</summary>
 	int GenerateOfflineMap (
-		OfflineMap & mapOut,
-		std::string strInputMesh,
-		std::string strOutputMesh,
+		std::string strSourceMesh,
+		std::string strTargetMesh,
 		std::string strOverlapMesh,
-		std::string strInputMeta,
-		std::string strOutputMeta,
-		std::string strInputType,
-		std::string strOutputType,
+		std::string strSourceType,
+		std::string strTargetType,
+		const GenerateOfflineMapAlgorithmOptions & optsAlg,
+		OfflineMap & mapRemap );
+/*
 		int nPin = 4,
 		int nPout = 4,
 		bool fNoBubble = false,
@@ -194,24 +335,165 @@ extern "C" {
 		std::string strOutputData = "",
 		std::string strNColName = "",
 		bool fOutputDouble = false,
-		std::string strOutputFormat = "Classic",
+		std::string strOutputFormat = "Netcdf4",
 		std::string strPreserveVariables = "",
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
-		bool fInputConcave = false,
-		bool fOutputConcave = false,
+		bool fSourceConcave = false,
+		bool fTargetConcave = false,
+		bool fSparseConstraints = false);
+*/
+
+	///	<summary>
+	///		A structure containing optional arguments for outputs from GenerateOfflineMap.
+	///	</summary>
+	struct ApplyOfflineMapOptions {
+
+	public:
+		///	<summary>
+		///		Constructor.
+		///	</summary>
+		ApplyOfflineMapOptions() :
+			strInputData(""),
+			strOutputData(""),
+			strInputDataList(""),
+			strOutputDataList(""),
+			strVariables(""),
+			strNColName("ncol"),
+			fOutputDouble(false),
+			strOutputFormat("Netcdf4"),
+			strPreserveVariables(""),
+			fPreserveAll(false),
+			dFillValueOverride(0.0),
+			strLogDir("")
+		{ }
+
+	public:
+		///	<summary>
+		///		The input data file.
+		///	</summary>
+		std::string strInputData;
+
+		///	<summary>
+		///		The output data file.
+		///	</summary>
+		std::string strOutputData;
+
+		///	<summary>
+		///		A text file containing a list of input data files.
+		///	</summary>
+		std::string strInputDataList;
+
+		///	<summary>
+		///		A text file containing a list of output data files.
+		///	</summary>
+		std::string strOutputDataList;
+
+		///	<summary>
+		///		A list of variables to operate on.
+		///	</summary>
+		std::string strVariables;
+
+		///	<summary>
+		///		The name of the unstructured dimension in the data.
+		///	</summary>
+		std::string strNColName;
+
+		///	<summary>
+		///		A string describing how bounds enforcement should be performed.
+		///	</summary>
+		std::string strEnforceBounds;
+
+		///	<summary>
+		///		Output data using double precision.
+		///	</summary>
+		bool fOutputDouble;
+
+		///	<summary>
+		///		NetCDF format to use for output.
+		///	</summary>
+		std::string strOutputFormat;
+
+		///	<summary>
+		///		List of variables to preserve.
+		///	</summary>
+		std::string strPreserveVariables;
+
+		///	<summary>
+		///		Preserve all output variables.
+		///	</summary>
+		bool fPreserveAll;
+
+		///	<summary>
+		///		Fill value to use for output data.
+		///	</summary>
+		double dFillValueOverride;
+
+		///	<summary>
+		///		A directory for writing log files.
+		///	</summary>
+		std::string strLogDir;
+	};
+
+	///	<summary>
+	///		Generate the OfflineMap between input and output meshes.
+	///	</summary>
+	int GenerateOfflineMapAndApply (
+		std::string strSourceMesh,
+		std::string strTargetMesh,
+		std::string strOverlapMesh,
+		std::string strSourceType,
+		std::string strTargetType,
+		const GenerateOfflineMapAlgorithmOptions & optsAlg,
+		const ApplyOfflineMapOptions & optsApply,
+		OfflineMap & mapRemap );
+/*
+	///	<summary>
+	///		Generate the OfflineMap between input and output meshes.
+	///	</summary>
+	int GenerateOfflineMap (
+		OfflineMap & mapRemap,
+		std::string strSourceMesh,
+		std::string strTargetMesh,
+		std::string strOverlapMesh,
+		std::string strSourceMeta,
+		std::string strTargetMeta,
+		std::string strSourceType,
+		std::string strTargetType,
+		int nPin = 4,
+		int nPout = 4,
+		bool fNoBubble = false,
+		bool fCorrectAreas = false,
+		int fMonotoneTypeID = 0,
+		bool fVolumetric = false,
+		bool fNoConservation = false,
+		bool fNoCheck = false,
+		std::string strVariables = "",
+		std::string strOutputMap = "",
+		std::string strInputData = "",
+		std::string strOutputData = "",
+		std::string strNColName = "",
+		bool fOutputDouble = false,
+		std::string strOutputFormat = "Netcdf4",
+		std::string strPreserveVariables = "",
+		bool fPreserveAll = false,
+		double dFillValueOverride = 0.0,
+		bool fSourceConcave = false,
+		bool fTargetConcave = false,
 		bool fSparseConstraints = false);
 
-	// Generate the OfflineMap between input and output meshes
+	///	<summary>
+	///		Generate the OfflineMap between input and output meshes.
+	///	</summary>
 	int GenerateOfflineMapWithMeshes (
 		OfflineMap & mapRemap,
-		Mesh & meshInput,
-		Mesh & meshOutput,
+		Mesh & meshSource,
+		Mesh & meshTarget,
 		Mesh & meshOverlap,
-		std::string strInputMeta,
-		std::string strOutputMeta,
-		std::string strInputType,
-		std::string strOutputType,
+		std::string strSourceMeta,
+		std::string strTargetMeta,
+		std::string strSourceType,
+		std::string strTargetType,
 		int nPin = 4,
 		int nPout = 4,
 		bool fBubble = false,
@@ -230,11 +512,13 @@ extern "C" {
 		std::string strPreserveVariables = "",
 		bool fPreserveAll = false,
 		double dFillValueOverride = 0.0,
-		bool fInputConcave = false,
-		bool fOutputConcave = false,
+		bool fSourceConcave = false,
+		bool fTargetConcave = false,
 		bool fSparseConstraints = false);
 
-	// Apply an offline map to a datafile
+	///	<summary>
+	///		Apply an OfflineMap to a datafile.
+	///	</summary>
 	int ApplyOfflineMap(
 		std::string strInputData,
 		std::string strInputDataList,
@@ -249,12 +533,23 @@ extern "C" {
 		bool fPreserveAll,
 		double dFillValueOverride,
 		std::string strLogDir );
+*/
 
-	// Generate the connectivity data for faces of the given Mesh
+	///	<summary>
+	///		Apply an OfflineMap to a datafile.
+	///	</summary>
+	int ApplyOfflineMap(
+		std::string strInputMap,
+		const ApplyOfflineMapOptions & optsApply);
+
+	///	<summary>
+	///		Generate the connectivity data for a given input file.
+	///	</summary>
 	int GenerateConnectivityData(
 		const Mesh & meshIn,
-		std::vector< std::set<int> > & vecConnectivity);
+		std::vector< std::set<int> > & vecConnectivity );
 
 }
 
 #endif // TEMPESTREMAP_API_H
+
