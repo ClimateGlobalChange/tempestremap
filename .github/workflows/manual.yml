@@ -17,7 +17,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        # os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
@@ -81,7 +82,7 @@ jobs:
         ls -ltrh
         which autoreconf
         autoreconf -fi
-        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment --enable-static
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment --with-netcdf-include=/usr/local/miniconda/envs/test-environment/include --with-netcdf-lib=/usr/local/miniconda/envs/test-environment/lib
         make -j
         make install
 
