@@ -18,7 +18,7 @@ jobs:
         auto-update-conda: true
         auto-activate-base: true
         use-only-tar-bz2: true
-    - run: conda install -y -c conda-forge lapack libnetcdf
+    - run: conda install -y -c conda-forge autoconf automake libtool lapack libnetcdf 
     - uses: actions/checkout@v2
     - name: pre-process
       run: mkdir build && autoreconf -fi && cd build
