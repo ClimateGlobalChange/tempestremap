@@ -27,9 +27,10 @@ jobs:
           pwd
           ls
           # build tempestremap
+          autoreconf -fi
           ./configure --prefix=/home/runner/tempestremap 
           make -j
-          
+
       - name: Run regression tests
         run: |
           pwd
