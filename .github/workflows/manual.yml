@@ -92,5 +92,5 @@ jobs:
         export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
         PATH=/Users/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
         cd /Users/runner/work/tempestremap/tempestremap/regression_tests
-        python regression_tests.py -v -p /Users/runner/work/tempestremap/tempestremap/tr/install/bin/ -n 4
+        DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH && python regression_tests.py -v -p /Users/runner/work/tempestremap/tempestremap/tr/install/bin/ -n 4
 
