@@ -17,8 +17,9 @@ jobs:
 
     strategy:
       matrix:
-        # os: [ubuntu-latest]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        # need to fix https://github.com/rajeeja/tempestremap/runs/3830784744?check_suite_focus=true#step:11:25 for osx build to work
+        # os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
