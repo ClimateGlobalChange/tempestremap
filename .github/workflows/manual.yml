@@ -35,6 +35,10 @@ jobs:
         conda install -y -c conda-forge lapack libnetcdf
         conda install -c anaconda pandas numpy
         which python
+    - if: contains(matrix.os, 'macos')
+      name: Install OSX Deps
+      run: |
+        brew install automake autoconf libtool
     - name: Ubuntu Tempest Build and Installation 
       if: matrix.os == 'ubuntu-latest'
       run: |
