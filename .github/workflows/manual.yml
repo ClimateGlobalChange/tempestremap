@@ -68,12 +68,12 @@ jobs:
         ls -ltrh
         which autoreconf
         autoreconf -fi
-        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment
-        make V=1 -j
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment --enable-static
+        make -j
         make install
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
-        echo "DYLD"
+        echo "DYLD_LIBRARY_PATH"
         echo $DYLD_LIBRARY_PATH
         ls -ltrh /usr/local/miniconda/envs/test-environment/lib/
         echo "printing"
