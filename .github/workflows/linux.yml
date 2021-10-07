@@ -30,7 +30,7 @@ jobs:
           cd /home/runner/work/tempestremap/tempestremap
           # build tempestremap
           autoreconf -fi
-          ./configure --prefix=/home/runner/tempestremap 
+          ./configure --prefix=/home/runner/work/tempestremap 
           make -j
           make install
 
