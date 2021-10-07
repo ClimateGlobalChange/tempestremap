@@ -48,7 +48,12 @@ except (OSError, EOFError, IOError) as e:
 
     exitsTimeFile = False
     print("opening new file")
-    # with (open(time_pkl_file , "wb")) as time_file
+    if not os.path.exists(os.path.dirname(time_pkl_file)):
+        try:
+            os.makedirs(os.path.dirname(time_pkl_file))
+        except OSError as exec: 
+            if exec.errno != errno.EEXIST:
+                raise
     time_file = open(time_pkl_file, 'wb')
 
 
@@ -324,7 +329,7 @@ def generate_mesh(meshstr):
 def check_error(success):
     if False in success:
        print("exiting..")
-       print("Usage: \npython regression_tests.py <location of executables>  <number of procs>\n    Default <location of executables> is ../bin/ and <number of procs> is 2\n")
+       print("Find usage by running: \npython regression_tests.py -h\n")
 
        exit()   
 
@@ -467,6 +472,17 @@ if __name__ == '__main__':
     results = []
     count = 0
     #  print(mesh_cmds)
+
+    # create mesh data maps and test directories before running if not already created
+    if not os.path.isdir("meshes"):
+        os.mkdir("meshes")
+    if not os.path.isdir("data"):
+        os.mkdir("data")    
+    if not os.path.isdir("test"):
+        os.mkdir("test")
+    if not os.path.isdir("maps"):
+        os.mkdir("maps")
+
     # Each for loop below runs the commands to create results
     for result, ss, timeDelta in pool.map(run_command, mesh_cmds):
 

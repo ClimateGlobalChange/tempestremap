@@ -22,6 +22,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: test-environment
+        python-version: 3.6
     - name: Conda info
       shell: bash -l {0}
       run: conda info
@@ -60,11 +61,6 @@ jobs:
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
         cd regression_tests
-        # TODO: copy baselines from server, now run and compare against baseline
-        # get baseline tar files
-        wget https://web.cels.anl.gov/~jain/tar_files.tar.gz
-        tar -xvzf tar_files.tar.gz 
-        mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
     - name: OSX Tempest Build and Installation
       if: matrix.os == 'macos-latest'
@@ -87,9 +83,4 @@ jobs:
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
         cd regression_tests
-        # TODO: copy baselines from server, now run and compare against baseline
-        # get baseline tar files
-        wget https://web.cels.anl.gov/~jain/tar_files.tar.gz
-        tar -xvzf tar_files.tar.gz 
-        mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
