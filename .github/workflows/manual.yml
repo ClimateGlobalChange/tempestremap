@@ -22,6 +22,12 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: test-environment
+    - name: Conda info
+      shell: bash -l {0}
+      run: conda info
+    - name: Conda list
+      shell: pwsh
+      run: conda list
     - name: "os fingerprinting"
       run: |
         pwd
@@ -34,6 +40,14 @@ jobs:
         conda install -y -c conda-forge lapack libnetcdf
         conda install -c anaconda pandas numpy
         which python
+      #   if: matrix.os == 'ubuntu-latest'
+      # run: |
+      #   which conda
+      #   which python
+      #   sudo conda install -y -c conda-forge lapack libnetcdf
+      #   sudo conda install -c anaconda pandas numpy
+      #   which python
+      #   if: matrix.os == 'macos-latest'
     - name: "basic commands"
       run: |
         set -o errexit
@@ -67,7 +81,7 @@ jobs:
         autoreconf -fi
         ls
         # need to specify netcdf lapack by conda or not?
-        ./configure --prefix=$TR_DIR
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/share/miniconda/envs/test-environment --with-hdf5=/usr/share/miniconda/envs/test-environment
         make -j
         make install
     - name: Regression 
