@@ -65,6 +65,7 @@ jobs:
     - name: OSX Tempest Build and Installation
       if: matrix.os == 'macos-latest'
       run: |
+        export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib
         which python
         mydir=/Users/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
