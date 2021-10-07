@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install doxygen graphviz wget gfortran libjpeg-dev libz-dev
-          sudo apt-get install blas lapack libtool          
+          sudo apt-get install libblas-dev liblapack-dev libtool          
           # python3
           sudo apt-get install python3
           
