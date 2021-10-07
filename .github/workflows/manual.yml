@@ -19,28 +19,34 @@ jobs:
         pwd
         ls
         hostnamectl status  
+    - name: "conda install commands"
+      run: |
+        which conda
+        which python
+        conda install -y -c conda-forge lapack libnetcdf
+        conda install -c anaconda pandas numpy
+        conda activate test
+        which python
     - name: "basic commands"
       run: |
-        conda install -y -c conda-forge lapack libnetcdf
-        which python
-        pip install numpy pandas
         set -o errexit
         set -o pipefail
         set -o nounset
         set -o xtrace
         # set -eox pipefail #safety for script
         cd ~ && whoami 
-    - name: "install dependencies"
-      run: |
-          sudo apt-get update
-          sudo apt-get install libtool
-          sudo apt-get install libblas-dev 
-          sudo apt-get install liblapack-dev
-          sudo apt-get install libnetcdf-dev
-          python -m pip install --upgrade pip
-          pip install numpy pandas 
+    # - name: "install dependencies"
+    #   run: |
+    #       sudo apt-get update
+    #       sudo apt-get install libtool
+    #       sudo apt-get install libblas-dev 
+    #       sudo apt-get install liblapack-dev
+    #       sudo apt-get install libnetcdf-dev
+    #       python -m pip install --upgrade pip
+    #       pip install numpy pandas 
     - name: Tempest Build and Installation
       run: |
+        which python
         mydir=/home/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
         cd $mydir
@@ -48,9 +54,10 @@ jobs:
         which autoreconf
         git branch -a
         git pull
-        git checkout vijaysm/new-fixes
+        git checkout master
         autoreconf -fi
         ls
+        # need to specify netcdf lapack by conda or not?
         ./configure --prefix=$TR_DIR
         make -j
         make install
