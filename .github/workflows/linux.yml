@@ -49,6 +49,7 @@ jobs:
           ./configure --prefix=/home/runner/tempestremap --with-netcdf=/home/jain/runner/netcdf-c
           make -j
       - name: Run regression tests
+        run: |
           pwd
           # Run TempestRemap Regression Tests
           cd tempestremap/regression_tests
