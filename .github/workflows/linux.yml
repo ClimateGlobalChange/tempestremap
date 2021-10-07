@@ -3,7 +3,6 @@ name: linux
 on:
   pull_request:
     branches: [ master ]
-on:
   workflow_dispatch:
 
   # Allows to run this workflow manually from the Actions tab
