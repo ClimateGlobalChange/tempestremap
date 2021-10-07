@@ -40,7 +40,7 @@ jobs:
         conda install -y -c conda-forge lapack libnetcdf pandas numpy
         which python
     - name: Ubuntu TempestRemap Build Install and Run Regression
-      if: matrix.os == 'ubuntu-latest'
+      if: contains(matrix.os, 'ubuntu')
       run: |
         export LD_LIBRARY_PATH=/usr/share/miniconda/envs/test-environment/lib:$LD_LIBRARY_PATH
         which python
@@ -57,8 +57,15 @@ jobs:
         echo $PATH
         cd regression_tests
         python regression_tests.py -v -p $TR_DIR/bin -n 4
-    - name: OSX TempestRemap Build Install and Run Regression
-      if: matrix.os == 'macos-latest'
+    - name: Ubuntu Run Regression
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        export LD_LIBRARY_PATH=/usr/share/miniconda/envs/test-environment/lib:$LD_LIBRARY_PATH
+        PATH=/home/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
+        cd /home/runner/work/tempestremap/tempestremap/regression_tests
+        python regression_tests.py -v -p $TR_DIR/bin -n 4
+    - name: OSX TempestRemap Build Install 
+      if: contains(matrix.os, 'macos')
       run: |
         export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
         which python
@@ -80,3 +87,11 @@ jobs:
         otool -L /Users/runner/work/tempestremap/tempestremap/tr/install/bin/GenerateCSMesh
         cd regression_tests
         python regression_tests.py -v -p $TR_DIR/bin -n 4
+    - name: OSX Run Regression
+      if: contains(matrix.os, 'macos')
+      run: |
+        export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        PATH=/Users/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
+        cd /Users/runner/work/tempestremap/tempestremap/regression_tests
+        python regression_tests.py -v -p $TR_DIR/bin -n 4
+
