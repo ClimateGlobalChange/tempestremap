@@ -28,11 +28,6 @@ jobs:
     - name: Conda list
       shell: pwsh
       run: conda list
-    # - name: "os fingerprinting"
-    #   run: |
-    #     pwd
-    #     ls
-    #     # hostnamectl status  
     - name: "conda install commands"
       run: |
         which conda
@@ -40,36 +35,8 @@ jobs:
         conda install -y -c conda-forge lapack libnetcdf
         conda install -c anaconda pandas numpy
         which python
-      #   if: matrix.os == 'ubuntu-latest'
-      # run: |
-      #   which conda
-      #   which python
-      #   sudo conda install -y -c conda-forge lapack libnetcdf
-      #   sudo conda install -c anaconda pandas numpy
-      #   which python
-      #   if: matrix.os == 'macos-latest'
-    # - name: "basic commands"
-    #   run: |
-    #     set -o errexit
-    #     set -o pipefail
-    #     set -o nounset
-    #     set -o xtrace
-    #     # set -eox pipefail #safety for script
-    #     cd ~ && whoami 
-    #     pwd
-    #     which python
-        
-    # - name: "install dependencies"
-    #   run: |
-    #       sudo apt-get update
-    #       sudo apt-get install libtool
-    #       sudo apt-get install libblas-dev 
-    #       sudo apt-get install liblapack-dev
-    #       sudo apt-get install libnetcdf-dev
-    #       python -m pip install --upgrade pip
-    #       pip install numpy pandas 
     - name: Ubuntu Tempest Build and Installation 
-    - if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         which python
         mydir=/home/runner/work/tempestremap/tempestremap
@@ -96,7 +63,7 @@ jobs:
         mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
     - name: OSX Tempest Build and Installation
-    - if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macos-latest'
       run: |
         which python
         mydir=/Users/runner/work/tempestremap/tempestremap
@@ -122,4 +89,3 @@ jobs:
         tar -xvzf tar_files.tar.gz 
         mv tar_files/* .
         python regression_tests.py -v -p $TR_DIR/bin -n 4
-  
