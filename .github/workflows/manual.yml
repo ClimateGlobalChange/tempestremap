@@ -33,7 +33,7 @@ jobs:
       run: |
         which conda
         which python
-        conda install -y -c conda-forge lapack libnetcdf pandas numpy
+        conda install -y -c conda-forge lapack libnetcdf=4.7.3 pandas numpy
         which python
     - if: contains(matrix.os, 'macos')
       name: Install OSX Deps
