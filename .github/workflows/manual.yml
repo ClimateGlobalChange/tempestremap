@@ -29,16 +29,16 @@ jobs:
     - name: Conda list
       shell: pwsh
       run: conda list
+    - if: contains(matrix.os, 'macos')
+      name: Install OSX Deps
+      run: |
+        brew install automake autoconf libtool
     - name: "conda install commands"
       run: |
         which conda
         which python
         conda install -y -c conda-forge lapack libnetcdf pandas numpy
         which python
-    - if: contains(matrix.os, 'macos')
-      name: Install OSX Deps
-      run: |
-        brew install automake autoconf libtool
     - name: Ubuntu TempestRemap Build Install and Run Regression
       if: matrix.os == 'ubuntu-latest'
       run: |
