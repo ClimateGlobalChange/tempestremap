@@ -1,0 +1,32 @@
+name: C/C++ OSX-CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: "macos-latest"
+
+    steps:
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniconda-version: "latest"
+        auto-update-conda: true
+        auto-activate-base: true
+        use-only-tar-bz2: true
+    - run: conda install -y -c conda-forge lapack libnetcdf
+    - uses: actions/checkout@v2
+    - name: pre-process
+      run: mkdir build && autoreconf -fi && cd build
+    - name: configure
+      run: ../configure --with-netcdf=$HOME/miniconda3 --with-hdf5=$HOME/miniconda3
+    - name: make
+      run: make
+    - name: make check
+      run: make check
+    - name: make distcheck
+      run: make distcheck
