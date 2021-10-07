@@ -25,14 +25,14 @@ jobs:
       - name: Build TempestRemap
         run: |
           pwd
+          ls
           # build tempestremap
-          cd tempestremap
           ./configure --prefix=/home/runner/tempestremap 
           make -j
       - name: Run regression tests
         run: |
           pwd
           # Run TempestRemap Regression Tests
-          cd tempestremap/regression_tests
+          cd regression_tests
           python regression_tests.py /home/runner/tempestremap/bin/ 4
           
