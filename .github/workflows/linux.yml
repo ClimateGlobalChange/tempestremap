@@ -39,5 +39,5 @@ jobs:
           cd /home/runner/work/tempestremap/tempestremap
           # Run TempestRemap Regression Tests
           cd regression_tests
-          python regression_tests.py /home/runner/tempestremap/bin/ 4
+          python regression_tests.py -p /home/runner/work/tempestremap/bin/ -n 4
           
