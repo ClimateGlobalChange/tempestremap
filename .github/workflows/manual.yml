@@ -48,7 +48,17 @@ jobs:
       #   sudo conda install -c anaconda pandas numpy
       #   which python
       #   if: matrix.os == 'macos-latest'
-?
+    # - name: "basic commands"
+    #   run: |
+    #     set -o errexit
+    #     set -o pipefail
+    #     set -o nounset
+    #     set -o xtrace
+    #     # set -eox pipefail #safety for script
+    #     cd ~ && whoami 
+    #     pwd
+    #     which python
+        
     # - name: "install dependencies"
     #   run: |
     #       sudo apt-get update
