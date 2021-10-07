@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        
+
     steps:
     - uses: actions/checkout@v2
 
@@ -47,7 +47,7 @@ jobs:
         conda install -y -c conda-forge lapack libnetcdf pandas numpy
         which python
 
-    - name: Ubuntu TempestRemap Build Install and Run Regression
+    - name: Ubuntu TempestRemap Build Install 
       if: contains(matrix.os, 'ubuntu')
       run: |
         export LD_LIBRARY_PATH=/usr/share/miniconda/envs/test-environment/lib:$LD_LIBRARY_PATH

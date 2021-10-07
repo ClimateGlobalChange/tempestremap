@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 60
 
     steps:         
+      - uses: actions/checkout@v2
       - name: Dependencies
         run: |
           sudo apt-get update
@@ -26,6 +27,7 @@ jobs:
         run: |
           pwd
           ls
+          cd /home/runner/work/tempestremap/tempestremap
           # build tempestremap
           autoreconf -fi
           ./configure --prefix=/home/runner/tempestremap 
@@ -34,6 +36,7 @@ jobs:
       - name: Run regression tests
         run: |
           pwd
+          cd /home/runner/work/tempestremap/tempestremap
           # Run TempestRemap Regression Tests
           cd regression_tests
           python regression_tests.py /home/runner/tempestremap/bin/ 4
