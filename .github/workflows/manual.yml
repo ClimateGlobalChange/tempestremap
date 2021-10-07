@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  ubuntu-latest-tempestremap:
-    name: "ubuntu-latest-tempestremap"
+  regression-tempestremap:
+    name: "regression-tempestremap"
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -69,6 +69,7 @@ jobs:
     #       python -m pip install --upgrade pip
     #       pip install numpy pandas 
     - name: Tempest Build and Installation
+    - if: matrix.os == 'ubuntu-latest'
       run: |
         which python
         mydir=/home/runner/work/tempestremap/tempestremap
@@ -85,14 +86,34 @@ jobs:
         ./configure --prefix=$TR_DIR --with-netcdf=/usr/share/miniconda/envs/test-environment --with-hdf5=/usr/share/miniconda/envs/test-environment
         make -j
         make install
-    - name: Regression 
-      run: |
-        mydir=/home/runner/work/tempestremap/tempestremap
-        export TR_DIR=$mydir/tr/install      
-        export TR_DIR=$mydir/tr/install
         PATH=$TR_DIR/bin:$PATH
         echo $PATH
-        ls $TR_DIR/bin
+        cd regression_tests
+        # TODO: copy baselines from server, now run and compare against baseline
+        # get baseline tar files
+        wget https://web.cels.anl.gov/~jain/tar_files.tar.gz
+        tar -xvzf tar_files.tar.gz 
+        mv tar_files/* .
+        python regression_tests.py -v -p $TR_DIR/bin -n 4
+    - if: matrix.os == 'macos-latest'
+      run: |
+        which python
+        mydir=/Users/runner/work/tempestremap/tempestremap
+        export TR_DIR=$mydir/tr/install
+        cd $mydir
+        ls -ltrh
+        which autoreconf
+        git branch -a
+        git pull
+        git checkout master
+        autoreconf -fi
+        ls
+        # need to specify netcdf lapack by conda or not?
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment
+        make -j
+        make install
+        PATH=$TR_DIR/bin:$PATH
+        echo $PATH
         cd regression_tests
         # TODO: copy baselines from server, now run and compare against baseline
         # get baseline tar files
