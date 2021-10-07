@@ -51,7 +51,7 @@ jobs:
         which autoreconf
         git branch -a
         git pull
-        git checkout master
+        git checkout rajeeja/github_actions_fixes
         autoreconf -fi
         ls
         # need to specify netcdf lapack by conda or not?
@@ -73,7 +73,7 @@ jobs:
         which autoreconf
         git branch -a
         git pull
-        git checkout master
+        git checkout rajeeja/github_actions_fixes
         autoreconf -fi
         ls
         # need to specify netcdf lapack by conda or not?
