@@ -41,13 +41,16 @@ jobs:
           # popd        
 
             
-      - name: Compile and Run regression tests
+      - name: Build TempestRemap
         run: |
+          pwd
           # build tempestremap
           cd tempestremap
           ./configure --prefix=/home/runner/tempestremap --with-netcdf=/home/jain/runner/netcdf-c
           make -j
-          # Run regression tests
-          cd regression_tests
+      - name: Run regression tests
+          pwd
+          # Run TempestRemap Regression Tests
+          cd tempestremap/regression_tests
           python regression_tests.py /home/runner/tempestremap/bin/ 2
           
