@@ -6,65 +6,92 @@ name: Manual workflow
 # or API.
 on:
   workflow_dispatch:
-   
-  ubuntu-latest-spack-netcdf-job:
-    name: "ubuntu-latest-tempestremap"
-    runs-on: ubuntu-latest
+
+jobs:
+  regression-tempestremap:
+    name: "regression-tempestremap"
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # need to fix https://github.com/rajeeja/tempestremap/runs/3830784744?check_suite_focus=true#step:11:25 for osx build to work
+        # os: [ubuntu-latest, macos-latest]
+
     steps:
     - uses: actions/checkout@v2
-    - name: "os fingerprinting"
+
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: test-environment
+        python-version: 3.6
+
+    - name: Conda info
+      shell: bash -l {0}
+      run: conda info
+
+    - name: Conda list
+      shell: pwsh
+      run: conda list
+    - if: contains(matrix.os, 'macos')
+
+      name: Install OSX Deps
       run: |
-        pwd
-        ls
-        hostnamectl status  
-    - name: "basic commands"
+        brew install automake autoconf libtool
+
+    - name: "conda install commands"
       run: |
-        set -o errexit
-        set -o pipefail
-        set -o nounset
-        set -o xtrace
-        # set -eox pipefail #safety for script
-        cd ~ && whoami 
-    - name: "install dependencies"
+        which conda
+        which python
+        conda install -y -c conda-forge lapack libnetcdf pandas numpy
+        which python
+
+    - name: Ubuntu TempestRemap Build Install 
+      if: contains(matrix.os, 'ubuntu')
       run: |
-          sudo apt-get update
-          sudo apt-get install libtool
-          sudo apt-get install libblas-dev 
-          sudo apt-get install liblapack-dev
-          sudo apt-get install libnetcdf-dev
-          python -m pip install --upgrade pip
-          pip install numpy pandas 
-    - name: Tempest Build and Installation
-      run: |
+        export LD_LIBRARY_PATH=/usr/share/miniconda/envs/test-environment/lib:$LD_LIBRARY_PATH
+        which python
         mydir=/home/runner/work/tempestremap/tempestremap
         export TR_DIR=$mydir/tr/install
         cd $mydir
         ls -ltrh
         which autoreconf
-        git branch -a
-        git pull
-        git checkout vijaysm/new-fixes
         autoreconf -fi
-        ls
-        ./configure --prefix=$TR_DIR
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/share/miniconda/envs/test-environment --with-hdf5=/usr/share/miniconda/envs/test-environment
         make -j
         make install
-    - name: Regression 
-      run: |
-        mydir=/home/runner/work/tempestremap/tempestremap
-        export TR_DIR=$mydir/tr/install      
-        export TR_DIR=$mydir/tr/install
-        PATH=$TR_DIR/bin:$PATH
-        echo $PATH
-        ls $TR_DIR/bin
-        cd regression_tests
-        # TODO: copy baselines from server, now run and compare against baseline
-        # get baseline tar files
-        wget https://web.cels.anl.gov/~jain/tar_files.tar.gz
-        tar -xvzf tar_files.tar.gz 
-        mv tar_files/* .
-        python regression_tests.py -v -p $TR_DIR/bin -n 4
-       
 
-        
+    - name: Ubuntu Run Regression
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        export LD_LIBRARY_PATH=/usr/share/miniconda/envs/test-environment/lib:$LD_LIBRARY_PATH
+        PATH=/home/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
+        cd /home/runner/work/tempestremap/tempestremap/regression_tests
+        python regression_tests.py -v -p /home/runner/work/tempestremap/tempestremap/tr/install/bin -n 4
+
+    - name: OSX TempestRemap Build Install 
+      if: contains(matrix.os, 'macos')
+      run: |
+        export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        which python
+        mydir=/Users/runner/work/tempestremap/tempestremap
+        export TR_DIR=$mydir/tr/install
+        cd $mydir
+        ls -ltrh
+        which autoreconf
+        autoreconf -fi
+        ./configure --prefix=$TR_DIR --with-netcdf=/usr/local/miniconda/envs/test-environment --with-hdf5=/usr/local/miniconda/envs/test-environment --with-netcdf-include=/usr/local/miniconda/envs/test-environment/include --with-netcdf-lib=/usr/local/miniconda/envs/test-environment/lib
+        make -j
+        make install
+
+    - name: OSX Run Regression
+      if: contains(matrix.os, 'macos')
+      run: |
+        export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        PATH=/Users/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
+        cd /Users/runner/work/tempestremap/tempestremap/regression_tests
+        DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH && python regression_tests.py -v -p /Users/runner/work/tempestremap/tempestremap/tr/install/bin/ -n 4
 
