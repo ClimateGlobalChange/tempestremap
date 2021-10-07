@@ -86,12 +86,12 @@ jobs:
         echo "printing"
         otool -L /Users/runner/work/tempestremap/tempestremap/tr/install/bin/GenerateCSMesh
         cd regression_tests
-        python regression_tests.py -v -p $TR_DIR/bin -n 4
+        python regression_tests.py -v -p /Users/runner/work/tempestremap/tempestremap/tr/install/bin/ -n 4
     - name: OSX Run Regression
       if: contains(matrix.os, 'macos')
       run: |
         export DYLD_LIBRARY_PATH=/usr/local/miniconda/envs/test-environment/lib:$DYLD_LIBRARY_PATH
         PATH=/Users/runner/work/tempestremap/tempestremap/tr/install/bin:$PATH
         cd /Users/runner/work/tempestremap/tempestremap/regression_tests
-        python regression_tests.py -v -p $TR_DIR/bin -n 4
+        python regression_tests.py -v -p /Users/runner/work/tempestremap/tempestremap/tr/install/bin/ -n 4
 

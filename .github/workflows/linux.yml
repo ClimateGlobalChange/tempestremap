@@ -15,43 +15,24 @@ jobs:
       - name: Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install doxygen graphviz wget gfortran libjpeg-dev libz-dev
-          sudo apt-get install libblas-dev liblapack-dev libtool          
-          # python3
-          sudo apt-get install python3
-          
-      - name: Installation
-        run: |
-          mydir="$PWD"
-          # build netcdf c
-          wget https://www.unidata.ucar.edu/downloads/netcdf/ftp/netcdf-c-4.7.4.tar.gz &> /dev/null
-          tar -xzf netcdf-c-4.7.4.tar.gz
-          pushd netcdf-c-4.7.4
-          ./configure --prefix=/home/runner/netcdf-c --disable-dap --disable-utilities
-          make -j
-          sudo make install
-          popd                  
-          # # build netcdf fortran
-          # wget https://github.com/Unidata/netcdf-fortran/archive/v4.5.3.tar.gz &> /dev/null
-          # tar -xzf v4.5.3.tar.gz
-          # pushd netcdf-fortran-4.5.3
-          # ./configure --prefix=/home/runner/netcdf-fortran
-          # make -j
-          # sudo make install
-          # popd        
-
+          sudo apt-get install libtool
+          sudo apt-get install libblas-dev 
+          sudo apt-get install liblapack-dev
+          sudo apt-get install libnetcdf-dev
+          python -m pip install --upgrade pip
+          pip install numpy pandas 
             
       - name: Build TempestRemap
         run: |
           pwd
           # build tempestremap
           cd tempestremap
-          ./configure --prefix=/home/runner/tempestremap --with-netcdf=/home/jain/runner/netcdf-c
+          ./configure --prefix=/home/runner/tempestremap 
           make -j
       - name: Run regression tests
         run: |
           pwd
           # Run TempestRemap Regression Tests
           cd tempestremap/regression_tests
-          python regression_tests.py /home/runner/tempestremap/bin/ 2
+          python regression_tests.py /home/runner/tempestremap/bin/ 4
           
