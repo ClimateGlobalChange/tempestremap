@@ -10,10 +10,18 @@ on:
 jobs:
   ubuntu-latest-tempestremap:
     name: "ubuntu-latest-tempestremap"
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
     - uses: actions/checkout@v2
     - uses: conda-incubator/setup-miniconda@v2
+        with:
+        activate-environment: test-environment
     - name: "os fingerprinting"
       run: |
         pwd
@@ -25,7 +33,6 @@ jobs:
         which python
         conda install -y -c conda-forge lapack libnetcdf
         conda install -c anaconda pandas numpy
-        conda activate test
         which python
     - name: "basic commands"
       run: |
@@ -35,6 +42,8 @@ jobs:
         set -o xtrace
         # set -eox pipefail #safety for script
         cd ~ && whoami 
+        pwd
+        which python
     # - name: "install dependencies"
     #   run: |
     #       sudo apt-get update
