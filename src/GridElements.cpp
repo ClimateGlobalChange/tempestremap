@@ -1015,7 +1015,10 @@ void Mesh::WriteScrip(
 			varDims->put(&nSize, 1);
 		} else {
 			varDims->set_cur((long)0);
-			varDims->put(&(vecGridDimSize[0]), (long)vecGridDimSize.size());
+			int nGridDimSize[2];
+			nGridDimSize[0] = vecGridDimSize[1];
+			nGridDimSize[1] = vecGridDimSize[0];
+			varDims->put(&(nGridDimSize[0]), (long)vecGridDimSize.size());
 		}
 	}
 }
@@ -1182,7 +1185,7 @@ void Mesh::Read(const std::string & strFile) {
 					_EXCEPTION1("SCRIP grid file \"%s\" has grid_rank 2 but does not contain variable grid_dims",
 						strFile.c_str());
 				}
-				if (varGridDims->num_dims() != 0) {
+				if (varGridDims->num_dims() != 1) {
 					_EXCEPTION1("SCRIP grid file \"%s\" variable grid_dims has more than one dimension",
 						strFile.c_str());
 				}
@@ -1194,9 +1197,12 @@ void Mesh::Read(const std::string & strFile) {
 				vecGridDimSize.resize(2);
 				vecGridDimName.resize(2);
 
-				varGridDims->get(&(vecGridDimSize[0]), 2);
-				vecGridDimName[0] = "griddim0";
-				vecGridDimName[1] = "griddim1";
+				int nGridDims[2];
+				varGridDims->get(&(nGridDims[0]), 2);
+				vecGridDimSize[0] = nGridDim[1];
+				vecGridDimSize[1] = nGridDim[0];
+				vecGridDimName[0] = "griddim1";
+				vecGridDimName[1] = "griddim0";
 
 				if (vecGridDimSize[0] * vecGridDimSize[1] != faces.size()) {
 					_EXCEPTION4("SCRIP grid file \"%s\" grid_dims (%i,%i) do not agree with grid_size (%i)",
