@@ -1199,8 +1199,8 @@ void Mesh::Read(const std::string & strFile) {
 
 				int nGridDims[2];
 				varGridDims->get(&(nGridDims[0]), 2);
-				vecGridDimSize[0] = nGridDim[1];
-				vecGridDimSize[1] = nGridDim[0];
+				vecGridDimSize[0] = nGridDims[1];
+				vecGridDimSize[1] = nGridDims[0];
 				vecGridDimName[0] = "griddim1";
 				vecGridDimName[1] = "griddim0";
 
