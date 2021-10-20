@@ -30,7 +30,7 @@
 template <typename T, size_t size>
 struct index_array
 {
-	T ix_[size];
+	T ix_[size+1];
 
 #if defined(__INTEL_COMPILER)
 	inline T& operator[](int i) {

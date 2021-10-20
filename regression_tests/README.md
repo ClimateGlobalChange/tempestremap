@@ -4,7 +4,9 @@
 - Paths used for regression are relative to the directory <yourpath>/tempestremap/regression_tests/
     - Python calls must be made from this directory
     - On a newly cloned repository:
+        - cd regression_tests
         - Generate baseline using ```python regression_tests.py -g```  generates ```baseline_data.pkl``` and ```timing_data.pkl```
+        - Commandline options supported can be found by running ```python regression_tests.py -h
         - Now run the regression as required: ```python regression_tests.py ``` generates ```baseline_data_repeat.pkl``` and ```regtime.pkl```
     - There are 5 major commands in the regression workflow
       - Generate mesh (called twice)

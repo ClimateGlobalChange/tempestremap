@@ -14,6 +14,9 @@ import pandas as pd
 import multiprocessing as mp
 from multiprocessing import Pool
 
+from tempest_commands import generate_cs_mesh, generate_ico_mesh, generate_rll_mesh
+from tempest_commands import generate_overlap_mesh, generate_offline_map, generate_test_data, apply_offline_map
+
 # some global paths for storing files
 meshes_path = "meshes/"
 maps_path = "maps/"
@@ -27,34 +30,39 @@ regression_dict = {'id': [], 'source': [], 'target': [], 'error': []}
 timing_dict = {'command':[], 'average_time': [], 'num_runs': []}
 time_pkl_file = baseline_path+'timing_data.pkl'
 
-objects = []
+timing_objects = []
 generate_baseline = False
+baseline_average = False
 
 exitsTimeFile = True
-#  Open timingfile
-try:
-    time_file = pickle.load(open(time_pkl_file, 'rb+'))
-
-    with (open(time_pkl_file , "rb+")) as openfile:
-        while True:
+def open_timingfile(baseline_average):
+    #  Open timingfile
+    df_timingfile=[]
+    try:
+        time_file = pickle.load(open(time_pkl_file, 'rb+'))
+        if baseline_average == False and generate_baseline == True:
+            time_file = open(time_pkl_file, 'wb')
+        else:
+            with (open(time_pkl_file , "rb+")) as openfile:
+                while True:
+                    try:
+                        timing_objects.append(pickle.load(openfile))
+                    except EOFError:
+                        break
+                df_timingfile = timing_objects[0]
+                print("opened existing timing file: ", time_pkl_file)
+    except (OSError, EOFError, IOError) as e:
+        exitsTimeFile = False
+        print("opening new file")
+        if not os.path.exists(os.path.dirname(time_pkl_file)):
             try:
-                objects.append(pickle.load(openfile))
-            except EOFError:
-                break
-    df_timingfile = objects[0]
-    print("opened existing timing file: ", time_pkl_file)
-
-except (OSError, EOFError, IOError) as e:
-
-    exitsTimeFile = False
-    print("opening new file")
-    if not os.path.exists(os.path.dirname(time_pkl_file)):
-        try:
-            os.makedirs(os.path.dirname(time_pkl_file))
-        except OSError as exec: 
-            if exec.errno != errno.EEXIST:
-                raise
-    time_file = open(time_pkl_file, 'wb')
+                os.makedirs(os.path.dirname(time_pkl_file))
+            except OSError as exec: 
+                if exec.errno != errno.EEXIST:
+                    raise
+        time_file = open(time_pkl_file, 'wb')
+    
+    return time_file, timing_objects, df_timingfile
 
 
 def populate_timing_data(cmd, t, loc):
@@ -67,13 +75,18 @@ def populate_timing_data(cmd, t, loc):
         mycmd+=cmd[j]+" "
 
     # timing file is created from the first time object read from timing file is empty
-    if objects == []:
+    if timing_objects == []:
         timing_dict['command'].append(mycmd)
         timing_dict['average_time'].append(t)
         timing_dict['num_runs'].append(1)
     # use df_timingfile datafram read from previous timing
-    elif generate_baseline == True:
+    elif generate_baseline == True and baseline_average == True:
         m = np.where(df_timingfile['command']==mycmd)
+        if (m[0].size == 0):
+            print("null value found, timingfile does not have the command: \n", mycmd)
+            print("Recreate baselines. exiting..")
+            raise
+            # exit()
         val=(m[0]).item()
 
         # update the loaded file dataframe to put average time and number of runs for the command
@@ -176,117 +189,6 @@ def extract_results(id, res):
     regression_dict['target'].append(tgtV)
     regression_dict['error'].append(percentage_diff)
 
-def generate_cs_mesh(res, filename):
-    command = []
-    command.append(bin_path+"/GenerateCSMesh")
-    command.append("--file")
-    command.append(filename)
-    command.append("--res")
-    command.append(res)
-
-    return command
-
-def generate_ico_mesh(res, dual, filename):
-    command = []
-    command.append(bin_path+"/GenerateICOMesh")
-    if dual:
-        command.append("--dual")
-    command.append("--res")
-    command.append(res)    
-    command.append("--file")
-    command.append(filename)
-
-    return command
-
-def generate_rll_mesh(lon, lat, filename):
-    command = []
-    command.append(bin_path+"/GenerateRLLMesh")
-    command.append("--lon")
-    command.append(lon)
-    command.append("--lat")
-    command.append(lat)
-    command.append("--file")
-    command.append(filename)
-
-    return command
-
-def generate_overlap_mesh(inpfname1, inpfname2, method, out):
-    command = []
-    command.append(bin_path+"/GenerateOverlapMesh")
-    command.append("--a")
-    command.append(meshes_path+inpfname1)
-    command.append("--b")
-    command.append(meshes_path+inpfname2)
-    command.append("--out")
-    command.append(meshes_path+out)    
-    command.append("--method")
-    command.append(method)
-
-    return command
-
-# order: list with 2 entries that is strtictly above 0: FV (1:4), SE==4
-# methods: list with 2 entries specifying one of fv, cgll, dgll
-def generate_offline_map(inpfname1, inpfname2, inpoverlapmesh, outputmap, orders, methods, correct_areas=False, monotone=False):
-    command = []
-    command.append(bin_path+"/GenerateOfflineMap")
-    
-    command.append("--in_mesh")
-    command.append(meshes_path+inpfname1)
-    command.append("--out_mesh")
-    command.append(meshes_path+inpfname2)
-    command.append("--ov_mesh")
-    command.append(meshes_path+inpoverlapmesh)
-    
-    command.append("--in_np")
-    command.append(orders[0])
-    command.append("--out_np")
-    command.append(orders[1])
-   
-    command.append("--in_type")
-    command.append(methods[0])
-    command.append("--out_type")
-    command.append(methods[1])
-    
-    if correct_areas:
-        command.append("--correct_areas")
-    
-    if monotone:
-        command.append("--mono")
-    
-    command.append("--out_map")
-    command.append(maps_path+outputmap)    
-
-    return command
-
-def generate_test_data(inpfname, testname, out_test):
-    command = []
-    command.append(bin_path+"/GenerateTestData")
-    command.append("--mesh")
-    command.append(meshes_path+inpfname)
-    command.append("--test")
-    command.append(testname)
-    command.append("--out")
-    command.append(data_path+out_test)             
-
-    return command
-
-def apply_offline_map(mapfile, inputdatafile, variablename, outfile):
-    command = []
-    command.append(bin_path+"/ApplyOfflineMap")
-    
-    command.append("--in_data")
-    command.append(data_path+inputdatafile)
-    
-    command.append("--map")
-    command.append(maps_path+mapfile)
-    
-    command.append("--var")
-    command.append(variablename)    
-    
-    command.append("--out_data")
-    command.append(data_path+outfile)    
-        
-    return command
 
 def generate_mesh(meshstr):
     if "cs" in meshstr:
@@ -295,7 +197,7 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate cs mesh command
-        command = generate_cs_mesh(res, meshes_path+filename)
+        command = generate_cs_mesh(res, meshes_path+filename, bin_path)
         #
     elif "icod" in meshstr:
         filename = "outICODMesh"
@@ -303,7 +205,7 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate polygonal mesh command        
-        command = generate_ico_mesh(res, True, meshes_path+filename)
+        command = generate_ico_mesh(res, True, meshes_path+filename, bin_path)
         #
     elif "ico" in meshstr:
         filename = "outICOMesh"
@@ -311,7 +213,7 @@ def generate_mesh(meshstr):
         filename+="-"+res+".g"
 
         # call function to generate icosahedral mesh command        
-        command = generate_ico_mesh(res, False, meshes_path+filename)
+        command = generate_ico_mesh(res, False, meshes_path+filename, bin_path)
         #
     elif "rll" in meshstr:
         filename = "outRLLMesh"
@@ -321,17 +223,26 @@ def generate_mesh(meshstr):
         filename+="-"+lon+"-"+lat+".g"
 
         # call function to generate regular lat-lon mesh command
-        command = generate_rll_mesh(lon, lat, meshes_path+filename)
+        command = generate_rll_mesh(lon, lat, meshes_path+filename, bin_path)
         #
+    else:
+        check_error(False, "")
 
     return command, filename
 
-def check_error(success):
-    if False in success:
+def check_error(success, results):
+    if (False in success):
        print("exiting..")
        print("Find usage by running: \npython regression_tests.py -h\n")
-
-       exit()   
+       raise
+    # scan for "Error:" in results string
+    for i in results:
+        for j in i:
+            if "Error:" in j:
+                print("exiting..")
+                print("Find usage by running: \npython regression_tests.py -h\n")
+                raise  
+    #    exit()   
 
 if __name__ == '__main__':
 
@@ -344,6 +255,7 @@ if __name__ == '__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     parser.add_argument("-g", "--generate_baseline", help="Generate new baseline for comparison (regression) later", action = "store_true")
+    parser.add_argument("-u", "--baseline_average", help="Don't average baseline with previous runs", action = "store_true")    
     parser.add_argument("-p", "--path", type=str, help="run parallel tests", default="../bin")
     parser.add_argument("-n", "--procs", type=int, help="number of processors used for running regression tests",default=2)
 
@@ -363,7 +275,12 @@ if __name__ == '__main__':
     if args.path:
         print("executable path specified =", args.path)
         bin_path=args.path
+    if args.baseline_average:
+        baseline_average=True
+        print("average from previous baseline:", baseline_average)
 
+    # open the timingfile
+    time_file, timing_objects, df_timingfile = open_timingfile(baseline_average)
 
     # Run a pipeline
     # read inputs
@@ -402,7 +319,7 @@ if __name__ == '__main__':
         # name overlap mesh as in+outfile.g
         overlapmesh = in_file[:len(in_file)-2]+"-"+out_file
 
-        cmd = generate_overlap_mesh(in_file, out_file, method, overlapmesh)
+        cmd = generate_overlap_mesh(in_file, out_file, method, overlapmesh, bin_path, meshes_path)
         overlap_test_cmds.append(cmd)
 
         # Generate Offline Map
@@ -411,7 +328,7 @@ if __name__ == '__main__':
         ofmap_out+=srcmesh_str.upper()+"-"+tgtmesh_str.upper()
         ofmap_out+="-O"+order+".nc"
 
-        correct_areas = tm.loc[i].at["correctareas"]
+        nocorrect_areas = tm.loc[i].at["nocorrectareas"]
         monotone = tm.loc[i].at["monotone"]
 
         # specify two entries 1st for input and 2nd for output
@@ -427,7 +344,7 @@ if __name__ == '__main__':
         inpoverlapmesh = overlapmesh 
 
         # call generate offline map
-        cmd = generate_offline_map(in_file, out_file, inpoverlapmesh, ofmap_out, orders, methods, correct_areas, monotone)
+        cmd = generate_offline_map(in_file, out_file, inpoverlapmesh, ofmap_out, orders, methods, bin_path, meshes_path, maps_path, nocorrect_areas, monotone)
         g_offmap_cmds.append(cmd)
 
         # Generate Test Data
@@ -437,7 +354,7 @@ if __name__ == '__main__':
         out_td_src+=srcmesh_str.upper()
         out_td_src+="-F"+test+"-O"+order+".nc"
 
-        cmd = generate_test_data(in_file, test, out_td_src)
+        cmd = generate_test_data(in_file, test, out_td_src, bin_path, data_path, meshes_path)
         generate_test_cmds.append(cmd)
 
         # Apply Offline Map
@@ -446,7 +363,7 @@ if __name__ == '__main__':
         out_test+=srcmesh_str.upper()
         out_test+="-F"+test+"-O"+order+".nc"
 
-        cmd = apply_offline_map(ofmap_out, out_td_src, variablename, out_test)          
+        cmd = apply_offline_map(ofmap_out, out_td_src, variablename, out_test, bin_path, data_path, maps_path)          
         a_offmap_cmds.append(cmd)  
 
     # Running multiple processes in parallel and in sequence
@@ -481,10 +398,14 @@ if __name__ == '__main__':
 
         populate_timing_data(mesh_cmds[count], timeDelta, splitLoc)
         count=count+1
-
+        if verbose:
+           if count == 1:
+              print("\nGENERATE MESH CMDS===================================\n")
+           print(result)
+           print("\n===================================\n")
         results.append(result)
         success.append(ss)
-    check_error(success)
+    check_error(success, results)
     #  
     success = []
     results = []
@@ -494,9 +415,14 @@ if __name__ == '__main__':
 
        populate_timing_data(generate_test_cmds[count], timeDelta, splitLoc)
        count=count+1
+       if verbose:
+           if count == 1:
+             print("\nGENERATE TEST CMDS===================================\n")
+           print(result)
+           print("\n===================================\n")
        results.append(result)
        success.append(ss)    
-    check_error(success)
+    check_error(success, results)
     #
     success = []
     results = [] 
@@ -506,9 +432,14 @@ if __name__ == '__main__':
 
        populate_timing_data(overlap_test_cmds[count], timeDelta, splitLoc)
        count=count+1
+       if verbose:
+           if count == 1:
+             print("\nGENERATE OVERLAP TEST CMDS===================================\n")
+           print(result)
+           print("\n===================================\n")
        results.append(result)
        success.append(ss)    
-    check_error(success)
+    check_error(success, results)
     # 
     success = []
     results = []    
@@ -518,9 +449,14 @@ if __name__ == '__main__':
 
        populate_timing_data(g_offmap_cmds[count], timeDelta, splitLoc)
        count=count+1
+       if verbose:
+           if count == 1:
+             print("\nGENERATE OFFLINE MAP===================================\n")
+           print(result)
+           print("\n===================================\n")
        results.append(result)
        success.append(ss)    
-    check_error(success)
+    check_error(success, results)
     # 
     success = []
     results = []   
@@ -530,9 +466,14 @@ if __name__ == '__main__':
 
        populate_timing_data(a_offmap_cmds[count], timeDelta, splitLoc)
        count=count+1
+       if verbose:
+           if count == 1:
+             print("\nAPPLY OFFLINE MAP CMDS===================================\n")
+           print(result)
+           print("\n===================================\n")
        results.append(result)
        success.append(ss)       
-    check_error(success)
+    check_error(success, results)
     #  print(results)
     pool.close()
     pool.join()
@@ -559,8 +500,8 @@ if __name__ == '__main__':
         print("\n Saved baseline/baseline_data.pkl file")
 
         # write current results to a file
-        #  check if objects populated from existing timing file is available
-        if objects == []:
+        #  check if timing_objects populated from existing timing file is available
+        if timing_objects == []:
             df_t = pd.DataFrame(timing_dict)
             pickle.dump(df_t, time_file)
             print("\n Saved baseline/timing_data.pkl file")
@@ -620,11 +561,15 @@ if __name__ == '__main__':
         # print(dlength)
         # print(df_timingfile.shape[0], df_timingfile.shape[1])
         # print("old_results")
-        print(df_timingfile['average_time'][0])
         for j in range(dlength):
             m = np.where(df_timingfile['command']==timing_dict['command'][j])
+            if (m[0].size == 0):
+                print("null value found, baseline does not have the command: \n", timing_dict['command'][j])
+                print("Recreate baselines. exiting..")
+                raise
+                # exit()
             # assuming there are no repetitions and there is one unique cmd
-            val=np.asscalar(m[0])
+            val=m[0].item()
             # print(val)
             comptime_dict['command'].append(timing_dict['command'][j])
             # comptime_dict['num_runs'].append(df_timingfile['num_runs'][val])
@@ -637,7 +582,7 @@ if __name__ == '__main__':
         
         
         dfcomp = pd.DataFrame(comptime_dict)
-        dfcomp['command'] = dfcomp['command'].astype(np.str)
+        dfcomp['command'] = dfcomp['command'].astype(str)
         # dfcomp['num_runs'] = dfcomp['num_runs'].astype(np.int)
         dfcomp['average_time'] = dfcomp['average_time'].astype(np.float64)
         dfcomp['time'] = dfcomp['time'].astype(np.float64)
