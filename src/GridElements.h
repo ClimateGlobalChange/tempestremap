@@ -682,7 +682,7 @@ public:
 	///	<summary>
 	///		Vector storing mask variable for this mesh.
 	///	</summary>
-	DataArray1D<int> vecMask;
+	std::vector<int> vecMask;
 
 	///	<summary>
 	///		EdgeMap for this mesh.

@@ -320,29 +320,6 @@ extern "C" {
 		std::string strTargetType,
 		const GenerateOfflineMapAlgorithmOptions & optsAlg,
 		OfflineMap & mapRemap );
-/*
-		int nPin = 4,
-		int nPout = 4,
-		bool fNoBubble = false,
-		bool fCorrectAreas = false,
-		int fMonotoneTypeID = 0,
-		bool fVolumetric = false,
-		bool fNoConservation = false,
-		bool fNoCheck = false,
-		std::string strVariables = "",
-		std::string strOutputMap = "",
-		std::string strInputData = "",
-		std::string strOutputData = "",
-		std::string strNColName = "",
-		bool fOutputDouble = false,
-		std::string strOutputFormat = "Netcdf4",
-		std::string strPreserveVariables = "",
-		bool fPreserveAll = false,
-		double dFillValueOverride = 0.0,
-		bool fSourceConcave = false,
-		bool fTargetConcave = false,
-		bool fSparseConstraints = false);
-*/
 
 	///	<summary>
 	///		A structure containing optional arguments for outputs from GenerateOfflineMap.
@@ -447,100 +424,13 @@ extern "C" {
 		const GenerateOfflineMapAlgorithmOptions & optsAlg,
 		const ApplyOfflineMapOptions & optsApply,
 		OfflineMap & mapRemap );
-/*
-	///	<summary>
-	///		Generate the OfflineMap between input and output meshes.
-	///	</summary>
-	int GenerateOfflineMap (
-		OfflineMap & mapRemap,
-		std::string strSourceMesh,
-		std::string strTargetMesh,
-		std::string strOverlapMesh,
-		std::string strSourceMeta,
-		std::string strTargetMeta,
-		std::string strSourceType,
-		std::string strTargetType,
-		int nPin = 4,
-		int nPout = 4,
-		bool fNoBubble = false,
-		bool fCorrectAreas = false,
-		int fMonotoneTypeID = 0,
-		bool fVolumetric = false,
-		bool fNoConservation = false,
-		bool fNoCheck = false,
-		std::string strVariables = "",
-		std::string strOutputMap = "",
-		std::string strInputData = "",
-		std::string strOutputData = "",
-		std::string strNColName = "",
-		bool fOutputDouble = false,
-		std::string strOutputFormat = "Netcdf4",
-		std::string strPreserveVariables = "",
-		bool fPreserveAll = false,
-		double dFillValueOverride = 0.0,
-		bool fSourceConcave = false,
-		bool fTargetConcave = false,
-		bool fSparseConstraints = false);
-
-	///	<summary>
-	///		Generate the OfflineMap between input and output meshes.
-	///	</summary>
-	int GenerateOfflineMapWithMeshes (
-		OfflineMap & mapRemap,
-		Mesh & meshSource,
-		Mesh & meshTarget,
-		Mesh & meshOverlap,
-		std::string strSourceMeta,
-		std::string strTargetMeta,
-		std::string strSourceType,
-		std::string strTargetType,
-		int nPin = 4,
-		int nPout = 4,
-		bool fBubble = false,
-		bool fCorrectAreas = false,
-		int fMonotoneTypeID = 0,
-		bool fVolumetric = false,
-		bool fNoConservation = false,
-		bool fNoCheck = false,
-		std::string strVariables = "",
-		std::string strOutputMap = "",
-		std::string strInputData = "",
-		std::string strOutputData = "",
-		std::string strNColName = "",
-		bool fOutputDouble = false,
-		std::string strOutputFormat = "Netcdf4",
-		std::string strPreserveVariables = "",
-		bool fPreserveAll = false,
-		double dFillValueOverride = 0.0,
-		bool fSourceConcave = false,
-		bool fTargetConcave = false,
-		bool fSparseConstraints = false);
-
-	///	<summary>
-	///		Apply an OfflineMap to a datafile.
-	///	</summary>
-	int ApplyOfflineMap(
-		std::string strInputData,
-		std::string strInputDataList,
-		std::string strInputMap,
-		std::string strVariables,
-		std::string strOutputData,
-		std::string strOutputDataList,
-		std::string strNColName, 
-		std::string strEnforceBounds,
-		bool fOutputDouble,
-		std::string strPreserveVariables,
-		bool fPreserveAll,
-		double dFillValueOverride,
-		std::string strLogDir );
-*/
 
 	///	<summary>
 	///		Apply an OfflineMap to a datafile.
 	///	</summary>
 	int ApplyOfflineMap(
 		std::string strInputMap,
-		const ApplyOfflineMapOptions & optsApply);
+		const ApplyOfflineMapOptions & optsApply );
 
 	///	<summary>
 	///		Generate the connectivity data for a given input file.

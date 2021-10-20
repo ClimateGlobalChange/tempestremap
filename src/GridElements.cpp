@@ -1133,7 +1133,7 @@ void Mesh::Read(const std::string & strFile) {
 					"Expected int type");
 			}
 
-			vecMask.Allocate(nGridSize);
+			vecMask.resize(nGridSize);
 			varMask->get(&(vecMask[0]), nGridSize);
 		}
 

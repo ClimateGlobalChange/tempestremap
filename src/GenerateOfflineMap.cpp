@@ -370,7 +370,7 @@ try {
 	// Set source mesh areas in map
 	if (eSourceType == DiscretizationType_FV) {
 		mapRemap.SetSourceAreas(meshSource.vecFaceArea);
-		if (meshSource.vecMask.IsAttached()) {
+		if (meshSource.vecMask.size() != 0) {
 			mapRemap.SetSourceMask(meshSource.vecMask);
 		}
 	}
@@ -378,7 +378,7 @@ try {
 	// Set target mesh areas in map
 	if (eTargetType == DiscretizationType_FV) {
 		mapRemap.SetTargetAreas(meshTarget.vecFaceArea);
-		if (meshTarget.vecMask.IsAttached()) {
+		if (meshTarget.vecMask.size() != 0) {
 			mapRemap.SetTargetMask(meshTarget.vecMask);
 		}
 	}

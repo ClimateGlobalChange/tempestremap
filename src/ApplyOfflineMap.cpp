@@ -208,10 +208,10 @@ try {
 
 #if defined(TEMPEST_MPIOMP)
 	// Set up logging
-	if (strLogDir == "") {
+	if (optsApply.strLogDir == "") {
 		Announce("Reporting only enabled on thread 0 (if reporting desired, use --logdir)");
 	} else {
-		Announce("Logs will be written to directory \"%s\"", strLogDir.c_str());
+		Announce("Logs will be written to directory \"%s\"", optsApply.strLogDir.c_str());
 	}
 
 	// Open log file
