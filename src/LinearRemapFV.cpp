@@ -519,13 +519,6 @@ void LinearRemapFVtoFVInvDist(
 			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
 
-		// Check mask
-		if (meshInput.vecMask.size() != 0) {
-			if (meshInput.vecMask[ixFirst] == 0) {
-				continue;
-			}
-		}
-
 		// This Face
 		const Face & faceFirst = meshInput.faces[ixFirst];
 
@@ -540,6 +533,16 @@ void LinearRemapFVtoFVInvDist(
 		}
 
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		// Check mask
+		if (meshInput.vecMask.size() != 0) {
+			if (meshInput.vecMask[ixFirst] == 0) {
+ 		               // Increment the current overlap index
+                		ixOverlap += nOverlapFaces;
+
+				continue;
+			}
+		}
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
