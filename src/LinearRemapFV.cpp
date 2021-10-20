@@ -504,12 +504,26 @@ void LinearRemapFVtoFVInvDist(
 	// Overlap face index
 	int ixOverlap = 0;
 
+	// Check mask size
+	_ASSERT((meshInput.vecMask.size() == 0) || (meshInput.vecMask.size() == meshInput.faces.size()));
+
+	if (meshInput.vecMask.size() != 0) {
+		Announce("Source mesh contains mask information which will be used in map calculation");
+	}
+
 	// Loop through all source faces
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 1000 overlap elements
 		if (ixFirst % 1000 == 0) {
 			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+		}
+
+		// Check mask
+		if (meshInput.vecMask.size() != 0) {
+			if (meshInput.vecMask[ixFirst] == 0) {
+				continue;
+			}
 		}
 
 		// This Face
@@ -583,6 +597,13 @@ void LinearRemapFVtoFVInvDist(
 
 					int iNearestFace = pFace - &(meshInput.faces[0]);
 
+					// Check mask
+					if (meshInput.vecMask.size() != 0) {
+						if (meshInput.vecMask[iNearestFace] == 0) {
+							iNearestFace = ixFirst;
+						}
+					}
+
 					const Face & faceCurrent = meshInput.faces[iNearestFace];
 
 					// TODO: Precompute face centroids on input mesh
@@ -612,6 +633,15 @@ void LinearRemapFVtoFVInvDist(
 								meshInput.edgemap.find(faceCurrent.edges[i])->second;
 
 						if (iNearestFace == facepair[0]){
+
+							// Check mask
+							if (meshInput.vecMask.size() != 0) {
+								if (meshInput.vecMask[facepair[1]] == 0) {
+									continue;
+								}
+							}
+
+							// Add contribution
 							Node nodeX2 =
 								GetFaceCentroid(
 									meshInput.faces[facepair[1]],
@@ -634,6 +664,15 @@ void LinearRemapFVtoFVInvDist(
 							}
 
 						} else if (iNearestFace == facepair[1]) {
+
+							// Check mask
+							if (meshInput.vecMask.size() != 0) {
+								if (meshInput.vecMask[facepair[0]] == 0) {
+									continue;
+								}
+							}
+
+							// Add contribution
 							Node nodeX2 =
 								GetFaceCentroid(
 									meshInput.faces[facepair[0]],
