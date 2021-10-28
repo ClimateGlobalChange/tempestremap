@@ -1788,80 +1788,78 @@ int BuildCoincidentNodeVector(
 	return nCoincidentNodes;
 }
 
-Real CalculateTriangleAreaQuadratureMethod(
-    Node node1, Node node2, Node node3
-) {
+Real CalculateTriangleAreaQuadratureMethod(Node &node1, Node &node2,
+		Node &node3) {
 
-    const int nOrder = 6;
+	const int nOrder = 6;
 
-    DataArray1D<double> dG;
-    DataArray1D<double> dW;
-    GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
+	DataArray1D<double> dG;
+	DataArray1D<double> dW;
+	GaussQuadrature::GetPoints(nOrder, 0.0, 1.0, dG, dW);
 
-    double dArea = 0.0;
-    // Calculate area at quadrature node
-    for (int p = 0; p < dW.GetRows(); p++) {
-        for (int q = 0; q < dW.GetRows(); q++) {
+	double dArea = 0.0;
+	// Calculate area at quadrature node
+	for (int p = 0; p < dW.GetRows(); p++) {
+		for (int q = 0; q < dW.GetRows(); q++) {
 
-            double dA = dG[p];
-            double dB = dG[q];
+			double dA = dG[p];
+			double dB = dG[q];
 
-            Node dF(
-                (1.0 - dB) * ((1.0 - dA) * node1.x + dA * node2.x) + dB * node3.x,
-                (1.0 - dB) * ((1.0 - dA) * node1.y + dA * node2.y) + dB * node3.y,
-                (1.0 - dB) * ((1.0 - dA) * node1.z + dA * node2.z) + dB * node3.z);
+			Node dF(
+					(1.0 - dB) * ((1.0 - dA) * node1.x + dA * node2.x)
+							+ dB * node3.x,
+					(1.0 - dB) * ((1.0 - dA) * node1.y + dA * node2.y)
+							+ dB * node3.y,
+					(1.0 - dB) * ((1.0 - dA) * node1.z + dA * node2.z)
+							+ dB * node3.z);
 
-            Node dDaF(
-                (1.0 - dB) * (node2.x - node1.x),
-                (1.0 - dB) * (node2.y - node1.y),
-                (1.0 - dB) * (node2.z - node1.z));
+			Node dDaF((1.0 - dB) * (node2.x - node1.x),
+					(1.0 - dB) * (node2.y - node1.y),
+					(1.0 - dB) * (node2.z - node1.z));
 
-            Node dDbF(
-                - (1.0 - dA) * node1.x - dA * node2.x + node3.x,
-                - (1.0 - dA) * node1.y - dA * node2.y + node3.y,
-                - (1.0 - dA) * node1.z - dA * node2.z + node3.z);
+			Node dDbF(-(1.0 - dA) * node1.x - dA * node2.x + node3.x,
+					-(1.0 - dA) * node1.y - dA * node2.y + node3.y,
+					-(1.0 - dA) * node1.z - dA * node2.z + node3.z);
 
-            double dR = sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
+			double dR = sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
 
-            Node dDaG(
-                dDaF.x * (dF.y * dF.y + dF.z * dF.z)
-                    - dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
-                dDaF.y * (dF.x * dF.x + dF.z * dF.z)
-                    - dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
-                dDaF.z * (dF.x * dF.x + dF.y * dF.y)
-                    - dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
+			Node dDaG(
+					dDaF.x * (dF.y * dF.y + dF.z * dF.z)
+							- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
+					dDaF.y * (dF.x * dF.x + dF.z * dF.z)
+							- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
+					dDaF.z * (dF.x * dF.x + dF.y * dF.y)
+							- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
 
-            Node dDbG(
-                dDbF.x * (dF.y * dF.y + dF.z * dF.z)
-                    - dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
-                dDbF.y * (dF.x * dF.x + dF.z * dF.z)
-                    - dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
-                dDbF.z * (dF.x * dF.x + dF.y * dF.y)
-                    - dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
+			Node dDbG(
+					dDbF.x * (dF.y * dF.y + dF.z * dF.z)
+							- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
+					dDbF.y * (dF.x * dF.x + dF.z * dF.z)
+							- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
+					dDbF.z * (dF.x * dF.x + dF.y * dF.y)
+							- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
 
-            double dDenomTerm = 1.0 / (dR * dR * dR);
+			double dDenomTerm = 1.0 / (dR * dR * dR);
 
-            dDaG.x *= dDenomTerm;
-            dDaG.y *= dDenomTerm;
-            dDaG.z *= dDenomTerm;
+			dDaG.x *= dDenomTerm;
+			dDaG.y *= dDenomTerm;
+			dDaG.z *= dDenomTerm;
 
-            dDbG.x *= dDenomTerm;
-            dDbG.y *= dDenomTerm;
-            dDbG.z *= dDenomTerm;
+			dDbG.x *= dDenomTerm;
+			dDbG.y *= dDenomTerm;
+			dDbG.z *= dDenomTerm;
 
-            // Cross product gives local Jacobian
-            Node nodeCross = CrossProduct(dDaG, dDbG);
+			// Cross product gives local Jacobian
+			Node nodeCross = CrossProduct(dDaG, dDbG);
 
-            double dJacobian = sqrt(
-                  nodeCross.x * nodeCross.x
-                + nodeCross.y * nodeCross.y
-                + nodeCross.z * nodeCross.z);
+			double dJacobian = sqrt(
+					nodeCross.x * nodeCross.x + nodeCross.y * nodeCross.y
+							+ nodeCross.z * nodeCross.z);
 
-
-            dArea += dW[p] * dW[q] * dJacobian;
-        }
-    }
-    return dArea;
+			dArea += dW[p] * dW[q] * dJacobian;
+		}
+	}
+	return dArea;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
