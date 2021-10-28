@@ -868,11 +868,12 @@ void LinearRemapSE4(
 			// Loop over all sub-triangles of this Overlap Face
 			for (int k = 0; k < nOverlapTriangles; k++) {
 				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-						{
+				{
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
-				} else // decompose polygon in triangles around the center
+				}
+				else // decompose polygon in triangles around the center
 				{
 					node0 = center;
 					node1 = nodesOverlap[faceOverlap[k]];

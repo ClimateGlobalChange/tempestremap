@@ -1751,7 +1751,7 @@ void LinearRemapFVtoGLL(
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
 				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-						{
+				{
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
@@ -2442,7 +2442,7 @@ void LinearRemapGLLtoGLL2(
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
 				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-						{
+				{
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
