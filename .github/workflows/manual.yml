@@ -53,8 +53,6 @@ jobs:
 
     - name: Ubuntu TempestRemap Build Install 
       if: contains(matrix.os, 'ubuntu')
-    - name: Ubuntu Tempest Build and Installation 
-      if: matrix.os == 'ubuntu-latest'
       run: |
         pwd
         export LD_LIBRARY_PATH=/usr/share/miniconda3/envs/test-environment/lib:$LD_LIBRARY_PATH
