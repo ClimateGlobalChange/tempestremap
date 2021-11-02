@@ -109,3 +109,4 @@ def apply_offline_map(mapfile, inputdatafile, variablename, outfile, bin_path, d
     command.append(data_path+outfile)    
         
     return command
+    

@@ -14,8 +14,7 @@ import pandas as pd
 import multiprocessing as mp
 from multiprocessing import Pool
 
-from tempest_commands import generate_cs_mesh, generate_ico_mesh, generate_rll_mesh
-from tempest_commands import generate_overlap_mesh, generate_offline_map, generate_test_data, apply_offline_map
+from tempest_commands import *
 
 # some global paths for storing files
 meshes_path = "meshes/"

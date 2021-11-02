@@ -1,5 +1,7 @@
 # This is a basic workflow that is manually triggered
 name: Manual workflow
+on:
+  workflow_dispatch:
 
 # Can be run automatically with the following:
 # on:
@@ -10,8 +12,6 @@ name: Manual workflow
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
-on:
-  workflow_dispatch:
 
 jobs:
   regression-tempestremap:
@@ -23,8 +23,6 @@ jobs:
 
     strategy:
       matrix:
-        # os: [ubuntu-latest]
-        # need to fix https://github.com/rajeeja/tempestremap/runs/3830784744?check_suite_focus=true#step:11:25 for osx build to work
         os: [ubuntu-latest, macos-latest]
 
     steps:
