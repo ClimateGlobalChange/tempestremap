@@ -845,21 +845,21 @@ void LinearRemapSE4(
 
 		// Find the local remap coefficients
 		for (int j = 0; j < nOverlapFaces; j++) {
-			const Face &faceOverlap = meshOverlap.faces[ixOverlap + j];
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 			int nbEdges = faceOverlap.edges.size();
 			int nOverlapTriangles = 1;
-			Node center; // not used if nbEdges == 3
-			if (nbEdges > 3) { // decompose from center in this case
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
 				nOverlapTriangles = nbEdges;
 				for (int k = 0; k < nbEdges; k++) {
 					const Node &node = nodesOverlap[faceOverlap[k]];
-					center = center + node;
+					nodeCenter = nodeCenter + node;
 				}
-				center = center / nbEdges;
-				double magni = sqrt(
-						center.x * center.x + center.y * center.y
-								+ center.z * center.z);
-				center = center / magni; // project back on sphere of radius 1
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
 			}
 
 			Node node0, node1, node2;
@@ -867,15 +867,13 @@ void LinearRemapSE4(
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int k = 0; k < nOverlapTriangles; k++) {
-				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-				{
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
 				}
-				else // decompose polygon in triangles around the center
-				{
-					node0 = center;
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
 					node1 = nodesOverlap[faceOverlap[k]];
 					int k1 = (k + 1) % nbEdges;
 					node2 = nodesOverlap[faceOverlap[k1]];
@@ -1285,49 +1283,44 @@ void LinearRemapGLLtoGLL_Pointwise(
 		for (int i = 0; i < nOverlapFaces; i++) {
 
 			// Quantities from the overlap Mesh
-			const Face &faceOverlap = meshOverlap.faces[ixOverlap + i];
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
 
-			const NodeVector &nodesOverlap = meshOverlap.nodes;
+			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
-			const NodeVector &nodesSecond = meshOutput.nodes;
+			const NodeVector & nodesSecond = meshOutput.nodes;
 
-			const Face &faceSecond = meshOutput.faces[ixSecond];
+			const Face & faceSecond = meshOutput.faces[ixSecond];
 			int nbEdges = faceOverlap.edges.size();
 			int nOverlapTriangles = 1;
-			Node center; // not used if nbEdges == 3
-			if (nbEdges > 3)
-			{ // decompose from center in this case
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
 				nOverlapTriangles = nbEdges;
-				for (int k = 0; k < nbEdges; k++)
-				{
+				for (int k = 0; k < nbEdges; k++) {
 					const Node &node = nodesOverlap[faceOverlap[k]];
-					center = center + node;
+					nodeCenter = nodeCenter + node;
 				}
-				center = center / nbEdges;
-				double magni = sqrt(
-						center.x * center.x + center.y * center.y
-								+ center.z * center.z);
-				center = center / magni; // project back on sphere of radius 1
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
 			}
 
 			Node node0, node1, node2;
 			double dTriArea;
 
 			// Loop over all sub-triangles of this Overlap Face
-			for (int j = 0; j < nOverlapTriangles; j++)
-			{
-				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-				{
+			for (int j = 0; j < nOverlapTriangles; j++) {
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
 				}
-				else // decompose polygon in triangles around the center
-				{
-					node0 = center;
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
 					node1 = nodesOverlap[faceOverlap[j]];
 					int j1 = (j + 1) % nbEdges;
 					node2 = nodesOverlap[faceOverlap[j1]];
@@ -1921,31 +1914,31 @@ void LinearRemapGLLtoGLL_Integrated(
 		for (int i = 0; i < nOverlapFaces; i++) {
 
 			// Quantities from the overlap Mesh
-			const Face &faceOverlap = meshOverlap.faces[ixOverlap + i];
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
 
-			const NodeVector &nodesOverlap = meshOverlap.nodes;
+			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
-			const NodeVector &nodesSecond = meshOutput.nodes;
+			const NodeVector & nodesSecond = meshOutput.nodes;
 
-			const Face &faceSecond = meshOutput.faces[ixSecond];
+			const Face & faceSecond = meshOutput.faces[ixSecond];
 
 			int nbEdges = faceOverlap.edges.size();
 			int nOverlapTriangles = 1;
-			Node center; // not used if nbEdges == 3
-			if (nbEdges > 3) { // decompose from center in this case
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
 				nOverlapTriangles = nbEdges;
 				for (int k = 0; k < nbEdges; k++) {
 					const Node &node = nodesOverlap[faceOverlap[k]];
-					center = center + node;
+					nodeCenter = nodeCenter + node;
 				}
-				center = center / nbEdges;
-				double magni = sqrt(
-						center.x * center.x + center.y * center.y
-								+ center.z * center.z);
-				center = center / magni; // project back on sphere of radius 1
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
 			}
 
 			Node node0, node1, node2;
@@ -1953,14 +1946,13 @@ void LinearRemapGLLtoGLL_Integrated(
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int k = 0; k < nOverlapTriangles; k++) {
-				if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-				{
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
 					node0 = nodesOverlap[faceOverlap[0]];
 					node1 = nodesOverlap[faceOverlap[1]];
 					node2 = nodesOverlap[faceOverlap[2]];
-				} else // decompose polygon in triangles around the center
-				{
-					node0 = center;
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
 					node1 = nodesOverlap[faceOverlap[k]];
 					int k1 = (k + 1) % nbEdges;
 					node2 = nodesOverlap[faceOverlap[k1]];

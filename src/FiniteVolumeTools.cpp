@@ -371,18 +371,18 @@ void BuildIntegrationArray(
 
 		int nbEdges = faceOverlap.edges.size();
 		int nOverlapTriangles = 1;
-		Node center; // not used if nbEdges == 3
+		Node nodeCenter; // not used if nbEdges == 3
 		if (nbEdges > 3) { // decompose from center in this case
 			nOverlapTriangles = nbEdges;
 			for (int k = 0; k < nbEdges; k++) {
-				const Node &node = nodesOverlap[faceOverlap[k]];
-				center = center + node;
+				const Node & currNode = nodesOverlap[faceOverlap[k]];
+				nodeCenter = nodeCenter + currNode;
 			}
-			center = center / nbEdges;
-			double magni = sqrt(
-					center.x * center.x + center.y * center.y
-							+ center.z * center.z);
-			center = center / magni; // project back on sphere of radius 1
+			nodeCenter = nodeCenter / nbEdges;
+			double dMagni = sqrt(
+					nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+							+ nodeCenter.z * nodeCenter.z);
+			nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
 		}
 
 		Node node0, node1, node2;
@@ -391,15 +391,13 @@ void BuildIntegrationArray(
 		// Loop over all sub-triangles of this Overlap Face
 		for (int j = 0; j < nOverlapTriangles; j++) {
 
-			if (nbEdges == 3) // will come here only once, nOverlapTriangles == 1 in this case
-			{
+			if (nbEdges == 3) {
 				node0 = nodesOverlap[faceOverlap[0]];
 				node1 = nodesOverlap[faceOverlap[1]];
 				node2 = nodesOverlap[faceOverlap[2]];
 			}
-			else // decompose polygon in triangles around the center
-			{
-				node0 = center;
+			else { // decompose polygon in triangles around the center
+				node0 = nodeCenter;
 				node1 = nodesOverlap[faceOverlap[j]];
 				int j1 = (j + 1) % nbEdges;
 				node2 = nodesOverlap[faceOverlap[j1]];

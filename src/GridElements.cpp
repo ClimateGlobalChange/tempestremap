@@ -1788,8 +1788,8 @@ int BuildCoincidentNodeVector(
 	return nCoincidentNodes;
 }
 
-Real CalculateTriangleAreaQuadratureMethod(Node &node1, Node &node2,
-		Node &node3) {
+Real CalculateTriangleAreaQuadratureMethod(Node & node1, Node & node2,
+		Node & node3) {
 
 	const int nOrder = 6;
 
