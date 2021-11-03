@@ -231,17 +231,7 @@ public:
 		double & lat,
 		double & lon
 	) const {
-		if (z > 1.0) {
-			lat = 0.5 * M_PI;
-		} else if (z < -1.0) {
-			lat = -0.5 * M_PI;
-		} else {
-			lat = asin(z);
-		}
-		lon = atan2(y,x);
-		if (lon < 0.0) {
-			lon += 2.0 * M_PI;
-		}
+		XYZtoRLL_Rad(x, y, z, lon, lat);
 	}
 
 	///	<summary>
