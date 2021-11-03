@@ -1,17 +1,14 @@
-# This is a basic workflow that is manually triggered
-name: Manual workflow
+# Regression tests for TempestRemap
+name: Regression on Ubuntu and MacOSX 
 on:
+  # Controls when the action will run. Workflow runs when manually triggered using the UI
+  # or API.
   workflow_dispatch:
 
-# Can be run automatically with the following:
-# on:
-#   pull_request:
-#     branches: [ master ]
-#   push:
-#     branches: [ master ]  
-
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]  
 
 jobs:
   regression-tempestremap:
@@ -81,7 +78,7 @@ jobs:
         ls -ltrh
         which autoreconf
         autoreconf -fi
-        ./configure --prefix=$HOME/tr_install --with-netcdf=/Users/runner/miniconda3/envs/test-environment --with-hdf5=/Users/runner/miniconda3/envs/test-environment --with-netcdf-include=/Users/runner/miniconda3/envs/test-environment/include --with-netcdf-lib=/Users/runner/miniconda3/envs/test-environment/lib
+        ./configure --prefix=$HOME/tr_install --with-netcdf=/Users/runner/miniconda3/envs/test-environment --with-hdf5=/Users/runner/miniconda3/envs/test-environment --with-netcdf-include=/Users/runner/miniconda3/envs/test-environment/include --with-netcdf-lib=/Users/runner/miniconda3/envs/test-environment/lib 
         make -j
         make install
     - name: OSX Run Regression
@@ -89,8 +86,30 @@ jobs:
       run: |
         pwd
         echo $HOME
-        ls -ltrh /Users/runner/miniconda3/envs/test-environment/lib/
+        # ls -ltrh /Users/runner/miniconda3/envs/test-environment/lib/
         export DYLD_LIBRARY_PATH=/Users/runner/miniconda3/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        # setting DYLD alone isn't enough, for each executables runtime path to lookup for libraries are required
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateCSMesh
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateCSMesh
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateRLLMesh
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateRLLMesh
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateICOMesh
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateICOMesh
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateOverlapMesh
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateOverlapMesh
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateOfflineMap
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateOfflineMap
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateTestData
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateTestData
+        # 
+        install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/ApplyOfflineMap
+        install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/ApplyOfflineMap
+        # 
         PATH=$HOME/tr_install/bin:$PATH
         cd regression_tests
         python regression_tests.py -v -p $HOME/tr_install/bin/ -n 4
