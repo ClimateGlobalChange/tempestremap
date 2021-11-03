@@ -42,6 +42,18 @@ void LinearRemapFVtoFV_np1(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Generate an inverse distance weighted map.
+///	</summary>
+void LinearRemapFVtoFVInvDist(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Generate the OfflineMap for remapping from finite volumes to finite
 ///		volumes.
 ///	</summary>

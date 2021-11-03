@@ -103,7 +103,8 @@ int ApplyOfflineMap(
 	std::string strVariables,
 	std::string strOutputData,
 	std::string strOutputDataList,
-	std::string strNColName, 
+	std::string strNColName,
+	std::string strEnforceBounds,
 	bool fOutputDouble,
 	std::string strPreserveVariables,
 	bool fPreserveAll,
@@ -289,6 +290,7 @@ try {
 	mapRemap.Read(strInputMap);
 	mapRemap.SetFillValueOverrideDbl(dFillValueOverride);
 	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
+	mapRemap.SetEnforcementBounds(strEnforceBounds);
 
 	AnnounceEndBlock("Done");
 
