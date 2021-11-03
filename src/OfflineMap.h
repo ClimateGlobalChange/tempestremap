@@ -490,7 +490,7 @@ public:
 	///	</summary>
 	void SetSourceMask(const std::vector<int> & iSourceMask) {
 		m_iSourceMask.Allocate(iSourceMask.size());
-		memcpy(&(m_iSourceMask[0]), &(iSourceMask[0]), iSourceMask.size() * sizeof(double));
+		memcpy(&(m_iSourceMask[0]), &(iSourceMask[0]), iSourceMask.size() * sizeof(int));
 	}
 
 	///	<summary>
@@ -498,7 +498,7 @@ public:
 	///	</summary>
 	void SetTargetMask(const std::vector<int> & iTargetMask) {
 		m_iTargetMask.Allocate(iTargetMask.size());
-		memcpy(&(m_iTargetMask[0]), &(iTargetMask[0]), iTargetMask.size() * sizeof(double));
+		memcpy(&(m_iTargetMask[0]), &(iTargetMask[0]), iTargetMask.size() * sizeof(int));
 	}
 
 public:
