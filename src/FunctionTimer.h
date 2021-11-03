@@ -2,7 +2,7 @@
 ///
 ///	\file    FunctionTimer.h
 ///	\author  Paul Ullrich
-///	\version July 26, 2010
+///	\version November 2, 2021
 ///
 ///	<remarks>
 ///		Copyright 2021 Paul Ullrich
@@ -21,7 +21,7 @@
 
 #include <string>
 #include <map>
-#include <sys/time.h>
+#include <chrono>
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -34,17 +34,11 @@ class FunctionTimer {
 
 public:
 	///	<summary>
-	///		Microseconds per second.
-	///	</summary>
-	static const unsigned long long MICROSECONDS_PER_SECOND = 1000000;
-
-public:
-	///	<summary>
 	///		A structure for storing group data.
 	///	</summary>
 	struct TimerGroupData {
-		unsigned long long iTotalTime;
-		unsigned long long nEntries;
+		std::chrono::microseconds iTotalTime;
+		unsigned long nEntries;
 	};
 
 	///	<summary>
@@ -81,13 +75,13 @@ public:
 	///	<param name="fDone">
 	///		If true stores the elapsed time in the group structure.
 	///	</param>
-	unsigned long long Time(bool fDone = false);
+	std::chrono::microseconds Time(bool fDone = false);
 
 	///	<summary>
 	///		Return the time elapsed since this timer began and store in
 	///		group data.
 	///	</summary>
-	unsigned long long StopTime();
+	std::chrono::microseconds StopTime();
 
 public:
 	///	<summary>
@@ -98,17 +92,17 @@ public:
 	///	<summary>
 	///		Retrieve the total time from a group data record.
 	///	</summary>
-	static unsigned long long GetTotalGroupTime(const char *szName);
+	static std::chrono::microseconds GetTotalGroupTime(const char *szName);
 
 	///	<summary>
 	///		Retrieve the average time from a group data record.
 	///	</summary>
-	static unsigned long long GetAverageGroupTime(const char *szName);
+	static std::chrono::microseconds GetAverageGroupTime(const char *szName);
 
 	///	<summary>
 	///		Retrieve the number of entries from a group data record.
 	///	</summary>
-	static unsigned long long GetNumberOfEntries(const char *szName);
+	static unsigned long GetNumberOfEntries(const char *szName);
 
 	///	<summary>
 	///		Reset the group data record.
@@ -130,12 +124,12 @@ private:
 	///	<summary>
 	///		Time at which this timer was constructed.
 	///	</summary
-	timeval m_tvStartTime;
+	std::chrono::high_resolution_clock::time_point m_tpStartTime;
 
 	///	<summary>
 	///		Time at which this timer was stopped.
 	///	</summary
-	timeval m_tvStopTime;
+	std::chrono::high_resolution_clock::time_point m_tpStopTime;
 
 	///	<summary>
 	///		Group name associated with this timer.

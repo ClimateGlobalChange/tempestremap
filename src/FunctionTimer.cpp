@@ -2,7 +2,7 @@
 ///
 ///	\file    FunctionTimer.cpp
 ///	\author  Paul Ullrich
-///	\version July 26, 2010
+///	\version November 2, 2021
 ///
 ///	<remarks>
 ///		Copyright 2021 Paul Ullrich
@@ -18,7 +18,7 @@
 #include "Exception.h"
 
 #include <iostream>
-#include <sys/time.h>
+#include <chrono>
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -39,31 +39,31 @@ FunctionTimer::FunctionTimer(const char *szGroup) {
 	}
 
 	// Assign start time
-	gettimeofday(&m_tvStartTime, NULL);
+	m_tpStartTime = std::chrono::high_resolution_clock::now();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void FunctionTimer::Reset() {
 	m_fStopped = false;
-	gettimeofday(&m_tvStartTime, NULL);
+	m_tpStartTime = std::chrono::high_resolution_clock::now();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned long long FunctionTimer::Time(bool fDone) {
+std::chrono::microseconds FunctionTimer::Time(bool fDone) {
 
 	if (!m_fStopped) {
-		gettimeofday(&m_tvStopTime, NULL);
+		m_tpStopTime = std::chrono::high_resolution_clock::now();
 	}
 
-	unsigned long long iTime =
-	    MICROSECONDS_PER_SECOND * (m_tvStopTime.tv_sec - m_tvStartTime.tv_sec)
-	    + (m_tvStopTime.tv_usec - m_tvStartTime.tv_usec);
+	std::chrono::microseconds msTime =
+		std::chrono::duration_cast<std::chrono::microseconds>(
+			m_tpStopTime - m_tpStartTime);
 
 	// If no name associated with this timer, ignore fDone.
 	if (m_strGroup == "") {
-		return iTime;
+		return msTime;
 	}
 
 	// Add the time to the group record
@@ -76,26 +76,26 @@ unsigned long long FunctionTimer::Time(bool fDone) {
 
 		// Add to existing group record
 		if (iter != m_mapGroupData.end()) {
-			iter->second.iTotalTime += iTime;
+			iter->second.iTotalTime += msTime;
 			iter->second.nEntries++;
 
 		// Create new group record
 		} else {
 			GroupDataPair gdp;
 			gdp.first = m_strGroup;
-			gdp.second.iTotalTime = iTime;
+			gdp.second.iTotalTime = msTime;
 			gdp.second.nEntries = 1;
 
 			m_mapGroupData.insert(gdp);
 		}
 	}
 
-	return iTime;
+	return msTime;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned long long FunctionTimer::StopTime() {
+std::chrono::microseconds FunctionTimer::StopTime() {
 	return Time(true);
 }
 
@@ -120,7 +120,7 @@ const FunctionTimer::TimerGroupData & FunctionTimer::GetGroupTimeRecord(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned long long FunctionTimer::GetTotalGroupTime(const char *szName) {
+std::chrono::microseconds FunctionTimer::GetTotalGroupTime(const char *szName) {
 
 	GroupDataMap::iterator iter;
 
@@ -134,13 +134,13 @@ unsigned long long FunctionTimer::GetTotalGroupTime(const char *szName) {
 
 	// Group record does not exist
 	} else {
-		return 0;
+		return std::chrono::microseconds(0);
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned long long FunctionTimer::GetAverageGroupTime(const char *szName) {
+std::chrono::microseconds FunctionTimer::GetAverageGroupTime(const char *szName) {
 
 	GroupDataMap::iterator iter;
 
@@ -154,13 +154,13 @@ unsigned long long FunctionTimer::GetAverageGroupTime(const char *szName) {
 
 	// Group record does not exist
 	} else {
-		return 0;
+		return std::chrono::microseconds(0);
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned long long FunctionTimer::GetNumberOfEntries(const char *szName) {
+unsigned long FunctionTimer::GetNumberOfEntries(const char *szName) {
 
 	GroupDataMap::iterator iter;
 
