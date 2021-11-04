@@ -32,6 +32,7 @@ time_pkl_file = baseline_path+'timing_data.pkl'
 timing_objects = []
 generate_baseline = False
 baseline_average = False
+verbose=False
 
 exitsTimeFile = True
 def open_timingfile(baseline_average):
@@ -248,7 +249,6 @@ if __name__ == '__main__':
     assert sys.version_info >= (3,0) 
 
     # default arguments
-    verbose=False
     procs = 2
 
     parser=argparse.ArgumentParser()
@@ -595,3 +595,4 @@ if __name__ == '__main__':
         print("\n Saved baseline/regtime.pkl file")
 
         # print(comptime_dict)
+
