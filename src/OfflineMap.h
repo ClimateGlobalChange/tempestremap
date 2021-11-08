@@ -523,15 +523,17 @@ public:
 	///	<summary>
 	///		Set the mask vector associated with the source grid.
 	///	</summary>
-	void SetSourceMask(const DataArray1D<int> & iSourceMask) {
-		m_iSourceMask = iSourceMask;
+	void SetSourceMask(const std::vector<int> & iSourceMask) {
+		m_iSourceMask.Allocate(iSourceMask.size());
+		memcpy(&(m_iSourceMask[0]), &(iSourceMask[0]), iSourceMask.size() * sizeof(int));
 	}
 
 	///	<summary>
 	///		Set the mask vector associated with the target grid.
 	///	</summary>
-	void SetTargetMask(const DataArray1D<int> & iTargetMask) {
-		m_iTargetMask = iTargetMask;
+	void SetTargetMask(const std::vector<int> & iTargetMask) {
+		m_iTargetMask.Allocate(iTargetMask.size());
+		memcpy(&(m_iTargetMask[0]), &(iTargetMask[0]), iTargetMask.size() * sizeof(int));
 	}
 
 public:
