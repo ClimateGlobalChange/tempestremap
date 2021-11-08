@@ -735,6 +735,16 @@ public:
 	///	</summary>
 	std::vector<int> vecMultiFaceMap;
 
+	///	<summary>
+	///		Grid dimensions.
+	///	</sumamry>
+	std::vector<int> vecGridDimSize;
+
+	///	<summary>
+	///		Grid dimension names.
+	///	</sumamry>
+	std::vector<std::string> vecGridDimName;
+
 public:
 	///	<summary>
 	///		Default constructor.
