@@ -1723,32 +1723,46 @@ void LinearRemapFVtoGLL(
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
 			const Face & faceSecond = meshOutput.faces[ixSecond];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
 
+			Node node0, node1, node2;
+			double dTriArea;
 			// Loop over all sub-triangles of this Overlap Face
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
-
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[j]];
+					int j1 = (j + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[j1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
 					// Get the nodal location of this point
@@ -2399,34 +2413,46 @@ void LinearRemapGLLtoGLL2(
 
 			// Quantities from the overlap Mesh
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
-
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
-
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
-
 			const NodeVector & nodesSecond = meshOutput.nodes;
-
 			const Face & faceSecond = meshOutput.faces[ixSecond];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
+
+			Node node0, node1, node2;
+			double dTriArea;
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[j]];
+					int j1 = (j + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[j1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
@@ -2894,8 +2920,6 @@ void LinearRemapGLLtoGLL2_Pointwise(
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
-
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
