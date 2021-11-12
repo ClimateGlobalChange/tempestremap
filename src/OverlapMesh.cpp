@@ -2445,10 +2445,10 @@ void GenerateOverlapMeshLint(
 	}
 
 	// Sort mesh faces by source face ix
-	meshOverlap.faces.resize(setAccumulatedLintFaces.size());
-	meshOverlap.vecSourceFaceIx.resize(setAccumulatedLintFaces.size());
-	meshOverlap.vecTargetFaceIx.resize(setAccumulatedLintFaces.size());
-	meshOverlap.vecFaceArea.resize(setAccumulatedLintFaces.size());
+	meshOverlap.faces.reserve(setAccumulatedLintFaces.size());
+	meshOverlap.vecSourceFaceIx.reserve(setAccumulatedLintFaces.size());
+	meshOverlap.vecTargetFaceIx.reserve(setAccumulatedLintFaces.size());
+	meshOverlap.vecFaceArea.reserve(setAccumulatedLintFaces.size());
 	for (auto it : setAccumulatedLintFaces) {
 		meshOverlap.faces.push_back(it.face);
 		meshOverlap.vecSourceFaceIx.push_back(it.ixSourceFace);
