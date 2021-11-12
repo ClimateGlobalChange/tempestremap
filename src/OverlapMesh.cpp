@@ -2146,6 +2146,34 @@ void GenerateOverlapMeshLint(
 	std::sort(vecSortedLon.begin(), vecSortedLon.end());
 	_ASSERT(vecSortedLon.size() == 2 * (vecMeshSourceLatLonBox.size() + vecMeshTargetLatLonBox.size()));
 
+	// Accumulated Face data (sort by source face ix)
+	struct LintFace {
+		Face face;
+		int ixSourceFace;
+		int ixTargetFace;
+		double dFaceArea;
+
+		// Constructor
+		LintFace(
+			const Face & _face,
+			int _ixSourceFace,
+			int _ixTargetFace,
+			double _dFaceArea
+		) :
+			face(_face),
+			ixSourceFace(_ixSourceFace),
+			ixTargetFace(_ixTargetFace),
+			dFaceArea(_dFaceArea)
+		{ }
+
+		// Comparator using source face ix
+		bool operator<(const LintFace & lf) const {
+			return (ixSourceFace < lf.ixSourceFace);
+		}
+	};
+
+	std::multiset<LintFace> setAccumulatedLintFaces;
+
 	// Perform line search
 	std::set< std::pair<int,int> > setTested;
 
@@ -2405,12 +2433,27 @@ void GenerateOverlapMeshLint(
 #endif
 
 			}
-			meshOverlap.faces.push_back(faceNew);
 
-			meshOverlap.vecSourceFaceIx.push_back(itoverlap.first);
-			meshOverlap.vecTargetFaceIx.push_back(itoverlap.second);
-			meshOverlap.vecFaceArea.push_back(dArea);
+			setAccumulatedLintFaces.insert(
+				LintFace(faceNew, itoverlap.first, itoverlap.second, dArea));
+
+			//meshOverlap.faces.push_back(faceNew);
+			//meshOverlap.vecSourceFaceIx.push_back(itoverlap.first);
+			//meshOverlap.vecTargetFaceIx.push_back(itoverlap.second);
+			//meshOverlap.vecFaceArea.push_back(dArea);
 		}
+	}
+
+	// Sort mesh faces by source face ix
+	meshOverlap.faces.resize(setAccumulatedLintFaces.size());
+	meshOverlap.vecSourceFaceIx.resize(setAccumulatedLintFaces.size());
+	meshOverlap.vecTargetFaceIx.resize(setAccumulatedLintFaces.size());
+	meshOverlap.vecFaceArea.resize(setAccumulatedLintFaces.size());
+	for (auto it : setAccumulatedLintFaces) {
+		meshOverlap.faces.push_back(it.face);
+		meshOverlap.vecSourceFaceIx.push_back(it.ixSourceFace);
+		meshOverlap.vecTargetFaceIx.push_back(it.ixTargetFace);
+		meshOverlap.vecFaceArea.push_back(it.dFaceArea);
 	}
 
 	// Replace parent indices if meshSource has a MultiFaceMap
