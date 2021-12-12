@@ -127,8 +127,9 @@ RestructureData_SOURCES = src/RestructureDataExe.cpp
 
 MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
-ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
-ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
+ConvertMeshToUGRID_SOURCES = src/ConvertMeshToUGRID.cpp
+ConvertMeshToSCRIP_SOURCES = src/ConvertMeshToSCRIP.cpp
+ConvertMeshToExodus_SOURCES = src/ConvertMeshToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
@@ -138,7 +139,7 @@ bin_PROGRAMS = GenerateTestData \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \
-				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus \
+				MeshToTxt ShpToMesh ConvertMeshToUGRID ConvertMeshToSCRIP ConvertMeshToExodus \
 				AnalyzeMap VerticalInterpolate RestructureData
 
 

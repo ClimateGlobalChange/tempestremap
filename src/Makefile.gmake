@@ -82,8 +82,9 @@ RestructureData_FILES= RestructureDataExe.cpp
 MeshToTxt_FILES= MeshToTxt.cpp
 ShpToMesh_FILES= ShpToMesh.cpp
 
-ConvertExodusToSCRIP_FILES= ConvertExodusToSCRIP.cpp
-ConvertSCRIPToExodus_FILES= ConvertSCRIPToExodus.cpp
+ConvertMeshToUGRID_FILES= ConvertMeshToUGRID.cpp
+ConvertMeshToSCRIP_FILES= ConvertMeshToSCRIP.cpp
+ConvertMeshToExodus_FILES= ConvertMeshToExodus.cpp
 
 ########################################################################
 # All executables
@@ -108,8 +109,9 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateVolumetricMesh \
               MeshToTxt \
               ShpToMesh \
-              ConvertExodusToSCRIP \
-              ConvertSCRIPToExodus \
+              ConvertMeshToUGRID \
+              ConvertMeshToSCRIP \
+              ConvertMeshToExodus \
 			  AnalyzeMap \
 			  VerticalInterpolate \
 			  RestructureData
@@ -143,8 +145,9 @@ AnalyzeMap_EXE: $(AnalyzeMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 VerticalInterpolate_EXE: $(VerticalInterpolate_FILES:%.cpp=$(BUILDDIR)/%.o)
 MeshToTxt_EXE: $(MeshToTxt_FILES:%.cpp=$(BUILDDIR)/%.o)
 ShpToMesh_EXE: $(ShpToMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
-ConvertExodusToSCRIP_EXE: $(ConvertExodusToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
-ConvertSCRIPToExodus_EXE: $(ConvertSCRIPToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
+ConvertMeshToUGRID_EXE: $(ConvertMeshToUGRID_FILES:%.cpp=$(BUILDDIR)/%.o)
+ConvertMeshToSCRIP_EXE: $(ConvertMeshToSCRIP_FILES:%.cpp=$(BUILDDIR)/%.o)
+ConvertMeshToExodus_EXE: $(ConvertMeshToExodus_FILES:%.cpp=$(BUILDDIR)/%.o)
 RestructureData_EXE: $(RestructureData_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 $(EXEC_TARGETS): %: $(UTIL_FILES:%.cpp=$(BUILDDIR)/%.o) %_EXE

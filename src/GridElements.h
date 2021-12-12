@@ -773,7 +773,7 @@ public:
 	///	</summary>
 	void Write(
 		const std::string & strFile,
-		NcFile::FileFormat eFileFormat = NcFile::Classic
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
 	) const;
 
 	///	<summary>
@@ -781,7 +781,15 @@ public:
 	///	</summary>
 	void WriteScrip(
 		const std::string & strFile,
-		NcFile::FileFormat eFileFormat = NcFile::Classic
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
+	) const;
+
+	///	<summary>
+	///		Write the mesh to a NetCDF file in UGRID format.
+	///	</summary>
+	void WriteUGRID(
+		const std::string & strFile,
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
 	) const;
 
 	///	<summary>

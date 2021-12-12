@@ -1025,6 +1025,95 @@ void Mesh::WriteScrip(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Mesh::WriteUGRID(
+	const std::string & strFile,
+	NcFile::FileFormat eFileFormat
+) const {
+	const int ParamLenString = 33;
+
+	// Temporarily change error reporting
+	NcError error_temp(NcError::verbose_fatal);
+
+	// Output to a NetCDF SCRIP file
+	NcFile ncOut(strFile.c_str(), NcFile::Replace, NULL, 0, eFileFormat);
+	if (!ncOut.is_valid()) {
+		_EXCEPTION1("Unable to open grid file \"%s\" for writing",
+			strFile.c_str());
+	}
+
+	// Find max number of corners oer all faces
+	int nCornersMax = 0;
+	for (int i = 0; i < faces.size(); i++) {
+		nCornersMax = std::max( nCornersMax, (int)(faces[i].edges.size()) );
+	}
+
+	// Generate face nodes array
+	DataArray2D<int> nFaceNodes(faces.size(), nCornersMax);
+	for (int i = 0; i < faces.size(); i++) {
+		for (int j = 0; j < faces[i].edges.size(); j++) {
+			nFaceNodes(i,j) = faces[i][j];
+		}
+		for (int j = faces[i].edges.size(); j < nCornersMax; j++) {
+			nFaceNodes(i,j) = -1;
+		}
+	}
+
+	// Number of nodes
+	NcDim * dimNodes = ncOut.add_dim("nMesh2_node", nodes.size());
+	NcDim * dimFaces = ncOut.add_dim("nMesh2_face", faces.size());
+	NcDim * dimMaxNodesPerFace = ncOut.add_dim("nMaxMesh2_face_nodes", nCornersMax);
+
+	// Mesh topology
+	NcVar * varMesh2 = ncOut.add_var("Mesh2", ncInt);
+	varMesh2->add_att("cf_role", "mesh_topology");
+	varMesh2->add_att("long_name", "Topology data of 2D unstructured mesh");
+	varMesh2->add_att("topology_dimension", 2);
+	varMesh2->add_att("node_coordinates", "Mesh2_node_x Mesh2_node_y");
+	varMesh2->add_att("node_dimension", "nMesh2_node");
+	varMesh2->add_att("face_node_connectivity", "Mesh2_face_nodes");
+	varMesh2->add_att("face_dimension", "nMesh2_face");
+
+	// Face nodes
+	NcVar * varFaceNodes = ncOut.add_var("Mesh2_face_nodes", ncInt, dimFaces, dimMaxNodesPerFace);
+	varFaceNodes->add_att("cf_role", "face_node_connectivity");
+	varFaceNodes->add_att("_FillValue", -1);
+	varFaceNodes->add_att("start_index", 0);
+	varFaceNodes->put(&(nFaceNodes(0,0)), faces.size(), nCornersMax);
+
+	// Mesh node coordinates
+	DataArray1D<double> dNodeLon(nodes.size());
+	DataArray1D<double> dNodeLat(nodes.size());
+
+	for (int i = 0; i < nodes.size(); i++) {
+		XYZtoRLL_Deg(nodes[i].x, nodes[i].y, nodes[i].z, dNodeLon[i], dNodeLat[i]);
+	}
+
+	NcVar * varNodeX = ncOut.add_var("Mesh2_node_x", ncDouble, dimNodes);
+	varNodeX->add_att("standard_name", "longitude");
+	varNodeX->add_att("long_name", "longitude of 2D mesh nodes");
+	varNodeX->add_att("units", "degrees_east");
+	varNodeX->put(&(dNodeLon[0]), nodes.size());
+
+	NcVar * varNodeY = ncOut.add_var("Mesh2_node_y", ncDouble, dimNodes);
+	varNodeY->add_att("standard_name", "latitude");
+	varNodeY->add_att("long_name", "latitude of 2D mesh nodes");
+	varNodeY->add_att("units", "degrees_north");
+	varNodeY->put(&(dNodeLat[0]), nodes.size());
+
+	// Mask
+	if (vecMask.size() == faces.size()) {
+		varMesh2->add_att("face_mask", "Mesh2_face_mask");
+
+		NcVar * varIMask = ncOut.add_var("Mesh2_face_mask", ncInt, dimFaces);
+		varIMask->add_att("standard_name", "mask");
+		varIMask->add_att("long_name", "integer mask of faces");
+		varIMask->add_att("units", "none");
+		varIMask->put(&(vecMask[0]), faces.size());
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Mesh::Read(const std::string & strFile) {
 
 	const int ParamFour = 4;
