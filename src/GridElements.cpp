@@ -1985,19 +1985,19 @@ Real CalculateFaceAreaQuadratureSplit(
 	double dFaceArea = 0.0;
 	
 	if(nOrder >= 8){
-        tol = 0.05;
+        	tol = 0.05;
 	}
-    else{
-        tol = 0.003;
+    	else{
+        	tol = 0.003;
 	}
 	
 	double dArea1 = 0.0;
 		
 	int nf = faces.size();
     
-    for (int i = 0; i < nf; i++){
+    	for (int i = 0; i < nf; i++){
 
-		int nv_surf = faces[i].edges.size();
+	int nv_surf = faces[i].edges.size();
 		int nTriangles = faces[i].edges.size() - 2;
 		double h = MaxEdgeLength(faces[i],nodes);
 		
@@ -2011,12 +2011,12 @@ Real CalculateFaceAreaQuadratureSplit(
 				pnts_vor.push_back(nodes[faces[i][j]]);
 			}
 			
-            // insert elements and points
-            int index = nv_surf;
-            node = ((pnts_vor[0] + pnts_vor[1])/2.0)/(((pnts_vor[0] + pnts_vor[1])/2.0).Magnitude());
-            pnts_vor.push_back(node);
+	           	// insert elements and points
+            		int index = nv_surf;
+           		node = ((pnts_vor[0] + pnts_vor[1])/2.0)/(((pnts_vor[0] + pnts_vor[1])/2.0).Magnitude());
+            		pnts_vor.push_back(node);
             
-            for (int j = 1; j < nv_surf-1; j++){
+            		for (int j = 1; j < nv_surf-1; j++){
 				
 				// insert elements
 				DataArray2D<int> surf_index;
@@ -2037,17 +2037,17 @@ Real CalculateFaceAreaQuadratureSplit(
 				surf_fid.push_back(face3);
 				surf_fid.push_back(face4);
 				
-                index += 1;
-                node = ((pnts_vor[j] + pnts_vor[j+1])/2.0)/(((pnts_vor[j] + pnts_vor[j+1])/2.0).Magnitude());
-                pnts_vor.push_back(node);
-                index += 1;
-                node = ((pnts_vor[0] + pnts_vor[j+1])/2.0)/(((pnts_vor[0] + pnts_vor[j+1])/2.0).Magnitude());
-                pnts_vor.push_back(node);		
+                		index += 1;
+                		node = ((pnts_vor[j] + pnts_vor[j+1])/2.0)/(((pnts_vor[j] + pnts_vor[j+1])/2.0).Magnitude());
+                		pnts_vor.push_back(node);
+                		index += 1;
+                		node = ((pnts_vor[0] + pnts_vor[j+1])/2.0)/(((pnts_vor[0] + pnts_vor[j+1])/2.0).Magnitude());
+                		pnts_vor.push_back(node);		
 			
 			}
 			
-            double dArea2 = CalculateFaceAreaQuadratureSplit(surf_fid,pnts_vor,nOrder);
-            dArea1 += dArea2;
+            		double dArea2 = CalculateFaceAreaQuadratureSplit(surf_fid,pnts_vor,nOrder);
+            		dArea1 += dArea2;
             
 		}
 		else{
@@ -2070,9 +2070,9 @@ double MaxEdgeLength(
 ) {
 	int nv_surf = face.edges.size();
 
-    double h = 0.0;
+    	double h = 0.0;
     
-    for (int i = 0; i < nv_surf-1; i++){
+    	for (int i = 0; i < nv_surf-1; i++){
 		Node node_diff = nodes[face[i]]-nodes[face[i+1]];
 		h = fmax(h,node_diff.Magnitude());
 	}
