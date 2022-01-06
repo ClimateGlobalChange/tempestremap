@@ -24,6 +24,9 @@
 #include "TriangularQuadrature.h"
 #include "MeshUtilitiesFuzzy.h"
 #include "OverlapMesh.h"
+#include "triangle.h"
+#include "kdtree.h"
+#include "DataArray3D.h"
 
 #include "Announce.h"
 #include "MathHelper.h"
@@ -446,6 +449,550 @@ void LinearRemapFVtoFV(
 		ixOverlap += nOverlapFaces;
 	}
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+void LinearRemapTriangulation(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+) {
+	
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
+	}
+
+	// Order of triangular quadrature rule
+	const int TriQuadRuleOrder = 4;
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
+
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
+
+	// Get SparseMatrix represntation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	// Array of global indices
+	std::vector <std::vector<int>> vecGlobalIndexI(6);
+	
+	// Vector storing meshes of each panel
+	std::vector<Mesh> vecMesh(6);
+	
+	// kd-tree for each panel
+	std::vector<kdtree *> vecKDTreePanelI(6);
+	
+	// Arrays of panel boundaries in lat/lon coordinates (radians)
+	DataArray2D<double> dPanelLat(6,2);
+	DataArray2D<double> dPanelLon(6,2);
+	
+	// Width of buffer zone for each panel (degrees)
+	double dBuff = 20; 
+	
+	// Define equatorial panel boundaries
+	for (int i = 0; i < 4; i++){
+		
+		dPanelLon(i,0) = 90*M_PI*i/180;  //Left boundary
+		dPanelLon(i,1) = 90*M_PI*(i+1)/180;  //Right Boundary
+		dPanelLat(i,1) = 45*M_PI/180;  //Upper Boundary
+		dPanelLat(i,0) = -45*M_PI/180;  //Lower Boundary
+		
+	}
+	
+	// Define polar panels
+	
+	dPanelLon(4,0) = 0; dPanelLon(4,1) = 2*M_PI;
+	dPanelLat(4,0) = 45*M_PI/180; dPanelLat(4,1) = M_PI/2;
+	
+	dPanelLon(5,0) = 0; dPanelLon(5,1) = 2*M_PI;
+	dPanelLat(5,1) = -45*M_PI/180; dPanelLat(5,0) = -M_PI/2;
+	
+	
+	// Generate the Delaunay triangulation for each of the 6 panels
+	for (int i = 0; i < 6; i++){
+		
+		// Array storing the coordinates of the face centroids of panel i
+		std::vector<std::vector<double>> dPanelCentroid(2);
+		
+		// Coordinates of tangent plane point of tangency for panel i
+		double dLatTan;
+		double dLonTan;
+			
+		if ((0 <= i) && (i <= 3)){
+			
+			dLatTan = 0;
+			dLonTan = (i+1)*45*M_PI/180 + 45*i*M_PI/180;
+		}
+		else if (i == 4){
+			
+			dLatTan = M_PI/2;
+			dLonTan = 0;
+			
+		}
+		else{
+			
+			dLonTan = 0;
+			dLatTan = -M_PI/2;
+			
+		}
+		
+		// Number of source faces centers for panel i; this is the size
+		// of in.pointlist
+		int nNodes = 0;
+		
+		for (int j = 0; j < meshInput.faces.size(); j++){
+			
+			// Get coordinates of centroid of current face
+			
+			double dLonRad0;
+			double dLatRad0;
+			
+			const Face & face = meshInput.faces[j];
+			
+			const Node & node = GetFaceCentroid(face,meshInput.nodes);
+			
+			node.Normalized();
+			
+			XYZtoRLL_Rad(node.x,node.y,node.z,dLonRad0,dLatRad0);
+			
+			// Determine if centroid is in panel i plus buffer zone
+			bool fPanelContainsCentroid = false;
+			
+			if ((0 <= i) && (i <= 3)){
+				
+				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1)+dBuff*M_PI/180)){
+					
+					if ( i == 0 ){
+						
+						if ( ((2*M_PI - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= 2*M_PI)) ||
+							 ((dPanelLon(i,0) <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ) {
+					
+							fPanelContainsCentroid = true;
+						}
+					}
+					
+					else if ( i == 3 ){
+						
+						if ( ((0 <= dLonRad0) && (dLonRad0 <= 0 + dBuff*M_PI/180)) ||
+							 ((dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ){
+								 
+							fPanelContainsCentroid = true;
+								 
+						}
+						
+					}
+					
+					else {
+						
+						if ( (dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)){
+					
+							fPanelContainsCentroid = true;
+						}
+						
+						
+					}
+					
+				}
+			}
+			else if (i == 4){
+								
+				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1))){
+					
+					fPanelContainsCentroid = true;
+					
+				}
+				
+			}
+			
+			else {
+
+				if ((dPanelLat(i,0) <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1) + dBuff*M_PI/180)){
+					fPanelContainsCentroid = true;
+					
+				}
+				
+			}
+			
+			if(fPanelContainsCentroid){
+				
+				vecGlobalIndexI[i].push_back(j);
+				nNodes++;
+				
+				// Gnomonic projection of centroid coordinates
+				double dGX;
+				double dGY;
+				GnomonicProjection(dLonTan,dLatTan,dLonRad0,dLatRad0,dGX,dGY);
+				
+				// Add Gnomonic coordinates to vector
+				dPanelCentroid[0].push_back(dGX);
+				dPanelCentroid[1].push_back(dGY);
+				
+			}
+		}
+		
+		// Structures for Delaunay triangulation
+		
+		struct triangulateio in, out, vorout;
+		 
+		in.numberofpoints           = nNodes;
+		in.numberofpointattributes  = 0;
+		in.numberofsegments         = 0;
+		in.numberofholes            = 0;
+		in.numberofregions          = 0;
+		in.pointlist                = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+		in.segmentlist              = (int  *) malloc(in.numberofsegments * 2 * sizeof(int));;
+		in.pointattributelist       = (REAL *) NULL;
+		in.pointmarkerlist          = (int  *) NULL;
+		in.trianglelist             = (int  *) NULL;
+		in.triangleattributelist    = (REAL *) NULL;
+		in.neighborlist             = (int  *) NULL;
+		in.segmentmarkerlist        = (int  *) NULL;
+		in.edgelist                 = (int  *) NULL;
+		in.edgemarkerlist           = (int  *) NULL;
+	
+		// initialize data structure for output triangulation
+		out.pointlist               = (REAL *) NULL;
+		out.pointattributelist      = (REAL *) NULL;
+		out.pointmarkerlist         = (int  *) NULL;
+		out.trianglelist            = (int  *) NULL;
+		out.triangleattributelist   = (REAL *) NULL;
+		out.neighborlist            = (int  *) NULL;
+		out.segmentlist             = (int  *) NULL;
+		out.segmentmarkerlist       = (int  *) NULL;
+		out.edgelist                = (int  *) NULL;
+		out.edgemarkerlist          = (int  *) NULL;
+	
+		// initialize data structure for output Voronoi diagram (unused)
+		vorout.pointlist            = (REAL *) NULL;
+		vorout.pointattributelist   = (REAL *) NULL;
+		vorout.edgelist             = (int  *) NULL;
+		vorout.normlist             = (REAL *) NULL;
+		
+		// Add points to in.pointlist
+		
+		for (int j = 0; j < nNodes; j++){
+		
+			in.pointlist[2*j+0] = dPanelCentroid[0][j];
+			in.pointlist[2*j+1] = dPanelCentroid[1][j];
+			
+		}
+		
+		// Compute Delaunay triangulation.  Use the 'c' option so that 
+		// the convex hull is included
+		
+		char options[256] ="cjzenYQ";
+		triangulate(options, &in, &out, &vorout);
+		
+		// Convert to mesh object by building face vector
+		for (int j = 0; j < out.numberoftriangles; j++){
+			
+			Face newFace(3);
+			
+			newFace.SetNode(0, out.trianglelist[3*j+0]);
+			newFace.SetNode(1, out.trianglelist[3*j+1]);
+			newFace.SetNode(2, out.trianglelist[3*j+2]);
+			vecMesh[i].faces.push_back(newFace);
+			
+		}
+		
+		// Build node vector.  Note that the Delaunay triangulation preserves
+		// point indexing.
+		for (int j = 0; j < out.numberofpoints; j++){
+			
+			Node node(out.pointlist[2*j+0],out.pointlist[2*j+1],0);
+			vecMesh[i].nodes.push_back(node);
+			
+		}
+		
+		vecMesh[i].ConstructReverseNodeArray();
+		vecMesh[i].RemoveCoincidentNodes();
+		vecMesh[i].RemoveZeroEdges();
+		vecMesh[i].ConstructEdgeMap();
+				
+		free(in.pointlist);
+		free(out.pointlist);
+		free(out.pointattributelist);
+		free(out.pointmarkerlist); 
+		free(out.trianglelist);
+		free(out.triangleattributelist);
+		free(out.neighborlist);
+		free(out.segmentlist);
+		free(out.segmentmarkerlist);
+		free(out.edgelist); 
+		free(out.edgemarkerlist); 
+
+	}
+	
+	// Construct kd-tree for each panel
+	
+	for (int i = 0; i < 6; i++){
+		
+		vecKDTreePanelI[i] = kd_create(3);
+		
+		for (int j = 0; j < vecMesh[i].faces.size(); j++){
+							
+				Face face = vecMesh[i].faces[j];
+				
+				Node nodeCenter = GetFaceCentroid(face, vecMesh[i].nodes);
+							
+				kd_insert3(
+					vecKDTreePanelI[i],
+					nodeCenter.x,
+					nodeCenter.y,
+					nodeCenter.z,
+					(void*)(&(vecMesh[i].faces[j])));
+			
+		}
+		
+	}
+	
+	// Overlap face index
+	int ixOverlap = 0;
+
+	// Loop through all source faces
+	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+
+		// Output every 1000 overlap elements
+		if (ixFirst % 1000 == 0) {
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+		}
+
+		// This Face
+		const Face & faceFirst = meshInput.faces[ixFirst];
+
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+				break;
+			}
+		}
+		
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		// Loop through all overlap faces associated with this source face
+		for (int j = 0; j < nOverlapFaces; j++) {
+			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+
+			int nSubTriangles = faceOverlap.edges.size() - 2;
+
+			// Jacobian at each quadrature point
+			DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+			DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+
+			// Compute quadrature area of each overlap face
+			double dQuadratureArea = 0.0;
+
+			for (int k = 0; k < nSubTriangles; k++) {
+				for (int p = 0; p < dW.GetRows(); p++) {
+
+					dQuadPtWeight(k,p) =
+						CalculateSphericalTriangleJacobianBarycentric(
+							meshOverlap.nodes[faceOverlap[0]],
+							meshOverlap.nodes[faceOverlap[k+1]],
+							meshOverlap.nodes[faceOverlap[k+2]],
+							dG(p,0), dG(p,1),
+							&(dQuadPtNodes(k,p)));
+
+					dQuadPtWeight(k,p) *= dW[p];
+
+					dQuadratureArea += dQuadPtWeight(k,p);
+				}
+			}
+
+			// Loop through all sub-triangles of this overlap Face
+			for (int k = 0; k < nSubTriangles; k++) {
+
+				// Loop through all quadrature nodes on this overlap Face
+				for (int p = 0; p < dW.GetRows(); p++) {
+
+					// Get quadrature node and pointwise Jacobian
+					const Node & nodeQ = dQuadPtNodes(k,p);
+
+					// Get lat/lon coordinates of nodeQ
+					double dLatRad;
+					double dLonRad;
+					
+					XYZtoRLL_Rad(nodeQ.x,nodeQ.y,nodeQ.z,dLonRad,dLatRad);
+					
+					// Determine the panel where nodeQ is located
+					int iPanelIndex;
+					
+					for (int i = 0; i < 6; i++){
+						
+						if ((dPanelLat(i,0) <= dLatRad) && (dLatRad <= dPanelLat(i,1)) &&
+							(dPanelLon(i,0) <= dLonRad) && (dLonRad <= dPanelLon(i,1))){
+								
+								iPanelIndex = i;
+								break;
+								
+							}
+						
+					}
+					// Compute Gnomonic projection onto the corresponding plane
+					
+					double dGX,dGY;
+					double dLatTan;
+					double dLonTan;
+					
+					if ((0 <= iPanelIndex) && (iPanelIndex <= 3)){
+				
+						dLatTan = 0;
+						dLonTan = (iPanelIndex+1)*45*M_PI/180 + 45*iPanelIndex*M_PI/180;
+						
+					}
+					else if (iPanelIndex == 4){
+						
+						dLatTan = M_PI/2;
+						dLonTan = 0;
+						
+					}
+					else{
+						
+						dLonTan = 0;
+						dLatTan = -M_PI/2;
+						
+					}
+					
+					GnomonicProjection(dLonTan,dLatTan,dLonRad,dLatRad,dGX,dGY);
+					
+					// Get point closest to dGX and dGY
+					kdres * kdresTarget =
+						kd_nearest3(
+							vecKDTreePanelI[iPanelIndex],
+							dGX,
+							dGY,
+							0.0);
+							
+					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+
+					int iNearestFace = pFace - &(vecMesh[iPanelIndex].faces[0]);
+
+					// Find triangle that contains the Gnomonic projection of nodeQ.
+					// This is the face whose local index is iFaceFinal
+					
+					int iFaceFinal;
+					
+					double dA,dB;
+					
+					BarycentricCoordinates(vecMesh[iPanelIndex],iNearestFace,dGX,dGY,dA,dB);
+					
+					GetTriangleThatContainsPoint(vecMesh[iPanelIndex],iNearestFace,iFaceFinal,dGX,dGY);
+					
+					// Get global indices of the vertices of this triangle and 
+					// calculate corresponding centroids
+					
+					std::vector<int> vecContributingFaceI(3);
+					DataArray2D<double> dataContributingCentroids(3,3);
+					
+					// Indices on the local mesh of the containing triangle
+					
+					int iLocalVertex1 = vecMesh[iPanelIndex].faces[iFaceFinal][0];
+					int iLocalVertex2 = vecMesh[iPanelIndex].faces[iFaceFinal][1];
+					int iLocalVertex3 = vecMesh[iPanelIndex].faces[iFaceFinal][2];
+					
+					// Indices on the source mesh of the containing triangle
+					
+					int iGlobalVertex1 = vecGlobalIndexI[iPanelIndex][iLocalVertex1];
+					int iGlobalVertex2 = vecGlobalIndexI[iPanelIndex][iLocalVertex2];
+					int iGlobalVertex3 = vecGlobalIndexI[iPanelIndex][iLocalVertex3];
+					
+					vecContributingFaceI[0] = iGlobalVertex1;
+					vecContributingFaceI[1] = iGlobalVertex2;
+					vecContributingFaceI[2] = iGlobalVertex3;
+					
+					// The centroids of the source mesh are the vertices of the containing triangle
+					
+					for (int i = 0; i < 3; i++){
+
+						Face faceCurrent = meshInput.faces[vecContributingFaceI[i]];
+						
+						Node nodeCenter = GetFaceCentroid(faceCurrent,meshInput.nodes);
+						
+						nodeCenter.Normalized();
+						
+						dataContributingCentroids(i,0) = nodeCenter.x;
+						dataContributingCentroids(i,1) = nodeCenter.y;
+						dataContributingCentroids(i,2) = nodeCenter.z;
+						
+									
+					}
+					
+					// Vector of areas of subtriangles
+					std::vector<double> vecSubAreas(3);
+					
+					// Area of triangle is obtained by adding up areas of the three 
+					// subtriangles that are formed by the sample point
+					
+					double dTriangleArea = 0;
+					
+					for (int i = 0; i < 3; i++){
+						
+						Face faceCurrent(3);
+					
+						faceCurrent.SetNode(0,0);
+						faceCurrent.SetNode(1,1);
+						faceCurrent.SetNode(2,2);
+					
+						NodeVector nodesCurrent;
+						
+						nodesCurrent.push_back(nodeQ);
+						
+						Node node1(dataContributingCentroids((i+1)%3,0),dataContributingCentroids((i+1)%3,1),
+								   dataContributingCentroids((i+1)%3,2));
+						
+						Node node2(dataContributingCentroids((i+2)%3,0),dataContributingCentroids((i+2)%3,1),
+								   dataContributingCentroids((i+2)%3,2));			
+						
+						nodesCurrent.push_back(node1);
+						nodesCurrent.push_back(node2);
+						
+						vecSubAreas[i] = CalculateFaceArea(faceCurrent,nodesCurrent);
+						
+						dTriangleArea += vecSubAreas[i];
+						
+					}
+					
+					// Calculate vector of weights
+					std::vector<double> vecContributingFaceWeights(3);
+					
+					for (int i = 0; i < 3; i++){
+						
+						vecContributingFaceWeights[i] = vecSubAreas[i]/dTriangleArea;
+						
+					}
+					
+					// Contribution of this quadrature point to the map
+					for (int i = 0; i < vecContributingFaceI.size(); i++){
+						
+						smatMap(iTargetFace, vecContributingFaceI[i]) +=
+							vecContributingFaceWeights[i]
+							* dQuadPtWeight(k,p)
+							* meshOverlap.vecFaceArea[ixOverlap + j]
+							/ dQuadratureArea
+							/ meshOutput.vecFaceArea[iTargetFace];
+							
+					}
+				}
+			}
+		}
+
+		// Increment the current overlap index
+		ixOverlap += nOverlapFaces;
+	}
+	
+	
+}
+	
+
 
 ///////////////////////////////////////////////////////////////////////////////
 

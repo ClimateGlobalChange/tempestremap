@@ -57,6 +57,20 @@ void LinearRemapFVtoFV(
 
 ///	<summary>
 ///		Generate the OfflineMap for remapping from finite volumes to finite
+///		volumes using a triangulation of the source mesh.
+///	</summary>
+
+void LinearRemapTriangulation(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for remapping from finite volumes to finite
 ///		elements using simple sampling of the FV reconstruction.
 ///	</summary>
 void LinearRemapFVtoGLL_Simple(
