@@ -231,6 +231,151 @@ void GetAdjacentFaceVectorByEdge(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void GetTriangleThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY
+) {
+	// Ensure the ReverseNodeArray has been constructed
+	if (mesh.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap is required");
+	}
+	
+	// First check if point is in initial face
+	if (fTriangleContainsPoint(mesh,iFaceInitial,dX,dY)){
+		
+		iFaceFinal = iFaceInitial;
+		return;
+						
+	}
+	
+	// Set of all Faces
+	std::set<int> setAllFaces;
+
+	// Set of current Faces
+	std::set<int> setCurrentFaces;
+	
+	// Insert initial Face
+	setAllFaces.insert(iFaceInitial);
+	setCurrentFaces.insert(iFaceInitial);
+	
+	while (setAllFaces.size() < mesh.faces.size()) {
+
+		// Set of Faces to examine next
+		std::set<int> setNextFaces;
+
+		// Loop through all Faces adjacent to Faces in setCurrentFaces
+		std::set<int>::const_iterator iterCurrentFace = setCurrentFaces.begin();
+		for (; iterCurrentFace != setCurrentFaces.end(); iterCurrentFace++) {
+
+			const Face & faceCurrent = mesh.faces[*iterCurrentFace];
+			for (int i = 0; i < faceCurrent.edges.size(); i++) {
+				const FacePair & facepair =
+					mesh.edgemap.find(faceCurrent.edges[i])->second;
+				
+				// New face index
+				int iNewFace;
+				if (facepair[0] == *iterCurrentFace) {
+					iNewFace = facepair[1];
+				} else if (facepair[1] == *iterCurrentFace) {
+					iNewFace = facepair[0];
+				} else {
+					_EXCEPTIONT("Logic error");
+				}
+
+				if (iNewFace == InvalidFace) {
+					continue;
+				}
+				
+				// If this is a new Face, check whether it contains the point
+				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
+					if(fTriangleContainsPoint(mesh,iNewFace,dX,dY)){
+						
+						iFaceFinal = iNewFace;
+						return;
+						
+					}
+					else{
+					
+						setAllFaces.insert(iNewFace);
+						setNextFaces.insert(iNewFace);
+						
+					}
+				}
+			}
+		}
+
+		setCurrentFaces = setNextFaces;
+	}
+	_EXCEPTIONT("Unable to find a triangle that contains the point");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void BarycentricCoordinates(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double & dA,
+	double & dB
+){
+	
+	Face face = mesh.faces[iFace];
+	
+	// The input face has to be a triangle
+	if(face.edges.size() != 3){
+		_EXCEPTIONT("The input face must be a triangle");
+	}
+	
+	Node nodeV1 = mesh.nodes[face[0]];
+	Node nodeV2 = mesh.nodes[face[1]];
+	Node nodeV3 = mesh.nodes[face[2]];
+	
+	double dX1 = nodeV1.x;
+	double dY1 = nodeV1.y;
+	
+	double dX2 = nodeV2.x;
+	double dY2 = nodeV2.y;
+	
+	double dX3 = nodeV3.x;
+	double dY3 = nodeV3.y;
+	
+	dA = ((dY2 - dY3)*(dX - dX3) + (dX3 - dX2)*(dY - dY3))/
+		 ((dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3));
+		 
+	dB = ((dY3 - dY1)*(dX - dX3) + (dX1 - dX3)*(dY - dY3))/
+		 ((dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3));
+		
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool fTriangleContainsPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY
+){
+	
+	double dA;
+	double dB;
+	
+	BarycentricCoordinates(mesh,iFace,dX,dY,dA,dB);
+		
+	if ((0 <= dA) && (0 <= dB) && (dA + dB <= 1+1e-15)){
+		return true;
+	}
+	else{
+		return false;
+	}
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void GetAdjacentFaceVectorByNode(
 	const Mesh & mesh,
 	int iFaceInitial,

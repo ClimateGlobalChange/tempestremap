@@ -116,6 +116,48 @@ void GetAdjacentFaceVectorByEdge(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Find the triangle that contains a two-dimensional point
+///	</summary>
+
+void GetTriangleThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Barycentric coordinates of a two-dimensional point
+///	</summary>
+
+void BarycentricCoordinates(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double & dA,
+	double & dB
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Determine if a triangle contains a point
+///	</summary>
+
+bool fTriangleContainsPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Get a vector of adjacent faces using vertex information to determine
 ///		adjacencies.
 ///	</summary>
