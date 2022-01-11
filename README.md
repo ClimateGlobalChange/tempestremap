@@ -25,9 +25,9 @@ Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1.
 [![Install with conda](https://anaconda.org/conda-forge/tempest-remap/badges/installer/conda.svg)](https://anaconda.org/conda-forge/tempest-remap)
 [![Platforms](https://anaconda.org/conda-forge/tempest-remap/badges/platforms.svg)]()
 
-Prebuilt Python and Julia Packages
+Prebuilt Conda and Julia Packages
 ----------------------------------
-Prebuilt binary packages for x64 Linux and MacOS are provided through conda-forge for Python [conda](https://docs.conda.io/en/latest/) projects and as a Julia [JLL](https://docs.binarybuilder.org/stable/jll/) package.
+Prebuilt binary packages for x64 Linux and MacOS are provided through conda-forge for [conda](https://docs.conda.io/en/latest/) projects and as a Julia [JLL](https://docs.binarybuilder.org/stable/jll/) package.
 
 For Conda:
 
