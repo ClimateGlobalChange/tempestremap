@@ -556,8 +556,8 @@ void Mesh::Write(
 				_EXCEPTION1("Error creating variable \"%s\"", szAttribName);
 			}
 
-			varAttrib->set_cur((long)0);
-			varAttrib->put(&(dAttrib[0]), vecBlockSizeFaces[n]);
+			varAttrib->set_cur((long)0, (long)0);
+			varAttrib->put(&(dAttrib[0]), vecBlockSizeFaces[n], 1);
 		}
 	}
 
