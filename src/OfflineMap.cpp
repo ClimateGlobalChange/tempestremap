@@ -2339,28 +2339,36 @@ void OfflineMap::Write(
 
 	// Verify dimensionality
 	if (m_dSourceCenterLon.GetRows() != nA) {
-		_EXCEPTIONT("Mismatch between m_dSourceCenterLon and nA");
+		_EXCEPTION2("Mismatch between m_dSourceCenterLon (%lu) and nA (%i)",
+			m_dSourceCenterLon.GetRows(), nA);
 	}
 	if (m_dSourceCenterLat.GetRows() != nA) {
-		_EXCEPTIONT("Mismatch between m_dSourceCenterLat and nA");
+		_EXCEPTION2("Mismatch between m_dSourceCenterLat (%lu) and nA (%i)",
+			m_dSourceCenterLat.GetRows(), nA);
 	}
 	if (m_dTargetCenterLon.GetRows() != nB) {
-		_EXCEPTIONT("Mismatch between m_dTargetCenterLon and nB");
+		_EXCEPTION2("Mismatch between m_dTargetCenterLon (%lu) and nB (%i)",
+			m_dTargetCenterLon.GetRows(), nB);
 	}
 	if (m_dTargetCenterLat.GetRows() != nB) {
-		_EXCEPTIONT("Mismatch between m_dTargetCenterLat and nB");
+		_EXCEPTION2("Mismatch between m_dTargetCenterLat (%lu) and nB (%i)",
+			m_dTargetCenterLat.GetRows(), nB);
 	}
 	if (m_dSourceVertexLon.GetRows() != nA) {
-		_EXCEPTIONT("Mismatch between m_dSourceVertexLon and nA");
+		_EXCEPTION2("Mismatch between m_dSourceVertexLon (%lu) and nA (%i)",
+			m_dSourceVertexLon.GetRows(), nA);
 	}
 	if (m_dSourceVertexLat.GetRows() != nA) {
-		_EXCEPTIONT("Mismatch between m_dSourceVertexLat and nA");
+		_EXCEPTION2("Mismatch between m_dSourceVertexLat (%lu) and nA (%i)",
+			m_dSourceVertexLat.GetRows(), nA);
 	}
 	if (m_dTargetVertexLon.GetRows() != nB) {
-		_EXCEPTIONT("Mismatch between m_dTargetVertexLon and nB");
+		_EXCEPTION2("Mismatch between m_dTargetVertexLon (%lu) and nB (%i)",
+			m_dTargetVertexLon.GetRows(), nB);
 	}
 	if (m_dTargetVertexLat.GetRows() != nB) {
-		_EXCEPTIONT("Mismatch between m_dTargetVertexLat and nB");
+		_EXCEPTION2("Mismatch between m_dTargetVertexLat (%lu) and nB (%i)",
+			m_dTargetVertexLat.GetRows(), nB);
 	}
 
 	varYCA->put(&(m_dSourceCenterLat[0]), nA);

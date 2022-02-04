@@ -269,7 +269,8 @@ double GenerateMetaData(
 	int nP,
 	bool fNoBubble,
 	DataArray3D<int> & dataGLLnodes,
-	DataArray3D<double> & dataGLLJacobian
+	DataArray3D<double> & dataGLLJacobian,
+	bool fContinuousGLL
 ) {
 
 	// Number of Faces
@@ -299,6 +300,9 @@ double GenerateMetaData(
 		}
 	}
 
+	// First node index, 1-indexed
+	int ixNode = 1;
+
 	// Write metadata
 	for (int k = 0; k < nElements; k++) {
 		const Face & face = mesh.faces[k];
@@ -312,79 +316,7 @@ double GenerateMetaData(
 
 		for (int j = 0; j < nP; j++) {
 		for (int i = 0; i < nP; i++) {
-/*
-			double dXc =
-				  nodevec[face[0]].x * (1.0 - dG[i]) * (1.0 - dG[j])
-				+ nodevec[face[1]].x *        dG[i]  * (1.0 - dG[j])
-				+ nodevec[face[2]].x *        dG[i]  *        dG[j]
-				+ nodevec[face[3]].x * (1.0 - dG[i]) *        dG[j];
 
-			double dYc =
-				  nodevec[face[0]].y * (1.0 - dG[i]) * (1.0 - dG[j])
-				+ nodevec[face[1]].y *        dG[i]  * (1.0 - dG[j])
-				+ nodevec[face[2]].y *        dG[i]  *        dG[j]
-				+ nodevec[face[3]].y * (1.0 - dG[i]) *        dG[j];
-
-			double dZc =
-				  nodevec[face[0]].z * (1.0 - dG[i]) * (1.0 - dG[j])
-				+ nodevec[face[1]].z *        dG[i]  * (1.0 - dG[j])
-				+ nodevec[face[2]].z *        dG[i]  *        dG[j]
-				+ nodevec[face[3]].z * (1.0 - dG[i]) *        dG[j];
-
-			double dR = sqrt(dXc * dXc + dYc * dYc + dZc * dZc);
-
-			// Check if this Node exists in the NodeMap
-			Node nodeGLL;
-			nodeGLL.x = dXc / dR;
-			nodeGLL.y = dYc / dR;
-			nodeGLL.z = dZc / dR;
-
-			// Calculate Jacobian
-
-			// Pointwise basis vectors in Cartesian geometry
-			Node dDx1F(
-				(1.0 - dG[j]) * (nodevec[face[1]].x - nodevec[face[0]].x)
-				+      dG[j]  * (nodevec[face[2]].x - nodevec[face[3]].x),
-				(1.0 - dG[j]) * (nodevec[face[1]].y - nodevec[face[0]].y)
-				+      dG[j]  * (nodevec[face[2]].y - nodevec[face[3]].y),
-				(1.0 - dG[j]) * (nodevec[face[1]].z - nodevec[face[0]].z)
-				+      dG[j]  * (nodevec[face[2]].z - nodevec[face[3]].z));
-
-			Node dDx2F(
-				(1.0 - dG[i]) * (nodevec[face[3]].x - nodevec[face[0]].x)
-				+      dG[i]  * (nodevec[face[2]].x - nodevec[face[1]].x),
-				(1.0 - dG[i]) * (nodevec[face[3]].y - nodevec[face[0]].y)
-				+      dG[i]  * (nodevec[face[2]].y - nodevec[face[1]].y),
-				(1.0 - dG[i]) * (nodevec[face[3]].z - nodevec[face[0]].z)
-				+      dG[i]  * (nodevec[face[2]].z - nodevec[face[1]].z));
-
-			// Pointwise basis vectors in spherical geometry
-			double dDenomTerm = 1.0 / (dR * dR * dR);
-
-			Node dDx1G(
-				- dXc * (dYc * dDx1F.y + dZc * dDx1F.z)
-					+ (dYc * dYc + dZc * dZc) * dDx1F.x,
-				- dYc * (dXc * dDx1F.x + dZc * dDx1F.z)
-					+ (dXc * dXc + dZc * dZc) * dDx1F.y,
-				- dZc * (dXc * dDx1F.x + dYc * dDx1F.y)
-					+ (dXc * dXc + dYc * dYc) * dDx1F.z);
-
-			Node dDx2G(
-				- dXc * (dYc * dDx2F.y + dZc * dDx2F.z)
-					+ (dYc * dYc + dZc * dZc) * dDx2F.x,
-				- dYc * (dXc * dDx2F.x + dZc * dDx2F.z)
-					+ (dXc * dXc + dZc * dZc) * dDx2F.y,
-				- dZc * (dXc * dDx2F.x + dYc * dDx2F.y)
-					+ (dXc * dXc + dYc * dYc) * dDx2F.z);
-
-			dDx1G.x *= dDenomTerm;
-			dDx1G.y *= dDenomTerm;
-			dDx1G.z *= dDenomTerm;
-
-			dDx2G.x *= dDenomTerm;
-			dDx2G.y *= dDenomTerm;
-			dDx2G.z *= dDenomTerm;
-*/
 			// Get local map vectors
 			Node nodeGLL;
 			Node dDx1G;
@@ -399,17 +331,25 @@ double GenerateMetaData(
 				dDx1G,
 				dDx2G);
 
-			// Determine if this is a unique Node
-			std::map<Node, int>::const_iterator iter = mapNodes.find(nodeGLL);
-			if (iter == mapNodes.end()) {
+			// For continuous GLL determine the mapping from local node index to global index
+			if (fContinuousGLL) {
 
-				// Insert new unique node into map
-				int ixNode = static_cast<int>(mapNodes.size());
-				mapNodes.insert(std::pair<Node, int>(nodeGLL, ixNode));
-				dataGLLnodes[j][i][k] = ixNode + 1;
+				// Determine if this is a unique Node
+				std::map<Node, int>::const_iterator iter = mapNodes.find(nodeGLL);
+				if (iter == mapNodes.end()) {
+
+					// Insert new unique node into map
+					int ixNode = static_cast<int>(mapNodes.size());
+					mapNodes.insert(std::pair<Node, int>(nodeGLL, ixNode));
+					dataGLLnodes[j][i][k] = ixNode + 1;
+
+				} else {
+					dataGLLnodes[j][i][k] = iter->second + 1;
+				}
 
 			} else {
-				dataGLLnodes[j][i][k] = iter->second + 1;
+				dataGLLnodes[j][i][k] = ixNode;
+				ixNode++;
 			}
 
 			// Cross product gives local Jacobian
@@ -471,18 +411,7 @@ double GenerateMetaData(
 					dataGLLJacobian[j][i][k] *= 1.0 + dInteriorMassSum;
 				}
 				}
-/*
-				double dNewMassSum = 0;
-				for (int j = 0; j < nP; j++) {
-				for (int i = 0; i < nP; i++) {
-					dNewMassSum += dataGLLJacobian[j][i][k];
-				}
-				}
 
-				std::cout << "New mass  -  true mass " << dNewMassSum - mesh.vecFaceArea[k] << "\n";
-
-				std::cout << "New mass = " << dNewMassSum << ", true mass = " << mesh.vecFaceArea[k] << "\n";
-*/
 				dFaceNumericalArea += dMassDifference;
 			}
 		}

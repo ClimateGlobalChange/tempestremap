@@ -89,7 +89,8 @@ double GenerateMetaData(
 	int nP,
 	bool fNoBubble,
 	DataArray3D<int> & dataGLLnodes,
-	DataArray3D<double> & dataGLLJacobian
+	DataArray3D<double> & dataGLLJacobian,
+	bool fContinuousGLL = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////

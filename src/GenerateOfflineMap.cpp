@@ -457,7 +457,8 @@ try {
 					optsAlg.nPout,
 					optsAlg.fNoBubble,
 					dataGLLNodes,
-					dataGLLJacobian);
+					dataGLLJacobian,
+					(eTargetType == DiscretizationType_CGLL));
 
 			Announce("Output Mesh Numerical Area: %1.15e", dNumericalArea);
 			AnnounceEndBlock(NULL);
@@ -540,7 +541,8 @@ try {
 					optsAlg.nPin,
 					optsAlg.fNoBubble,
 					dataGLLNodes,
-					dataGLLJacobian);
+					dataGLLJacobian,
+					(eSourceType == DiscretizationType_CGLL));
 
 			Announce("Input Mesh Numerical Area: %1.15e", dNumericalArea);
 			AnnounceEndBlock(NULL);
@@ -618,7 +620,8 @@ try {
 					optsAlg.nPin,
 					optsAlg.fNoBubble,
 					dataGLLNodesIn,
-					dataGLLJacobianIn);
+					dataGLLJacobianIn,
+					(eSourceType == DiscretizationType_CGLL));
 
 			Announce("Input Mesh Numerical Area: %1.15e", dNumericalAreaIn);
 			AnnounceEndBlock(NULL);
@@ -644,7 +647,8 @@ try {
 					optsAlg.nPout,
 					optsAlg.fNoBubble,
 					dataGLLNodesOut,
-					dataGLLJacobianOut);
+					dataGLLJacobianOut,
+					(eTargetType == DiscretizationType_CGLL));
 
 			Announce("Output Mesh Numerical Area: %1.15e", dNumericalAreaOut);
 			AnnounceEndBlock(NULL);
