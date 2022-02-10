@@ -25,6 +25,46 @@ Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1.
 [![Install with conda](https://anaconda.org/conda-forge/tempest-remap/badges/installer/conda.svg)](https://anaconda.org/conda-forge/tempest-remap)
 [![Platforms](https://anaconda.org/conda-forge/tempest-remap/badges/platforms.svg)]()
 
+Prebuilt Conda and Julia Packages
+----------------------------------
+Prebuilt binary packages for x64 Linux and MacOS are provided through conda-forge for [conda](https://docs.conda.io/en/latest/) projects and as a Julia [JLL](https://docs.binarybuilder.org/stable/jll/) package.
+
+For Conda:
+
+     > conda install -c conda-forge tempest-remap 
+     > GenerateCSMesh --res 6 --file cubedsphere_6.netcdf --out_format NetCDF4
+     Parameters:
+       --res <integer> [6] 
+       --file <string> ["cubedsphere_6.netcdf"] 
+       --out_format <string> ["Netcdf4"] 
+       --alt <bool> [false] 
+     =========================================================
+     ..Generating mesh with resolution [6]
+     ..Writing mesh to file [cubedsphere_6.netcdf] 
+     Nodes per element
+     ..Block 1 (4 nodes): 216
+     ..Mesh generator exited successfully
+     =========================================================
+
+For Julia (v1.7+):
+
+    julia> using Pkg; Pkg.add("TempestRemap_jll")
+    julia> using TempestRemap_jll
+
+    julia> run(`$(TempestRemap_jll.GenerateCSMesh_exe()) --res 6 --file cubedsphere_6.netcdf  --out_format Netcdf4`);
+    Parameters:
+      --res <integer> [6] 
+      --file <string> ["cubedsphere_6.netcdf"] 
+      --out_format <string> ["Netcdf4"] 
+      --alt <bool> [false] 
+    =========================================================
+    ..Generating mesh with resolution [6]
+    ..Writing mesh to file [cubedsphere_6.netcdf] 
+    Nodes per element
+    ..Block 1 (4 nodes): 216
+    ..Mesh generator exited successfully
+    =========================================================
+
 Build Instructions with Autotools
 ----------------------------------
 
