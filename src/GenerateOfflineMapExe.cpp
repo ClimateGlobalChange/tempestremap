@@ -45,6 +45,9 @@ int main(int argc, char** argv) {
 	// Algorithm options
 	GenerateOfflineMapAlgorithmOptions optsAlg;
 
+	// Dummy option (backward compatibility)
+	bool fCorrectAreas;
+
 	// Apply options
 	ApplyOfflineMapOptions optsApply;
 
@@ -70,6 +73,7 @@ int main(int argc, char** argv) {
 		CommandLineString(optsAlg.strMethod, "method", "");
 		CommandLineBool(optsAlg.fMonotone, "mono");
 		CommandLineBool(optsAlg.fNoBubble, "nobubble");
+		CommandLineBool(fCorrectAreas, "correct_areas"); // Dummy option (does not affect optsAlg)
 		CommandLineBool(optsAlg.fNoCorrectAreas, "nocorrectareas");
 		CommandLineBool(optsAlg.fNoConservation, "noconserve");
 		CommandLineBool(optsAlg.fNoCheck, "nocheck");
