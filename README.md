@@ -22,59 +22,89 @@ Paul A. Ullrich, Darshi Devendran and Hans Johansen, 2016: Arbitrary-Order
 Conservative and Consistent Remapping and a Theory of Linear Maps, Part 2.
 Mon. Weather Rev., 144, 1529-1549, doi: 10.1175/MWR-D-15-0301.1. 
 
-Librarification for build with MOAB
------------------------------------
+[![Install with conda](https://anaconda.org/conda-forge/tempest-remap/badges/installer/conda.svg)](https://anaconda.org/conda-forge/tempest-remap)
+[![Platforms](https://anaconda.org/conda-forge/tempest-remap/badges/platforms.svg)]()
 
-The original TempestRemap sources available at 
-https://github.com/ClimateGlobalChange/tempestremap have been modified to
-accomodate a robust autotools-based configuration/build system. Additional
-modifications include librarification of the TempestRemap sources to produce
-both a linkable library (enabled with --enable-linkable-library), and in the
-absence of such an option, the original TempestRemap drivers. These changes 
-should be considered more of a refactor of the sources and do not contain any
-functional or algorithmic changes.
+Prebuilt Conda and Julia Packages
+----------------------------------
+Prebuilt binary packages for x64 Linux and MacOS are provided through conda-forge for [conda](https://docs.conda.io/en/latest/) projects and as a Julia [JLL](https://docs.binarybuilder.org/stable/jll/) package.
 
-If you are working from the repository, please proceed with these new set of
-build instructions
+For Conda:
 
-  1. cd $TEMPESTREMAP_SRCDIR && autoreconf -fi
-  2. mkdir -p build && cd build
-  3. To build a linkable library:
+     > conda install -c conda-forge tempest-remap 
+     > GenerateCSMesh --res 6 --file cubedsphere_6.netcdf --out_format NetCDF4
+     Parameters:
+       --res <integer> [6] 
+       --file <string> ["cubedsphere_6.netcdf"] 
+       --out_format <string> ["Netcdf4"] 
+       --alt <bool> [false] 
+     =========================================================
+     ..Generating mesh with resolution [6]
+     ..Writing mesh to file [cubedsphere_6.netcdf] 
+     Nodes per element
+     ..Block 1 (4 nodes): 216
+     ..Mesh generator exited successfully
+     =========================================================
+
+For Julia (v1.7+):
+
+    julia> using Pkg; Pkg.add("TempestRemap_jll")
+    julia> using TempestRemap_jll
+
+    julia> run(`$(TempestRemap_jll.GenerateCSMesh_exe()) --res 6 --file cubedsphere_6.netcdf  --out_format Netcdf4`);
+    Parameters:
+      --res <integer> [6] 
+      --file <string> ["cubedsphere_6.netcdf"] 
+      --out_format <string> ["Netcdf4"] 
+      --alt <bool> [false] 
+    =========================================================
+    ..Generating mesh with resolution [6]
+    ..Writing mesh to file [cubedsphere_6.netcdf] 
+    Nodes per element
+    ..Block 1 (4 nodes): 216
+    ..Mesh generator exited successfully
+    =========================================================
+
+Build Instructions with Autotools
+----------------------------------
+
+TempestRemap now supports a robust autotools-based configuration/build system. Building with the standard autotools toolchain simplifies the process of linking for downstream packages like [MOAB](https://bitbucket.org/fathomteam/moab), and in [conda feedstock](https://anaconda.org/conda-forge/tempest-remap). The builds produce both linkable TempestRemap libraries and several specialized tools (or drivers) that can be installed in user-specified installation directories.
+
+Please follow the build instructions below:
+
+  1. `cd $TEMPESTREMAP_SRCDIR && autoreconf -fi`
+  2. `mkdir -p build && cd build`
+  3. Configure TempestRemap:
+  ```
      ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
                   --with-blas=$BLAS_LIB \ # Path to BLAS libraries
                   --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
-                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
+                  --with-netcdf=$NETCDF_DIR \ # With NetCDF-C interfaces
                   --with-hdf5=$HDF5_DIR # If NetCDF was build with HDF5
-  4. To build the TempestRemap drivers:
-     ../configure --prefix=$INSTALL_DIR \ # Install dir for TempestRemap libraries
-                  --with-blas=$BLAS_LIB \ # Path to BLAS libraries
-                  --with-lapack=$LAPACK_LIB \ # Path to LAPACK libraries
-                  --with-netcdf=$NETCDF_DIR \ # With C++ interfaces
-                  --with-hdf5=$HDF5_DIR # If NetCDF was build with HDF5
-  5. make all
-  6. make install
+  ```
+  5.  Build TempestRemap: `make all`
+  6.  Install TempestRemap: `make install`
 
-Additionally, a user can provide the appropriate compilers with the environmental
-flags (CC, CXX, FC, F77 etc) and control the compilation/link flags (CXXFLAGS, 
-CPPFLAGS, LDFLAGS, LIBS) as necessary.
+Additionally, users can provide the appropriate compilers with the environmental flags (`CC`, `CXX`, `FC`, `F77`, etc.) and control the compilation/link flags (`CXXFLAGS`, `CPPFLAGS`, `LDFLAGS`, `LIBS`) as necessary.
 
 Build Instructions with make
 ----------------------------
 
 The software can be obtained from the GITHub repository via git:
-
+```
 git clone https://github.com/paullric/tempestgecore.git
-
+```
 You will likely need to edit the first couple lines of the Makefile to
 customize the NetCDF paths and change any compiler flags.  Once you have
 modified the Makefile, build the code:
-
-`make -f Makefile.gmake all`
-
+```
+make -f Makefile.gmake all
+```
 To clean out the object file and return the sources to pristine condition,
 you can execute the following:
-
-`make -f Makefile.gmake clean`
+```
+make -f Makefile.gmake clean
+```
 
 Mesh Generation
 ---------------
@@ -85,30 +115,31 @@ either be done via the SQuadGen mesh utility, or via the three GenerateMesh
 executables that come with TempestRemap.
 
 For a cubed-sphere mesh:
-
+```
 ./GenerateCSMesh --res <Resolution> --alt --file <Output mesh filename>.g
-
+```
 For a latitude-longitude mesh:
-
+```
 ./GenerateRLLMesh --lon <longitudes> --lat <latitudes> --file <Output mesh filename>.g
-
+```
 For a geodesic mesh:
-
+```
 ./GenerateICOMesh --res <Resolution> --dual --file <Output mesh filename>.g
-
+```
 Once your input and output meshes are generated, you will need to generate the
 overlap mesh (that is, the mesh obtained by placing the input and output mesh
 overtop one another and recalculating intersections).  This can be done as
 follows:
-
+```
 ./GenerateOverlapMesh --a <Input mesh>.g --b <Output mesh>.g --out <Overlap mesh>.g
+```
 
 Offline Map Generation
 ----------------------
 
 Once the overlap mesh is generated, you can now generate the weight file, which
 the contains information on remapping from one mesh to the other.  The type
-of offline map desired is specified by --in_type and --out_type, which can be
+of offline map desired is specified by `--in_type` and `--out_type`, which can be
 one of the following:
 
 fv   - Finite volume mesh, with degrees of freedom stored as volume averages
@@ -118,33 +149,39 @@ dgll - Discontinuous finite element method (such as discontinuous Galerkin)
 Offline map generation is then performed as follows:
 
 For finite volume to finite volume remapping:
-
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_np <Remapping Order> --out_map <Output map>.nc
-
-Monotone remapping in this case can be achieved with --in_np 1.
-
+```
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_np <Remapping Order> \
+                     --out_map <Output map>.nc
+```
+Monotone remapping in this case can be achieved with `--in_np 1`.
 
 For finite element to finite volume remapping:
-
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] --out_type fv --in_np <Input order> --out_map <Output map>.nc
-
-Monotone remapping in this case can be achieved with argument --mono.
-
+```
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] \
+                     --out_type fv --in_np <Input order> --out_map <Output map>.nc
+```
+Monotone remapping in this case can be achieved with argument `--mono`.
 
 For finite volume to finite element remapping:
-
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type fv --out_type [cgll|dgll] --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
-
-Monotone remapping in this case requires --mono and --in_np 1.
-
+```
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type fv --out_type [cgll|dgll] \
+                     --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
+```
+Monotone remapping in this case requires `--mono` and `--in_np 1`.
 
 For finite element to finite element remapping:
+```
+./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g \
+                     --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] \
+                     --out_type [cgll|dgll] --in_np <Input order> \
+                     --out_np <Output order> --out_map <Output map>.nc
+```
+Monotone remapping in this case requires `--in_np 1` and `--out_np 1`.
 
-./GenerateOfflineMap --in_mesh <Input mesh>.g --out_mesh <Output mesh>.g --ov_mesh <Overlap mesh>.g --in_type [cgll|dgll] --out_type [cgll|dgll] --in_np <Input order> --out_np <Output order> --out_map <Output map>.nc
-
-Monotone remapping in this case requires --in_np 1 and --out_np 1.
-
-In each case, the linear weights file will then be written to <Output map>.nc
+In each case, the linear weights file will then be written to `<Output map>.nc`
 in SCRIP format (although it’s a bare-bones version of SCRIP format at the
 moment and I’m not sure it’ll work with SCRIP utilities).  Now that the map is
 generated you can apply it to your data files:
@@ -152,11 +189,12 @@ generated you can apply it to your data files:
 Offline Map Application
 -----------------------
 
-The offline map can be applied using the ApplyOfflineMap utility:
-
-./ApplyOfflineMap --map <Output map>.nc --var <Comma-separated list of variables> --in_data <Input data>.nc --out_data <Output data>.nc
-
-The remapped fields should then appear in <Output data>.nc.  Note that if your
+The offline map can be applied using the `ApplyOfflineMap` utility:
+```
+./ApplyOfflineMap --map <Output map>.nc --var <Comma-separated list of variables> \
+                  --in_data <Input data>.nc --out_data <Output data>.nc
+```
+The remapped fields should then appear in `<Output data>.nc`.  Note that if your
 output mesh is rectilinear, such as a latitude-longitude mesh, the data will
 automatically be arranged with horizontal spatial dimensions lat and lon.
 

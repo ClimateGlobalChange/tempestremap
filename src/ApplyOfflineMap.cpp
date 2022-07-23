@@ -16,6 +16,7 @@
 
 #include "Announce.h"
 #include "Exception.h"
+#include "TempestRemapAPI.h"
 #include "OfflineMap.h"
 #include "netcdfcpp.h"
 
@@ -97,18 +98,8 @@ void ParseInputFiles(
 
 extern "C" 
 int ApplyOfflineMap(
-	std::string strInputData,
-	std::string strInputDataList,
 	std::string strInputMap,
-	std::string strVariables,
-	std::string strOutputData,
-	std::string strOutputDataList,
-	std::string strNColName, 
-	bool fOutputDouble,
-	std::string strPreserveVariables,
-	bool fPreserveAll,
-	double dFillValueOverride,
-	std::string strLogDir
+	const ApplyOfflineMapOptions & optsApply
 ) {
 
 	NcError error(NcError::silent_nonfatal);
@@ -119,36 +110,36 @@ try {
 	if (strInputMap == "") {
 		_EXCEPTIONT("No map specified");
 	}
-	if ((strInputData == "") && (strInputDataList == "")) {
+	if ((optsApply.strInputData == "") && (optsApply.strInputDataList == "")) {
 		_EXCEPTIONT("No input data (--in_data) or (--in_data_list) specified");
 	}
-	if ((strInputData != "") && (strInputDataList != "")) {
+	if ((optsApply.strInputData != "") && (optsApply.strInputDataList != "")) {
 		_EXCEPTIONT("Only one of --in_data or --in_data_list may be specified");
 	}
-	if ((strOutputData == "") && (strOutputDataList == "")) {
+	if ((optsApply.strOutputData == "") && (optsApply.strOutputDataList == "")) {
 		_EXCEPTIONT("No output data (--out_data) or (--out_data_list)");
 	}
-	if ((strOutputData != "") && (strOutputDataList != "")) {
+	if ((optsApply.strOutputData != "") && (optsApply.strOutputDataList != "")) {
 		_EXCEPTIONT("Only one of --out_data or --out_data_list may be specified");
 	}
-	if ((strInputData != "") && (strOutputData == "")) {
+	if ((optsApply.strInputData != "") && (optsApply.strOutputData == "")) {
 		_EXCEPTIONT("If --in_data is specified then --out_data must also be specified");
 	}
-	if ((strInputDataList != "") && (strOutputDataList == "")) {
+	if ((optsApply.strInputDataList != "") && (optsApply.strOutputDataList == "")) {
 		_EXCEPTIONT("If --in_data_list is specified then --out_data_list must also be specified");
 	}
 
 	// Load input file list
 	std::vector<std::string> vecInputDataFiles;
 
-	if (strInputData.length() != 0) {
-		vecInputDataFiles.push_back(strInputData);
+	if (optsApply.strInputData.length() != 0) {
+		vecInputDataFiles.push_back(optsApply.strInputData);
 
 	} else {
-		std::ifstream ifInputFileList(strInputDataList.c_str());
+		std::ifstream ifInputFileList(optsApply.strInputDataList.c_str());
 		if (!ifInputFileList.is_open()) {
 			_EXCEPTION1("Unable to open file \"%s\"",
-				strInputDataList.c_str());
+				optsApply.strInputDataList.c_str());
 		}
 		std::string strFileLine;
 		while (std::getline(ifInputFileList, strFileLine)) {
@@ -165,14 +156,14 @@ try {
 	// Load output file list
 	std::vector<std::string> vecOutputDataFiles;
 
-	if (strOutputData.length() != 0) {
-		vecOutputDataFiles.push_back(strOutputData);
+	if (optsApply.strOutputData.length() != 0) {
+		vecOutputDataFiles.push_back(optsApply.strOutputData);
 
 	} else {
-		std::ifstream ifOutputFileList(strOutputDataList.c_str());
+		std::ifstream ifOutputFileList(optsApply.strOutputDataList.c_str());
 		if (!ifOutputFileList.is_open()) {
 			_EXCEPTION1("Unable to open file \"%s\"",
-				strOutputDataList.c_str());
+				optsApply.strOutputDataList.c_str());
 		}
 		std::string strFileLine;
 		while (std::getline(ifOutputFileList, strFileLine)) {
@@ -193,13 +184,13 @@ try {
 
 	// Parse variable list
 	std::vector< std::string > vecVariableStrings;
-	ParseVariableList(strVariables, vecVariableStrings);
+	ParseVariableList(optsApply.strVariables, vecVariableStrings);
 
 	// Parse preserve variable list
 	std::vector< std::string > vecPreserveVariableStrings;
-	ParseVariableList(strPreserveVariables, vecPreserveVariableStrings);
+	ParseVariableList(optsApply.strPreserveVariables, vecPreserveVariableStrings);
 
-	if (fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
+	if (optsApply.fPreserveAll && (vecPreserveVariableStrings.size() != 0)) {
 		_EXCEPTIONT("--preserveall and --preserve cannot both be specified");
 	}
 
@@ -217,15 +208,15 @@ try {
 
 #if defined(TEMPEST_MPIOMP)
 	// Set up logging
-	if (strLogDir == "") {
+	if (optsApply.strLogDir == "") {
 		Announce("Reporting only enabled on thread 0 (if reporting desired, use --logdir)");
 	} else {
-		Announce("Logs will be written to directory \"%s\"", strLogDir.c_str());
+		Announce("Logs will be written to directory \"%s\"", optsApply.strLogDir.c_str());
 	}
 
 	// Open log file
-	if (strLogDir != "") {
-		std::string strLogFile = strLogDir;
+	if (optsApply.strLogDir != "") {
+		std::string strLogFile = optsApply.strLogDir;
 		if (strLogFile[strLogFile.length()-1] != '/') {
 			strLogFile += "/";
 		}
@@ -242,8 +233,8 @@ try {
 		AnnounceOutputOnAllRanks();
 	}
 #else
-	if (strLogDir != "") {
-		std::string strLogFile = strLogDir;
+	if (optsApply.strLogDir != "") {
+		std::string strLogFile = optsApply.strLogDir;
 		if (strLogFile[strLogFile.length()-1] != '/') {
 			strLogFile += "/";
 		}
@@ -287,8 +278,9 @@ try {
 
 	OfflineMap mapRemap;
 	mapRemap.Read(strInputMap);
-	mapRemap.SetFillValueOverrideDbl(dFillValueOverride);
-	mapRemap.SetFillValueOverride(static_cast<float>(dFillValueOverride));
+	mapRemap.SetFillValueOverrideDbl(optsApply.dFillValueOverride);
+	mapRemap.SetFillValueOverride(static_cast<float>(optsApply.dFillValueOverride));
+	mapRemap.SetEnforcementBounds(optsApply.strEnforceBounds);
 
 	AnnounceEndBlock("Done");
 
@@ -306,12 +298,12 @@ try {
 			vecInputDataFiles[f],
 			vecOutputDataFiles[f],
 			vecVariableStrings,
-			strNColName,
-			fOutputDouble,
+			optsApply.strNColName,
+			optsApply.fOutputDouble,
 			false);
 	
 		// Copy variables from input file to output file
-		if (fPreserveAll) {
+		if (optsApply.fPreserveAll) {
 			AnnounceStartBlock("Preserving variables");
 			mapRemap.PreserveAllVariables(
 				vecInputDataFiles[f],

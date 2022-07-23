@@ -31,6 +31,43 @@ class Mesh;
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		A class used for storing information about bounds enforcement.
+///	</summary>
+class EnforceBounds {
+public:
+	///	<summary>
+	///		Variable name.
+	///	</summary>
+	std::string strVariable;
+
+	///	<summary>
+	///		Lower bound to use.  Must be one of the following:
+	///		"n": No enforcement of bounds
+	///		"l": Enforce local bounds
+	///		"g": Enforce global bounds
+	///		floating point number: Enforce explicit bound
+	///	</summary>
+	std::string strLowerBound;
+
+	///	<summary>
+	///		Upper bound to use.  Same requirements as strLowerBound.
+	///	</summary>
+	std::string strUpperBound;
+};
+
+typedef std::vector<EnforceBounds> EnforceBoundsVector;
+
+///	<summary>
+///		Parse a string that encodes information on bounds preservation.
+///	</summary>
+void ParseEnforceBounds(
+	const std::string & strEnforceBounds,
+	EnforceBoundsVector & vecEnforceBounds
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		An offline map between two Meshes.
 ///	</summary>
 class OfflineMap {
@@ -486,15 +523,17 @@ public:
 	///	<summary>
 	///		Set the mask vector associated with the source grid.
 	///	</summary>
-	void SetSourceMask(const DataArray1D<int> & iSourceMask) {
-		m_iSourceMask = iSourceMask;
+	void SetSourceMask(const std::vector<int> & iSourceMask) {
+		m_iSourceMask.Allocate(iSourceMask.size());
+		memcpy(&(m_iSourceMask[0]), &(iSourceMask[0]), iSourceMask.size() * sizeof(int));
 	}
 
 	///	<summary>
 	///		Set the mask vector associated with the target grid.
 	///	</summary>
-	void SetTargetMask(const DataArray1D<int> & iTargetMask) {
-		m_iTargetMask = iTargetMask;
+	void SetTargetMask(const std::vector<int> & iTargetMask) {
+		m_iTargetMask.Allocate(iTargetMask.size());
+		memcpy(&(m_iTargetMask[0]), &(iTargetMask[0]), iTargetMask.size() * sizeof(int));
 	}
 
 public:
@@ -544,6 +583,25 @@ public:
 	///	</summary>
 	void SetFillValueOverrideDbl(double dFillValueOverride) {
 		m_dFillValueOverride = dFillValueOverride;
+	}
+
+public:
+	///	<summary>
+	///		Set the bounds enforcement parameters.
+	///	</summary>
+	void SetEnforcementBounds(
+		const std::string & strEnforcementBounds
+	) {
+		ParseEnforceBounds(
+			strEnforcementBounds,
+			m_vecEnforcementBounds);
+	}
+
+	///	<summary>
+	///		Clear the bounds enforcement parameters.
+	///	</summary>
+	void ClearEnforcementBounds() {
+		m_vecEnforcementBounds.clear();
 	}
 
 protected:
@@ -683,6 +741,12 @@ protected:
 	///		The fill value override (double).
 	///	</summary>
 	double m_dFillValueOverride;
+
+	///	<summary>
+	///		Enforcement bounds used in this map.
+	///	</summary>
+	EnforceBoundsVector m_vecEnforcementBounds;
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////

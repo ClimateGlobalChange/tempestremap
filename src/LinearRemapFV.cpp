@@ -20,6 +20,7 @@
 #include "GridElements.h"
 #include "OfflineMap.h"
 #include "FiniteElementTools.h"
+#include "GaussQuadrature.h"
 #include "GaussLobattoQuadrature.h"
 #include "TriangularQuadrature.h"
 #include "MeshUtilitiesFuzzy.h"
@@ -27,6 +28,7 @@
 
 #include "Announce.h"
 #include "MathHelper.h"
+#include "kdtree.h"
 
 #include <cstring>
 #include <map>
@@ -341,7 +343,12 @@ void LinearRemapFVtoFV(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -440,6 +447,279 @@ void LinearRemapFVtoFV(
 				dComposedArray(i,j)
 				/ meshOutput.vecFaceArea[ixSecondFace];
 		}
+		}
+
+		// Increment the current overlap index
+		ixOverlap += nOverlapFaces;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void LinearRemapFVtoFVInvDist(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+) {
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
+	}
+
+	// Order of triangular quadrature rule
+	const int TriQuadRuleOrder = 4;
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
+
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
+
+	// Get SparseMatrix represntation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+
+	// kd-tree for nearest neighbor search
+    kdtree * kdTarget = kd_create(3);
+
+	// Vectors used in determining contributions from each Face
+	std::vector<int> vecContributingFaceIxs;
+	std::vector<double> vecContributingFaceWeights;
+
+	// Vector of centers of the source mesh
+	for (int i = 0; i < meshInput.faces.size(); i++){
+
+		const Face & face = meshInput.faces[i];
+
+		Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+
+		kd_insert3(
+			kdTarget,
+			nodeCentroid.x,
+			nodeCentroid.y,
+			nodeCentroid.z,
+			(void*)(&(meshInput.faces[i])));
+	}
+
+	// Overlap face index
+	int ixOverlap = 0;
+
+	// Check mask size
+	_ASSERT((meshInput.vecMask.size() == 0) || (meshInput.vecMask.size() == meshInput.faces.size()));
+
+	if (meshInput.vecMask.size() != 0) {
+		Announce("Source mesh contains mask information which will be used in map calculation");
+	}
+
+	// Loop through all source faces
+	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+
+		// Output every 1000 overlap elements
+		if (ixFirst % 1000 == 0) {
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+		}
+
+		// This Face
+		const Face & faceFirst = meshInput.faces[ixFirst];
+
+		// Find the set of Faces that overlap faceFirst
+		int ixOverlapBegin = ixOverlap;
+		int ixOverlapEnd = ixOverlapBegin;
+	
+		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+				break;
+			}
+		}
+
+		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		// Check mask
+		if (meshInput.vecMask.size() != 0) {
+			if (meshInput.vecMask[ixFirst] == 0) {
+ 		               // Increment the current overlap index
+                		ixOverlap += nOverlapFaces;
+
+				continue;
+			}
+		}
+
+		// Loop through all overlap faces associated with this source face
+		for (int j = 0; j < nOverlapFaces; j++) {
+			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+
+			int nSubTriangles = faceOverlap.edges.size() - 2;
+
+			// Jacobian at each quadrature point
+			DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+			DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+
+			// Compute quadrature area of each overlap face
+			double dQuadratureArea = 0.0;
+
+			for (int k = 0; k < nSubTriangles; k++) {
+				for (int p = 0; p < dW.GetRows(); p++) {
+
+					dQuadPtWeight(k,p) =
+						CalculateSphericalTriangleJacobianBarycentric(
+							meshOverlap.nodes[faceOverlap[0]],
+							meshOverlap.nodes[faceOverlap[k+1]],
+							meshOverlap.nodes[faceOverlap[k+2]],
+							dG(p,0), dG(p,1),
+							&(dQuadPtNodes(k,p)));
+
+					dQuadPtWeight(k,p) *= dW[p];
+
+					dQuadratureArea += dQuadPtWeight(k,p);
+				}
+			}
+
+			//printf("%1.15e %1.15e %1.15e %1.15e\n", meshOverlap.vecFaceArea[ixOverlap + j], dQuadratureArea, CalculateFaceAreaKarneysMethod(faceOverlap, meshOverlap.nodes), dQuadratureArea / meshOverlap.vecFaceArea[ixOverlap + j]);
+
+			// Loop through all sub-triangles of this overlap Face
+			for (int k = 0; k < nSubTriangles; k++) {
+
+				// Loop through all quadrature nodes on this overlap Face
+				for (int p = 0; p < dW.GetRows(); p++) {
+
+					// Get quadrature node and pointwise Jacobian
+					const Node & nodeQ = dQuadPtNodes(k,p);
+
+					// Find nearest source mesh face and add its contribution
+					// to the inverse distance.
+					kdres * kdresTarget =
+						kd_nearest3(
+							kdTarget,
+							nodeQ.x,
+							nodeQ.y,
+							nodeQ.z);
+
+					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+
+					int iNearestFace = pFace - &(meshInput.faces[0]);
+
+					// Check mask
+					if (meshInput.vecMask.size() != 0) {
+						if (meshInput.vecMask[iNearestFace] == 0) {
+							iNearestFace = ixFirst;
+						}
+					}
+
+					const Face & faceCurrent = meshInput.faces[iNearestFace];
+
+					// TODO: Precompute face centroids on input mesh
+					Node nodeX1 =
+						GetFaceCentroid(
+							meshInput.faces[iNearestFace],
+							meshInput.nodes);
+
+					Node nodeX1minusQ = nodeX1;
+					nodeX1minusQ.x -= nodeQ.x;
+					nodeX1minusQ.y -= nodeQ.y;
+					nodeX1minusQ.z -= nodeQ.z;
+
+					vecContributingFaceIxs.clear();
+					vecContributingFaceWeights.clear();
+
+					// TODO: Switch to using great circle distance rather than chord dist
+					// TODO: Be careful about nodeCenter1 being zero
+					double dInvDist1 = 1.0 / nodeX1minusQ.Magnitude();
+					vecContributingFaceIxs.push_back(iNearestFace);
+					vecContributingFaceWeights.push_back(dInvDist1);
+
+					// Push neighboring face if it is on the correct side
+					for (int i = 0; i < faceCurrent.edges.size(); i++) {
+
+						const FacePair & facepair =
+								meshInput.edgemap.find(faceCurrent.edges[i])->second;
+
+						if (iNearestFace == facepair[0]){
+
+							// Check mask
+							if (meshInput.vecMask.size() != 0) {
+								if (meshInput.vecMask[facepair[1]] == 0) {
+									continue;
+								}
+							}
+
+							// Add contribution
+							Node nodeX2 =
+								GetFaceCentroid(
+									meshInput.faces[facepair[1]],
+									meshInput.nodes);
+
+							Node nodeX1minusX2 = nodeX1;
+							nodeX1minusX2.x -= nodeX2.x;
+							nodeX1minusX2.y -= nodeX2.y;
+							nodeX1minusX2.z -= nodeX2.z;
+
+							if (DotProduct(nodeX1minusX2, nodeX1minusQ) > 0.0) {
+								Node nodeX2minusQ = nodeX2;
+								nodeX2minusQ.x -= nodeQ.x;
+								nodeX2minusQ.y -= nodeQ.y;
+								nodeX2minusQ.z -= nodeQ.z;
+
+								double dInvDist2 = 1.0 / nodeX2minusQ.Magnitude();
+								vecContributingFaceIxs.push_back(facepair[1]);
+								vecContributingFaceWeights.push_back(dInvDist2);
+							}
+
+						} else if (iNearestFace == facepair[1]) {
+
+							// Check mask
+							if (meshInput.vecMask.size() != 0) {
+								if (meshInput.vecMask[facepair[0]] == 0) {
+									continue;
+								}
+							}
+
+							// Add contribution
+							Node nodeX2 =
+								GetFaceCentroid(
+									meshInput.faces[facepair[0]],
+									meshInput.nodes);
+
+							Node nodeX1minusX2 = nodeX1;
+							nodeX1minusX2.x -= nodeX2.x;
+							nodeX1minusX2.y -= nodeX2.y;
+							nodeX1minusX2.z -= nodeX2.z;
+
+							if (DotProduct(nodeX1minusX2, nodeX1minusQ) > 0.0){
+								Node nodeX2minusQ = nodeX2;
+								nodeX2minusQ.x -= nodeQ.x;
+								nodeX2minusQ.y -= nodeQ.y;
+								nodeX2minusQ.z -= nodeQ.z;
+
+								double dInvDist2 = 1.0 / nodeX2minusQ.Magnitude();
+								vecContributingFaceIxs.push_back(facepair[0]);
+								vecContributingFaceWeights.push_back(dInvDist2);
+							}
+
+						} else {
+							_EXCEPTIONT("Logic error");
+						}
+					}
+
+					// Total contributions
+					double dInvWeightSum = 0.0;
+					for (int i = 0; i < vecContributingFaceWeights.size(); i++){
+						dInvWeightSum += vecContributingFaceWeights[i];
+					}
+
+					// Contribution of this quadrature point to the map
+					for (int i = 0; i < vecContributingFaceIxs.size(); i++){
+						smatMap(iTargetFace, vecContributingFaceIxs[i]) +=
+							vecContributingFaceWeights[i]
+							/ dInvWeightSum
+							* dQuadPtWeight(k,p)
+							* meshOverlap.vecFaceArea[ixOverlap + j]
+							/ dQuadratureArea
+							/ meshOutput.vecFaceArea[iTargetFace];
+					}
+				}
+			}
 		}
 
 		// Increment the current overlap index
@@ -754,7 +1034,12 @@ void LinearRemapFVtoGLL_Simple(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -1224,7 +1509,12 @@ void LinearRemapFVtoGLL_Volumetric(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -1475,32 +1765,46 @@ void LinearRemapFVtoGLL(
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
 			const Face & faceSecond = meshOutput.faces[ixSecond];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
 
+			Node node0, node1, node2;
+			double dTriArea;
 			// Loop over all sub-triangles of this Overlap Face
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
-
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[j]];
+					int j1 = (j + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[j1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
 					// Get the nodal location of this point
@@ -1922,7 +2226,12 @@ void LinearRemapFVtoGLL(
 		// distance metric.
 		AdjacentFaceVector vecAdjFaces;
 
+//#ifdef RECTANGULAR_TRUNCATION
+//		GetAdjacentFaceVectorByNode(
+//#endif
+//#ifdef TRIANGULAR_TRUNCATION
 		GetAdjacentFaceVectorByEdge(
+//#endif
 			meshInput,
 			ixFirst,
 			nRequiredFaceSetSize,
@@ -2146,34 +2455,46 @@ void LinearRemapGLLtoGLL2(
 
 			// Quantities from the overlap Mesh
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
-
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
-
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
-
 			const NodeVector & nodesSecond = meshOutput.nodes;
-
 			const Face & faceSecond = meshOutput.faces[ixSecond];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
+
+			Node node0, node1, node2;
+			double dTriArea;
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int j = 0; j < nOverlapTriangles; j++) {
 
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[j]];
+					int j1 = (j + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[j1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
@@ -2641,8 +2962,6 @@ void LinearRemapGLLtoGLL2_Pointwise(
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + i];
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
-
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];

@@ -1,11 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///   \file    ConvertSCRIPtoExodus.cpp
+///   \file    ConvertExodusToUGRID.cpp
 ///   \author  Paul Ullrich
-///   \version November 14, 2019
+///   \version November 19, 2021
 ///
 ///   <remarks>
-///      Copyright 2019 Paul Ullrich
+///      Copyright 2021 Paul Ullrich
 ///
 ///      This file is distributed as part of the Tempest source code package.
 ///      Permission is granted to use, copy, modify and distribute this
@@ -48,7 +48,7 @@ try {
 		CommandLineString(strInputFile,  "in",  "");
 		CommandLineString(strOutputFile, "out", "");
 		CommandLineString(strOutputFormat, "out_format", "netcdf4");
-
+		
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
@@ -76,7 +76,7 @@ try {
 	// std::cout << "..Generating SCRIP format data" << std::endl;
 	// Mesh meshOut;
 
-	// Write the mesh	
+	// Write the mesh
 	std::cout << "..Writing mesh" << std::endl;
 
 	// Output format
@@ -90,7 +90,7 @@ try {
 			strOutputFormat.c_str());
 	}
 
-	meshIn.Write(strOutputFile, eOutputFormat);
+	meshIn.WriteUGRID(strOutputFile, eOutputFormat);
 
 	std::cout << "..Done writing" << std::endl;
 

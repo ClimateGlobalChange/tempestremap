@@ -37,68 +37,30 @@ int main(int argc, char** argv) {
 	AnnounceOnlyOutputOnRankZero();
 #endif
 
-	// Input data file
-	std::string strInputData;
-
-	// Input data file list
-	std::string strInputDataList;
-
 	// Input map file
 	std::string strInputMap;
 
-	// List of variables
-	std::string strVariables;
-
-	// Input data file (second instance)
-	//std::string strInputData2;
-
-	// Input map file (second instance)
-	//std::string strInputMap2;
-
-	// List of variables (second instance)
-	//std::string strVariables2;
-
-	// Output data file
-	std::string strOutputData;
-
-	// Output data file list
-	std::string strOutputDataList;
-
-	// Name of the ncol variable
-	std::string strNColName;
-
-	// Output as double
-	bool fOutputDouble;
-
-	// List of variables to preserve
-	std::string strPreserveVariables;
-
-	// Preserve all non-remapped variables
-	bool fPreserveAll;
-
-	// Fill value override
-	double dFillValueOverride;
-
-	// Log directory
-	std::string strLogDir;
+	// Options
+	ApplyOfflineMapOptions optsApply;
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineString(strInputData, "in_data", "");
-		CommandLineString(strInputDataList, "in_data_list", "");
 		CommandLineString(strInputMap, "map", "");
-		CommandLineString(strVariables, "var", "");
+		CommandLineString(optsApply.strInputData, "in_data", "");
+		CommandLineString(optsApply.strOutputData, "out_data", "");
+		CommandLineString(optsApply.strInputDataList, "in_data_list", "");
+		CommandLineString(optsApply.strOutputDataList, "out_data_list", "");
+		CommandLineString(optsApply.strVariables, "var", "");
 		//CommandLineString(strInputData2, "in_data2", "");
 		//CommandLineString(strInputMap2, "map2", "");
 		//CommandLineString(strVariables2, "var2", "");
-		CommandLineString(strOutputData, "out_data", "");
-		CommandLineString(strOutputDataList, "out_data_list", "");
-		CommandLineString(strNColName, "ncol_name", "ncol");
-		CommandLineBool(fOutputDouble, "out_double");
-		CommandLineString(strPreserveVariables, "preserve", "");
-		CommandLineBool(fPreserveAll, "preserveall");
-		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
-		CommandLineString(strLogDir, "logdir", "");
+		CommandLineString(optsApply.strNColName, "ncol_name", "ncol");
+		CommandLineString(optsApply.strEnforceBounds, "bounds", "");
+		CommandLineBool(optsApply.fOutputDouble, "out_double");
+		CommandLineString(optsApply.strPreserveVariables, "preserve", "");
+		CommandLineBool(optsApply.fPreserveAll, "preserveall");
+		CommandLineDouble(optsApply.dFillValueOverride, "fillvalue", 0.0);
+		CommandLineString(optsApply.strLogDir, "logdir", "");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
@@ -107,18 +69,8 @@ int main(int argc, char** argv) {
 
 	// Calculate metadata
 	int err = ApplyOfflineMap(
-		strInputData,
-		strInputDataList,
 		strInputMap,
-		strVariables,
-		strOutputData,
-		strOutputDataList,
-		strNColName, 
-		fOutputDouble,
-		strPreserveVariables,
-		fPreserveAll,
-		dFillValueOverride,
-		strLogDir );
+		optsApply );
 
 	// Done
 	AnnounceBanner();

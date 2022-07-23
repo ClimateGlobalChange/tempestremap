@@ -682,7 +682,7 @@ public:
 	///	<summary>
 	///		Vector storing mask variable for this mesh.
 	///	</summary>
-	DataArray1D<int> vecMask;
+	std::vector<int> vecMask;
 
 	///	<summary>
 	///		EdgeMap for this mesh.
@@ -699,6 +699,16 @@ public:
 	///		the original mesh has been subdivided).
 	///	</summary>
 	std::vector<int> vecMultiFaceMap;
+
+	///	<summary>
+	///		Grid dimensions.
+	///	</sumamry>
+	std::vector<int> vecGridDimSize;
+
+	///	<summary>
+	///		Grid dimension names.
+	///	</sumamry>
+	std::vector<std::string> vecGridDimName;
 
 public:
 	///	<summary>
@@ -763,7 +773,7 @@ public:
 	///	</summary>
 	void Write(
 		const std::string & strFile,
-		NcFile::FileFormat eFileFormat = NcFile::Classic
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
 	) const;
 
 	///	<summary>
@@ -771,7 +781,15 @@ public:
 	///	</summary>
 	void WriteScrip(
 		const std::string & strFile,
-		NcFile::FileFormat eFileFormat = NcFile::Classic
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
+	) const;
+
+	///	<summary>
+	///		Write the mesh to a NetCDF file in UGRID format.
+	///	</summary>
+	void WriteUGRID(
+		const std::string & strFile,
+		NcFile::FileFormat eFileFormat = NcFile::Netcdf4
 	) const;
 
 	///	<summary>
@@ -936,6 +954,65 @@ int BuildCoincidentNodeVector(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Calculate the Jacobian (infinitesmal local area element) for a
+///		spherical triangle.  Variables dA and dB specify the coordinates
+///		within the spherical triangle:
+///		  (dA,dB)=(0,0) corresponds to node1
+///		  (dA,dB)=(1,0) corresponds to node2
+///		  (dA,dB)=(0,1)=(1,1) corresponds to node3
+///	</summary>
+Real CalculateSphericalTriangleJacobian(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode = NULL
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the Jacobian (infinitesmal local area element) for a
+///		spherical triangle.  Variables dA and dB specify the barycentric
+///		coordinates within the spherical triangle:
+///		  (dA,dB)=(0,0) corresponds to node3
+///		  (dA,dB)=(1,0) corresponds to node2
+///		  (dA,dB)=(0,1) corresponds to node1
+///	</summary>
+Real CalculateSphericalTriangleJacobianBarycentric(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode = NULL
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a Face using quadrature.
+///	</summary>
+Real CalculateFaceAreaQuadratureMethod(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Calculate the area of a Face using Karney's method (may be poorly
+///		conditioned at higher resolutions).
+///	</summary>
+Real CalculateFaceAreaKarneysMethod(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Check if the specified Face is concave.
 ///	</summary>
 bool IsFaceConcave(
@@ -963,6 +1040,14 @@ Real CalculateFaceArea(
 	const NodeVector & nodes
 );
 
+/// <summary>
+///     Calculate triangle area, quadrature.
+/// </summary>
+Real CalculateTriangleAreaQuadratureMethod(
+	Node &node1,
+	Node &node2,
+	Node &node3
+);
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>

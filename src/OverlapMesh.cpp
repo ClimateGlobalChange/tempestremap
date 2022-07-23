@@ -1597,7 +1597,13 @@ int FindFaceContainingNode(
 	queueTargetFaces.push(ixTargetFaceSeed);
 	setExaminedTargetFaces.insert(ixTargetFaceSeed);
 
+	int ixIterate = 0;
 	while (!queueTargetFaces.empty()) {
+
+		if ((OverlapFaceSearchMaximumFaces != (-1)) && (ixIterate > OverlapFaceSearchMaximumFaces)) {
+			Announce("Abandoning search after %i iterations", OverlapFaceSearchMaximumFaces);
+			return InvalidFace;
+		}
 
 		int ixCurrentTargetFace = queueTargetFaces.front();
 		queueTargetFaces.pop();
@@ -1667,6 +1673,8 @@ int FindFaceContainingNode(
 				setExaminedTargetFaces.insert(iPushFace);
 			}
 		}
+
+		ixIterate++;
 	}
 
 	return InvalidFace;
@@ -1914,6 +1922,7 @@ void GenerateOverlapMesh_v2(
 
 	// Generate Overlap mesh for each Face
 	for (int i = 0; i < meshSource.faces.size(); i++) {
+	//for (int i = 3999555; i < 3999555+1; i++) {
         if (fVerbose) {
 			std::string strAnnounce = "Source Face " + std::to_string((long long)i);
 			AnnounceStartBlock(strAnnounce.c_str());

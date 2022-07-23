@@ -28,161 +28,99 @@
 int main(int argc, char** argv) {
 
 	// Input mesh file
-	std::string strInputMesh;
+	std::string strSourceMesh;
+
+	// Output mesh file
+	std::string strTargetMesh;
 
 	// Overlap mesh file
 	std::string strOverlapMesh;
 
-	// Input metadata file
-	std::string strInputMeta;
-
-	// Output metadata file
-	std::string strOutputMeta;
-
 	// Input data type
-	std::string strInputType;
+	std::string strSourceType;
 
 	// Output data type
-	std::string strOutputType;
+	std::string strTargetType;
 
-	// Output mesh file
-	std::string strOutputMesh;
+	// Algorithm options
+	GenerateOfflineMapAlgorithmOptions optsAlg;
 
-	// Order of polynomial in each element
-	int nPin;
-
-	// Order of polynomial in each output element
-	int nPout;
-
-	// Use bubble on interior of spectral element nodes
-	bool fNoBubble;
-
-	// Correct the areas to match the overlap mesh
+	// Dummy option (backward compatibility)
 	bool fCorrectAreas;
 
-	// Enforce monotonicity
-	bool fMonotoneType1;
+	// Apply options
+	ApplyOfflineMapOptions optsApply;
 
-	// Enforce monotonicity
-	bool fMonotoneType2;
-
-	// Enforce monotonicity
-	bool fMonotoneType3;
-
-	// Volumetric remapping
-	bool fVolumetric;
-
-	// No conservation
-	bool fNoConservation;
-
-	// Turn off checking for conservation / consistency
-	bool fNoCheck;
-
-	// Variable list
-	std::string strVariables;
-
-	// Output map file
-	std::string strOutputMap;
-
-	// Input data file
-	std::string strInputData;
-
-	// Output data file
-	std::string strOutputData;
-
-	// Name of the ncol variable
-	std::string strNColName;
-
-	// Output as double
-	bool fOutputDouble;
-
-	// List of variables to preserve
+	// NetCDF output format
 	std::string strOutputFormat;
-
-	// List of variables to preserve
-	std::string strPreserveVariables;
-
-	// Preserve all non-remapped variables
-	bool fPreserveAll;
-
-	// Fill value override
-	double dFillValueOverride;
-
-	// Input mesh contains concave elements
-	bool fInputConcave;
-
-	// Output mesh contains concave elements
-	bool fOutputConcave;
 
 	// Parse the command line
 	BeginCommandLine()
-		CommandLineString(strInputMesh, "in_mesh", "");
-		CommandLineString(strOutputMesh, "out_mesh", "");
+		CommandLineString(strSourceMesh, "in_mesh", "");
+		CommandLineString(strTargetMesh, "out_mesh", "");
 		CommandLineString(strOverlapMesh, "ov_mesh", "");
-		CommandLineString(strInputMeta, "in_meta", "");
-		CommandLineString(strOutputMeta, "out_meta", "");
-		CommandLineStringD(strInputType, "in_type", "fv", "[fv|cgll|dgll]");
-		CommandLineStringD(strOutputType, "out_type", "fv", "[fv|cgll|dgll]");
+		CommandLineStringD(strSourceType, "in_type", "fv", "[fv|cgll|dgll]");
+		CommandLineStringD(strTargetType, "out_type", "fv", "[fv|cgll|dgll]");
 
-		// Optional arguments
-		CommandLineInt(nPin, "in_np", 4);
-		CommandLineInt(nPout, "out_np", 4);
-		CommandLineBool(fNoBubble, "no_bubble");
-		CommandLineBool(fCorrectAreas, "correct_areas");
-		CommandLineBool(fMonotoneType1, "mono");
-		CommandLineBool(fMonotoneType2, "mono2");
-		CommandLineBool(fMonotoneType3, "mono3");
-		CommandLineBool(fVolumetric, "volumetric");
-		CommandLineBool(fNoConservation, "noconserve");
-		CommandLineBool(fNoCheck, "nocheck");
-		CommandLineString(strVariables, "var", "");
-		CommandLineString(strOutputMap, "out_map", "");
-		CommandLineString(strInputData, "in_data", "");
-		CommandLineString(strOutputData, "out_data", "");
-		CommandLineString(strNColName, "ncol_name", "ncol");
-		CommandLineBool(fOutputDouble, "out_double");
-		CommandLineString(strOutputFormat, "out_format","Netcdf4");
-		CommandLineString(strPreserveVariables, "preserve", "");
-		CommandLineBool(fPreserveAll, "preserveall");
-		CommandLineDouble(dFillValueOverride, "fillvalue", 0.0);
-		CommandLineBool(fInputConcave, "in_concave");
-		CommandLineBool(fOutputConcave, "out_concave");
+		// Optional algorithm arguments
+		CommandLineString(optsAlg.strOutputMapFile, "out_map", "");
+		CommandLineString(optsAlg.strSourceMeta, "in_meta", "");
+		CommandLineString(optsAlg.strTargetMeta, "out_meta", "");
+		CommandLineBool(optsAlg.fSourceConcave, "in_concave");
+		CommandLineBool(optsAlg.fTargetConcave, "out_concave");
+		CommandLineInt(optsAlg.nPin, "in_np", 4);
+		CommandLineInt(optsAlg.nPout, "out_np", 4);
+		CommandLineString(optsAlg.strMethod, "method", "");
+		CommandLineBool(optsAlg.fMonotone, "mono");
+		CommandLineBool(optsAlg.fNoBubble, "nobubble");
+		CommandLineBool(fCorrectAreas, "correct_areas"); // Dummy option (does not affect optsAlg)
+		CommandLineBool(optsAlg.fNoCorrectAreas, "nocorrectareas");
+		CommandLineBool(optsAlg.fNoConservation, "noconserve");
+		CommandLineBool(optsAlg.fNoCheck, "nocheck");
+		CommandLineBool(optsAlg.fSparseConstraints, "sparse_constraints");
+
+		// Absorbed into --method
+		//CommandLineBool(fVolumetric, "volumetric");
+		//CommandLineBool(fMonotoneType2, "mono2");
+		//CommandLineBool(fMonotoneType3, "mono3");
+
+		// Optional apply arguments
+		CommandLineString(optsApply.strInputData, "in_data", "");
+		CommandLineString(optsApply.strOutputData, "out_data", "");
+		//CommandLineString(optsApply.strInputDataList, "in_data_list", "");
+		//CommandLineString(optsApply.strOutputDataList, "out_data_list", "");
+		CommandLineString(optsApply.strVariables, "var", "");
+		CommandLineString(optsApply.strNColName, "ncol_name", "ncol");
+		CommandLineBool(optsApply.fOutputDouble, "out_double");
+		CommandLineString(optsApply.strPreserveVariables, "preserve", "");
+		CommandLineBool(optsApply.fPreserveAll, "preserveall");
+		CommandLineDouble(optsApply.dFillValueOverride, "fillvalue", 0.0);
+		//CommandLineString(optsApply.strLogDir, "logdir", "");
+
+		// Optional output format
+		CommandLineStringD(strOutputFormat, "out_format","Netcdf4","[Classic|Offset64Bits|Netcdf4|Netcdf4Classic]");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
 	AnnounceBanner();
 
-	int nMonotoneTypeID=0;
-	if (fMonotoneType1) nMonotoneTypeID=1;
-	if (fMonotoneType2) nMonotoneTypeID=2;
-	if (fMonotoneType3) nMonotoneTypeID=3;
+	// Store NetCDF output format in both option lists
+	optsAlg.strOutputFormat = strOutputFormat;
+	optsApply.strOutputFormat = strOutputFormat;
 
 	// Call the actual mesh generator
-    OfflineMap mapRemap;
-	int err = GenerateOfflineMap(
-			mapRemap,
-			strInputMesh, strOutputMesh, strOverlapMesh,
-			strInputMeta, strOutputMeta,
-			strInputType, strOutputType,
-			nPin, nPout,
-			fNoBubble,
-			fCorrectAreas,
-			nMonotoneTypeID,
-			fVolumetric,
-			fNoConservation,
-			fNoCheck,
-			strVariables,
-			strOutputMap,
-			strInputData,
-			strOutputData,
-			strNColName,
-			fOutputDouble,
-			strOutputFormat,
-			strPreserveVariables,
-			fPreserveAll,
-			dFillValueOverride,
-			fInputConcave, fOutputConcave);
+	OfflineMap mapRemap;
+	int err =
+		GenerateOfflineMapAndApply(
+			strSourceMesh,
+			strTargetMesh,
+			strOverlapMesh,
+			strSourceType,
+			strTargetType,
+			optsAlg,
+			optsApply,
+			mapRemap);
 
 	if (err) exit(err);
 

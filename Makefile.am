@@ -64,6 +64,7 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateStereographicMesh.cpp \
 	src/GenerateICOMesh.cpp \
 	src/GenerateRLLMesh.cpp \
+	src/GenerateRectilinearMeshFromFile.cpp \
 	src/GenerateUTMMesh.cpp \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
@@ -75,6 +76,7 @@ libTempestRemap_la_SOURCES = \
 	src/FiniteElementTools.cpp \
 	src/FiniteVolumeTools.cpp \
 	src/NetCDFUtilities.cpp \
+	src/RestructureData.cpp \
 	src/ncvalues.cpp \
 	src/netcdf.cpp \
 	src/OverlapMesh.cpp \
@@ -97,6 +99,7 @@ LDADD = libTempestRemap.la ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
 # Mesh generation drivers
 GenerateTestData_SOURCES = src/GenerateTestData.cpp
 GenerateRLLMesh_SOURCES = src/GenerateRLLMeshExe.cpp
+GenerateRectilinearMeshFromFile_SOURCES = src/GenerateRectilinearMeshFromFileExe.cpp
 GenerateUTMMesh_SOURCES = src/GenerateUTMMeshExe.cpp
 GenerateCSMesh_SOURCES = src/GenerateCSMeshExe.cpp
 GenerateTransectMesh_SOURCES = src/GenerateTransectMeshExe.cpp
@@ -120,22 +123,24 @@ CoarsenRectilinearData_SOURCES = src/CoarsenRectilinearData.cpp
 CalculateDiffNorms_SOURCES = src/CalculateDiffNorms.cpp
 AnalyzeMap_SOURCES = src/AnalyzeMap.cpp
 VerticalInterpolate_SOURCES = src/VerticalInterpolate.cpp
+RestructureData_SOURCES = src/RestructureDataExe.cpp
 
 MeshToTxt_SOURCES = src/MeshToTxt.cpp
 ShpToMesh_SOURCES = src/ShpToMesh.cpp
-ConvertExodusToSCRIP_SOURCES = src/ConvertExodusToSCRIP.cpp
-ConvertSCRIPToExodus_SOURCES = src/ConvertSCRIPToExodus.cpp
+ConvertMeshToUGRID_SOURCES = src/ConvertMeshToUGRID.cpp
+ConvertMeshToSCRIP_SOURCES = src/ConvertMeshToSCRIP.cpp
+ConvertMeshToExodus_SOURCES = src/ConvertMeshToExodus.cpp
 
 bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
-				GenerateUTMMesh GenerateICOMesh \
+				GenerateUTMMesh GenerateICOMesh GenerateRectilinearMeshFromFile \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
 				GenerateOverlapMesh GenerateOverlapMesh_v1 \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \
-				MeshToTxt ShpToMesh ConvertExodusToSCRIP ConvertSCRIPToExodus \
-				AnalyzeMap VerticalInterpolate
+				MeshToTxt ShpToMesh ConvertMeshToUGRID ConvertMeshToSCRIP ConvertMeshToExodus \
+				AnalyzeMap VerticalInterpolate RestructureData
 
 
 # Utility target: build but don't run tests
@@ -170,8 +175,14 @@ nobase_dist_bin_SCRIPTS = \
 	test/run_fvtofv_rll_diffnorms.sh \
 	test/run_fvtogll_ico.sh \
 	test/run_glltofv_rll.sh \
-	test/run_glltogll_cs_diffnorms.sh
+	test/run_glltogll_cs_diffnorms.sh \
+	test/too_many_targets/too_many_targets.sh
 
-EXTRA_DIST = $(doc_DATA) Makefile.gmake src/Makefile.gmake
+GMAKE_FILES = mk/config.make  mk/defs.make  mk/framework.make  mk/rules.make  mk/system.make \
+							mk/system/agri.make  mk/system/cheyenne.make  mk/system/cori.make  mk/system/example.make  \
+							mk/system/macosx.make
+
+EXTRA_DIST = $(doc_DATA) $(GMAKE_FILES) LICENSE Makefile.gmake src/Makefile.gmake \
+						 src/netcdf-cxx-4.2.COPYRIGHT src/netcdf-cxx-4.2.README src/netcdf-cxx-4.2.VERSION
 
 CLEANFILES = configs.sed

@@ -14,6 +14,7 @@
 ///		or implied warranty.
 ///	</remarks>
 
+#include "Defines.h"
 #include "LinearRemapSE0.h"
 #include "OfflineMap.h"
 #include "FiniteElementTools.h"
@@ -505,7 +506,7 @@ void ForceConsistencyConservation3(
 	const DataArray1D<double> & vecSourceArea,
 	const DataArray1D<double> & vecTargetArea,
 	DataArray2D<double> & dCoeff,
-	bool fMonotone
+	bool fMonotone, bool fSparseConstraints = false
 ) {
 
 	// Number of free coefficients
@@ -520,38 +521,45 @@ void ForceConsistencyConservation3(
 
 	// Product matrix
 	DataArray2D<double> dCCt(nCond, nCond);
-	DataArray2D<double> dC(nCoeff, nCond);
-
-	DataArray1D<double> dRHS(nCoeff + nCond);
-
+	DataArray1D<double> localLK; // (nCond)
+	DataArray2D<double> dC; // (nCoeff, nCond);
 	// RHS
+	DataArray1D<double> dRHS; // (nCoeff + nCond);
 	int ix = 0;
-	for (int i = 0; i < dCoeff.GetRows(); i++) {
-	for (int j = 0; j < dCoeff.GetColumns(); j++) {
-		dRHS[ix] = dCoeff[i][j];
-		ix++;
-	}
-	}
-
-	// Consistency
-	ix = 0;
-	for (int i = 0; i < dCoeff.GetRows(); i++) {
-		for (int j = 0; j < dCoeff.GetColumns(); j++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = 1.0;
-		}
-		dRHS[nCoeff + ix] = 1.0;
-		ix++;
-	}
-
-	// Conservation
-	for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
+	if (fSparseConstraints)
+		localLK.Allocate(nCond); // will store lagrange multipliers lambda(nCondConservation)
+	                         // and kappa(nCond-1)
+	else {
+		dC.Allocate(nCoeff, nCond);
+		dRHS.Allocate(nCoeff + nCond);
 		for (int i = 0; i < dCoeff.GetRows(); i++) {
-			dC[i * dCoeff.GetColumns() + j][ix] = vecTargetArea[i];
+		for (int j = 0; j < dCoeff.GetColumns(); j++) {
+			dRHS[ix] = dCoeff[i][j];
+			ix++;
 		}
-		dRHS[nCoeff + ix] = vecSourceArea[j];
-		ix++;
+		}
 	}
+	
+	if (!fSparseConstraints){
+		// Consistency
+		ix = 0;
+		for (int i = 0; i < dCoeff.GetRows(); i++) {
+			for (int j = 0; j < dCoeff.GetColumns(); j++) {
+				dC[i * dCoeff.GetColumns() + j][ix] = 1.0;
+			}
+			dRHS[nCoeff + ix] = 1.0;
+			ix++;
+		}
 
+		// Conservation
+		for (int j = 0; j < dCoeff.GetColumns()-1; j++) {
+			for (int i = 0; i < dCoeff.GetRows(); i++) {
+				dC[i * dCoeff.GetColumns() + j][ix] = vecTargetArea[i];
+			}
+			dRHS[nCoeff + ix] = vecSourceArea[j];
+			ix++;
+		}
+	}
 	// Calculate CCt
 	double dP = 0.0;
 	for (int i = 0; i < dCoeff.GetRows(); i++) {
@@ -599,7 +607,23 @@ void ForceConsistencyConservation3(
 	int incy = 1;
 	double posone = 1.0;
 	double negone = -1.0;
-	dgemv_(
+	if (fSparseConstraints)
+	{
+		for (int m=0; m < nCondConsistency; m++) { // consistency condition
+			localLK[m] = 0;
+			for (int j=0; j<nCondConservation; j++)
+				localLK[m] += dCoeff[m][j];
+			localLK[m] += -1.;
+		}
+		for (int n=0; n<nCondConservation-1; n++) { // conservation condition
+			localLK[nCondConsistency + n] = 0;
+			for (int i = 0; i < nCondConsistency; i++)
+				localLK[nCondConsistency + n] += dCoeff[i][n] * vecTargetArea[i];
+			localLK[nCondConsistency + n] += -vecSourceArea[n]; //
+		}
+	}
+	else {
+		dgemv_(
 		&trans,
 		&m,
 		&n,
@@ -611,6 +635,7 @@ void ForceConsistencyConservation3(
 		&negone,
 		&(dRHS[nCoeff]),
 		&incy);
+	}
 
 	// Solve the general system
 	int nrhs = 1;
@@ -631,7 +656,18 @@ void ForceConsistencyConservation3(
 		&nInfo);
 */
 	char uplo = 'U';
-	dposv_(
+	if (fSparseConstraints)
+		dposv_(
+		&uplo,
+		&m,
+		&nrhs,
+		&(dCCt[0][0]),
+		&lda,
+		&(localLK[0]),
+		&ldb,
+		&nInfo);
+	else
+		dposv_(
 		&uplo,
 		&m,
 		&nrhs,
@@ -640,14 +676,23 @@ void ForceConsistencyConservation3(
 		&(dRHS[nCoeff]),
 		&ldb,
 		&nInfo);
-
 	if (nInfo != 0) {
 		_EXCEPTION1("Unable to solve SPD Schur system: %i\n", nInfo);
 	}
-
+	if (fSparseConstraints) {
+		for (int i = 0; i < nCondConsistency; i++) {
+			for (int j = 0; j < nCondConservation - 1; j++)
+			// R^_ij =  R_ij - lambda_i - kapa_j * JT_i
+				dCoeff[i][j] =
+				dCoeff[i][j] - localLK[i] - localLK[nCondConsistency + j] * vecTargetArea[i];
+			// the last column still needs correction
+			dCoeff[i][nCondConservation - 1] = dCoeff[i][nCondConservation - 1] - localLK[i];
+		}
+	}
 	// Obtain coefficients
-	trans = 't';
-	dgemv_(
+	else {
+		trans = 't';
+		dgemv_(
 		&trans,
 		&m,
 		&n,
@@ -659,16 +704,15 @@ void ForceConsistencyConservation3(
 		&posone,
 		&(dRHS[0]),
 		&incy);
-
-	// Store coefficients in array
-	ix = 0;
-	for (int i = 0; i < dCoeff.GetRows(); i++) {
-	for (int j = 0; j < dCoeff.GetColumns(); j++) {
-		dCoeff[i][j] = dRHS[ix];
-		ix++;
+		// Store coefficients in array
+		ix = 0;
+		for (int i = 0; i < dCoeff.GetRows(); i++) {
+			for (int j = 0; j < dCoeff.GetColumns(); j++) {
+				dCoeff[i][j] = dRHS[ix];
+				ix++;
+			}
+		}
 	}
-	}
-
 	// Force monotonicity
 	if (fMonotone) {
 
@@ -722,7 +766,7 @@ void LinearRemapSE4(
 	const DataArray3D<double> & dataGLLJacobian,
 	int nMonotoneType,
 	bool fContinuousIn,
-	bool fNoConservation,
+	bool fNoConservation, bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Order of the polynomial interpolant
@@ -778,7 +822,6 @@ void LinearRemapSE4(
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = 0;
-		int nTotalOverlapTriangles = 0;
 
 		// Determine how many overlap Faces and triangles are present
 		int ixOverlapTemp = ixOverlap;
@@ -789,9 +832,7 @@ void LinearRemapSE4(
 			if (meshOverlap.vecSourceFaceIx[ixOverlapTemp] != ixFirst) {
 				break;
 			}
-
 			nOverlapFaces++;
-			nTotalOverlapTriangles += faceOverlap.edges.size() - 2;
 		}
 
 		// No overlaps
@@ -805,26 +846,40 @@ void LinearRemapSE4(
 		// Find the local remap coefficients
 		for (int j = 0; j < nOverlapFaces; j++) {
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
+			Node node0, node1, node2;
+			double dTriangleArea;
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int k = 0; k < nOverlapTriangles; k++) {
-
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[k+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[k+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[k+1]);
-				faceTri.SetNode(2, faceOverlap[k+2]);
-
-				double dTriangleArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
-
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[k]];
+					int k1 = (k + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[k1]];
+				}
+				dTriangleArea = CalculateTriangleAreaQuadratureMethod(node0,
+						node1, node2);
 				// Coordinates of quadrature Node
 				for (int l = 0; l < TriQuadraturePoints; l++) {
 					Node nodeQuadrature;
@@ -1016,11 +1071,80 @@ void LinearRemapSE4(
 					dTargetArea);
 			}
 
-			ForceConsistencyConservation3(
-				vecSourceArea,
-				vecTargetArea,
-				dCoeff,
-				(nMonotoneType != 0));
+			// Force consistency and conservation (over all coefficients)
+			if ((FORCECC_MAX_TARGET_FACES == (-1)) || (nOverlapFaces <= FORCECC_MAX_TARGET_FACES)) {
+
+				ForceConsistencyConservation3(
+					vecSourceArea,
+					vecTargetArea,
+					dCoeff,
+					(nMonotoneType != 0),
+					fSparseConstraints);
+
+			// If too many target faces are included this can greatly slow down the computation and
+			// require a high memory footprint.  In this case only apply forcing to the first
+			// FORCECC_MAX_TARGET_FACES overlap faces.
+			} else {
+				DataArray1D<double> dSubsetTargetArea(FORCECC_MAX_TARGET_FACES);
+				DataArray2D<double> dSubsetCoeff(FORCECC_MAX_TARGET_FACES, nP * nP);
+
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					dSubsetTargetArea[j] = vecTargetArea[j];
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						dSubsetCoeff[j][p * nP + q] = dCoeff[j][p * nP + q];
+					}
+					}
+				}
+
+				for (int j = FORCECC_MAX_TARGET_FACES; j < nOverlapFaces; j++) {
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						vecSourceArea[p * nP + q] -= dCoeff[j][p * nP + q] * vecTargetArea[j];
+					}
+					}
+				}
+/*
+  				// DEBUGGING
+				double dJacobianAreaTot = 0.0;
+				double dSourceAreaTot = 0.0;
+				double dTargetAreaTot = 0.0;
+
+				for (int p = 0; p < nP; p++) {
+				for (int q = 0; q < nP; q++) {
+					//printf("%1.5e : %1.5e %1.5e\n", vecSourceArea[p * nP + q], dataGLLJacobian[p][q][ixFirst], meshInput.vecFaceArea[ixFirst]);
+					dSourceAreaTot += vecSourceArea[p * nP + q];
+					dJacobianAreaTot += dataGLLJacobian[p][q][ixFirst];
+					printf("%i %i %1.5e\n", p, q, vecSourceArea[p * nP + q]);
+					//if (vecSourceArea[p * nP + q] < 0.0) {
+					//	_EXCEPTIONT("Logic error:  Source face has negative area");
+					//}
+				}
+				}
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					dTargetAreaTot += dSubsetTargetArea[j];
+					printf("%i %1.5e\n", j, dSubsetTargetArea[j]);
+				}
+
+				printf("%1.15e %1.15e : %1.15e %1.15e\n", dSourceAreaTot, dTargetAreaTot, dJacobianAreaTot, meshInput.vecFaceArea[ixFirst]);
+*/
+				ForceConsistencyConservation3(
+					vecSourceArea,
+					dSubsetTargetArea,
+					dSubsetCoeff,
+					(nMonotoneType != 0),
+					fSparseConstraints);
+
+				for (int j = 0; j < FORCECC_MAX_TARGET_FACES; j++) {
+					for (int p = 0; p < nP; p++) {
+					for (int q = 0; q < nP; q++) {
+						dCoeff[j][p * nP + q] = dSubsetCoeff[j][p * nP + q];
+					}
+					}
+				}
+			}
+
+			//_EXCEPTION();
 
 			for (int j = 0; j < nOverlapFaces; j++) {
 			for (int p = 0; p < nP; p++) {
@@ -1083,6 +1207,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 
@@ -1149,7 +1274,7 @@ void LinearRemapGLLtoGLL_Pointwise(
 		// Quantities from the First Mesh
 		const Face & faceFirst = meshInput.faces[ixFirst];
 
-		const NodeVector & nodesFirst = meshInput.nodes;
+		const NodeVector &nodesFirst = meshInput.nodes;
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
@@ -1162,32 +1287,46 @@ void LinearRemapGLLtoGLL_Pointwise(
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
 			const Face & faceSecond = meshOutput.faces[ixSecond];
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
+
+			Node node0, node1, node2;
+			double dTriArea;
 
 			// Loop over all sub-triangles of this Overlap Face
 			for (int j = 0; j < nOverlapTriangles; j++) {
-
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
-
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[j]];
+					int j1 = (j + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[j1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
 					// Get the nodal location of this point
@@ -1452,7 +1591,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			fSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -1557,7 +1697,8 @@ void LinearRemapGLLtoGLL_Pointwise(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			fSparseConstraints);
 
 /*
 		// Check column sums (conservation)
@@ -1696,6 +1837,7 @@ void LinearRemapGLLtoGLL_Integrated(
 	int nMonotoneType,
 	bool fContinuousIn,
 	bool fContinuousOut,
+	bool fSparseConstraints,
 	OfflineMap & mapRemap
 ) {
 	// Triangular quadrature rule
@@ -1749,19 +1891,21 @@ void LinearRemapGLLtoGLL_Integrated(
 
 	int ixTotal = 0;
 
-	std::set< std::pair<int, int> > setFound;
+	std::set<std::pair<int, int> > setFound;
+
+	// Loop over all input Faces
 
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
 		// Output every 100 elements
 		if (ixFirst % 1000 == 0) {
-                  Announce("Element %i/%i", ixFirst,meshInput.faces.size());
+			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
 
 		// Quantities from the First Mesh
-		const Face & faceFirst = meshInput.faces[ixFirst];
+		const Face &faceFirst = meshInput.faces[ixFirst];
 
-		const NodeVector & nodesFirst = meshInput.nodes;
+		const NodeVector &nodesFirst = meshInput.nodes;
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
@@ -1774,8 +1918,6 @@ void LinearRemapGLLtoGLL_Integrated(
 
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
 
-			int nOverlapTriangles = faceOverlap.edges.size() - 2;
-
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
@@ -1783,22 +1925,40 @@ void LinearRemapGLLtoGLL_Integrated(
 
 			const Face & faceSecond = meshOutput.faces[ixSecond];
 
+			int nbEdges = faceOverlap.edges.size();
+			int nOverlapTriangles = 1;
+			Node nodeCenter; // not used if nbEdges == 3
+			if (nbEdges > 3) { // decompose from nodeCenter in this case
+				nOverlapTriangles = nbEdges;
+				for (int k = 0; k < nbEdges; k++) {
+					const Node &node = nodesOverlap[faceOverlap[k]];
+					nodeCenter = nodeCenter + node;
+				}
+				nodeCenter = nodeCenter / nbEdges;
+				double dMagni = sqrt(
+						nodeCenter.x * nodeCenter.x + nodeCenter.y * nodeCenter.y
+								+ nodeCenter.z * nodeCenter.z);
+				nodeCenter = nodeCenter / dMagni; // project back on sphere of radius 1
+			}
+
+			Node node0, node1, node2;
+			double dTriArea;
+
 			// Loop over all sub-triangles of this Overlap Face
-			for (int j = 0; j < nOverlapTriangles; j++) {
-
-				// Cornerpoints of triangle
-				const Node & node0 = nodesOverlap[faceOverlap[0]];
-				const Node & node1 = nodesOverlap[faceOverlap[j+1]];
-				const Node & node2 = nodesOverlap[faceOverlap[j+2]];
-
-				// Calculate the area of the modified Face
-				Face faceTri(3);
-				faceTri.SetNode(0, faceOverlap[0]);
-				faceTri.SetNode(1, faceOverlap[j+1]);
-				faceTri.SetNode(2, faceOverlap[j+2]);
-
-				double dTriArea =
-					CalculateFaceArea(faceTri, nodesOverlap);
+			for (int k = 0; k < nOverlapTriangles; k++) {
+				if (nbEdges == 3) { // will come here only once, nOverlapTriangles == 1 in this case
+					node0 = nodesOverlap[faceOverlap[0]];
+					node1 = nodesOverlap[faceOverlap[1]];
+					node2 = nodesOverlap[faceOverlap[2]];
+				}
+				else { // decompose polygon in triangles around the nodeCenter
+					node0 = nodeCenter;
+					node1 = nodesOverlap[faceOverlap[k]];
+					int k1 = (k + 1) % nbEdges;
+					node2 = nodesOverlap[faceOverlap[k1]];
+				}
+				dTriArea = CalculateTriangleAreaQuadratureMethod(node0, node1,
+						node2);
 
 				for (int k = 0; k < triquadrule.GetPoints(); k++) {
 
@@ -1966,7 +2126,8 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			fSparseConstraints);
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
@@ -2071,7 +2232,8 @@ void LinearRemapGLLtoGLL_Integrated(
 			dSourceArea,
 			dTargetArea,
 			dCoeff,
-			(nMonotoneType != 0));
+			(nMonotoneType != 0),
+			fSparseConstraints);
 /*
 		// Check column sums (conservation)
 		for (int i = 0; i < dCoeff.GetColumns(); i++) {

@@ -7,11 +7,7 @@
 # Mac OS X (Paul's Laptop)
 
 CXX=               g++
-F90=               gfortran
-MPICXX=            mpic++
-MPIF90=            mpif90
-
-F90_RUNTIME=       -lgfortran
+MPICXX=            mpicxx
 
 # NetCDF
 NETCDF_ROOT=       /opt/local

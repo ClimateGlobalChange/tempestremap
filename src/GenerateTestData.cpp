@@ -91,6 +91,8 @@ public:
 	}
 };
 
+///////////////////////////////////////////////////////////////////////////////
+
 ///	<summary>
 ///		The constant function
 ///	</summary>
@@ -105,6 +107,44 @@ public:
 		double dLat
 	) {
           return 1;
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		The longitude function.
+///	</summary>
+class TestFunctionLonDeg : public TestFunction {
+
+public:
+	///	<summary>
+	///		Evaluate the test function.
+	///	</summary>
+	virtual double operator()(
+		double dLon,
+		double dLat
+	) {
+          return 180.0 / M_PI * dLon;
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		The latitude function.
+///	</summary>
+class TestFunctionLatDeg : public TestFunction {
+
+public:
+	///	<summary>
+	///		Evaluate the test function.
+	///	</summary>
+	virtual double operator()(
+		double dLon,
+		double dLat
+	) {
+          return 180.0 / M_PI * dLat;
 	}
 };
 
@@ -256,8 +296,20 @@ try {
 		pTest = new TestFunctionVortex;
 	} else if (iTestData == 4) {
 		pTest = new TestFunction1;
+	} else if (iTestData == 5) {
+		pTest = new TestFunctionLonDeg;
+	} else if (iTestData == 6) {
+		pTest = new TestFunctionLatDeg;
 	} else {
-		_EXCEPTIONT("Test index out of range; expected [1,2,3]");
+		Announce("Test index out of range.  Expected:");
+		Announce("   1  Y2b2 approximate spherical harmonic");
+		Announce("   2  Y16b32 approximate spherical harmonic");
+		Announce("   3  Vortex test case");
+		Announce("   4  Constant test function");
+		Announce("   5  Longitude test function");
+		Announce("   6  Latitude test function");
+		Announce("=========================================================");
+		_EXCEPTION();
 	}
 
 	// Input mesh

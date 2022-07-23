@@ -129,6 +129,9 @@ try {
 	// Last polygon
 	int iPolygonLast;
 
+	// Coarsen
+	int nCoarsen;
+
 	// Calculate and display area of mesh
 	bool fCalculateArea;
 
@@ -140,6 +143,7 @@ try {
 		CommandLineBool(fConvexify, "convexify");
 		CommandLineInt(iPolygonFirst, "polygon_first", (-1));
 		CommandLineInt(iPolygonLast, "polygon_last", (-1));
+		CommandLineInt(nCoarsen, "coarsen", 1);
 		CommandLineBool(fCalculateArea, "calculatearea");
 
 		ParseCommandLine(argc, argv);
@@ -152,6 +156,9 @@ try {
 	if (strOutputFile == "") {
 		_EXCEPTIONT("No output file specified");
 		return (-1);
+	}
+	if (nCoarsen < 1) {
+		_EXCEPTIONT("--coarsen must be greater than or equal to 1");
 	}
 
 	AnnounceBanner();
@@ -346,31 +353,34 @@ try {
 		}
 		fclose(fp);
 */
-		// Convert to Exodus mesh.  Note that shapefile polygons are specified
-		// in clockwise order, whereas Exodus files request polygons to be
-		// specified in counter-clockwise order.  Hence we need to reorient
-		// the alignment of Faces.
+		// Convert to Exodus mesh.
 		int nFaces = mesh.faces.size();
 		int nNodes = mesh.nodes.size();
-		mesh.faces.resize(nFaces+1);
-		mesh.nodes.resize(nNodes + iLargestPartEndIx - iLargestPartBeginIx);
 
-		mesh.faces[nFaces] = Face(iLargestPartEndIx - iLargestPartBeginIx);
+		int nShpNodes = (iLargestPartEndIx - iLargestPartBeginIx) / nCoarsen;
+
+		mesh.faces.resize(nFaces+1);
+		mesh.nodes.resize(nNodes + nShpNodes);
+
+		mesh.faces[nFaces] = Face(nShpNodes);
 
 		// Convert from longitude/latitude to XYZ
 		if (strXYUnits == "lonlat") {
-			for (int i = iLargestPartBeginIx; i < iLargestPartEndIx; i++) {
-				int ix = i - iLargestPartBeginIx;
+			for (int i = 0; i < nShpNodes; i++) {
+				int ix = iLargestPartBeginIx + i * nCoarsen;
 
-				double dLonRad = dPoints[2*i] / 180.0 * M_PI;
-				double dLatRad = dPoints[2*i+1] / 180.0 * M_PI;
+				double dLonRad = dPoints[2*ix] / 180.0 * M_PI;
+				double dLatRad = dPoints[2*ix+1] / 180.0 * M_PI;
 
-				mesh.nodes[nNodes+ix].x = cos(dLatRad) * cos(dLonRad);
-				mesh.nodes[nNodes+ix].y = cos(dLatRad) * sin(dLonRad);
-				mesh.nodes[nNodes+ix].z = sin(dLatRad);
+				mesh.nodes[nNodes+i].x = cos(dLatRad) * cos(dLonRad);
+				mesh.nodes[nNodes+i].y = cos(dLatRad) * sin(dLonRad);
+				mesh.nodes[nNodes+i].z = sin(dLatRad);
 
+				// Note that shapefile polygons are specified in clockwise order,
+				// whereas Exodus files request polygons to be specified in
+				// counter-clockwise order.  Hence we need to reorient these Faces.
 				mesh.faces[nFaces].SetNode(
-					iLargestPartEndIx - i - 1, nNodes + ix);
+					nShpNodes - i - 1, nNodes + i);
 			}
 
 		} else {
@@ -394,7 +404,8 @@ try {
 	// Convexify the mesh
 	if (fConvexify) {
 		AnnounceStartBlock("Convexify mesh");
-		ConvexifyMesh(mesh, true);
+		Mesh meshtemp = mesh;
+		ConvexifyMesh(meshtemp, mesh, true);
 		AnnounceEndBlock("Done");
 	}
 
