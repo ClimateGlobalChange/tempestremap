@@ -936,6 +936,23 @@ int BuildCoincidentNodeVector(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Calculate the Jacobian (infinitesmal local area element) for a
+///		spherical triangle.  Variables dA and dB specify the barycentric
+///		coordinates within the spherical triangle:
+///		  (dA,dB)=(0,0) corresponds to node3
+///		  (dA,dB)=(1,0) corresponds to node2
+///		  (dA,dB)=(0,1) corresponds to node1
+///	</summary>
+Real CalculateSphericalTriangleJacobianBarycentric(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode = NULL
+);
+
+///	<summary>
 ///		Check if the specified Face is concave.
 ///	</summary>
 bool IsFaceConcave(

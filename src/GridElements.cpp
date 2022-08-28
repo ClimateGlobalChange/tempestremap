@@ -1790,6 +1790,78 @@ int BuildCoincidentNodeVector(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Real CalculateSphericalTriangleJacobianBarycentric(
+	const Node & node1,
+	const Node & node2,
+	const Node & node3,
+	double dA,
+	double dB,
+	Node * pnode
+) {
+	double dC = 1.0 - dA - dB;
+
+	Node dF(
+		dA * node1.x + dB * node2.x + dC * node3.x,
+		dA * node1.y + dB * node2.y + dC * node3.y,
+		dA * node1.z + dB * node2.z + dC * node3.z);
+
+	Node dDaF(
+		node1.x - node3.x,
+		node1.y - node3.y,
+		node1.z - node3.z);
+
+	Node dDbF(
+		node2.x - node3.x,
+		node2.y - node3.y,
+		node2.z - node3.z);
+
+	double dInvR = 1.0 / sqrt(dF.x * dF.x + dF.y * dF.y + dF.z * dF.z);
+
+	if (pnode != NULL) {
+		pnode->x = dF.x * dInvR;
+		pnode->y = dF.y * dInvR;
+		pnode->z = dF.z * dInvR;
+	}
+
+	Node dDaG(
+		dDaF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDaF.y * dF.y + dDaF.z * dF.z),
+		dDaF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDaF.x * dF.x + dDaF.z * dF.z),
+		dDaF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDaF.x * dF.x + dDaF.y * dF.y));
+
+	Node dDbG(
+		dDbF.x * (dF.y * dF.y + dF.z * dF.z)
+			- dF.x * (dDbF.y * dF.y + dDbF.z * dF.z),
+		dDbF.y * (dF.x * dF.x + dF.z * dF.z)
+			- dF.y * (dDbF.x * dF.x + dDbF.z * dF.z),
+		dDbF.z * (dF.x * dF.x + dF.y * dF.y)
+			- dF.z * (dDbF.x * dF.x + dDbF.y * dF.y));
+
+	double dDenomTerm = dInvR * dInvR * dInvR;
+
+	dDaG.x *= dDenomTerm;
+	dDaG.y *= dDenomTerm;
+	dDaG.z *= dDenomTerm;
+
+	dDbG.x *= dDenomTerm;
+	dDbG.y *= dDenomTerm;
+	dDbG.z *= dDenomTerm;
+
+	// Cross product gives local Jacobian
+	Node nodeCross = CrossProduct(dDaG, dDbG);
+
+	double dJacobian = sqrt(
+		  nodeCross.x * nodeCross.x
+		+ nodeCross.y * nodeCross.y
+		+ nodeCross.z * nodeCross.z);
+
+	return 0.5 * dJacobian;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 Real CalculateFaceAreaQuadratureMethod(
 	const Face & face,
 	const NodeVector & nodes

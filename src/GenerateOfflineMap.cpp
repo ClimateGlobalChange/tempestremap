@@ -24,6 +24,8 @@
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
 #include "NetCDFUtilities.h"
+#include "triangle.h"
+#include "FiniteVolumeTools.h"
 
 #include "OverlapMesh.h"
 #include "OfflineMap.h"
@@ -397,7 +399,8 @@ try {
 
         // Construct OfflineMap
         AnnounceStartBlock("Calculating offline map");
-        LinearRemapFVtoFV(meshSource, meshTarget, meshOverlap, nPin, mapRemap);
+                
+        LinearRemapIntegratedBilinear(meshSource, meshTarget, meshOverlap, mapRemap);
 
     // Finite volume input / Finite element output
     } else if (eInputType == DiscretizationType_FV) {
