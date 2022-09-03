@@ -19,6 +19,7 @@
 #include "Announce.h"
 #include "STLStringHelper.h"
 #include "NetCDFUtilities.h"
+#include "FiniteVolumeTools.h"
 
 #include "netcdfcpp.h"
 
@@ -346,7 +347,7 @@ void GenerateIcosahedralQuadGrid(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Dual(
+/*void Dual(
 	Mesh & mesh
 ) {
 	const int EdgeCountHexagon = 6;
@@ -457,6 +458,7 @@ void Dual(
 		mesh.faces.push_back(face);
 	}
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 

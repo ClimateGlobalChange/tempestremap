@@ -337,6 +337,27 @@ inline void StereographicProjectionInv(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+inline void GnomonicProjection(
+	double dLonRad0,
+	double dLatRad0,
+	double dLonRad,
+	double dLatRad,
+	double & dXs,
+	double & dYs
+) {
+	// Forward projection using equations (1)-(3)
+	// https://mathworld.wolfram.com/GnomonicProjection.html
+	
+	double dK = sin(dLatRad0) * sin(dLatRad) + cos(dLatRad0) * cos(dLatRad) * cos(dLonRad - dLonRad0);
+	
+	dXs = cos(dLatRad) * sin(dLonRad - dLonRad0)/dK;
+	
+	dYs = (cos(dLatRad0) * sin(dLatRad) - sin(dLatRad0) * cos(dLatRad) * cos(dLonRad - dLonRad0))/dK;
+		
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 
 #endif // _COORDTRANSFORMS_H_
 

@@ -25,6 +25,8 @@
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
 #include "NetCDFUtilities.h"
+#include "triangle.h"
+#include "FiniteVolumeTools.h"
 
 #include "OverlapMesh.h"
 #include "OfflineMap.h"
@@ -431,12 +433,19 @@ try {
 
 		} else {
 			AnnounceStartBlock("Calculating offline map (default)");
-			LinearRemapFVtoFV(
+			//LinearRemapFVtoFV(
+				//meshSource,
+				//meshTarget,
+				//meshOverlap,
+				//(optsAlg.fMonotone)?(1):(optsAlg.nPin),
+				//mapRemap);
+				
+				LinearRemapIntegratedTriangulation(
 				meshSource,
 				meshTarget,
 				meshOverlap,
-				(optsAlg.fMonotone)?(1):(optsAlg.nPin),
 				mapRemap);
+				
 		}
 
 	// Finite volume input / Finite element output
