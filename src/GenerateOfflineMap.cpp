@@ -433,18 +433,18 @@ try {
 
 		} else {
 			AnnounceStartBlock("Calculating offline map (default)");
-			//LinearRemapFVtoFV(
-				//meshSource,
-				//meshTarget,
-				//meshOverlap,
-				//(optsAlg.fMonotone)?(1):(optsAlg.nPin),
-				//mapRemap);
-				
-				LinearRemapIntegratedTriangulation(
+			LinearRemapFVtoFV(
 				meshSource,
 				meshTarget,
 				meshOverlap,
+				(optsAlg.fMonotone)?(1):(optsAlg.nPin),
 				mapRemap);
+				
+				//LinearRemapIntegratedTriangulation(
+				//meshSource,
+				//meshTarget,
+				//meshOverlap,
+				//mapRemap);
 				
 		}
 
