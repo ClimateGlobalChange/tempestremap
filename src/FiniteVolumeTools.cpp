@@ -630,7 +630,7 @@ void BarycentricCoordinates(
 	
 	double dDenom = (dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3);
 	
-	if( abs(dDenom) > 1e-12 ){
+	if( abs(dDenom) < ReferenceTolerance ){
 		
 		_EXCEPTIONT("Points are close to colinear");
 		
