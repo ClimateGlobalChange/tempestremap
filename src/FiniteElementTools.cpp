@@ -657,6 +657,64 @@ void SampleGLLFiniteElement(
 					1.0 - g_dCoeffBeta[3];
 			}
 
+		// Fifth order monotone interpolation
+		} else if (nP == 5) {
+
+			const double dGLL1 = sqrt(21.0) / 7.0;
+
+			const double dA0 = - (81.0 + 15.0 * sqrt(21.0)) / 80.0;
+			const double dB0 = - (441.0 + 99.0 * sqrt(21.0)) / 80.0;
+			const double dC0 = - (819.0 + 189.0 * sqrt(21.0)) / 80.0;
+			const double dD0 = - (539.0 + 105.0 * sqrt(21.0)) / 80.0;
+
+			const double dA2 = 1.0;
+			const double dC2 = - 14.0 + 56.0 * sqrt(21.0) / 27.0;
+			const double dE2 = 245.0 / 9.0 - 392.0 * sqrt(21.0) / 81.0;
+
+			if (dAlpha < -dGLL1) {
+				g_dCoeffAlpha[0] =
+					dA0 + dAlpha * (dB0 + dAlpha * (dC0 + dAlpha * dD0));
+				g_dCoeffAlpha[1] =
+					1.0 - g_dCoeffAlpha[0];
+			} else if (dAlpha < 0.0) {
+				g_dCoeffAlpha[2] =
+					dA2 + dAlpha * dAlpha * (dC2 + dAlpha * dAlpha * dE2);
+				g_dCoeffAlpha[1] =
+					1.0 - g_dCoeffAlpha[2];
+			} else if (dAlpha < dGLL1) {
+				g_dCoeffAlpha[2] =
+					dA2 + dAlpha * dAlpha * (dC2 + dAlpha * dAlpha * dE2);
+				g_dCoeffAlpha[3] =
+					1.0 - g_dCoeffAlpha[2];
+			} else {
+				g_dCoeffAlpha[4] =
+					dA0 - dAlpha * (dB0 - dAlpha * (dC0 - dAlpha * dD0));
+				g_dCoeffAlpha[3] =
+					1.0 - g_dCoeffAlpha[4];
+			}
+
+			if (dBeta < -dGLL1) {
+				g_dCoeffBeta[0] =
+					dA0 + dBeta * (dB0 + dBeta * (dC0 + dBeta * dD0));
+				g_dCoeffBeta[1] =
+					1.0 - g_dCoeffBeta[0];
+			} else if (dBeta < 0.0) {
+				g_dCoeffBeta[2] =
+					dA2 + dBeta * dBeta * (dC2 + dBeta * dBeta * dE2);
+				g_dCoeffBeta[1] =
+					1.0 - g_dCoeffBeta[2];
+			} else if (dBeta < dGLL1) {
+				g_dCoeffBeta[2] =
+					dA2 + dBeta * dBeta * (dC2 + dBeta * dBeta * dE2);
+				g_dCoeffBeta[3] =
+					1.0 - g_dCoeffBeta[2];
+			} else {
+				g_dCoeffBeta[4] =
+					dA0 - dBeta * (dB0 - dBeta * (dC0 - dBeta * dD0));
+				g_dCoeffBeta[3] =
+					1.0 - g_dCoeffBeta[4];
+			}
+
 		} else {
 			_EXCEPTIONT("Not implemented");
 		}

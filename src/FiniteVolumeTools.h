@@ -116,6 +116,86 @@ void GetAdjacentFaceVectorByEdge(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Find the triangle that contains a two-dimensional point
+///	</summary>
+void GetTriangleThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Find the triangle that contains a two-dimensional point
+///	</summary>
+void GetFaceThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY,
+	double dZ
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Returns true if a face contains a given point
+///	</summary>
+bool DoesFaceContainPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double dZ
+
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Returns true if a face contains a given point
+///	</summary>
+bool DoesFaceContainPoint(
+	const NodeVector & nodesP,
+	double dX,
+	double dY,
+	double dZ
+
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Barycentric coordinates of a two-dimensional point
+///	</summary>
+void BarycentricCoordinates(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double & dA,
+	double & dB
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Determine if a triangle contains a point
+///	</summary>
+bool DoesTriangleContainPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Get a vector of adjacent faces using vertex information to determine
 ///		adjacencies.
 ///	</summary>
@@ -124,6 +204,41 @@ void GetAdjacentFaceVectorByNode(
 	int iFaceInitial,
 	int nRequiredFaceSetSize,
 	AdjacentFaceVector & vecFaces
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Multiply a 3-dimensional vector by a 3x3 matrix.
+///	</summary>
+void MatVectorMult(
+	const DataArray2D<double> & dMat,
+	DataArray1D<double> & dRHS,
+	DataArray1D<double> & dOutput
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Intersection of a point and triangle.
+///	</summary>
+void TriangleLineIntersection(
+	Node & nodeQ,
+	NodeVector & nodesP,
+	DataArray1D<double> & dCoeffs,
+	double & dCond
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Find the coordinates of a point in the basis of a quadrilateral.
+///	</summary>
+void NewtonQuadrilateral(
+	Node & nodeQ,
+	NodeVector & nodesP,
+	DataArray1D<double> & dCoeffs,
+	bool & fConverged
 );
 
 ///////////////////////////////////////////////////////////////////////////////
