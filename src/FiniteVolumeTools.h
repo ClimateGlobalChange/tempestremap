@@ -118,7 +118,6 @@ void GetAdjacentFaceVectorByEdge(
 ///	<summary>
 ///		Find the triangle that contains a two-dimensional point
 ///	</summary>
-
 void GetTriangleThatContainsPoint(
 	const Mesh & mesh,
 	int iFaceInitial,
@@ -132,7 +131,6 @@ void GetTriangleThatContainsPoint(
 ///	<summary>
 ///		Find the triangle that contains a two-dimensional point
 ///	</summary>
-
 void GetFaceThatContainsPoint(
 	const Mesh & mesh,
 	int iFaceInitial,
@@ -147,8 +145,7 @@ void GetFaceThatContainsPoint(
 ///	<summary>
 ///		Returns true if a face contains a given point
 ///	</summary>
-
-bool fFaceContainsPoint(
+bool DoesFaceContainPoint(
 	const Mesh & mesh,
 	int iFace,
 	double dX,
@@ -157,13 +154,12 @@ bool fFaceContainsPoint(
 
 );
 
+///////////////////////////////////////////////////////////////////////////////
+
 ///	<summary>
 ///		Returns true if a face contains a given point
 ///	</summary>
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool fFaceContainsPoint(
+bool DoesFaceContainPoint(
 	const NodeVector & nodesP,
 	double dX,
 	double dY,
@@ -176,7 +172,6 @@ bool fFaceContainsPoint(
 ///	<summary>
 ///		Barycentric coordinates of a two-dimensional point
 ///	</summary>
-
 void BarycentricCoordinates(
 	const Mesh & mesh,
 	int iFace,
@@ -191,8 +186,7 @@ void BarycentricCoordinates(
 ///	<summary>
 ///		Determine if a triangle contains a point
 ///	</summary>
-
-bool fTriangleContainsPoint(
+bool DoesTriangleContainPoint(
 	const Mesh & mesh,
 	int iFace,
 	double dX,
@@ -217,7 +211,6 @@ void GetAdjacentFaceVectorByNode(
 ///	<summary>
 ///		Multiply a 3-dimensional vector by a 3x3 matrix.
 ///	</summary>
-
 void MatVectorMult(
 	const DataArray2D<double> & dMat,
 	DataArray1D<double> & dRHS,
@@ -229,7 +222,6 @@ void MatVectorMult(
 ///	<summary>
 ///		Intersection of a point and triangle.
 ///	</summary>
-
 void TriangleLineIntersection(
 	Node & nodeQ,
 	NodeVector & nodesP,
@@ -242,7 +234,6 @@ void TriangleLineIntersection(
 ///	<summary>
 ///		Find the coordinates of a point in the basis of a quadrilateral.
 ///	</summary>
-
 void NewtonQuadrilateral(
 	Node & nodeQ,
 	NodeVector & nodesP,
@@ -308,16 +299,6 @@ void InvertFitArray_LeastSquares(
 	DataArray2D<double> & dFitArray,
 	DataArray1D<double> & dFitWeights,
 	DataArray2D<double> & dFitArrayPlus
-);
-
-///////////////////////////////////////////////////////////////////////////////
-
-///	<summary>
-///		Construct the dual mesh.
-///	</summary>
-
-void Dual(
-	Mesh & mesh
 );
 
 ///////////////////////////////////////////////////////////////////////////////

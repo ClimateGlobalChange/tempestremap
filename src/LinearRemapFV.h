@@ -71,7 +71,6 @@ void LinearRemapFVtoFV(
 ///		Generate the OfflineMap for integrated remapping from finite volumes to finite
 ///		volumes using a triangulation of the source mesh.
 ///	</summary>
-
 void LinearRemapIntegratedTriangulation(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -85,7 +84,6 @@ void LinearRemapIntegratedTriangulation(
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using generalized barycentric coordinates using the dual mesh
 ///	</summary>
-
 void LinearRemapIntegratedGeneralizedBarycentric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -99,7 +97,6 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 ///		Generate the OfflineMap for integrated remapping from finite volumes to finite
 ///		volumes using generalized barycentric coordinates using the dual mesh
 ///	</summary>
-
 void LinearRemapGeneralizedBarycentric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -113,7 +110,6 @@ void LinearRemapGeneralizedBarycentric(
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using a triangulation of the source mesh.
 ///	</summary>
-
 void LinearRemapTriangulation(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -127,7 +123,6 @@ void LinearRemapTriangulation(
 ///		Generate the OfflineMap for integrated remapping from finite volumes to finite
 ///		volumes using the ESMF based bilinear interpolation
 ///	</summary>
-
 void LinearRemapIntegratedBilinear(	
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -141,7 +136,6 @@ void LinearRemapIntegratedBilinear(
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using the ESMF based bilinear interpolation
 ///	</summary>
-
 void LinearRemapBilinear(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,

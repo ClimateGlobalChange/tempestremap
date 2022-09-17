@@ -244,7 +244,7 @@ void GetTriangleThatContainsPoint(
 	}
 	
 	// First check if point is in initial face
-	if (fTriangleContainsPoint(mesh,iFaceInitial,dX,dY)){
+	if (DoesTriangleContainPoint(mesh,iFaceInitial,dX,dY)){
 		
 		iFaceFinal = iFaceInitial;
 		return;
@@ -291,7 +291,8 @@ void GetTriangleThatContainsPoint(
 				
 				// If this is a new Face, check whether it contains the point
 				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
-					if(fTriangleContainsPoint(mesh,iNewFace,dX,dY)){
+
+					if(DoesTriangleContainPoint(mesh,iNewFace,dX,dY)){
 						
 						iFaceFinal = iNewFace;
 						return;
@@ -330,7 +331,7 @@ void GetFaceThatContainsPoint(
 	}
 	
 	// First check if point is in initial face
-	if (fFaceContainsPoint(mesh,iFaceInitial,dX,dY,dZ)){
+	if (DoesFaceContainPoint(mesh,iFaceInitial,dX,dY,dZ)){
 		
 		iFaceFinal = iFaceInitial;
 		return;
@@ -377,7 +378,8 @@ void GetFaceThatContainsPoint(
 				
 				// If this is a new Face, check whether it contains the point
 				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
-					if(fFaceContainsPoint(mesh,iNewFace,dX,dY,dZ)){
+
+					if(DoesFaceContainPoint(mesh,iNewFace,dX,dY,dZ)){
 						
 						iFaceFinal = iNewFace;
 						return;
@@ -400,7 +402,7 @@ void GetFaceThatContainsPoint(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool fFaceContainsPoint(
+bool DoesFaceContainPoint(
 	const Mesh & mesh,
 	int iFace,
 	double dX,
@@ -500,7 +502,7 @@ bool fFaceContainsPoint(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool fFaceContainsPoint(
+bool DoesFaceContainPoint(
 	const NodeVector & nodesP,
 	double dX,
 	double dY,
@@ -584,8 +586,8 @@ bool fFaceContainsPoint(
 					
 		//If the signs of the dot products are different, than the sample point is outside the polygon		  
 		
-		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0 && DotProduct(nodeQ,nodeEdgeNormal) < 0) ||
-			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0 && DotProduct(nodeQ,nodeEdgeNormal) > 0)){
+		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0.0 && DotProduct(nodeQ,nodeEdgeNormal) < 0.0) ||
+			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0.0 && DotProduct(nodeQ,nodeEdgeNormal) > 0.0)){
 				
 				return false;
 				
@@ -628,17 +630,23 @@ void BarycentricCoordinates(
 	double dX3 = nodeV3.x;
 	double dY3 = nodeV3.y;
 	
-	dA = ((dY2 - dY3)*(dX - dX3) + (dX3 - dX2)*(dY - dY3))/
-		 ((dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3));
+	double dDenom = (dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3);
+	
+	if( abs(dDenom) < ReferenceTolerance ){
+		
+		_EXCEPTIONT("Points are close to colinear");
+		
+	}
+	
+	dA = ((dY2 - dY3)*(dX - dX3) + (dX3 - dX2)*(dY - dY3))/dDenom;
 		 
-	dB = ((dY3 - dY1)*(dX - dX3) + (dX1 - dX3)*(dY - dY3))/
-		 ((dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3));
+	dB = ((dY3 - dY1)*(dX - dX3) + (dX1 - dX3)*(dY - dY3))/dDenom;
 		
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool fTriangleContainsPoint(
+bool DoesTriangleContainPoint(
 	const Mesh & mesh,
 	int iFace,
 	double dX,
@@ -650,7 +658,7 @@ bool fTriangleContainsPoint(
 	
 	BarycentricCoordinates(mesh,iFace,dX,dY,dA,dB);
 		
-	if ((0 <= dA) && (0 <= dB) && (dA + dB <= 1+1e-15)){
+	if ((0.0 <= dA) && (0.0 <= dB) && (dA + dB <= 1+ReferenceTolerance)){
 		return true;
 	}
 	else{
@@ -760,6 +768,9 @@ void TriangleLineIntersection(
 	double & dCond
 ) {
 	
+	_ASSERT(dCoeffs.GetRows() == 3);
+	
+
 	//Setup up columns of 3x3 matrix
 	DataArray2D<double> dInterpMat(3,3);
 	
@@ -768,15 +779,10 @@ void TriangleLineIntersection(
 	dInterpMat(2,0) = nodeQ.z;
 	
 	dInterpMat(0,1) = nodesP[1].x - nodesP[0].x;						  
-	
 	dInterpMat(1,1) = nodesP[1].y - nodesP[0].y;
-	
 	dInterpMat(2,1) = nodesP[1].z - nodesP[0].z;
-	
 	dInterpMat(0,2) = nodesP[2].x - nodesP[0].x;						  
-	
 	dInterpMat(1,2) = nodesP[2].y - nodesP[0].y;
-	
 	dInterpMat(2,2) = nodesP[2].z - nodesP[0].z;	
 					  			
 	int m = 3;
@@ -874,6 +880,8 @@ void NewtonQuadrilateral(
 	DataArray1D<double> & dCoeffs,
 	bool & fConverged
 ) {
+	
+	_ASSERT(dCoeffs.GetRows() == 3);
 	
 	int iMaxIterations = 100;
 	
@@ -1688,118 +1696,3 @@ void InvertFitArray_LeastSquares(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-void Dual(
-	Mesh & mesh
-) {
-	const int EdgeCountHexagon = 6;
-
-	// Generate ReverseNodeArray
-	mesh.ConstructReverseNodeArray();
-
-	// Backup Nodes and Faces
-	NodeVector nodesOld = mesh.nodes;
-	FaceVector facesOld = mesh.faces;
-
-	mesh.nodes.clear();
-	mesh.faces.clear();
-		
-	// Generate new Node array
-	for (int i = 0; i < facesOld.size(); i++) {
-		Node node;
-		for (int j = 0; j < facesOld[i].edges.size(); j++) {
-			node.x += nodesOld[facesOld[i][j]].x;
-			node.y += nodesOld[facesOld[i][j]].y;
-			node.z += nodesOld[facesOld[i][j]].z;
-		}
-
-		node.x /= static_cast<double>(facesOld[i].edges.size());
-		node.y /= static_cast<double>(facesOld[i].edges.size());
-		node.z /= static_cast<double>(facesOld[i].edges.size());
-
-		double dMag = node.Magnitude();
-
-		node.x /= dMag;
-		node.y /= dMag;
-		node.z /= dMag;
-
-		mesh.nodes.push_back(node);
-	}
-
-	// Generate new Face array
-	for (int i = 0; i < nodesOld.size(); i++) {
-		const int nEdges = mesh.revnodearray[i].size();
-
-		Face face(mesh.revnodearray[i].size());
-		Face faceTemp(mesh.revnodearray[i].size());
-
-		int ixNode = 0;
-		std::set<int>::const_iterator iter = mesh.revnodearray[i].begin();
-		for (; iter != mesh.revnodearray[i].end(); iter++) {
-			faceTemp.SetNode(ixNode, *iter);
-			ixNode++;
-		}
-
-		// Reorient Faces
-		Node nodeCentral = nodesOld[i];
-		Node node0 = mesh.nodes[faceTemp[0]] - nodeCentral;
-
-		Node nodeCross = CrossProduct(mesh.nodes[faceTemp[0]], nodeCentral);
-		
-		double dNode0Mag = node0.Magnitude();
-
-		// Determine the angles about the central Node of each Face Node
-		std::vector<double> dAngles;
-		dAngles.resize(faceTemp.edges.size());
-		dAngles[0] = 0.0;
-
-		for (int j = 1; j < nEdges; j++) {
-			Node nodeDiff = mesh.nodes[faceTemp[j]] - nodeCentral;
-			double dNodeDiffMag = nodeDiff.Magnitude();
-
-			double dSide = DotProduct(nodeCross, nodeDiff);
-
-			double dDotNorm =
-				DotProduct(node0, nodeDiff) / (dNode0Mag * dNodeDiffMag);
-
-			double dAngle;
-			if (dDotNorm > 1.0) {
-				dDotNorm = 1.0;
-			}
-
-			dAngles[j] = acos(dDotNorm);
-
-			if (dSide > 0.0) {
-				dAngles[j] = - dAngles[j] + 2.0 * M_PI;
-			}
-		}
-
-		// Orient each Face by putting Nodes in order of increasing angle
-		double dCurrentAngle = 0.0;
-		face.SetNode(0, faceTemp[0]);
-		for (int j = 1; j < nEdges; j++) {
-			int ixNextNode = 1;
-			double dNextAngle = 2.0 * M_PI;
-
-			for (int k = 1; k < nEdges; k++) {
-				if ((dAngles[k] > dCurrentAngle) && (dAngles[k] < dNextAngle)) {
-					ixNextNode = k;
-					dNextAngle = dAngles[k];
-				}
-			}
-
-			face.SetNode(j, faceTemp[ixNextNode]);
-			dCurrentAngle = dNextAngle;
-		}
-
-		// Fill in missing edges
-		//for (int j = nEdges; j < EdgeCountHexagon; j++) {
-			//face.SetNode(j, face[nEdges-1]);
-		//}
-
-		mesh.faces.push_back(face);
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-

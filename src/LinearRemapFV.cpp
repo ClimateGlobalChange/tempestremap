@@ -1302,9 +1302,11 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 	
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
-	//Construct edge map
 	
+	//Reverse node array
+	meshInputDual.ConstructReverseNodeArray();	
+	
+	//Construct edge map
 	meshInputDual.ConstructEdgeMap();
 	
 	//kd-tree of dual mesh centers
@@ -1587,17 +1589,19 @@ void LinearRemapGeneralizedBarycentric(
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 	
+	//Dual mesh
 	Mesh meshInputDual = meshInput;
 	
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
-	//Construct edge map
 	
+	//Reverse node array
+	meshInputDual.ConstructReverseNodeArray();	
+	
+	//Construct edge map
 	meshInputDual.ConstructEdgeMap();
 	
 	//kd-tree of dual mesh centers
-	
     kdtree * kdTarget = kd_create(3);
 
 	// Vector of centers of the source mesh
@@ -2491,7 +2495,7 @@ void LinearRemapIntegratedBilinear(
 							nodesP.push_back(nodeKPlusOne);
 							nodesP.push_back(nodeKPlusTwo);
 							
-							if( fFaceContainsPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
+							if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
 								
 								TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
 								
@@ -2719,7 +2723,7 @@ void LinearRemapBilinear(
 				nodesP.push_back(nodeKPlusOne);
 				nodesP.push_back(nodeKPlusTwo);
 				
-				if( fFaceContainsPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
+				if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
 					
 					TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
 										

@@ -2923,3 +2923,110 @@ void ConvexifyMesh(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Dual(
+	Mesh & mesh
+) {
+	
+	// Generate ReverseNodeArray
+	mesh.ConstructReverseNodeArray();
+
+	// Backup Nodes and Faces
+	NodeVector nodesOld = mesh.nodes;
+	FaceVector facesOld = mesh.faces;
+
+	mesh.nodes.clear();
+	mesh.faces.clear();
+		
+	// Generate new Node array
+	for (int i = 0; i < facesOld.size(); i++) {
+		Node node;
+		for (int j = 0; j < facesOld[i].edges.size(); j++) {
+			node.x += nodesOld[facesOld[i][j]].x;
+			node.y += nodesOld[facesOld[i][j]].y;
+			node.z += nodesOld[facesOld[i][j]].z;
+		}
+
+		node.x /= static_cast<double>(facesOld[i].edges.size());
+		node.y /= static_cast<double>(facesOld[i].edges.size());
+		node.z /= static_cast<double>(facesOld[i].edges.size());
+
+		double dMag = node.Magnitude();
+
+		node.x /= dMag;
+		node.y /= dMag;
+		node.z /= dMag;
+
+		mesh.nodes.push_back(node);
+	}
+
+	// Generate new Face array
+	for (int i = 0; i < nodesOld.size(); i++) {
+		const int nEdges = mesh.revnodearray[i].size();
+
+		Face face(mesh.revnodearray[i].size());
+		Face faceTemp(mesh.revnodearray[i].size());
+
+		int ixNode = 0;
+		std::set<int>::const_iterator iter = mesh.revnodearray[i].begin();
+		for (; iter != mesh.revnodearray[i].end(); iter++) {
+			faceTemp.SetNode(ixNode, *iter);
+			ixNode++;
+		}
+
+		// Reorient Faces
+		Node nodeCentral = nodesOld[i];
+		Node node0 = mesh.nodes[faceTemp[0]] - nodeCentral;
+
+		Node nodeCross = CrossProduct(mesh.nodes[faceTemp[0]], nodeCentral);
+		
+		double dNode0Mag = node0.Magnitude();
+
+		// Determine the angles about the central Node of each Face Node
+		std::vector<double> dAngles;
+		dAngles.resize(faceTemp.edges.size());
+		dAngles[0] = 0.0;
+
+		for (int j = 1; j < nEdges; j++) {
+			Node nodeDiff = mesh.nodes[faceTemp[j]] - nodeCentral;
+			double dNodeDiffMag = nodeDiff.Magnitude();
+
+			double dSide = DotProduct(nodeCross, nodeDiff);
+
+			double dDotNorm =
+				DotProduct(node0, nodeDiff) / (dNode0Mag * dNodeDiffMag);
+
+			double dAngle;
+			if (dDotNorm > 1.0) {
+				dDotNorm = 1.0;
+			}
+
+			dAngles[j] = acos(dDotNorm);
+
+			if (dSide > 0.0) {
+				dAngles[j] = - dAngles[j] + 2.0 * M_PI;
+			}
+		}
+
+		// Orient each Face by putting Nodes in order of increasing angle
+		double dCurrentAngle = 0.0;
+		face.SetNode(0, faceTemp[0]);
+		for (int j = 1; j < nEdges; j++) {
+			int ixNextNode = 1;
+			double dNextAngle = 2.0 * M_PI;
+
+			for (int k = 1; k < nEdges; k++) {
+				if ((dAngles[k] > dCurrentAngle) && (dAngles[k] < dNextAngle)) {
+					ixNextNode = k;
+					dNextAngle = dAngles[k];
+				}
+			}
+
+			face.SetNode(j, faceTemp[ixNextNode]);
+			dCurrentAngle = dNextAngle;
+		}
+
+		mesh.faces.push_back(face);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////

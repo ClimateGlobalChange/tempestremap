@@ -225,7 +225,7 @@ try {
 			if (nMonotoneType != 0) {
 				_EXCEPTIONT("Multiple monotonicity specifications found (--mono) or (--method \"mono#\")");
 			}
-			if ((eSourceType == DiscretizationType_FV) || (eTargetType == DiscretizationType_FV)) {
+			if ((eSourceType == DiscretizationType_FV) && (eTargetType == DiscretizationType_FV)) {
 				_EXCEPTIONT("--method \"mono2\" is only used when remapping to/from CGLL or DGLL grids");
 			}
 			nMonotoneType = 2;
@@ -235,7 +235,7 @@ try {
 			if (nMonotoneType != 0) {
 				_EXCEPTIONT("Multiple monotonicity specifications found (--mono) or (--method \"mono#\")");
 			}
-			if ((eSourceType == DiscretizationType_FV) || (eTargetType == DiscretizationType_FV)) {
+			if ((eSourceType == DiscretizationType_FV) && (eTargetType == DiscretizationType_FV)) {
 				_EXCEPTIONT("--method \"mono3\" is only used when remapping to/from CGLL or DGLL grids");
 			}
 			nMonotoneType = 3;
@@ -440,11 +440,16 @@ try {
 				(optsAlg.fMonotone)?(1):(optsAlg.nPin),
 				mapRemap);
 				
-				//LinearRemapIntegratedTriangulation(
-				//meshSource,
-				//meshTarget,
-				//meshOverlap,
-				//mapRemap);
+				//To run the non-conservative monotone remapping schemes, uncomment the following and replace with
+				//LinearRemapGeneralizedBarycentric, LinearRemapTriangulation, LinearRemapBilinear, 
+				//LinearRemapIntegratedGeneralizedBarycentric, LinearRemapIntegratedTriangulation, 
+				//or LinearRemapIntegratedBilinear
+				
+				//LinearRemapIntegratedGeneralizedBarycentric(
+					//meshSource,
+					//meshTarget,
+					//meshOverlap,
+					//mapRemap);
 				
 		}
 
