@@ -25,6 +25,8 @@
 #include "SparseMatrix.h"
 #include "STLStringHelper.h"
 #include "NetCDFUtilities.h"
+#include "triangle.h"
+#include "FiniteVolumeTools.h"
 
 #include "OverlapMesh.h"
 #include "OfflineMap.h"
@@ -437,6 +439,18 @@ try {
 				meshOverlap,
 				(optsAlg.fMonotone)?(1):(optsAlg.nPin),
 				mapRemap);
+				
+				//To run the non-conservative monotone remapping schemes, uncomment the following and replace with
+				//LinearRemapGeneralizedBarycentric, LinearRemapTriangulation, LinearRemapBilinear, 
+				//LinearRemapIntegratedGeneralizedBarycentric, LinearRemapIntegratedTriangulation, 
+				//or LinearRemapIntegratedBilinear
+				
+				//LinearRemapIntegratedGeneralizedBarycentric(
+					//meshSource,
+					//meshTarget,
+					//meshOverlap,
+					//mapRemap);
+				
 		}
 
 	// Finite volume input / Finite element output

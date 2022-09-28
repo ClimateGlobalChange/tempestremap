@@ -132,6 +132,16 @@ public:
     );
 
 protected:
+
+	///	<summary>
+	///		Clip and assured sum function.
+	///	</summary>
+	void CAAS(
+		DataArray1D<double> & dataCorrectedField,
+		DataArray1D<double> & dataLowerBound,
+		DataArray1D<double> & dataUpperBound,
+		double & dMass);
+
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.
 	///	</summary>
@@ -590,12 +600,20 @@ public:
 	///		Set the bounds enforcement parameters.
 	///	</summary>
 	void SetEnforcementBounds(
-		const std::string & strEnforcementBounds
-	) {
-		ParseEnforceBounds(
-			strEnforcementBounds,
-			m_vecEnforcementBounds);
-	}
+		const std::string & strEnforcementBounds,
+		Mesh * pmeshSource,
+		Mesh * pmeshOverlap,
+		DataArray3D<int> * pdataGLLNodesIn,
+		DataArray3D<int> * pdataGLLNodesOut,
+		int iPin
+	);
+	//void SetEnforcementBounds(
+		//const std::string & strEnforcementBounds
+	//) {
+		//ParseEnforceBounds(
+			//strEnforcementBounds,
+			//m_vecEnforcementBounds);
+	//}
 
 	///	<summary>
 	///		Clear the bounds enforcement parameters.
@@ -746,6 +764,31 @@ protected:
 	///		Enforcement bounds used in this map.
 	///	</summary>
 	EnforceBoundsVector m_vecEnforcementBounds;
+	
+		///	<summary>
+	///		Pointer to the source mesh.
+	///	</summary>
+	Mesh * m_pmeshSource;
+	
+	///	<summary>
+	///		Pointer to the overlap mesh.
+	///	</summary>
+	Mesh * m_pmeshOverlap;
+	
+	///	<summary>
+	///		Pointer to the GLL node data for the source mesh.
+	///	</summary>
+	DataArray3D<int> * m_pdataGLLNodesIn;
+	
+	///	<summary>
+	///		Pointer to the GLL node data for the target mesh.
+	///	</summary>
+	DataArray3D<int> * m_pdataGLLNodesOut;
+	
+	///	<summary>
+	///		Order of the reconstruction polynomial for FV mesh.
+	///	</summary>
+	int m_iPin;
 
 };
 

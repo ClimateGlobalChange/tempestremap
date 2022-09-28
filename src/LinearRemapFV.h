@@ -68,6 +68,84 @@ void LinearRemapFVtoFV(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Generate the OfflineMap for integrated remapping from finite volumes to finite
+///		volumes using a triangulation of the source mesh.
+///	</summary>
+void LinearRemapIntegratedTriangulation(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
+///		volumes using generalized barycentric coordinates using the dual mesh
+///	</summary>
+void LinearRemapIntegratedGeneralizedBarycentric(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for integrated remapping from finite volumes to finite
+///		volumes using generalized barycentric coordinates using the dual mesh
+///	</summary>
+void LinearRemapGeneralizedBarycentric(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
+///		volumes using a triangulation of the source mesh.
+///	</summary>
+void LinearRemapTriangulation(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for integrated remapping from finite volumes to finite
+///		volumes using the ESMF based bilinear interpolation
+///	</summary>
+void LinearRemapIntegratedBilinear(	
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
+///		volumes using the ESMF based bilinear interpolation
+///	</summary>
+void LinearRemapBilinear(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Generate the OfflineMap for remapping from finite volumes to finite
 ///		elements using simple sampling of the FV reconstruction.
 ///	</summary>

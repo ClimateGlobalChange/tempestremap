@@ -231,6 +231,444 @@ void GetAdjacentFaceVectorByEdge(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void GetTriangleThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY
+) {
+	// Ensure the ReverseNodeArray has been constructed
+	if (mesh.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap is required");
+	}
+	
+	// First check if point is in initial face
+	if (DoesTriangleContainPoint(mesh,iFaceInitial,dX,dY)){
+		
+		iFaceFinal = iFaceInitial;
+		return;
+						
+	}
+	
+	// Set of all Faces
+	std::set<int> setAllFaces;
+
+	// Set of current Faces
+	std::set<int> setCurrentFaces;
+	
+	// Insert initial Face
+	setAllFaces.insert(iFaceInitial);
+	setCurrentFaces.insert(iFaceInitial);
+	
+	while (setAllFaces.size() < mesh.faces.size()) {
+
+		// Set of Faces to examine next
+		std::set<int> setNextFaces;
+
+		// Loop through all Faces adjacent to Faces in setCurrentFaces
+		std::set<int>::const_iterator iterCurrentFace = setCurrentFaces.begin();
+		for (; iterCurrentFace != setCurrentFaces.end(); iterCurrentFace++) {
+
+			const Face & faceCurrent = mesh.faces[*iterCurrentFace];
+			for (int i = 0; i < faceCurrent.edges.size(); i++) {
+				const FacePair & facepair =
+					mesh.edgemap.find(faceCurrent.edges[i])->second;
+				
+				// New face index
+				int iNewFace;
+				if (facepair[0] == *iterCurrentFace) {
+					iNewFace = facepair[1];
+				} else if (facepair[1] == *iterCurrentFace) {
+					iNewFace = facepair[0];
+				} else {
+					_EXCEPTIONT("Logic error");
+				}
+
+				if (iNewFace == InvalidFace) {
+					continue;
+				}
+				
+				// If this is a new Face, check whether it contains the point
+				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
+
+					if(DoesTriangleContainPoint(mesh,iNewFace,dX,dY)){
+						
+						iFaceFinal = iNewFace;
+						return;
+						
+					}
+					else{
+					
+						setAllFaces.insert(iNewFace);
+						setNextFaces.insert(iNewFace);
+						
+					}
+				}
+			}
+		}
+
+		setCurrentFaces = setNextFaces;
+	}
+	_EXCEPTIONT("Unable to find a triangle that contains the point");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GetFaceThatContainsPoint(
+	const Mesh & mesh,
+	int iFaceInitial,
+	int & iFaceFinal,
+	double dX,
+	double dY,
+	double dZ
+
+){
+	
+	// Ensure the ReverseNodeArray has been constructed
+	if (mesh.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap is required");
+	}
+	
+	// First check if point is in initial face
+	if (DoesFaceContainPoint(mesh,iFaceInitial,dX,dY,dZ)){
+		
+		iFaceFinal = iFaceInitial;
+		return;
+						
+	}
+	
+	// Set of all Faces
+	std::set<int> setAllFaces;
+
+	// Set of current Faces
+	std::set<int> setCurrentFaces;
+	
+	// Insert initial Face
+	setAllFaces.insert(iFaceInitial);
+	setCurrentFaces.insert(iFaceInitial);
+	
+	while (setAllFaces.size() < mesh.faces.size()) {
+
+		// Set of Faces to examine next
+		std::set<int> setNextFaces;
+
+		// Loop through all Faces adjacent to Faces in setCurrentFaces
+		std::set<int>::const_iterator iterCurrentFace = setCurrentFaces.begin();
+		for (; iterCurrentFace != setCurrentFaces.end(); iterCurrentFace++) {
+
+			const Face & faceCurrent = mesh.faces[*iterCurrentFace];
+			for (int i = 0; i < faceCurrent.edges.size(); i++) {
+				const FacePair & facepair =
+					mesh.edgemap.find(faceCurrent.edges[i])->second;
+				
+				// New face index
+				int iNewFace;
+				if (facepair[0] == *iterCurrentFace) {
+					iNewFace = facepair[1];
+				} else if (facepair[1] == *iterCurrentFace) {
+					iNewFace = facepair[0];
+				} else {
+					_EXCEPTIONT("Logic error");
+				}
+
+				if (iNewFace == InvalidFace) {
+					continue;
+				}
+				
+				// If this is a new Face, check whether it contains the point
+				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
+
+					if(DoesFaceContainPoint(mesh,iNewFace,dX,dY,dZ)){
+						
+						iFaceFinal = iNewFace;
+						return;
+						
+					}
+					else{
+					
+						setAllFaces.insert(iNewFace);
+						setNextFaces.insert(iNewFace);
+						
+					}
+				}
+			}
+		}
+
+		setCurrentFaces = setNextFaces;
+	}
+	_EXCEPTIONT("Unable to find a face that contains the point");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool DoesFaceContainPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double dZ
+
+){
+	
+	//Convert sample point to lat/lon coordinates
+	
+	double dLonRad0 = 0.0;
+	double dLatRad0 = 0.0;
+	
+	XYZtoRLL_Rad(dX,dY,dZ,dLonRad0,dLatRad0);
+	
+	int iEdges = mesh.faces[iFace].edges.size();
+	
+	NodeVector nodesPlane;
+	
+	double dCenterX = 0;
+	double dCenterY = 0;
+	
+	// Project face nodes onto plane tangent to the sphere at the sample point whose 
+	// coordinates are dX, dY, dZ
+	for (int i = 0; i < iEdges; i++){
+		
+		Node nodeCurrent = mesh.nodes[mesh.faces[iFace][i]];
+		
+		double dLonRad = 0.0;
+		double dLatRad = 0.0;
+		
+		//Convert to lat/lon coordinates
+		
+		XYZtoRLL_Rad(nodeCurrent.x,nodeCurrent.y,nodeCurrent.z,dLonRad,dLatRad);
+		
+		//Project on tangent plane at sample point
+		
+		double dGX = 0.0;
+		double dGY = 0.0;
+		
+		GnomonicProjection(dLonRad0,dLatRad0,dLonRad,dLatRad,dGX,dGY);
+		
+		Node nodeI(dGX,dGY,0.0);
+		
+		nodesPlane.push_back(nodeI);
+		
+		//add contributions to planar face centroid
+		dCenterX += dGX;
+		dCenterY += dGY;
+		
+	}
+	
+	//Compute coordinates of planar face centroid and turn it into a Node
+	
+	dCenterX /= iEdges;
+	dCenterY /= iEdges;
+		
+	Node nodeCenter(dCenterX,dCenterY,0);
+	
+	//loop over all edges
+	for (int i = 0; i < iEdges; i++){
+		
+		Node nodeI = nodesPlane[i];
+		
+		Node nodeIPlusOne = nodesPlane[(i+1)%iEdges];
+		
+		Node nodeEdge(nodeIPlusOne.x - nodeI.x,
+					  nodeIPlusOne.y - nodeI.y,
+					  0.0);
+		
+		Node nodeEdgeNormal(-nodeEdge.y, nodeEdge.x, 0.0);
+		
+		
+		Node nodeCenterMinusI(nodeCenter.x - nodeI.x,
+							  nodeCenter.y - nodeI.y,
+							  0.0);
+		
+		//This is the projected sampled point (whose coordinates are zero in the gnomonic plane)
+		//minus nodeI
+						  
+		Node nodeQ(-nodeI.x,-nodeI.y,0.0);
+					
+		//If the signs of the dot products are different, than the sample point is outside the polygon		  
+		
+		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0 && DotProduct(nodeQ,nodeEdgeNormal) < 0) ||
+			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0 && DotProduct(nodeQ,nodeEdgeNormal) > 0)){
+				
+				return false;
+				
+		}
+		
+	}
+	
+	return true;
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool DoesFaceContainPoint(
+	const NodeVector & nodesP,
+	double dX,
+	double dY,
+	double dZ
+
+){
+	
+	//Convert sample point to lat/lon coordinates
+	
+	double dLonRad0 = 0.0;
+	double dLatRad0 = 0.0;
+	
+	XYZtoRLL_Rad(dX,dY,dZ,dLonRad0,dLatRad0);
+	
+	int iEdges = nodesP.size();
+	
+	NodeVector nodesPlane;
+	
+	double dCenterX = 0;
+	double dCenterY = 0;
+	
+	// Project face nodes onto plane tangent to the sphere at the sample point whose 
+	// coordinates are dX, dY, dZ
+	for (int i = 0; i < iEdges; i++){
+		
+		Node nodeCurrent = nodesP[i];
+		
+		double dLonRad = 0.0;
+		double dLatRad = 0.0;
+		
+		//Convert to lat/lon coordinates
+		
+		XYZtoRLL_Rad(nodeCurrent.x,nodeCurrent.y,nodeCurrent.z,dLonRad,dLatRad);
+		
+		//Project on tangent plane at sample point
+		
+		double dGX = 0.0;
+		double dGY = 0.0;
+		
+		GnomonicProjection(dLonRad0,dLatRad0,dLonRad,dLatRad,dGX,dGY);
+		
+		Node nodeI(dGX,dGY,0.0);
+		
+		nodesPlane.push_back(nodeI);
+		
+		//add contributions to planar face centroid
+		dCenterX += dGX;
+		dCenterY += dGY;
+		
+	}
+	
+	//Compute coordinates of planar face centroid and turn it into a Node
+	
+	dCenterX /= iEdges;
+	dCenterY /= iEdges;
+		
+	Node nodeCenter(dCenterX,dCenterY,0);
+	
+	//loop over all edges
+	for (int i = 0; i < iEdges; i++){
+		
+		Node nodeI = nodesPlane[i];
+		
+		Node nodeIPlusOne = nodesPlane[(i+1)%iEdges];
+		
+		Node nodeEdge(nodeIPlusOne.x - nodeI.x,
+					  nodeIPlusOne.y - nodeI.y,
+					  0.0);
+		
+		Node nodeEdgeNormal(-nodeEdge.y, nodeEdge.x, 0.0);
+		
+		
+		Node nodeCenterMinusI(nodeCenter.x - nodeI.x,
+							  nodeCenter.y - nodeI.y,
+							  0.0);
+		
+		//This is the projected sampled point (whose coordinates are zero in the gnomonic plane)
+		//minus nodeI
+						  
+		Node nodeQ(-nodeI.x,-nodeI.y,0.0);
+					
+		//If the signs of the dot products are different, than the sample point is outside the polygon		  
+		
+		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0.0 && DotProduct(nodeQ,nodeEdgeNormal) < 0.0) ||
+			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0.0 && DotProduct(nodeQ,nodeEdgeNormal) > 0.0)){
+				
+				return false;
+				
+		}
+		
+	}
+	
+	return true;
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void BarycentricCoordinates(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY,
+	double & dA,
+	double & dB
+){
+	
+	Face face = mesh.faces[iFace];
+	
+	// The input face has to be a triangle
+	if(face.edges.size() != 3){
+		_EXCEPTIONT("The input face must be a triangle");
+	}
+	
+	Node nodeV1 = mesh.nodes[face[0]];
+	Node nodeV2 = mesh.nodes[face[1]];
+	Node nodeV3 = mesh.nodes[face[2]];
+	
+	double dX1 = nodeV1.x;
+	double dY1 = nodeV1.y;
+	
+	double dX2 = nodeV2.x;
+	double dY2 = nodeV2.y;
+	
+	double dX3 = nodeV3.x;
+	double dY3 = nodeV3.y;
+	
+	double dDenom = (dY2 - dY3)*(dX1 - dX3) + (dX3 - dX2)*(dY1 - dY3);
+	
+	if( abs(dDenom) < ReferenceTolerance ){
+		
+		_EXCEPTIONT("Points are close to colinear");
+		
+	}
+	
+	dA = ((dY2 - dY3)*(dX - dX3) + (dX3 - dX2)*(dY - dY3))/dDenom;
+		 
+	dB = ((dY3 - dY1)*(dX - dX3) + (dX1 - dX3)*(dY - dY3))/dDenom;
+		
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool DoesTriangleContainPoint(
+	const Mesh & mesh,
+	int iFace,
+	double dX,
+	double dY
+){
+	
+	double dA;
+	double dB;
+	
+	BarycentricCoordinates(mesh,iFace,dX,dY,dA,dB);
+		
+	if ((0.0 <= dA) && (0.0 <= dB) && (dA + dB <= 1+ReferenceTolerance)){
+		return true;
+	}
+	else{
+		return false;
+	}
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void GetAdjacentFaceVectorByNode(
 	const Mesh & mesh,
 	int iFaceInitial,
@@ -306,6 +744,252 @@ void GetAdjacentFaceVectorByNode(
 			}
 		}
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void MatVectorMult(const DataArray2D<double> & dMat,
+				   DataArray1D<double> & dRHS,
+				   DataArray1D<double> & dOutput)
+{
+
+		dOutput(0) = (dMat(0,0))*dRHS(0) + (dMat(0,1))*dRHS(1) + (dMat(0,2))*dRHS(2);
+		dOutput(1) = (dMat(1,0))*dRHS(0) + (dMat(1,1))*dRHS(1) + (dMat(1,2))*dRHS(2);
+		dOutput(2) = (dMat(2,0))*dRHS(0) + (dMat(2,1))*dRHS(1) + (dMat(2,2))*dRHS(2);
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void TriangleLineIntersection(
+	Node & nodeQ,
+	NodeVector & nodesP,
+	DataArray1D<double> & dCoeffs,
+	double & dCond
+) {
+	
+	_ASSERT(dCoeffs.GetRows() == 3);
+	
+
+	//Setup up columns of 3x3 matrix
+	DataArray2D<double> dInterpMat(3,3);
+	
+	dInterpMat(0,0) = nodeQ.x;
+	dInterpMat(1,0) = nodeQ.y;
+	dInterpMat(2,0) = nodeQ.z;
+	
+	dInterpMat(0,1) = nodesP[1].x - nodesP[0].x;						  
+	dInterpMat(1,1) = nodesP[1].y - nodesP[0].y;
+	dInterpMat(2,1) = nodesP[1].z - nodesP[0].z;
+	dInterpMat(0,2) = nodesP[2].x - nodesP[0].x;						  
+	dInterpMat(1,2) = nodesP[2].y - nodesP[0].y;
+	dInterpMat(2,2) = nodesP[2].z - nodesP[0].z;	
+					  			
+	int m = 3;
+	int n = 3;
+	int lda = 3;
+	int info;
+	
+	DataArray1D<int> iPIV;
+	iPIV.Allocate(3);
+	
+	DataArray1D<double> dWork;
+	dWork.Allocate(3);
+	
+	int lWork = 3;
+	
+	//Column sums for A and A inverse
+	DataArray1D<double> dColSumA(3);
+	
+	for (int j = 0; j < 3; j++) {
+		
+		for (int k = 0; k < 3; k++) {
+			
+			dColSumA[j] += fabs(dInterpMat(j,k));
+			
+		}
+		
+	}
+	
+	DataArray1D<double> dColSumAInv(3);
+	
+	dgetrf_(&m, &n, &(dInterpMat(0,0)),
+			&lda, &(iPIV[0]), &info);
+
+		
+	dgetri_(&n, &(dInterpMat(0,0)),
+			&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+			
+
+	//A inverse column sums
+	for (int j = 0; j < 3; j++) {
+	
+		for (int k = 0; k < 3; k++) {
+		
+			dColSumAInv[j] += fabs(dInterpMat(j,k));
+		
+		}
+	
+	}
+	
+	
+	//max column sums of A and A inverse
+	double dMaxColSumA = dColSumA[0];
+	
+	double dMaxColSumAInv = dColSumAInv[0];
+	
+	for (int k = 1; k < 3; k++) {
+		
+		if (dColSumA[k] > dMaxColSumA) {
+			dMaxColSumA = dColSumA[k];
+		}
+		if (dColSumAInv[k] > dMaxColSumAInv) {
+			dMaxColSumAInv = dColSumAInv[k];
+		}
+	}		
+	
+	dCond = dMaxColSumAInv * dMaxColSumA;
+		
+	if (info < 0) {
+		_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
+	}
+	if (info > 0) {
+		Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
+	}
+	
+	//Set right hand side of linear system
+	
+	DataArray1D<double> dRHS(3);
+	
+	dRHS(0) = nodeQ.x - nodesP[0].x;
+	dRHS(1) = nodeQ.y - nodesP[0].y;
+	dRHS(2) = nodeQ.z - nodesP[0].z;
+	
+	//Solve linear system with matrix multiply
+	
+	MatVectorMult(dInterpMat, dRHS, dCoeffs);
+	
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void NewtonQuadrilateral(
+	Node & nodeQ,
+	NodeVector & nodesP,
+	DataArray1D<double> & dCoeffs,
+	bool & fConverged
+) {
+	
+	_ASSERT(dCoeffs.GetRows() == 3);
+	
+	int iMaxIterations = 100;
+	
+	//This algorithm is essentially the one that is used in ESMF
+	
+	// Four corners of quadrilateral
+	Node nodeQ0 = nodesP[0];
+	Node nodeQ1 = nodesP[1];
+	Node nodeQ2 = nodesP[2];
+	Node nodeQ3 = nodesP[3];
+	
+	// Jacobian
+	DataArray2D<double> dJacobian(3,3);
+	
+	DataArray1D<double> A(3), B(3), C(3), D(3), E(3), F(3);
+	
+	A[0] = nodeQ0.x - nodeQ1.x + nodeQ2.x - nodeQ3.x;
+	A[1] = nodeQ0.y - nodeQ1.y + nodeQ2.y - nodeQ3.y;
+	A[2] = nodeQ0.z - nodeQ1.z + nodeQ2.z - nodeQ3.z;
+	
+	B[0] = nodeQ1.x - nodeQ0.x;
+	B[1] = nodeQ1.y - nodeQ0.y;
+	B[2] = nodeQ1.z - nodeQ0.z;
+
+	C[0] = nodeQ3.x-nodeQ0.x;
+	C[1] = nodeQ3.y-nodeQ0.y;
+	C[2] = nodeQ3.z-nodeQ0.z;
+	
+	D[0] = nodeQ.x;
+	D[1] = nodeQ.y;
+	D[2] = nodeQ.z;
+	
+	E[0] = nodeQ0.x - nodeQ.x;
+	E[1] = nodeQ0.y - nodeQ.y;
+	E[2] = nodeQ0.z - nodeQ.z;
+	
+	for (int i = 0; i < iMaxIterations; i++){
+		
+		double dA = dCoeffs[0];
+		double dB = dCoeffs[1];
+		double dC = dCoeffs[2];
+		
+		// Calculate Value of function at X
+		F[0] = dA*dB*A[0] + dA*B[0] + dB*C[0] + dC*D[0] + E[0];
+		F[1] = dA*dB*A[1] + dA*B[1] + dB*C[1] + dC*D[1] + E[1];
+		F[2] = dA*dB*A[2] + dA*B[2] + dB*C[2] + dC*D[2] + E[2];
+		
+	    // If we're close enough to 0.0 then exit
+		if (F[0]*F[0]+F[1]*F[1]+F[2]*F[2] < 1.0E-15) {
+			
+			fConverged = true;
+			break;
+			
+		}
+
+		// Construct Jacobian
+		dJacobian(0,0) = A[0]*dB + B[0];
+		dJacobian(1,0) = A[1]*dB + B[1];
+		dJacobian(2,0) = A[2]*dB + B[2];
+		
+		dJacobian(0,1) = A[0]*dA + C[0];
+		dJacobian(1,1) = A[1]*dA + C[1];
+		dJacobian(2,1) = A[2]*dA + C[2];
+
+		dJacobian(0,2) = D[0];
+		dJacobian(1,2) = D[1];
+		dJacobian(2,2) = D[2];
+		
+		//Invert jacobian
+		int m = 3;
+		int n = 3;
+		int lda = 3;
+		int info;
+		
+		DataArray1D<int> iPIV;
+		iPIV.Allocate(3);
+		
+		DataArray1D<double> dWork;
+		dWork.Allocate(3);
+		
+		int lWork = 3;
+		
+		//LU decomposition
+		dgetrf_(&m, &n, &(dJacobian(0,0)),
+				&lda, &(iPIV[0]), &info);
+	
+		//Invert LU decomposition
+		dgetri_(&n, &(dJacobian(0,0)),
+				&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
+			
+		if (info != 0) {
+			_EXCEPTIONT("Mass matrix inversion error");
+		}
+		
+		DataArray1D<double> dDeltaX(3);
+		
+		//Multiply solution vector by inverse jacobian
+		MatVectorMult(dJacobian, F, dDeltaX);
+		
+		//Update solution
+		dCoeffs[0] = dCoeffs[0] - dDeltaX[0];
+		dCoeffs[1] = dCoeffs[1] - dDeltaX[1];
+		dCoeffs[2] = dCoeffs[2] - dDeltaX[2];
+		
+		
+	}
+	
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1012,4 +1696,3 @@ void InvertFitArray_LeastSquares(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
