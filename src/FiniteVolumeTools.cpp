@@ -1054,6 +1054,8 @@ void BuildIntegrationArray(
 		const NodeVector &nodesOverlap = meshOverlap.nodes;
 
 		int nbEdges = faceOverlap.edges.size();
+		if (nbEdges < 3)
+		    continue; // skip / ignore degenerated triangles
 		int nOverlapTriangles = 1;
 		Node nodeCenter; // not used if nbEdges == 3
 		if (nbEdges > 3) { // decompose from center in this case
