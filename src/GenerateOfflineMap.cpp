@@ -262,17 +262,12 @@ try {
 			}
 			strMapAlgorithm = "delaunay";
 
-		// Bilinear (same as --mono3 --noconserve when source grid is CGLL/DGLL)
+		// Bilinear
 		} else if (it == "bilin") {
-			if (eTargetType != DiscretizationType_FV) {
-				_EXCEPTIONT("--method \"bilin\" may only be used when mapping to FV.");
+			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
+				_EXCEPTIONT("--method \"bilin\" may only be used for FV->FV remapping");
 			}
-			fNoConservation = true;
-			if (eSourceType == DiscretizationType_FV) {
-				strMapAlgorithm = "fvbilin";
-			} else {
-				strMapAlgorithm = "mono3";
-			}
+			strMapAlgorithm = "fvbilin";
 
 		// Integrated bilinear (same as mono3 when source grid is CGLL/DGLL)
 		} else if (it == "intbilin") {
