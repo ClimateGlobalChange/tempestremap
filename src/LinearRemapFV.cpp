@@ -1298,12 +1298,11 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 	
-	//Dual mesh
 	Mesh meshInputDual = meshInput;
 	
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
+	
 	//Reverse node array
 	meshInputDual.ConstructReverseNodeArray();	
 	
@@ -1595,7 +1594,7 @@ void LinearRemapGeneralizedBarycentric(
 	
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
+	
 	//Reverse node array
 	meshInputDual.ConstructReverseNodeArray();	
 	

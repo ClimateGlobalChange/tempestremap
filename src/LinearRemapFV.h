@@ -84,7 +84,6 @@ void LinearRemapIntegratedTriangulation(
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using generalized barycentric coordinates using the dual mesh
 ///	</summary>
-
 void LinearRemapIntegratedGeneralizedBarycentric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -98,7 +97,6 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 ///		Generate the OfflineMap for integrated remapping from finite volumes to finite
 ///		volumes using generalized barycentric coordinates using the dual mesh
 ///	</summary>
-
 void LinearRemapGeneralizedBarycentric(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
@@ -112,7 +110,6 @@ void LinearRemapGeneralizedBarycentric(
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using a triangulation of the source mesh.
 ///	</summary>
-
 void LinearRemapTriangulation(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,

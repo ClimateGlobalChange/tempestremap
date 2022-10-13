@@ -19,6 +19,8 @@
 #include "TempestRemapAPI.h"
 #include "OfflineMap.h"
 #include "netcdfcpp.h"
+#include "GridElements.h"
+#include "FiniteElementTools.h"
 
 #include <fstream>
 
@@ -273,6 +275,69 @@ try {
 		AnnounceStartBlock("Applying first offline map to data");
 	}
 */
+
+	DataArray3D<int> dataGLLNodesIn;
+	DataArray3D<double> dataGLLJacobianIn;
+	
+	DataArray3D<int> dataGLLNodesOut;
+	DataArray3D<double> dataGLLJacobianOut;
+	
+	DataArray3D<int> * pdataGLLNodesIn = NULL;
+			
+	DataArray3D<int> * pdataGLLNodesOut = NULL;
+							
+	Mesh meshOverlap;
+	Mesh meshSource;
+	Mesh meshTarget;
+	
+	Mesh * pmeshSource = NULL;
+	Mesh * pmeshOverlap = NULL;
+		
+		
+	if(optsApply.strInputMesh != ""){
+		
+		//If the source mesh is finite volume, we need the source mesh for local p bounds preservation
+		
+		meshSource.Read(optsApply.strInputMesh);
+		meshSource.ConstructReverseNodeArray();
+		meshSource.ConstructEdgeMap();
+		pmeshSource = &meshSource;
+		
+		
+		//If the source mesh is finite element, we need dataGLLNodes for local bounds preservation
+		if(optsApply.fgll){
+			
+			double dTotalAreaInput = meshSource.CalculateFaceAreas(optsApply.fContainsConcaveFaces);
+			double dNumericalAreaIn = GenerateMetaData(meshSource,optsApply.nPin,false,dataGLLNodesIn,dataGLLJacobianIn);
+			
+			pdataGLLNodesIn = &dataGLLNodesIn;
+			
+		}
+		
+	}
+	
+	if(optsApply.strOverlapMesh != ""){
+		
+		meshOverlap.Read(optsApply.strOverlapMesh);
+		meshOverlap.RemoveZeroEdges();
+		pmeshOverlap = &meshOverlap;
+		
+	}
+	
+	//If the target mesh is finite element, get dataGLLNodesOut
+	if(optsApply.strOutputMesh != ""){
+		
+		meshTarget.Read(optsApply.strOutputMesh);
+		meshTarget.ConstructReverseNodeArray();
+		meshTarget.ConstructEdgeMap();
+		
+		double dTotalAreaOutput = meshTarget.CalculateFaceAreas(optsApply.fContainsConcaveFaces);
+		double dNumericalAreaOut = GenerateMetaData(meshTarget,optsApply.nPout,false,dataGLLNodesOut,dataGLLJacobianOut);
+		
+		pdataGLLNodesOut = &dataGLLNodesOut;
+					
+	}
+		
 	// OfflineMap
 	AnnounceStartBlock("Loading offline map");
 
@@ -280,7 +345,9 @@ try {
 	mapRemap.Read(strInputMap);
 	mapRemap.SetFillValueOverrideDbl(optsApply.dFillValueOverride);
 	mapRemap.SetFillValueOverride(static_cast<float>(optsApply.dFillValueOverride));
-	mapRemap.SetEnforcementBounds(optsApply.strEnforceBounds);
+	mapRemap.SetEnforcementBounds(optsApply.strEnforceBounds,pmeshSource,pmeshOverlap,pdataGLLNodesIn,
+								  pdataGLLNodesOut,optsApply.nPin);
+	//mapRemap.SetEnforcementBounds(optsApply.strEnforceBounds);
 
 	AnnounceEndBlock("Done");
 

@@ -56,11 +56,18 @@ int main(int argc, char** argv) {
 		//CommandLineString(strVariables2, "var2", "");
 		CommandLineString(optsApply.strNColName, "ncol_name", "ncol");
 		CommandLineString(optsApply.strEnforceBounds, "bounds", "");
+		CommandLineString(optsApply.strInputMesh,"mesh_in","");
+		CommandLineString(optsApply.strOutputMesh,"mesh_out","");
+		CommandLineString(optsApply.strOverlapMesh,"mesh_ov","");
+		CommandLineInt(optsApply.nPin, "in_np", 0);
+		CommandLineInt(optsApply.nPout, "out_np", 0);
 		CommandLineBool(optsApply.fOutputDouble, "out_double");
 		CommandLineString(optsApply.strPreserveVariables, "preserve", "");
 		CommandLineBool(optsApply.fPreserveAll, "preserveall");
 		CommandLineDouble(optsApply.dFillValueOverride, "fillvalue", 0.0);
 		CommandLineString(optsApply.strLogDir, "logdir", "");
+		CommandLineBool(optsApply.fContainsConcaveFaces,"concave");
+		CommandLineBool(optsApply.fgll,"gll");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)

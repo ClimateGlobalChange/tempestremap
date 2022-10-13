@@ -38,7 +38,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::string g_strVersion = "GenerateOfflineMap 2.5 : 2021-10-06";
+std::string g_strVersion = "GenerateOfflineMap 2.6 : 2022-10-11";
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -217,6 +217,7 @@ try {
 	// Method flags
 	std::string strMapAlgorithm("");
 	int nMonotoneType = (optsAlg.fMonotone)?(1):(0);
+	bool fNoConservation = optsAlg.fNoConservation;
 
 	for (auto it : setMethodStrings) {
 
@@ -253,6 +254,38 @@ try {
 				_EXCEPTIONT("--method \"invdist\" may only be used for FV->FV remapping");
 			}
 			strMapAlgorithm = "invdist";
+
+		// Delaunay triangulation mapping
+		} else if (it == "delaunay") {
+			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
+				_EXCEPTIONT("--method \"delaunay\" may only be used for FV->FV remapping");
+			}
+			strMapAlgorithm = "delaunay";
+
+		// Bilinear
+		} else if (it == "bilin") {
+			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
+				_EXCEPTIONT("--method \"bilin\" may only be used for FV->FV remapping");
+			}
+			strMapAlgorithm = "fvbilin";
+
+		// Integrated bilinear (same as mono3 when source grid is CGLL/DGLL)
+		} else if (it == "intbilin") {
+			if (eTargetType != DiscretizationType_FV) {
+				_EXCEPTIONT("--method \"intbilin\" may only be used when mapping to FV.");
+			}
+			if (eSourceType == DiscretizationType_FV) {
+				strMapAlgorithm = "fvintbilin";
+			} else {
+				strMapAlgorithm = "mono3";
+			}
+
+		// Integrated bilinear with generalized Barycentric coordinates
+		} else if (it == "intbilingb") {
+			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
+				_EXCEPTIONT("--method \"intbilingb\" may only be used for FV->FV remapping");
+			}
+			strMapAlgorithm = "fvintbilingb";
 
 		} else {
 			_EXCEPTION1("Invalid --method argument \"%s\"", it.c_str());
@@ -431,6 +464,38 @@ try {
 				meshOverlap,
 				mapRemap);
 
+		} else if (strMapAlgorithm == "delaunay") {
+			AnnounceStartBlock("Calculating offline map (delaunay)");
+			LinearRemapTriangulation(
+				meshSource,
+				meshTarget,
+				meshOverlap,
+				mapRemap);
+
+		} else if (strMapAlgorithm == "fvintbilin") {
+			AnnounceStartBlock("Calculating offline map (intbilin)");
+			LinearRemapIntegratedBilinear(
+				meshSource,
+				meshTarget,
+				meshOverlap,
+				mapRemap);
+
+		} else if (strMapAlgorithm == "fvintbilingb") {
+			AnnounceStartBlock("Calculating offline map (intbilingb)");
+			LinearRemapIntegratedGeneralizedBarycentric(
+				meshSource,
+				meshTarget,
+				meshOverlap,
+				mapRemap);
+
+		} else if (strMapAlgorithm == "fvbilin") {
+			AnnounceStartBlock("Calculating offline map (bilin)");
+			LinearRemapBilinear(
+				meshSource,
+				meshTarget,
+				meshOverlap,
+				mapRemap);
+
 		} else {
 			AnnounceStartBlock("Calculating offline map (default)");
 			LinearRemapFVtoFV(
@@ -516,7 +581,7 @@ try {
 				mapRemap,
 				nMonotoneType,
 				fContinuous,
-				optsAlg.fNoConservation);
+				fNoConservation);
 
 		} else {
 			AnnounceStartBlock("Calculating offline map");
@@ -531,7 +596,7 @@ try {
 				mapRemap,
 				nMonotoneType,
 				fContinuous,
-				optsAlg.fNoConservation);
+				fNoConservation);
 		}
 
 	// Finite element input / Finite volume output
@@ -603,7 +668,7 @@ try {
 			dataGLLJacobian,
 			nMonotoneType,
 			fContinuousIn,
-			optsAlg.fNoConservation,
+			fNoConservation,
 			optsAlg.fSparseConstraints,
 			mapRemap
 		);
@@ -726,7 +791,7 @@ try {
 			nMonotoneType,
 			fContinuousIn,
 			fContinuousOut,
-			optsAlg.fNoConservation,
+			fNoConservation,
 			mapRemap
 		);
 
@@ -777,7 +842,7 @@ try {
 		mapAttributes.insert(AttributePair("mono", (optsAlg.fMonotone)?("true"):("false")));
 		mapAttributes.insert(AttributePair("nobubble", (optsAlg.fNoBubble)?("true"):("false")));
 		mapAttributes.insert(AttributePair("nocorrectareas", (optsAlg.fNoCorrectAreas)?("true"):("false")));
-		mapAttributes.insert(AttributePair("noconserve", (optsAlg.fNoConservation)?("true"):("false")));
+		mapAttributes.insert(AttributePair("noconserve", (fNoConservation)?("true"):("false")));
 		mapAttributes.insert(AttributePair("sparse_constraints", (optsAlg.fSparseConstraints)?("true"):("false")));
 		mapAttributes.insert(AttributePair("method", optsAlg.strMethod));
 		mapAttributes.insert(AttributePair("version", g_strVersion));

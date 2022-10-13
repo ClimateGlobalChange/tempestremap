@@ -291,6 +291,7 @@ void GetTriangleThatContainsPoint(
 				
 				// If this is a new Face, check whether it contains the point
 				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
+
 					if(DoesTriangleContainPoint(mesh,iNewFace,dX,dY)){
 						
 						iFaceFinal = iNewFace;
@@ -377,6 +378,7 @@ void GetFaceThatContainsPoint(
 				
 				// If this is a new Face, check whether it contains the point
 				if (setAllFaces.find(iNewFace) == setAllFaces.end()) {
+
 					if(DoesFaceContainPoint(mesh,iNewFace,dX,dY,dZ)){
 						
 						iFaceFinal = iNewFace;
@@ -768,6 +770,7 @@ void TriangleLineIntersection(
 	
 	_ASSERT(dCoeffs.GetRows() == 3);
 	
+
 	//Setup up columns of 3x3 matrix
 	DataArray2D<double> dInterpMat(3,3);
 	
@@ -1051,6 +1054,8 @@ void BuildIntegrationArray(
 		const NodeVector &nodesOverlap = meshOverlap.nodes;
 
 		int nbEdges = faceOverlap.edges.size();
+		if (nbEdges < 3)
+		    continue; // skip / ignore degenerated triangles
 		int nOverlapTriangles = 1;
 		Node nodeCenter; // not used if nbEdges == 3
 		if (nbEdges > 3) { // decompose from center in this case

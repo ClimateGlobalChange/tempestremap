@@ -21,6 +21,7 @@
 #include "Announce.h"
 #include "FiniteElementTools.h"
 #include "GaussQuadrature.h"
+#include "TriangularQuadrature.h"
 #include "STLStringHelper.h"
 #include "MeshUtilitiesFuzzy.h"
 
@@ -2244,6 +2245,207 @@ Real CalculateFaceAreaQuadratureMethod(
 	}
 
 	return dFaceArea;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceAreaTriQuadratureMethod(
+	const Face & face,
+	const NodeVector & nodes
+) {
+
+	int nOrder1 = 4;
+	int nOrder2 = 8;
+
+	double dFaceArea = 0.0;
+
+	double h = MaxEdgeLength(face,nodes);
+
+	if(h < 0.004){
+
+		dFaceArea = CalculateFaceAreaTriQuadrature(face,nodes,nOrder1);
+
+	}
+	else if(h < 0.09){
+
+		dFaceArea = CalculateFaceAreaTriQuadrature(face,nodes,nOrder2);
+
+	}
+	else{
+
+		FaceVector faces;
+		faces.push_back(face);
+		dFaceArea = CalculateFaceAreaTriQuadratureSplit(faces,nodes,nOrder2);
+
+	}
+
+	return dFaceArea;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceAreaTriQuadrature(
+	const Face & face,
+	const NodeVector & nodes,
+	int nOrder
+) {
+
+	double dFaceArea = 0.0;
+
+	TriangularQuadratureRule TriQuadPoints(nOrder);
+
+	DataArray2D<double> dG1 = TriQuadPoints.GetG();
+	
+	DataArray1D<double> dW1 = TriQuadPoints.GetW();
+
+	int nTriangles = face.edges.size() - 2;
+
+	for (int j = 0; j < nTriangles; j++) {
+
+		Node node1 = nodes[face[0]];
+		Node node2 = nodes[face[j+1]];
+		Node node3 = nodes[face[j+2]];
+
+		Node nodeCross = CrossProduct(node2,node3);
+
+		double tri_pro = node1.x*nodeCross.x + node1.y*nodeCross.y + node1.z*nodeCross.z;
+
+		for (int q =0; q < dW1.GetRows(); q++){
+						
+			Node pnts_q = node1*dG1[q][0] + node2*dG1[q][1] + node3*dG1[q][2];
+
+			double nrm_q = pnts_q.Magnitude();
+
+			Node sph_q = pnts_q/nrm_q;
+
+			double nrm_q3 = pow(nrm_q,3);
+			
+			dFaceArea += 0.5*(tri_pro/nrm_q3)*dW1[q];
+		}
+
+	}
+
+	return dFaceArea;
+
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Real CalculateFaceAreaTriQuadratureSplit(
+	const FaceVector & faces,
+	const NodeVector & nodes,
+	int & nOrder
+) {
+
+	double tol = 0.0;
+	double dFaceArea = 0.0;
+
+	if(nOrder >= 8){
+        tol = 0.05;
+	}
+	
+    else{
+        tol = 0.003;
+	}
+
+	double dArea1 = 0.0;
+
+	int nf = faces.size();
+
+    for (int i = 0; i < nf; i++){
+
+		int nv_surf = faces[i].edges.size();
+		int nTriangles = faces[i].edges.size() - 2;
+		double h = MaxEdgeLength(faces[i],nodes);
+
+		if(h > tol){
+
+			FaceVector surf_fid;
+			NodeVector pnts_vor;
+			Node node;
+
+			for (int j = 0; j < nv_surf; j++){
+				
+				pnts_vor.push_back(nodes[faces[i][j]]);
+				
+			}
+
+           	// insert elements and points
+			int index = nv_surf;
+			node = ((pnts_vor[0] + pnts_vor[1])/2.0)/(((pnts_vor[0] + pnts_vor[1])/2.0).Magnitude());
+			pnts_vor.push_back(node);
+
+			for (int j = 1; j < nv_surf-1; j++){
+
+				// insert elements
+				DataArray2D<int> surf_index;
+				surf_index.Allocate(4,3);
+
+				Face face1(3);
+				Face face2(3);
+				Face face3(3);
+				Face face4(3);
+
+				face1.SetNode(0,0), face1.SetNode(1,index), face1.SetNode(2,index+2);
+				face2.SetNode(0,index+2), face2.SetNode(1,index), face2.SetNode(2,index+1);
+				face3.SetNode(0,index+1), face3.SetNode(1,index), face3.SetNode(2,j);
+				face4.SetNode(0,index+2), face4.SetNode(1,index+1), face4.SetNode(2,j+1);
+
+				surf_fid.push_back(face1);
+				surf_fid.push_back(face2);
+				surf_fid.push_back(face3);
+				surf_fid.push_back(face4);
+
+				index += 1;
+				node = ((pnts_vor[j] + pnts_vor[j+1])/2.0)/(((pnts_vor[j] + pnts_vor[j+1])/2.0).Magnitude());
+				pnts_vor.push_back(node);
+				index += 1;
+				node = ((pnts_vor[0] + pnts_vor[j+1])/2.0)/(((pnts_vor[0] + pnts_vor[j+1])/2.0).Magnitude());
+				pnts_vor.push_back(node);		
+
+			}
+
+			double dArea2 = CalculateFaceAreaTriQuadratureSplit(surf_fid,pnts_vor,nOrder);
+			dArea1 += dArea2;
+
+		}
+		
+		else{
+
+			double dArea2 = CalculateFaceAreaTriQuadrature(faces[i],nodes,nOrder);
+			dArea1 += dArea2;
+			
+		}
+		
+	}
+
+	return dArea1;
+
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+double MaxEdgeLength(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	int nv_surf = face.edges.size();
+
+    double h = 0.0;
+
+    for (int i = 0; i < nv_surf-1; i++){
+		
+		Node node_diff = nodes[face[i]]-nodes[face[i+1]];
+		h = fmax(h,node_diff.Magnitude());
+		
+	}
+	
+	Node node_diff = nodes[face[0]]-nodes[face[nv_surf-1]];
+	h = fmax(h,node_diff.Magnitude());
+	
+	return h;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

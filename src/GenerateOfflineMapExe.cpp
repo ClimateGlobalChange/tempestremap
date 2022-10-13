@@ -51,6 +51,15 @@ int main(int argc, char** argv) {
 	// Apply options
 	ApplyOfflineMapOptions optsApply;
 
+	// Additional flags (volumetric remapping)
+	bool fVolumetric;
+
+	// Monotone basis 2
+	bool fMonotoneType2;
+
+	// Monotone basis 3
+	bool fMonotoneType3;
+
 	// NetCDF output format
 	std::string strOutputFormat;
 
@@ -79,10 +88,10 @@ int main(int argc, char** argv) {
 		CommandLineBool(optsAlg.fNoCheck, "nocheck");
 		CommandLineBool(optsAlg.fSparseConstraints, "sparse_constraints");
 
-		// Absorbed into --method
-		//CommandLineBool(fVolumetric, "volumetric");
-		//CommandLineBool(fMonotoneType2, "mono2");
-		//CommandLineBool(fMonotoneType3, "mono3");
+		// Absorbed into --method but kept for backward compatibility
+		CommandLineBool(fVolumetric, "volumetric");
+		CommandLineBool(fMonotoneType2, "mono2");
+		CommandLineBool(fMonotoneType3, "mono3");
 
 		// Optional apply arguments
 		CommandLineString(optsApply.strInputData, "in_data", "");
@@ -108,6 +117,26 @@ int main(int argc, char** argv) {
 	// Store NetCDF output format in both option lists
 	optsAlg.strOutputFormat = strOutputFormat;
 	optsApply.strOutputFormat = strOutputFormat;
+
+	// Kept for backward compatibility
+	if (fVolumetric) {
+		if (optsAlg.strMethod != "") {
+			optsAlg.strMethod += ";";
+		}
+		optsAlg.strMethod += "volumetric";
+	}
+	if (fMonotoneType2) {
+		if (optsAlg.strMethod != "") {
+			optsAlg.strMethod += ";";
+		}
+		optsAlg.strMethod += "mono2";
+	}
+	if (fMonotoneType3) {
+		if (optsAlg.strMethod != "") {
+			optsAlg.strMethod += ";";
+		}
+		optsAlg.strMethod += "mono3";
+	}
 
 	// Call the actual mesh generator
 	OfflineMap mapRemap;

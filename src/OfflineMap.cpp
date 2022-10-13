@@ -21,6 +21,7 @@
 #include "GridElements.h"
 #include "FiniteElementTools.h"
 #include "STLStringHelper.h"
+#include "FiniteVolumeTools.h"
 
 #include "Announce.h"
 #include "Exception.h"
@@ -114,12 +115,14 @@ void ParseEnforceBounds(
 		bool fLowerBoundIsFloat = STLStringHelper::IsFloat(it.strLowerBound);
 		bool fUpperBoundIsFloat = STLStringHelper::IsFloat(it.strUpperBound);
 
-		if ((it.strLowerBound != "n") && (it.strLowerBound != "l") && (it.strLowerBound != "g") && (!fLowerBoundIsFloat)) {
-			_EXCEPTION1("Invalid lower bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", or floating point value",
+		if ((it.strLowerBound != "n") && (it.strLowerBound != "l") && (it.strLowerBound != "g") && (!fLowerBoundIsFloat) &&
+			(it.strLowerBound != "lp")) {
+			_EXCEPTION1("Invalid lower bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", \"lp\", or floating point value",
 				it.strLowerBound.c_str());
 		}
-		if ((it.strUpperBound != "n") && (it.strUpperBound != "l") && (it.strUpperBound != "g") && (!fUpperBoundIsFloat)) {
-			_EXCEPTION1("Invalid upper bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", or floating point value",
+		if ((it.strUpperBound != "n") && (it.strUpperBound != "l") && (it.strUpperBound != "g") && (!fUpperBoundIsFloat) &&
+			(it.strUpperBound != "lp")) {
+			_EXCEPTION1("Invalid upper bound in bounds string \"%s\", expected \"n\", \"l\", \"g\", \"lp\", or floating point value",
 				it.strUpperBound.c_str());
 		}
 		if (fLowerBoundIsFloat && fUpperBoundIsFloat) {
@@ -136,6 +139,65 @@ void ParseEnforceBounds(
 	//	printf("%s %s %s\n", it.strVariable.c_str(), it.strLowerBound.c_str(), it.strUpperBound.c_str());
 	//}
 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::SetEnforcementBounds(
+		const std::string & strEnforcementBounds,
+		Mesh * pmeshSource,
+		Mesh * pmeshOverlap,
+		DataArray3D<int> * pdataGLLNodesIn,
+		DataArray3D<int> * pdataGLLNodesOut,
+		int iPin
+){
+	
+	ParseEnforceBounds(strEnforcementBounds,m_vecEnforcementBounds);
+	
+	bool fHasLocalBounds = false;
+	bool fHasLocalPBounds = false;
+	
+	for (int i = 0; i < m_vecEnforcementBounds.size(); i++) {
+		if ((m_vecEnforcementBounds[i].strLowerBound == "l") ||
+		    (m_vecEnforcementBounds[i].strUpperBound == "l")
+		) {
+			fHasLocalBounds = true;
+		}
+	}
+	
+	for (int i = 0; i < m_vecEnforcementBounds.size(); i++) {
+		if ((m_vecEnforcementBounds[i].strLowerBound == "lp") ||
+		    (m_vecEnforcementBounds[i].strUpperBound == "lp")
+		) {
+			fHasLocalPBounds = true;
+		}
+	}
+	
+	if (fHasLocalBounds || fHasLocalPBounds) {
+		if (pmeshOverlap == NULL) {
+			_EXCEPTIONT("Local bounds enforcement requires the overlap mesh");
+		}
+		if(fHasLocalPBounds){
+			if(pmeshSource == NULL){
+				_EXCEPTIONT("Local p bounds enforcement requires the source mesh");
+			}
+		}
+		//if((!fgll) & ((pmeshSource == NULL))){
+		//	_EXCEPTIONT("Local bounds enforcement with a finite volume source mesh requires source and overlap meshes");
+		//}
+	}
+	
+	m_pmeshSource = pmeshSource;
+	
+	m_pmeshOverlap = pmeshOverlap;
+	
+	m_pdataGLLNodesIn = pdataGLLNodesIn;
+	
+	m_pdataGLLNodesOut = pdataGLLNodesOut;
+	
+	m_iPin = iPin;
+	
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -437,6 +499,115 @@ void OfflineMap::InitializeTargetDimensions(
   std::copy(p_tgtDimSizes.begin(), p_tgtDimSizes.end(), m_vecTargetDimSizes.begin());
 
   return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void OfflineMap::CAAS(
+		DataArray1D<double> & dataCorrectedField,
+		DataArray1D<double> & dataLowerBound,
+		DataArray1D<double> & dataUpperBound,
+		double & dMass){
+			
+		DataArray1D<double> dataCorrection(dataLowerBound.GetRows());
+		
+			
+		for (int i = 0; i < dataLowerBound.GetRows(); i++){
+			dataCorrection[i] = fmax(dataLowerBound[i],fmin(dataUpperBound[i],0.0));
+		}
+		
+		
+		double dMassL=0.0;
+		double dMassU=0.0;
+		
+		for (int i = 0; i < dataLowerBound.GetRows(); i++){
+			dMassL += m_dTargetAreas[i]*dataLowerBound[i];
+			dMassU += m_dTargetAreas[i]*dataUpperBound[i];
+		}
+				
+		double dMassDiff = dMass;
+		
+		for (int i = 0; i < dataCorrectedField.GetRows(); i++){
+			dMassDiff -= m_dTargetAreas[i]*dataCorrection[i];
+		}
+				
+		double dLMinusU = abs(dataLowerBound[0]-dataUpperBound[0]);
+		
+		for (int i = 0; i < dataLowerBound.GetRows(); i++){	
+			if(abs(dataLowerBound[i] - dataUpperBound[i]) > dLMinusU){
+				
+				dLMinusU = abs(dataLowerBound[i] - dataUpperBound[i]);
+				
+			}
+		}
+		
+		//If the upper and lower bounds are too close together, just clip
+		if(dMassDiff == 0 || (dLMinusU < 1e-13)){
+			
+			for(int i = 0; i < dataUpperBound.GetRows(); i++){
+				
+				dataCorrectedField[i] += dataCorrection[i];
+				
+			}
+			
+			return;
+		}
+		else if(dMassL > dMassDiff){
+					
+			Announce("Lower bound mass exceeds target mass by %1.15e: CAAS not applied",dMassL-dMassDiff);
+			return;
+					
+		}
+		else if(dMassU < dMassDiff){
+					
+			Announce("Target mass exceeds upper bound mass by %1.15e: CAAS not applied",dMassDiff-dMassU);
+			return;
+					
+		}
+		else{
+			
+			DataArray1D<double> dataMassVec(dataUpperBound.GetRows()); //vector of mass redistribution
+			
+			if(dMassDiff > 0.0){
+				double dMassCorrectU = 0.0;
+				for (int i = 0; i < dataUpperBound.GetRows(); i++){
+					
+					dMassCorrectU += m_dTargetAreas[i]*(dataUpperBound[i]-dataCorrection[i]);
+					
+				}
+								
+				for (int i = 0; i < dataUpperBound.GetRows(); i++){
+					
+					dataMassVec[i] = (dataUpperBound[i]-dataCorrection[i])/dMassCorrectU;
+					dataCorrection[i]=dataCorrection[i]+dMassDiff*dataMassVec[i];
+					
+				}
+			}
+			else{
+				double dMassCorrectL = 0.0;
+				for (int i = 0; i < dataUpperBound.GetRows(); i++){
+					
+					dMassCorrectL += m_dTargetAreas[i]*(dataCorrection[i]-dataLowerBound[i]);
+					
+				}
+								
+				for (int i = 0; i < dataLowerBound.GetRows(); i++){
+					
+					dataMassVec[i] = (dataCorrection[i]-dataLowerBound[i])/dMassCorrectL;
+					dataCorrection[i] = dataCorrection[i]+dMassDiff*dataMassVec[i];
+					
+				}
+			}
+			
+			for (int i = 0; i < dataUpperBound.GetRows(); i++){
+				
+				dataCorrectedField[i] += dataCorrection[i];
+				
+			}
+
+		}
+		
+		return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1864,6 +2035,371 @@ void OfflineMap::Apply(
 
 			// Apply the offline map to the data
 			m_mapRemap.Apply(dataInDouble, dataOutDouble);
+			
+			int iVarIndex = 0;
+			
+			bool fCAAS = false;
+			
+			for (; iVarIndex < m_vecEnforcementBounds.size(); iVarIndex++){
+				if((m_vecEnforcementBounds[iVarIndex].strVariable == vecVariableList[v].c_str()) || 
+				   ((m_vecEnforcementBounds.size() == 1) & (m_vecEnforcementBounds[0].strVariable==""))){
+					fCAAS = true;
+					break;
+				}
+			}
+			
+			//Upper and lower bounds for CAAS
+			
+			if(fCAAS){
+								
+				DataArray1D<double> dataLowerBound(nTargetCount);
+				DataArray1D<double> dataUpperBound(nTargetCount);
+				DataArray1D<double> x(nTargetCount);
+				double dMassDiff = dSourceMass;
+			
+				for (int i = 0; i < dataLowerBound.GetRows(); i++){
+					dMassDiff -= dataOutDouble[i]*m_dTargetAreas[i];
+				}
+				
+				
+				if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "g"){
+					for(int i = 0; i < nTargetCount; i++){
+						dataLowerBound[i] = dSourceMin - dataOutDouble[i];
+					}
+				}
+				
+				if(STLStringHelper::IsFloat(m_vecEnforcementBounds[iVarIndex].strLowerBound)){
+					for (int i = 0; i < nTargetCount; i++){
+						dataLowerBound[i] = std::stod(m_vecEnforcementBounds[iVarIndex].strLowerBound) - dataOutDouble[i];	
+					}
+				}
+				
+				if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "n"){				
+					for(int i = 0; i < nTargetCount; i++){				
+						dataLowerBound[i] = -DBL_MAX;
+					}
+				}
+				
+				if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "g"){
+					for(int i = 0; i < nTargetCount; i++){
+						dataUpperBound[i] = dSourceMax - dataOutDouble[i];
+					}
+				}
+				
+				if(STLStringHelper::IsFloat(m_vecEnforcementBounds[iVarIndex].strUpperBound)){
+					for (int i = 0; i < nTargetCount; i++){
+						dataUpperBound[i] = std::stod(m_vecEnforcementBounds[iVarIndex].strUpperBound) - dataOutDouble[i];
+					}
+				}
+				
+				if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "n"){
+					for (int i = 0; i < nTargetCount; i++){
+						dataUpperBound[i] = DBL_MAX;
+					}
+				}
+				
+				if((m_vecEnforcementBounds[iVarIndex].strLowerBound == "l") || 
+					(m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp") ||
+					(m_vecEnforcementBounds[iVarIndex].strUpperBound == "l") ||
+					(m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp")){
+					
+					double dMinI;
+					double dMaxI;
+					
+					int nTargetFaces;
+											
+					if(m_pdataGLLNodesOut != NULL){
+						nTargetFaces = m_pdataGLLNodesOut->GetSize(2);
+					}
+					else{
+						nTargetFaces = nTargetCount;
+					}	
+					
+					std::vector<double> vecLocalUpperBound(nTargetCount);
+					std::vector<double> vecLocalLowerBound(nTargetCount);
+										
+					std::vector< std::vector<int> > vecSourceOvTarget(nTargetFaces);
+					
+					for (int i=0; i<m_pmeshOverlap->faces.size(); i++){
+					
+						int ixT = m_pmeshOverlap->vecTargetFaceIx[i];
+						int ixS = m_pmeshOverlap->vecSourceFaceIx[i];
+						vecSourceOvTarget[ixT].push_back(ixS);
+						
+					}
+										
+					//FV to FV
+					if(m_pdataGLLNodesIn == NULL && m_pdataGLLNodesOut == NULL){
+						
+						for (int i = 0; i < nTargetCount; i++){
+						
+							dMaxI=dataInDouble[vecSourceOvTarget[i][0]];
+							dMinI=dataInDouble[vecSourceOvTarget[i][0]];
+							
+							//Compute max over interstecting source faces
+							
+							for (int j = 0; j < vecSourceOvTarget[i].size(); j++){
+							
+								int k = vecSourceOvTarget[i][j];
+								dMaxI = fmax(dMaxI,dataInDouble[k]);
+								dMinI = fmin(dMinI,dataInDouble[k]);
+								
+							}
+														
+							if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp" ||
+								m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp"){
+								
+								double dMaxIAdj = dMaxI;
+								double dMinIAdj = dMinI;
+								
+								AdjacentFaceVector vecAdjFaces;
+												
+								GetAdjacentFaceVectorByEdge(*m_pmeshSource,vecSourceOvTarget[i][0],(m_iPin+1)*(m_iPin+1),vecAdjFaces);
+								
+								//Compute max over neighboring faces
+								
+								for (int j = 0; j < vecAdjFaces.size(); j++) {
+									
+									int k = vecAdjFaces[j].first;
+									
+									dMaxIAdj=fmax(dMaxIAdj,dataInDouble[k]);
+									dMinIAdj=fmin(dMinIAdj,dataInDouble[k]);
+									
+								}
+								
+								if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp"){
+									vecLocalLowerBound[i] = dMinIAdj;
+								}
+								if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp"){
+									vecLocalUpperBound[i] = dMaxIAdj;
+								}
+								
+							}
+							
+							if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "l"){
+								vecLocalLowerBound[i] = dMinI;
+							}
+							if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "l"){
+								vecLocalUpperBound[i] = dMaxI;
+							}
+							
+						}
+						
+					}
+					
+					//FE to FE
+					
+					else if(m_pdataGLLNodesIn != NULL && m_pdataGLLNodesOut != NULL){
+						
+						std::vector< std::vector<double> > vecMaxI(nTargetCount);
+						std::vector< std::vector<double> > vecMinI(nTargetCount);
+					
+						
+						for (int i = 0; i < m_pdataGLLNodesOut->GetSize(2); i++){
+							
+							int q = vecSourceOvTarget[i][0];
+							
+							dMaxI = dataInDouble[(*m_pdataGLLNodesIn)[0][0][q]-1];
+							dMinI = dataInDouble[(*m_pdataGLLNodesIn)[0][0][q]-1];
+							
+							//Compute maximum over all source elements that intersect target element i
+							
+							for (int j = 0; j < vecSourceOvTarget[i].size(); j++){
+								
+								for (int k = 0; k < m_pdataGLLNodesIn->GetSize(0); k++){
+									for (int r = 0; r < m_pdataGLLNodesIn->GetSize(1); r++){
+										
+										int m = vecSourceOvTarget[i][j];
+										int n = (*m_pdataGLLNodesIn)[k][r][m]-1;
+										
+										dMaxI = fmax(dMaxI,dataInDouble[n]);
+										dMinI = fmin(dMinI,dataInDouble[n]);
+										
+									}
+								}
+							}
+							
+							
+							for (int l = 0; l < m_pdataGLLNodesOut->GetSize(0); l++){
+								for (int s = 0; s < m_pdataGLLNodesOut->GetSize(1); s++){
+									
+									int t = (*m_pdataGLLNodesOut)[l][s][i]-1;
+																		
+									vecMaxI[t].push_back(dMaxI);
+									vecMinI[t].push_back(dMinI);
+								
+								}
+							}	
+							
+						}
+						
+						for (int i = 0; i < nTargetCount; i++){
+						
+							double dMaxNodeI = vecMaxI[i][0];
+							double dMinNodeI = vecMinI[i][0];
+							
+							
+							//Determine maximum and minimum for corner and edge nodes
+							for (int j = 0; j < vecMaxI[i].size(); j++){
+								dMaxNodeI = fmax(dMaxNodeI,vecMaxI[i][j]);
+								dMinNodeI = fmin(dMinNodeI,vecMinI[i][j]);
+							}
+							
+							
+							if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "l"){
+								vecLocalUpperBound[i] = dMaxNodeI;
+							}
+							if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "l"){
+								vecLocalLowerBound[i] = dMinNodeI;
+							}
+							
+						}
+						
+					}
+						
+						
+					//FV to GLL	
+					else if(m_pdataGLLNodesOut != NULL){
+						
+						std::vector< std::vector<double> > vecMaxI(nTargetCount);
+						std::vector< std::vector<double> > vecMinI(nTargetCount);
+						
+						for (int i = 0; i < m_pdataGLLNodesOut->GetSize(2); i++){
+							
+							dMaxI=dataInDouble[vecSourceOvTarget[i][0]];
+							dMinI=dataInDouble[vecSourceOvTarget[i][0]];
+							
+							for (int j = 0; j < vecSourceOvTarget[i].size(); j++) {
+							
+								int k = vecSourceOvTarget[i][j];
+								dMaxI=fmax(dMaxI,dataInDouble[k]);
+								dMinI=fmin(dMinI,dataInDouble[k]);
+								
+							}
+							
+							double dMaxIAdj;
+							double dMinIAdj;
+							
+							if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp" ||
+								m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp"){
+								
+								dMaxIAdj = dMaxI;
+								dMinIAdj = dMinI;
+								
+								AdjacentFaceVector vecAdjFaces;
+								
+								GetAdjacentFaceVectorByEdge(*m_pmeshSource,vecSourceOvTarget[i][0],(m_iPin+1)*(m_iPin+1),vecAdjFaces);
+								
+								for (int j = 0; j < vecAdjFaces.size(); j++) {
+									
+									int k = vecAdjFaces[j].first;
+									
+									dMaxIAdj=fmax(dMaxIAdj,dataInDouble[k]);
+									dMinIAdj=fmin(dMinIAdj,dataInDouble[k]);
+									
+								}
+											
+							}
+							
+							//For lp bounds, push back the max/min over the intersecting set, and the adjacency set
+							//For local bounds, push back the max/min over the intersecting set
+							
+							for (int l = 0; l < m_pdataGLLNodesOut->GetSize(0); l++){
+								for (int s = 0; s < m_pdataGLLNodesOut->GetSize(1); s++){
+									
+									int t = (*m_pdataGLLNodesOut)[l][s][i]-1;
+									
+									if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp"){
+										vecMaxI[t].push_back(dMaxIAdj);
+									}
+									else{
+										vecMaxI[t].push_back(dMaxI);
+									}
+									if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp"){
+										vecMinI[t].push_back(dMinIAdj);
+									}
+									else{
+										vecMinI[t].push_back(dMinI);
+									}
+								
+								}
+							}
+						}
+							
+						for (int i = 0; i < nTargetCount; i++){
+					
+							double dMaxNodeI = vecMaxI[i][0];
+							double dMinNodeI = vecMinI[i][0];
+							
+							
+							//Determine maximum and minimum for corner and edge nodes
+							for (int j = 0; j < vecMaxI[i].size(); j++){
+								dMaxNodeI = fmax(dMaxNodeI,vecMaxI[i][j]);
+								dMinNodeI = fmin(dMinNodeI,vecMinI[i][j]);
+							}
+							
+							vecLocalUpperBound[i] = dMaxNodeI;
+							
+							vecLocalLowerBound[i] = dMinNodeI;
+							
+						}
+						
+					}
+					
+					else{
+						
+						for (int i = 0; i < nTargetCount; i++){
+						
+							int q = vecSourceOvTarget[i][0];
+							
+							dMaxI = dataInDouble[(*m_pdataGLLNodesIn)[0][0][q]-1];
+							dMinI = dataInDouble[(*m_pdataGLLNodesIn)[0][0][q]-1];
+							
+							//Compute maximum over all source elements that intersect target element i
+							
+							for (int j = 0; j < vecSourceOvTarget[i].size(); j++){
+								
+								for (int k = 0; k < m_pdataGLLNodesIn->GetSize(0); k++){
+									for (int r = 0; r < m_pdataGLLNodesIn->GetSize(1); r++){
+										
+										int m = vecSourceOvTarget[i][j];
+										int n = (*m_pdataGLLNodesIn)[k][r][m]-1;
+										
+										dMaxI = fmax(dMaxI,dataInDouble[n]);
+										dMinI = fmin(dMinI,dataInDouble[n]);
+										
+									}
+								}
+							}
+							
+							if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "l"){
+								vecLocalLowerBound[i] = dMinI;
+							}
+							if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "l"){
+								vecLocalUpperBound[i] = dMaxI;
+							}
+							
+						}
+						
+					}
+						
+					for (int i = 0; i < dataLowerBound.GetRows(); i++){
+						
+						if(m_vecEnforcementBounds[iVarIndex].strLowerBound == "l" || 
+							m_vecEnforcementBounds[iVarIndex].strLowerBound == "lp"){
+							dataLowerBound[i] = vecLocalLowerBound[i] - dataOutDouble[i];
+						}
+						if(m_vecEnforcementBounds[iVarIndex].strUpperBound == "l" ||
+							m_vecEnforcementBounds[iVarIndex].strUpperBound == "lp"){
+							dataUpperBound[i] = vecLocalUpperBound[i] - dataOutDouble[i];
+						}
+					}
+						
+				}
+				
+				CAAS(dataOutDouble,dataLowerBound,dataUpperBound,dMassDiff);
+					
+			}	
 
 			// Announce output mass
 			double dTargetMass = 0.0;

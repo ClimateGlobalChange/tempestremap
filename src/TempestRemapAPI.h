@@ -337,12 +337,20 @@ extern "C" {
 			strOutputDataList(""),
 			strVariables(""),
 			strNColName("ncol"),
+			strEnforceBounds(""),
+			strInputMesh(""),
+			strOutputMesh(""),
+			strOverlapMesh(""),
+			nPin(0),
+			nPout(0),
 			fOutputDouble(false),
 			strOutputFormat("Netcdf4"),
 			strPreserveVariables(""),
 			fPreserveAll(false),
 			dFillValueOverride(0.0),
-			strLogDir("")
+			strLogDir(""),
+			fContainsConcaveFaces(false),
+			fgll(false)
 		{ }
 
 	public:
@@ -379,7 +387,32 @@ extern "C" {
 		///	<summary>
 		///		A string describing how bounds enforcement should be performed.
 		///	</summary>
-		std::string strEnforceBounds;
+		std::string strEnforceBounds;	
+		
+		///	<summary>
+		///		Input mesh.
+		///	</summary>
+		std::string strInputMesh;
+		
+		///	<summary>
+		///		Output mesh.
+		///	</summary>
+		std::string strOutputMesh;
+		
+		///	<summary>
+		///		Overlap mesh.
+		///	</summary>
+		std::string strOverlapMesh;
+		
+		///	<summary>
+		///		Order of the polynomial on the source mesh.
+		///	</summary>		
+		int nPin;
+		
+		///	<summary>
+		///		Order of the polynomial on the target mesh.
+		///	</summary>		
+		int nPout;
 
 		///	<summary>
 		///		Output data using double precision.
@@ -410,6 +443,16 @@ extern "C" {
 		///		A directory for writing log files.
 		///	</summary>
 		std::string strLogDir;
+		
+		///	<summary>
+		///		A mesh contains concave faces.
+		///	</summary>
+		bool fContainsConcaveFaces;
+		
+		///	<summary>
+		///		The source mesh is finite element.
+		///	</summary>
+		bool fgll;
 	};
 
 	///	<summary>
