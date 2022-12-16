@@ -2670,10 +2670,6 @@ void LinearRemapIntegratedBilinear(
 					
 					DataArray1D<double> dCoeffs(3);
 					
-					double dCond = 0;
-					
-					bool fConverged = false;
-					
 					if( iEdges == 3 ){
 												
 						NodeVector nodesP;
@@ -2686,7 +2682,7 @@ void LinearRemapIntegratedBilinear(
 											
 						}
 						
-						//TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
+						TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
 							
 						vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
 						vecContributingFaceWeights.push_back(dCoeffs[1]);
@@ -2711,12 +2707,12 @@ void LinearRemapIntegratedBilinear(
 							nodesP.push_back(nodeI);
 											
 						}
-												
-						//NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);			
+								
+						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs);		
 							
 						for (int i = 0; i < iEdges; i++){
 							
-							//vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
+							vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
 								
 						}
 						
@@ -2748,7 +2744,7 @@ void LinearRemapIntegratedBilinear(
 							
 							if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
 								
-								//TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
+								TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
 								
 								vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
 								vecContributingFaceWeights.push_back(dCoeffs[1]);

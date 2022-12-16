@@ -225,7 +225,7 @@ void MatVectorMult(
 void TriangleLineIntersection(
 	Node & nodeQ,
 	NodeVector & nodesP,
-	std::vector<double> & dCoeffs
+	DataArray1D<double> & dCoeffs
 );
 
 ///////////////////////////////////////////////////////////////////////////////

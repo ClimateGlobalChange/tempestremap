@@ -510,7 +510,7 @@ try {
 				//LinearRemapIntegratedGeneralizedBarycentric, LinearRemapIntegratedTriangulation, 
 				//or LinearRemapIntegratedBilinear
 				
-				//LinearRemapGeneralizedBarycentric(
+				//LinearRemapBilinear(
 					//meshSource,
 					//meshTarget,
 					//meshOverlap,
