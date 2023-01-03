@@ -196,7 +196,7 @@ void LinearRemapFVtoFV_np1(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
@@ -209,6 +209,9 @@ void LinearRemapFVtoFV_np1(
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixFirstFace = meshOverlap.vecSourceFaceIx[ixOverlap + j];
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
 
 			smatMap(ixSecondFace, ixFirstFace) +=
 				meshOverlap.vecFaceArea[ixOverlap + j]
@@ -282,7 +285,7 @@ void LinearRemapFVtoFV(
 #ifdef RECTANGULAR_TRUNCATION
 	const int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	const int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -320,7 +323,7 @@ void LinearRemapFVtoFV(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
@@ -328,6 +331,8 @@ void LinearRemapFVtoFV(
 		}
 
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		if( nOverlapFaces == 0 ) continue;
 
 		// Build integration array, which maps polynomial coefficients to
 		// area integrals.
@@ -445,7 +450,10 @@ void LinearRemapFVtoFV(
 			int ixFirstFace = vecAdjFaces[i].first;
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
-			smatMap(ixSecondFace, ixFirstFace) +=
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
+
+      smatMap(ixSecondFace, ixFirstFace) +=
 				dComposedArray(i,j)
 				/ meshOutput.vecFaceArea[ixSecondFace];
 		}
@@ -527,7 +535,7 @@ void LinearRemapFVtoFVInvDist(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
@@ -545,10 +553,15 @@ void LinearRemapFVtoFVInvDist(
 				continue;
 			}
 		}
+		
+		if( nOverlapFaces == 0 ) continue;
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( iTargetFace < 0 ) continue;  // skip and do not do anything
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 
@@ -737,8 +750,8 @@ void LinearRemapIntegratedTriangulation(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
-	
+
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -755,169 +768,169 @@ void LinearRemapIntegratedTriangulation(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
+
 	// Array of global indices
 	std::vector <std::vector<int>> vecGlobalIndexI(6);
-	
+
 	// Vector storing meshes of each panel
 	std::vector<Mesh> vecMesh(6);
-	
+
 	// kd-tree for each panel
 	std::vector<kdtree *> vecKDTreePanelI(6);
-	
+
 	// Arrays of panel boundaries in lat/lon coordinates (radians)
 	DataArray2D<double> dPanelLat(6,2);
 	DataArray2D<double> dPanelLon(6,2);
-	
+
 	// Width of buffer zone for each panel (degrees)
-	double dBuff = 30; 
-	
+	double dBuff = 30;
+
 	// Define equatorial panel boundaries
 	for (int i = 0; i < 4; i++){
-		
+
 		dPanelLon(i,0) = 90*M_PI*i/180;  //Left boundary
 		dPanelLon(i,1) = 90*M_PI*(i+1)/180;  //Right Boundary
 		dPanelLat(i,1) = 45*M_PI/180;  //Upper Boundary
 		dPanelLat(i,0) = -45*M_PI/180;  //Lower Boundary
-		
+
 	}
-	
+
 	// Define polar panels
-	
+
 	dPanelLon(4,0) = 0; dPanelLon(4,1) = 2*M_PI;
 	dPanelLat(4,0) = 45*M_PI/180; dPanelLat(4,1) = M_PI/2;
-	
+
 	dPanelLon(5,0) = 0; dPanelLon(5,1) = 2*M_PI;
 	dPanelLat(5,1) = -45*M_PI/180; dPanelLat(5,0) = -M_PI/2;
-	
-	
+
+
 	// Generate the Delaunay triangulation for each of the 6 panels
 	for (int i = 0; i < 6; i++){
-		
+
 		// Array storing the coordinates of the face centroids of panel i
 		std::vector<std::vector<double>> dPanelCentroid(2);
-		
+
 		// Coordinates of tangent plane point of tangency for panel i
 		double dLatTan;
 		double dLonTan;
-			
+
 		if ((0 <= i) && (i <= 3)){
-			
+
 			dLatTan = 0;
 			dLonTan = (i+1)*45*M_PI/180 + 45*i*M_PI/180;
 		}
 		else if (i == 4){
-			
+
 			dLatTan = M_PI/2;
 			dLonTan = 0;
-			
+
 		}
 		else{
-			
+
 			dLonTan = 0;
 			dLatTan = -M_PI/2;
-			
+
 		}
-		
+
 		// Number of source faces centers for panel i; this is the size
 		// of in.pointlist
 		int nNodes = 0;
-		
+
 		for (int j = 0; j < meshInput.faces.size(); j++){
-			
+
 			// Get coordinates of centroid of current face
-			
+
 			double dLonRad0;
 			double dLatRad0;
-			
+
 			const Face & face = meshInput.faces[j];
-			
+
 			Node node = GetFaceCentroid(face,meshInput.nodes);
-			
+
 			node = node.Normalized();
 			//node.Normalized();
-			
+
 			XYZtoRLL_Rad(node.x,node.y,node.z,dLonRad0,dLatRad0);
-			
+
 			// Determine if centroid is in panel i plus buffer zone
 			bool fPanelContainsCentroid = false;
-			
+
 			if ((0 <= i) && (i <= 3)){
-				
+
 				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1)+dBuff*M_PI/180)){
-					
+
 					if ( i == 0 ){
-						
+
 						if ( ((2*M_PI - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= 2*M_PI)) ||
 							 ((dPanelLon(i,0) <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ) {
-					
+
 							fPanelContainsCentroid = true;
 						}
 					}
-					
+
 					else if ( i == 3 ){
-						
+
 						if ( ((0 <= dLonRad0) && (dLonRad0 <= 0 + dBuff*M_PI/180)) ||
 							 ((dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ){
-								 
+
 							fPanelContainsCentroid = true;
-								 
+
 						}
-						
+
 					}
-					
+
 					else {
-						
+
 						if ( (dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)){
-					
+
 							fPanelContainsCentroid = true;
 						}
-						
-						
+
+
 					}
-					
+
 				}
 			}
 			else if (i == 4){
-								
+
 				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1))){
-					
+
 					fPanelContainsCentroid = true;
-					
+
 				}
-				
+
 			}
-			
+
 			else {
 
 				if ((dPanelLat(i,0) <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1) + dBuff*M_PI/180)){
 					fPanelContainsCentroid = true;
-					
+
 				}
-				
+
 			}
-			
+
 			if(fPanelContainsCentroid){
-				
+
 				vecGlobalIndexI[i].push_back(j);
 				nNodes++;
-				
+
 				// Gnomonic projection of centroid coordinates
 				double dGX;
 				double dGY;
 				GnomonicProjection(dLonTan,dLatTan,dLonRad0,dLatRad0,dGX,dGY);
-				
+
 				// Add Gnomonic coordinates to vector
 				dPanelCentroid[0].push_back(dGX);
 				dPanelCentroid[1].push_back(dGY);
-				
+
 			}
 		}
-		
+
 		// Structures for Delaunay triangulation
-		
+
 		struct triangulateio in, out, vorout;
-		 
+
 		in.numberofpoints           = nNodes;
 		in.numberofpointattributes  = 0;
 		in.numberofsegments         = 0;
@@ -933,7 +946,7 @@ void LinearRemapIntegratedTriangulation(
 		in.segmentmarkerlist        = (int  *) NULL;
 		in.edgelist                 = (int  *) NULL;
 		in.edgemarkerlist           = (int  *) NULL;
-	
+
 		// initialize data structure for output triangulation
 		out.pointlist               = (REAL *) NULL;
 		out.pointattributelist      = (REAL *) NULL;
@@ -945,91 +958,91 @@ void LinearRemapIntegratedTriangulation(
 		out.segmentmarkerlist       = (int  *) NULL;
 		out.edgelist                = (int  *) NULL;
 		out.edgemarkerlist          = (int  *) NULL;
-	
+
 		// initialize data structure for output Voronoi diagram (unused)
 		vorout.pointlist            = (REAL *) NULL;
 		vorout.pointattributelist   = (REAL *) NULL;
 		vorout.edgelist             = (int  *) NULL;
 		vorout.normlist             = (REAL *) NULL;
-		
+
 		// Add points to in.pointlist
-		
+
 		for (int j = 0; j < nNodes; j++){
-		
+
 			in.pointlist[2*j+0] = dPanelCentroid[0][j];
 			in.pointlist[2*j+1] = dPanelCentroid[1][j];
-			
+
 		}
-		
-		// Compute Delaunay triangulation.  Use the 'c' option so that 
+
+		// Compute Delaunay triangulation.  Use the 'c' option so that
 		// the convex hull is included
-		
+
 		char options[256] ="cjzenYQ";
 		triangulate(options, &in, &out, &vorout);
-		
+
 		// Convert to mesh object by building face vector
 		for (int j = 0; j < out.numberoftriangles; j++){
-			
+
 			Face newFace(3);
-			
+
 			newFace.SetNode(0, out.trianglelist[3*j+0]);
 			newFace.SetNode(1, out.trianglelist[3*j+1]);
 			newFace.SetNode(2, out.trianglelist[3*j+2]);
 			vecMesh[i].faces.push_back(newFace);
-			
+
 		}
-		
+
 		// Build node vector.  Note that the Delaunay triangulation preserves
 		// point indexing.
 		for (int j = 0; j < out.numberofpoints; j++){
-			
+
 			Node node(out.pointlist[2*j+0],out.pointlist[2*j+1],0);
 			vecMesh[i].nodes.push_back(node);
-			
+
 		}
-		
+
 		vecMesh[i].ConstructReverseNodeArray();
 		vecMesh[i].RemoveCoincidentNodes();
 		vecMesh[i].RemoveZeroEdges();
 		vecMesh[i].ConstructEdgeMap();
-				
+
 		free(in.pointlist);
 		free(out.pointlist);
 		free(out.pointattributelist);
-		free(out.pointmarkerlist); 
+		free(out.pointmarkerlist);
 		free(out.trianglelist);
 		free(out.triangleattributelist);
 		free(out.neighborlist);
 		free(out.segmentlist);
 		free(out.segmentmarkerlist);
-		free(out.edgelist); 
-		free(out.edgemarkerlist); 
+		free(out.edgelist);
+		free(out.edgemarkerlist);
 
 	}
-	
+
 	// Construct kd-tree for each panel
-	
+
 	for (int i = 0; i < 6; i++){
-		
+
 		vecKDTreePanelI[i] = kd_create(3);
-		
+
 		for (int j = 0; j < vecMesh[i].faces.size(); j++){
-							
+
 				Face face = vecMesh[i].faces[j];
-				
+
 				Node nodeCenter = GetFaceCentroid(face, vecMesh[i].nodes);
-							
+
 				kd_insert3(
 					vecKDTreePanelI[i],
 					nodeCenter.x,
 					nodeCenter.y,
 					nodeCenter.z,
 					(void*)(&(vecMesh[i].faces[j])));
-			
+
 		}
-		
+
 	}
-	
+
 	// Overlap face index
 	int ixOverlap = 0;
 
@@ -1047,18 +1060,23 @@ void LinearRemapIntegratedTriangulation(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
 			}
 		}
-		
+
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+		
+		if( nOverlapFaces == 0 ) continue;
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( iTargetFace < 0 ) continue;  // skip and do not do anything
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 
@@ -1100,50 +1118,50 @@ void LinearRemapIntegratedTriangulation(
 					// Get lat/lon coordinates of nodeQ
 					double dLatRad;
 					double dLonRad;
-					
+
 					XYZtoRLL_Rad(nodeQ.x,nodeQ.y,nodeQ.z,dLonRad,dLatRad);
-					
+
 					// Determine the panel where nodeQ is located
 					int iPanelIndex;
-					
+
 					for (int i = 0; i < 6; i++){
-						
+
 						if ((dPanelLat(i,0) <= dLatRad) && (dLatRad <= dPanelLat(i,1)) &&
 							(dPanelLon(i,0) <= dLonRad) && (dLonRad <= dPanelLon(i,1))){
-								
+
 								iPanelIndex = i;
 								break;
-								
+
 							}
-						
+
 					}
 					// Compute Gnomonic projection onto the corresponding plane
-					
+
 					double dGX,dGY;
 					double dLatTan;
 					double dLonTan;
-					
+
 					if ((0 <= iPanelIndex) && (iPanelIndex <= 3)){
-				
+
 						dLatTan = 0;
 						dLonTan = (iPanelIndex+1)*45*M_PI/180 + 45*iPanelIndex*M_PI/180;
-						
+
 					}
 					else if (iPanelIndex == 4){
-						
+
 						dLatTan = M_PI/2;
 						dLonTan = 0;
-						
+
 					}
 					else{
-						
+
 						dLonTan = 0;
 						dLatTan = -M_PI/2;
-						
+
 					}
-					
+
 					GnomonicProjection(dLonTan,dLatTan,dLonRad,dLatRad,dGX,dGY);
-					
+
 					// Get point closest to dGX and dGY
 					kdres * kdresTarget =
 						kd_nearest3(
@@ -1151,115 +1169,115 @@ void LinearRemapIntegratedTriangulation(
 							dGX,
 							dGY,
 							0.0);
-							
+
 					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 					int iNearestFace = pFace - &(vecMesh[iPanelIndex].faces[0]);
 
 					// Find triangle that contains the Gnomonic projection of nodeQ.
 					// This is the face whose local index is iFaceFinal
-					
+
 					int iFaceFinal;
-					
+
 					double dA,dB;
-					
+
 					BarycentricCoordinates(vecMesh[iPanelIndex],iNearestFace,dGX,dGY,dA,dB);
-					
+
 					GetTriangleThatContainsPoint(vecMesh[iPanelIndex],iNearestFace,iFaceFinal,dGX,dGY);
-					
-					// Get global indices of the vertices of this triangle and 
+
+					// Get global indices of the vertices of this triangle and
 					// calculate corresponding centroids
-					
+
 					std::vector<int> vecContributingFaceI(3);
 					DataArray2D<double> dataContributingCentroids(3,3);
-					
+
 					// Indices on the local mesh of the containing triangle
-					
+
 					int iLocalVertex1 = vecMesh[iPanelIndex].faces[iFaceFinal][0];
 					int iLocalVertex2 = vecMesh[iPanelIndex].faces[iFaceFinal][1];
 					int iLocalVertex3 = vecMesh[iPanelIndex].faces[iFaceFinal][2];
-					
+
 					// Indices on the source mesh of the containing triangle
-					
+
 					int iGlobalVertex1 = vecGlobalIndexI[iPanelIndex][iLocalVertex1];
 					int iGlobalVertex2 = vecGlobalIndexI[iPanelIndex][iLocalVertex2];
 					int iGlobalVertex3 = vecGlobalIndexI[iPanelIndex][iLocalVertex3];
-					
+
 					vecContributingFaceI[0] = iGlobalVertex1;
 					vecContributingFaceI[1] = iGlobalVertex2;
 					vecContributingFaceI[2] = iGlobalVertex3;
-					
+
 					// The centroids of the source mesh are the vertices of the containing triangle
-					
+
 					for (int i = 0; i < 3; i++){
 
 						Face faceCurrent = meshInput.faces[vecContributingFaceI[i]];
-						
+
 						Node nodeCenter = GetFaceCentroid(faceCurrent,meshInput.nodes);
-						
+
 						nodeCenter = nodeCenter.Normalized();
-												
+
 						dataContributingCentroids(i,0) = nodeCenter.x;
 						dataContributingCentroids(i,1) = nodeCenter.y;
 						dataContributingCentroids(i,2) = nodeCenter.z;
-						
-									
+
+
 					}
-					
+
 					// Vector of areas of subtriangles
 					std::vector<double> vecSubAreas(3);
-					
-					// Area of triangle is obtained by adding up areas of the three 
+
+					// Area of triangle is obtained by adding up areas of the three
 					// subtriangles that are formed by the sample point
-					
+
 					double dTriangleArea = 0;
-					
+
 					for (int i = 0; i < 3; i++){
-						
+
 						Face faceCurrent(3);
-					
+
 						faceCurrent.SetNode(0,0);
 						faceCurrent.SetNode(1,1);
 						faceCurrent.SetNode(2,2);
-					
+
 						NodeVector nodesCurrent;
-						
+
 						nodesCurrent.push_back(nodeQ);
-						
+
 						Node node1(dataContributingCentroids((i+1)%3,0),dataContributingCentroids((i+1)%3,1),
 								   dataContributingCentroids((i+1)%3,2));
-						
+
 						Node node2(dataContributingCentroids((i+2)%3,0),dataContributingCentroids((i+2)%3,1),
-								   dataContributingCentroids((i+2)%3,2));			
-						
+								   dataContributingCentroids((i+2)%3,2));
+
 						nodesCurrent.push_back(node1);
 						nodesCurrent.push_back(node2);
-						
+
 						vecSubAreas[i] = CalculateFaceArea(faceCurrent,nodesCurrent);
-						
+
 						dTriangleArea += vecSubAreas[i];
-						
+
 					}
-					
+
 					// Calculate vector of weights
 					std::vector<double> vecContributingFaceWeights(3);
-					
+
 					for (int i = 0; i < 3; i++){
-						
+
 						vecContributingFaceWeights[i] = vecSubAreas[i]/dTriangleArea;
-						
+
 					}
-					
+
 					// Contribution of this quadrature point to the map
 					for (int i = 0; i < vecContributingFaceI.size(); i++){
-						
+
 						smatMap(iTargetFace, vecContributingFaceI[i]) +=
 							vecContributingFaceWeights[i]
 							* dQuadPtWeight(k,p)
 							* meshOverlap.vecFaceArea[ixOverlap + j]
 							/ dQuadratureArea
 							/ meshOutput.vecFaceArea[iTargetFace];
-							
+
 					}
 				}
 			}
@@ -1267,8 +1285,8 @@ void LinearRemapIntegratedTriangulation(
 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
-	}	
-	
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1279,8 +1297,8 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
-	
+
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -1297,20 +1315,20 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
+
 	Mesh meshInputDual = meshInput;
-	
+
 	//Construct dual mesh
 	Dual(meshInputDual);
-	
+
 	//Reverse node array
-	meshInputDual.ConstructReverseNodeArray();	
-	
+	meshInputDual.ConstructReverseNodeArray();
+
 	//Construct edge map
 	meshInputDual.ConstructEdgeMap();
-	
+
 	//kd-tree of dual mesh centers
-	
+
     kdtree * kdTarget = kd_create(3);
 
 	// Vector of centers of the source mesh
@@ -1319,7 +1337,7 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 		const Face & face = meshInputDual.faces[i];
 
 		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-		
+
 		nodeCentroid = nodeCentroid.Normalized();
 
 		kd_insert3(
@@ -1328,10 +1346,10 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 			nodeCentroid.y,
 			nodeCentroid.z,
 			(void*)(&(meshInputDual.faces[i])));
-			
+
 	}
-	
-	
+
+
 	// Overlap face index
 	int ixOverlap = 0;
 
@@ -1349,18 +1367,23 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
 			}
 		}
-		
+
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		if( nOverlapFaces == 0 ) continue;
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( iTargetFace < 0 ) continue;  // skip and do not do anything
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 
@@ -1389,7 +1412,7 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 					dQuadratureArea += dQuadPtWeight(k,p);
 				}
 			}
-			
+
 			// Loop through all sub-triangles of this overlap Face
 			for (int k = 0; k < nSubTriangles; k++) {
 
@@ -1398,159 +1421,159 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 
 					// Get quadrature node and pointwise Jacobian
 					const Node & nodeQ = dQuadPtNodes(k,p);
-					
+
 					//Get the dual mesh face whose center is nearest to the sample point
-					
+
 					kdres * kdresTarget =
 						kd_nearest3(
 							kdTarget,
 							nodeQ.x,
 							nodeQ.y,
 							nodeQ.z);
-							
+
 					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 					int iNearestFace = pFace - &(meshInputDual.faces[0]);
-					
+
 					// Find triangle that contains nodeQ.
 					// This is the face whose local index is iFaceFinal
-					
+
 					int iFaceFinal = 0;
-					
+
 					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-					
+
 					//Pre-compute all triangle areas and subareas
-					
+
 					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-					
+
 					//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
 					std::vector<double> vecTriangleSubAreas(iEdges);
-					
+
 					//Subtriangles without sample point as a vertex (m-1,m,m+1)
 					std::vector<double> vecTriangleAreas(iEdges);
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						Face faceTriangleM(3); //Triangle with vertices m-1,m,m+1
-						
+
 						Face faceSubTriangleM(3); //Triangle with vertices q,m,m+1
-						
+
 						faceTriangleM.SetNode(0,0);
 						faceTriangleM.SetNode(1,1);
 						faceTriangleM.SetNode(2,2);
-						
+
 						faceSubTriangleM.SetNode(0,0);
 						faceSubTriangleM.SetNode(1,1);
 						faceSubTriangleM.SetNode(2,2);
-						
+
 						NodeVector nodesTriangleM;
-						
+
 						NodeVector nodesSubTriangleM;
-						
+
 						Node nodeM(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].x,
 								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].y,
 								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].z);
-						
+
 						//c++ doesn't like the modulo operator when the argument is negative
-						
+
 						int iMMinusOne = m - 1;
-						
+
 						if (m == 0){
-							
+
 							iMMinusOne = iEdges - 1;
-							
+
 						}
-						
-						
+
+
 						Node nodeMMinusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].x,
 										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].y,
 										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].z);
-										   
+
 						Node nodeMPlusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].x,
 										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].y,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);	
-						
+										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);
+
 						nodesTriangleM.push_back(nodeMMinusOne);
 						nodesTriangleM.push_back(nodeM);
 						nodesTriangleM.push_back(nodeMPlusOne);
-						
+
 						nodesSubTriangleM.push_back(nodeQ);
 						nodesSubTriangleM.push_back(nodeM);
 						nodesSubTriangleM.push_back(nodeMPlusOne);
-						
+
 						double dSubAreaM = CalculateFaceArea(faceSubTriangleM, nodesSubTriangleM);
-						
+
 						vecTriangleSubAreas[m] = dSubAreaM;
-						
+
 						double dTriangleAreaM = CalculateFaceArea(faceTriangleM, nodesTriangleM);
-						
-						vecTriangleAreas[m] = dTriangleAreaM;	
-						
-						
+
+						vecTriangleAreas[m] = dTriangleAreaM;
+
+
 					}
-					
+
 					std::vector<double> vecWeights(iEdges,1);
-					
+
 					double dWeightTotal = 0;
-					
+
 					//Double loop over all nodes of the face because each weight depends on all
 					//triangle subareas
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						for (int l = 0; l < iEdges; l++){
-							
+
 							int iLMinusOne = l - 1;
-						
+
 								if (l == 0){
-							
+
 									iLMinusOne = iEdges - 1;
-							
+
 								}
-							
+
 							if (l != m && l != iLMinusOne){
-								
-								
+
+
 								vecWeights[m] *= vecTriangleSubAreas[iLMinusOne]*vecTriangleSubAreas[l];
-								
+
 							}
-						
+
 						}
-						
+
 						vecWeights[m] *= vecTriangleAreas[m];
-						
+
 						dWeightTotal += vecWeights[m];
-						
+
 					}
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						vecWeights[m] /= dWeightTotal;
-						
+
 					}
-					
+
 					double dFaceArea = CalculateFaceArea(meshInputDual.faces[iFaceFinal],meshInputDual.nodes);
-					
+
 					double dsum = 0;
-					
+
 					for (int s = 0; s < iEdges; s++){
-						
+
 						dsum += vecTriangleSubAreas[s];
-						
+
 					}
-										
+
 					// Contribution of this quadrature point to the map
 					for (int i = 0; i < iEdges; i++){
-						
+
 						int iContributingFaceI = meshInputDual.faces[iFaceFinal][i];
-						
+
 						smatMap(iTargetFace, iContributingFaceI) +=
 							vecWeights[i]
 							* dQuadPtWeight(k,p)
 							* meshOverlap.vecFaceArea[ixOverlap + j]
 							/ dQuadratureArea
 							/ meshOutput.vecFaceArea[iTargetFace];
-							
+
 					}
 				}
 			}
@@ -1558,8 +1581,8 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
-	}	
-	
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1570,8 +1593,8 @@ void LinearRemapGeneralizedBarycentric(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
-	
+
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -1588,19 +1611,19 @@ void LinearRemapGeneralizedBarycentric(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
+
 	//Dual mesh
 	Mesh meshInputDual = meshInput;
-	
+
 	//Construct dual mesh
 	Dual(meshInputDual);
-	
+
 	//Reverse node array
-	meshInputDual.ConstructReverseNodeArray();	
-	
+	meshInputDual.ConstructReverseNodeArray();
+
 	//Construct edge map
 	meshInputDual.ConstructEdgeMap();
-	
+
 	//kd-tree of dual mesh centers
     kdtree * kdTarget = kd_create(3);
 
@@ -1610,7 +1633,7 @@ void LinearRemapGeneralizedBarycentric(
 		const Face & face = meshInputDual.faces[i];
 
 		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-		
+
 		nodeCentroid = nodeCentroid.Normalized();
 
 		kd_insert3(
@@ -1619,10 +1642,10 @@ void LinearRemapGeneralizedBarycentric(
 			nodeCentroid.y,
 			nodeCentroid.z,
 			(void*)(&(meshInputDual.faces[i])));
-			
+
 	}
-	
-	
+
+
 	// Loop through all target faces
 	for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
 
@@ -1633,154 +1656,154 @@ void LinearRemapGeneralizedBarycentric(
 
 		// This Face
 		const Face & faceFirst = meshOutput.faces[ixFirst];
-		
+
 			// Get node coordinates of each target face center
 			Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
-			
+
 			nodeQ = nodeQ.Normalized();
-					
+
 					//Get the dual mesh face whose center is nearest to the target face
-					
+
 					kdres * kdresTarget =
 						kd_nearest3(
 							kdTarget,
 							nodeQ.x,
 							nodeQ.y,
 							nodeQ.z);
-							
+
 					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 					int iNearestFace = pFace - &(meshInputDual.faces[0]);
-					
+
 					// Find triangle that contains nodeQ.
 					// This is the face whose local index is iFaceFinal
-					
+
 					int iFaceFinal = 0;
-					
+
 					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-					
+
 					//Pre-compute all triangle areas and subareas
-					
+
 					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-					
+
 					//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
 					std::vector<double> vecTriangleSubAreas(iEdges);
-					
+
 					//Subtriangles without sample point as a vertex (m-1,m,m+1)
 					std::vector<double> vecTriangleAreas(iEdges);
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						Face faceTriangleM(3); //Triangle with vertices m-1,m,m+1
-						
+
 						Face faceSubTriangleM(3); //Triangle with vertices q,m,m+1
-						
+
 						faceTriangleM.SetNode(0,0);
 						faceTriangleM.SetNode(1,1);
 						faceTriangleM.SetNode(2,2);
-						
+
 						faceSubTriangleM.SetNode(0,0);
 						faceSubTriangleM.SetNode(1,1);
 						faceSubTriangleM.SetNode(2,2);
-						
+
 						NodeVector nodesTriangleM;
-						
+
 						NodeVector nodesSubTriangleM;
-						
+
 						Node nodeM(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].x,
 								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].y,
 								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].z);
-						
+
 						//c++ doesn't like the modulo operator when the argument is negative
-						
+
 						int iMMinusOne = m - 1;
-						
+
 						if (m == 0){
-							
+
 							iMMinusOne = iEdges - 1;
-							
+
 						}
-						
-						
+
+
 						Node nodeMMinusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].x,
 										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].y,
 										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].z);
-										   
+
 						Node nodeMPlusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].x,
 										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].y,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);	
-						
+										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);
+
 						nodesTriangleM.push_back(nodeMMinusOne);
 						nodesTriangleM.push_back(nodeM);
 						nodesTriangleM.push_back(nodeMPlusOne);
-						
+
 						nodesSubTriangleM.push_back(nodeQ);
 						nodesSubTriangleM.push_back(nodeM);
 						nodesSubTriangleM.push_back(nodeMPlusOne);
-						
+
 						double dSubAreaM = CalculateFaceArea(faceSubTriangleM, nodesSubTriangleM);
-						
+
 						vecTriangleSubAreas[m] = dSubAreaM;
-						
+
 						double dTriangleAreaM = CalculateFaceArea(faceTriangleM, nodesTriangleM);
-						
-						vecTriangleAreas[m] = dTriangleAreaM;	
-						
-						
+
+						vecTriangleAreas[m] = dTriangleAreaM;
+
+
 					}
-					
+
 					double dfacearea = CalculateFaceArea(meshInputDual.faces[iFaceFinal],meshInputDual.nodes);
-					
+
 					std::vector<double> vecWeights(iEdges,1);
-					
+
 					double dWeightTotal = 0;
-					
+
 					//Double loop over all nodes of the face because each weight depends on all
 					//triangle subareas
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						for (int l = 0; l < iEdges; l++){
-							
+
 							int iLMinusOne = l - 1;
-						
+
 								if (l == 0){
-							
+
 									iLMinusOne = iEdges - 1;
-							
+
 								}
-							
+
 							if (l != m && l != iLMinusOne){
-								
-								
+
+
 								vecWeights[m] *= vecTriangleSubAreas[iLMinusOne]*vecTriangleSubAreas[l];
-								
+
 							}
-						
+
 						}
-						
+
 						vecWeights[m] *= vecTriangleAreas[m];
-						
+
 						dWeightTotal += vecWeights[m];
-						
+
 					}
-					
+
 					for (int m = 0; m < iEdges; m++){
-						
+
 						vecWeights[m] /= dWeightTotal;
-						
+
 					}
-										
+
 					// Contribution of this quadrature point to the map
 					for (int i = 0; i < iEdges; i++){
-						
+
 						int iContributingFaceI = meshInputDual.faces[iFaceFinal][i];
-						
+
 						smatMap(ixFirst, iContributingFaceI) = vecWeights[i];
-							
+
 					}
 				}
-	
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1791,7 +1814,7 @@ void LinearRemapTriangulation(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -1808,170 +1831,170 @@ void LinearRemapTriangulation(
 
 	// Get SparseMatrix represntation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
+
 	// Array of global indices
 	std::vector <std::vector<int>> vecGlobalIndexI(6);
-	
+
 	// Vector storing meshes of each panel
 	std::vector<Mesh> vecMesh(6);
-	
+
 	// kd-tree for each panel
 	std::vector<kdtree *> vecKDTreePanelI(6);
-	
+
 	// Arrays of panel boundaries in lat/lon coordinates (radians)
 	DataArray2D<double> dPanelLat(6,2);
 	DataArray2D<double> dPanelLon(6,2);
-	
+
 	// Width of buffer zone for each panel (degrees)
-	double dBuff = 30; 
-	
+	double dBuff = 30;
+
 	// Define equatorial panel boundaries
 	for (int i = 0; i < 4; i++){
-		
+
 		dPanelLon(i,0) = 90*M_PI*i/180;  //Left boundary
 		dPanelLon(i,1) = 90*M_PI*(i+1)/180;  //Right Boundary
 		dPanelLat(i,1) = 45*M_PI/180;  //Upper Boundary
 		dPanelLat(i,0) = -45*M_PI/180;  //Lower Boundary
-		
+
 	}
-	
+
 	// Define polar panels
-	
+
 	dPanelLon(4,0) = 0; dPanelLon(4,1) = 2*M_PI;
 	dPanelLat(4,0) = 45*M_PI/180; dPanelLat(4,1) = M_PI/2;
-	
+
 	dPanelLon(5,0) = 0; dPanelLon(5,1) = 2*M_PI;
 	dPanelLat(5,1) = -45*M_PI/180; dPanelLat(5,0) = -M_PI/2;
-	
-	
+
+
 	// Generate the Delaunay triangulation for each of the 6 panels
 	for (int i = 0; i < 6; i++){
-		
+
 		// Array storing the coordinates of the face centroids of panel i
 		std::vector<std::vector<double>> dPanelCentroid(2);
-		
+
 		// Coordinates of tangent plane point of tangency for panel i
 		double dLatTan;
 		double dLonTan;
-			
+
 		if ((0 <= i) && (i <= 3)){
-			
+
 			dLatTan = 0;
 			dLonTan = (i+1)*45*M_PI/180 + 45*i*M_PI/180;
-			
+
 		}
 		else if (i == 4){
-			
+
 			dLatTan = M_PI/2;
 			dLonTan = 0;
-			
+
 		}
 		else{
-			
+
 			dLonTan = 0;
 			dLatTan = -M_PI/2;
-			
+
 		}
-		
+
 		// Number of source faces centers for panel i; this is the size
 		// of in.pointlist
 		int nNodes = 0;
-		
+
 		for (int j = 0; j < meshInput.faces.size(); j++){
-			
+
 			// Get coordinates of centroid of current face
-			
+
 			double dLonRad0;
 			double dLatRad0;
-			
+
 			const Face & face = meshInput.faces[j];
-			
+
 			//const Node & node = GetFaceCentroid(face,meshInput.nodes);
 			Node node = GetFaceCentroid(face,meshInput.nodes);
-			
+
 			node = node.Normalized();
-			
+
 			XYZtoRLL_Rad(node.x,node.y,node.z,dLonRad0,dLatRad0);
-			
+
 			// Determine if centroid is in panel i plus buffer zone
 			bool fPanelContainsCentroid = false;
-			
+
 			if ((0 <= i) && (i <= 3)){
-				
+
 				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1)+dBuff*M_PI/180)){
-					
+
 					if ( i == 0 ){
-						
+
 						if ( ((2*M_PI - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= 2*M_PI)) ||
 							 ((dPanelLon(i,0) <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ) {
-					
+
 							fPanelContainsCentroid = true;
 						}
 					}
-					
+
 					else if ( i == 3 ){
-						
+
 						if ( ((0 <= dLonRad0) && (dLonRad0 <= 0 + dBuff*M_PI/180)) ||
 							 ((dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)) ){
-								 
+
 							fPanelContainsCentroid = true;
-								 
+
 						}
-						
+
 					}
-					
+
 					else {
-						
+
 						if ( (dPanelLon(i,0) - dBuff*M_PI/180 <= dLonRad0) && (dLonRad0 <= dPanelLon(i,1) + dBuff*M_PI/180)){
-					
+
 							fPanelContainsCentroid = true;
 						}
-						
-						
+
+
 					}
-					
+
 				}
 			}
 			else if (i == 4){
-								
+
 				if ((dPanelLat(i,0) - dBuff*M_PI/180 <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1))){
-					
+
 					fPanelContainsCentroid = true;
-					
+
 				}
-				
+
 			}
-			
+
 			else {
 
 				if ((dPanelLat(i,0) <= dLatRad0) && (dLatRad0 <= dPanelLat(i,1) + dBuff*M_PI/180)){
 					fPanelContainsCentroid = true;
-					
+
 				}
-				
+
 			}
-			
+
 			if(fPanelContainsCentroid){
-				
+
 				vecGlobalIndexI[i].push_back(j);
 				nNodes++;
-				
+
 				// Gnomonic projection of centroid coordinates
 				double dGX;
 				double dGY;
 				GnomonicProjection(dLonTan,dLatTan,dLonRad0,dLatRad0,dGX,dGY);
-				
+
 				// Add Gnomonic coordinates to vector
 				dPanelCentroid[0].push_back(dGX);
 				dPanelCentroid[1].push_back(dGY);
-				
+
 			}
 		}
-		
+
 		// Structures for Delaunay triangulation
-		
+
 		struct triangulateio in, out, vorout;
-		 
+
 		in.numberofpoints           = nNodes;
 		in.numberofpointattributes  = 0;
 		in.numberofsegments         = 0;
@@ -1987,7 +2010,7 @@ void LinearRemapTriangulation(
 		in.segmentmarkerlist        = (int  *) NULL;
 		in.edgelist                 = (int  *) NULL;
 		in.edgemarkerlist           = (int  *) NULL;
-	
+
 		// initialize data structure for output triangulation
 		out.pointlist               = (REAL *) NULL;
 		out.pointattributelist      = (REAL *) NULL;
@@ -1999,89 +2022,89 @@ void LinearRemapTriangulation(
 		out.segmentmarkerlist       = (int  *) NULL;
 		out.edgelist                = (int  *) NULL;
 		out.edgemarkerlist          = (int  *) NULL;
-	
+
 		// initialize data structure for output Voronoi diagram (unused)
 		vorout.pointlist            = (REAL *) NULL;
 		vorout.pointattributelist   = (REAL *) NULL;
 		vorout.edgelist             = (int  *) NULL;
 		vorout.normlist             = (REAL *) NULL;
-		
+
 		// Add points to in.pointlist
-		
+
 		for (int j = 0; j < nNodes; j++){
-		
+
 			in.pointlist[2*j+0] = dPanelCentroid[0][j];
 			in.pointlist[2*j+1] = dPanelCentroid[1][j];
-			
+
 		}
-		
-		// Compute Delaunay triangulation.  Use the 'c' option so that 
+
+		// Compute Delaunay triangulation.  Use the 'c' option so that
 		// the convex hull is included
-		
+
 		char options[256] ="cjzenYQ";
 		triangulate(options, &in, &out, &vorout);
-		
+
 		// Convert to mesh object by building face vector
 		for (int j = 0; j < out.numberoftriangles; j++){
-			
+
 			Face newFace(3);
-			
+
 			newFace.SetNode(0, out.trianglelist[3*j+0]);
 			newFace.SetNode(1, out.trianglelist[3*j+1]);
 			newFace.SetNode(2, out.trianglelist[3*j+2]);
 			vecMesh[i].faces.push_back(newFace);
-			
+
 		}
-		
+
 		// Build node vector.  Note that the Delaunay triangulation preserves
 		// point indexing.
 		for (int j = 0; j < out.numberofpoints; j++){
-			
+
 			Node node(out.pointlist[2*j+0],out.pointlist[2*j+1],0);
 			vecMesh[i].nodes.push_back(node);
-			
+
 		}
-		
+
 		vecMesh[i].ConstructReverseNodeArray();
 		vecMesh[i].RemoveCoincidentNodes();
 		vecMesh[i].RemoveZeroEdges();
 		vecMesh[i].ConstructEdgeMap();
-				
+
 		free(in.pointlist);
 		free(out.pointlist);
 		free(out.pointattributelist);
-		free(out.pointmarkerlist); 
+		free(out.pointmarkerlist);
 		free(out.trianglelist);
 		free(out.triangleattributelist);
 		free(out.neighborlist);
 		free(out.segmentlist);
 		free(out.segmentmarkerlist);
-		free(out.edgelist); 
-		free(out.edgemarkerlist); 
+		free(out.edgelist);
+		free(out.edgemarkerlist);
 
 	}
-	
+
 	// Construct kd-tree for each panel
-	
+
 	for (int i = 0; i < 6; i++){
-		
+
 		vecKDTreePanelI[i] = kd_create(3);
-		
+
 		for (int j = 0; j < vecMesh[i].faces.size(); j++){
-							
+
 				Face face = vecMesh[i].faces[j];
-				
+
 				Node nodeCenter = GetFaceCentroid(face, vecMesh[i].nodes);
-							
+
 				kd_insert3(
 					vecKDTreePanelI[i],
 					nodeCenter.x,
 					nodeCenter.y,
 					nodeCenter.z,
 					(void*)(&(vecMesh[i].faces[j])));
-			
+
 		}
-		
+
 	}
 
 	// Loop through all target faces
@@ -2094,59 +2117,59 @@ void LinearRemapTriangulation(
 
 		// This Face
 		const Face & faceFirst = meshOutput.faces[ixFirst];
-		
+
 			// Get node coordinates of each target face center
 			Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
-			
+
 			nodeQ = nodeQ.Normalized();
-			
+
 			// Get lat/lon coordinates of nodeQ
 			double dLatRad;
 			double dLonRad;
-			
+
 			XYZtoRLL_Rad(nodeQ.x,nodeQ.y,nodeQ.z,dLonRad,dLatRad);
-			
+
 			// Determine the panel where nodeQ is located
 			int iPanelIndex;
-			
+
 			for (int i = 0; i < 6; i++){
-				
+
 				if ((dPanelLat(i,0) <= dLatRad) && (dLatRad <= dPanelLat(i,1)) &&
 					(dPanelLon(i,0) <= dLonRad) && (dLonRad <= dPanelLon(i,1))){
-						
+
 						iPanelIndex = i;
 						break;
-						
+
 					}
-				
+
 			}
 			// Compute Gnomonic projection onto the corresponding plane
-			
+
 			double dGX,dGY;
 			double dLatTan;
 			double dLonTan;
-			
+
 			if ((0 <= iPanelIndex) && (iPanelIndex <= 3)){
-		
+
 				dLatTan = 0;
 				dLonTan = (iPanelIndex+1)*45*M_PI/180 + 45*iPanelIndex*M_PI/180;
-				
+
 			}
 			else if (iPanelIndex == 4){
-				
+
 				dLatTan = M_PI/2;
 				dLonTan = 0;
-				
+
 			}
 			else{
-				
+
 				dLonTan = 0;
 				dLatTan = -M_PI/2;
-				
+
 			}
-			
+
 			GnomonicProjection(dLonTan,dLatTan,dLonRad,dLatRad,dGX,dGY);
-			
+
 			// Get point closest to dGX and dGY
 			kdres * kdresTarget =
 				kd_nearest3(
@@ -2154,125 +2177,125 @@ void LinearRemapTriangulation(
 					dGX,
 					dGY,
 					0.0);
-					
+
 			Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 			int iNearestFace = pFace - &(vecMesh[iPanelIndex].faces[0]);
 
 			// Find triangle that contains the Gnomonic projection nodeQ.
 			// This is the face whose local index is iFaceFinal
-			
+
 			int iFaceFinal;
-			
+
 			double dA,dB;
-			
+
 			BarycentricCoordinates(vecMesh[iPanelIndex],iNearestFace,dGX,dGY,dA,dB);
-			
+
 			GetTriangleThatContainsPoint(vecMesh[iPanelIndex],iNearestFace,iFaceFinal,dGX,dGY);
-			
-			// Get global indices of the vertices of this triangle and 
+
+			// Get global indices of the vertices of this triangle and
 			// calculate corresponding centroids
-			
+
 			std::vector<int> vecContributingFaceI(3);
 			DataArray2D<double> dataContributingCentroids(3,3);
-			
+
 			// Indices on the local mesh of the containing triangle
-			
+
 			int iLocalVertex1 = vecMesh[iPanelIndex].faces[iFaceFinal][0];
 			int iLocalVertex2 = vecMesh[iPanelIndex].faces[iFaceFinal][1];
 			int iLocalVertex3 = vecMesh[iPanelIndex].faces[iFaceFinal][2];
-			
+
 			// Indices on the source mesh of the containing triangle
-			
+
 			int iGlobalVertex1 = vecGlobalIndexI[iPanelIndex][iLocalVertex1];
 			int iGlobalVertex2 = vecGlobalIndexI[iPanelIndex][iLocalVertex2];
 			int iGlobalVertex3 = vecGlobalIndexI[iPanelIndex][iLocalVertex3];
-			
+
 			vecContributingFaceI[0] = iGlobalVertex1;
 			vecContributingFaceI[1] = iGlobalVertex2;
 			vecContributingFaceI[2] = iGlobalVertex3;
-			
+
 			// The centroids of the source mesh are the vertices of the containing triangle
-			
+
 			for (int i = 0; i < 3; i++){
 
 				Face faceCurrent = meshInput.faces[vecContributingFaceI[i]];
-				
+
 				Node nodeCenter = GetFaceCentroid(faceCurrent,meshInput.nodes);
-				
+
 				nodeCenter = nodeCenter.Normalized();
-										
+
 				dataContributingCentroids(i,0) = nodeCenter.x;
 				dataContributingCentroids(i,1) = nodeCenter.y;
 				dataContributingCentroids(i,2) = nodeCenter.z;
-				
-							
+
+
 			}
-			
+
 			// Vector of areas of subtriangles
 			std::vector<double> vecSubAreas(3);
-			
-			// Area of triangle is obtained by adding up areas of the three 
+
+			// Area of triangle is obtained by adding up areas of the three
 			// subtriangles that are formed by the sample point
-			
+
 			double dTriangleArea = 0;
-			
+
 			for (int i = 0; i < 3; i++){
-				
+
 				Face faceCurrent(3);
-			
+
 				faceCurrent.SetNode(0,0);
 				faceCurrent.SetNode(1,1);
 				faceCurrent.SetNode(2,2);
-			
+
 				NodeVector nodesCurrent;
-				
+
 				nodesCurrent.push_back(nodeQ);
-				
+
 				Node node1(dataContributingCentroids((i+1)%3,0),dataContributingCentroids((i+1)%3,1),
 						   dataContributingCentroids((i+1)%3,2));
-				
+
 				Node node2(dataContributingCentroids((i+2)%3,0),dataContributingCentroids((i+2)%3,1),
-						   dataContributingCentroids((i+2)%3,2));			
-				
+						   dataContributingCentroids((i+2)%3,2));
+
 				nodesCurrent.push_back(node1);
 				nodesCurrent.push_back(node2);
-				
+
 				vecSubAreas[i] = CalculateFaceArea(faceCurrent,nodesCurrent);
-				
+
 				dTriangleArea += vecSubAreas[i];
-				
+
 			}
-			
+
 			// Calculate vector of weights
 			std::vector<double> vecContributingFaceWeights(3);
-			
+
 			for (int i = 0; i < 3; i++){
-				
+
 				vecContributingFaceWeights[i] = vecSubAreas[i]/dTriangleArea;
-				
+
 			}
-			
+
 			// Contribution of this point to the map
 			for (int i = 0; i < vecContributingFaceI.size(); i++){
-				
+
 				smatMap(ixFirst, vecContributingFaceI[i]) = vecContributingFaceWeights[i];
-					
+
 			}
 		}
-	
-	
+
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void LinearRemapIntegratedBilinear(	
+void LinearRemapIntegratedBilinear(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -2289,18 +2312,18 @@ void LinearRemapIntegratedBilinear(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
+
 	Mesh meshInputDual = meshInput;
-	
+
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
+
 	//Construct edge map
-	
+
 	meshInputDual.ConstructEdgeMap();
-	
+
 	//kd-tree of dual mesh centers
-	
+
     kdtree * kdTarget = kd_create(3);
 
 	// Vector of centers of the source mesh
@@ -2309,7 +2332,7 @@ void LinearRemapIntegratedBilinear(
 		const Face & face = meshInputDual.faces[i];
 
 		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-		
+
 		nodeCentroid = nodeCentroid.Normalized();
 
 		kd_insert3(
@@ -2318,13 +2341,13 @@ void LinearRemapIntegratedBilinear(
 			nodeCentroid.y,
 			nodeCentroid.z,
 			(void*)(&(meshInputDual.faces[i])));
-			
+
 	}
-	
+
 	std::vector<double> vecContributingFaceWeights;
-					
+
 	std::vector<int> vecContributingFaceI;
-	
+
 	// Overlap face index
 	int ixOverlap = 0;
 
@@ -2342,18 +2365,23 @@ void LinearRemapIntegratedBilinear(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
 				break;
 			}
 		}
-		
+
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+
+		if( nOverlapFaces == 0 ) continue;
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( iTargetFace < 0 ) continue;  // skip and do not do anything
 
 			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
 
@@ -2382,7 +2410,7 @@ void LinearRemapIntegratedBilinear(
 					dQuadratureArea += dQuadPtWeight(k,p);
 				}
 			}
-			
+
 			// Loop through all sub-triangles of this overlap Face
 			for (int k = 0; k < nSubTriangles; k++) {
 
@@ -2391,139 +2419,139 @@ void LinearRemapIntegratedBilinear(
 
 					// Get quadrature node and pointwise Jacobian
 					Node & nodeQ = dQuadPtNodes(k,p);
-					
+
 					//Get the dual mesh face whose center is nearest to the sample point
-					
+
 					kdres * kdresTarget =
 						kd_nearest3(
 							kdTarget,
 							nodeQ.x,
 							nodeQ.y,
 							nodeQ.z);
-							
+
 					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 					int iNearestFace = pFace - &(meshInputDual.faces[0]);
-					
+
 					int iFaceFinal = 0;
-					
+
 					//Get the face that contains nodeQ
-					
+
 					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-					
+
 					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-					
+
 					vecContributingFaceWeights.clear();
-			
-					vecContributingFaceI.clear();			
-					
+
+					vecContributingFaceI.clear();
+
 					DataArray1D<double> dCoeffs(3);
-					
+
 					double dCond = 0;
-					
+
 					bool fConverged = false;
-					
+
 					if( iEdges == 3 ){
-												
+
 						NodeVector nodesP;
-						
+
 						for (int i = 0; i < 3; i++){
-							
+
 							Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-							
+
 							nodesP.push_back(nodeI);
-											
+
 						}
-						
+
 						TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-							
+
 						vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
 						vecContributingFaceWeights.push_back(dCoeffs[1]);
 						vecContributingFaceWeights.push_back(dCoeffs[2]);
-						
+
 						for (int i = 0; i < iEdges; i++){
-							
+
 							vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-							
+
 						}
-						
+
 					}
-					
+
 					else if ( iEdges == 4 ){
-												
+
 						NodeVector nodesP;
-						
+
 						for (int i = 0; i < 4; i++){
-							
+
 							Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-							
+
 							nodesP.push_back(nodeI);
-											
+
 						}
-												
-						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);			
-							
+
+						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);
+
 						for (int i = 0; i < iEdges; i++){
-							
+
 							vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-								
+
 						}
-						
+
 						vecContributingFaceWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
 						vecContributingFaceWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
 						vecContributingFaceWeights.push_back(dCoeffs[0]*dCoeffs[1]);
 						vecContributingFaceWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
-						
+
 					}
-					
-					else {				
+
+					else {
 						//Loop over the subtrianges until we find one that contains the sample point
-												
+
 						int nSubTriangles = iEdges - 2;
-								
+
 						double dSum;
-							
+
 						for (int k = 0; k < nSubTriangles; k++) {
 
 							Node & node0 = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][0]];
 							Node & nodeKPlusOne = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+1]];
 							Node & nodeKPlusTwo = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+2]];
-							
+
 							NodeVector nodesP;
-															
+
 							nodesP.push_back(node0);
 							nodesP.push_back(nodeKPlusOne);
 							nodesP.push_back(nodeKPlusTwo);
-							
+
 							if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
-								
+
 								TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-								
+
 								vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
 								vecContributingFaceWeights.push_back(dCoeffs[1]);
 								vecContributingFaceWeights.push_back(dCoeffs[2]);
-								
+
 								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][0]);
 								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+1]);
 								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+2]);
-																
+
 								break;
-								
-							}		
-							
+
+							}
+
 						}
-						
+
 					}
-					
+
 					// Contribution of this quadrature point to the map
 					for (int i = 0; i < vecContributingFaceI.size(); i++){
-						
+
 						if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
-							
+
 							_EXCEPTIONT("Non-monotone weight");
-							
+
 						}
-						
+
 						smatMap(iTargetFace, vecContributingFaceI[i]) +=
 							vecContributingFaceWeights[i]
 							* dQuadPtWeight(k,p)
@@ -2531,28 +2559,28 @@ void LinearRemapIntegratedBilinear(
 							/ dQuadratureArea
 							/ meshOutput.vecFaceArea[iTargetFace];
 					}
-					
+
 				}
-				
+
 			}
-			
+
 		}
-		
+
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
 	}
-	
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void LinearRemapBilinear(	
+void LinearRemapBilinear(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-	
+
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -2569,19 +2597,18 @@ void LinearRemapBilinear(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
-	
-	Mesh meshInputDual = meshInput;
-	
+
+    std::cout << "\nCreating the dual mesh\n";
+    Mesh meshInputDual(meshInput);
+
 	//Construct dual mesh
 	Dual(meshInputDual);
-		
+
 	//Construct edge map
-	
-	meshInputDual.ConstructEdgeMap();
-	
+  meshInputDual.ConstructEdgeMap();
+
 	//kd-tree of dual mesh centers
-	
-    kdtree * kdTarget = kd_create(3);
+  kdtree * kdTarget = kd_create(3);
 
 	// Vector of centers of the source mesh
 	for (int i = 0; i < meshInputDual.faces.size(); i++){
@@ -2589,7 +2616,7 @@ void LinearRemapBilinear(
 		const Face & face = meshInputDual.faces[i];
 
 		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-		
+
 		nodeCentroid = nodeCentroid.Normalized();
 
 		kd_insert3(
@@ -2598,13 +2625,13 @@ void LinearRemapBilinear(
 			nodeCentroid.y,
 			nodeCentroid.z,
 			(void*)(&(meshInputDual.faces[i])));
-			
+
 	}
-	
-	std::vector<double> vecContributingFaceWeights;
-		
+
+  std::vector<double> vecContributingFaceWeights;
+
 	std::vector<int> vecContributingFaceI;
-	
+
 		// Loop through all target faces
 	for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
 
@@ -2615,149 +2642,149 @@ void LinearRemapBilinear(
 
 		// This Face
 		const Face & faceFirst = meshOutput.faces[ixFirst];
-		
+
 		// Get node coordinates of each target face center
 		Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
-		
+
 		nodeQ = nodeQ.Normalized();
-				
+
 		//Get the dual mesh face whose center is nearest to the target face
-		
+
 		kdres * kdresTarget =
 			kd_nearest3(
 				kdTarget,
 				nodeQ.x,
 				nodeQ.y,
 				nodeQ.z);
-				
+
 		Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
 		int iNearestFace = pFace - &(meshInputDual.faces[0]);
-		
+
 		// Find face that contains nodeQ.
 		// This is the face whose local index is iFaceFinal
-		
+
 		int iFaceFinal = 0;
-		
+
 		GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-		
+
 		int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-		
+
 		vecContributingFaceWeights.clear();
 
-		vecContributingFaceI.clear();			
-		
+		vecContributingFaceI.clear();
+
 		DataArray1D<double> dCoeffs(3);
-		
+
 		double dCond = 0;
-		
+
 		bool fConverged = false;
-		
+
 		if( iEdges == 3 ){
-									
+
 			NodeVector nodesP;
-			
+
 			for (int i = 0; i < 3; i++){
-				
+
 				Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-				
+
 				nodesP.push_back(nodeI);
-								
+
 			}
-			
+
 			TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-				
+
 			vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
 			vecContributingFaceWeights.push_back(dCoeffs[1]);
 			vecContributingFaceWeights.push_back(dCoeffs[2]);
-			
+
 			for (int i = 0; i < iEdges; i++){
-				
+
 				vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-				
+
 			}
-			
+
 		}
-		
+
 		else if ( iEdges == 4 ){
-									
+
 			NodeVector nodesP;
-			
+
 			for (int i = 0; i < 4; i++){
-				
+
 				Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-				
+
 				nodesP.push_back(nodeI);
-								
+
 			}
-									
-			NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);			
-				
+
+			NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);
+
 			for (int i = 0; i < iEdges; i++){
-				
+
 				vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-					
+
 			}
-			
+
 			vecContributingFaceWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
 			vecContributingFaceWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
 			vecContributingFaceWeights.push_back(dCoeffs[0]*dCoeffs[1]);
 			vecContributingFaceWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
-			
+
 		}
-		
-		else {				
+
+		else {
 			//Loop over the subtrianges until we find one that contains the sample point
-						
+
 			int nSubTriangles = iEdges - 2;
-							
+
 			for (int k = 0; k < nSubTriangles; k++) {
 
 				Node & node0 = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][0]];
 				Node & nodeKPlusOne = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+1]];
 				Node & nodeKPlusTwo = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+2]];
-				
+
 				NodeVector nodesP;
-												
+
 				nodesP.push_back(node0);
 				nodesP.push_back(nodeKPlusOne);
 				nodesP.push_back(nodeKPlusTwo);
-				
+
 				if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
-					
+
 					TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-										
+
 					vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
 					vecContributingFaceWeights.push_back(dCoeffs[1]);
 					vecContributingFaceWeights.push_back(dCoeffs[2]);
-					
+
 					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][0]);
 					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+1]);
 					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+2]);
-										
+
 					break;
-					
-				}		
-				
+
+				}
+
 			}
-			
+
 		}
-		
+
 		// Contribution of each point to the map
 		for (int i = 0; i < vecContributingFaceI.size(); i++){
-			
+
 			if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
-							
+
 				_EXCEPTIONT("Non-monotone weight");
-							
+
 			}
-			
+
 			int iContributingFaceI = vecContributingFaceI[i];
-			
+
 			smatMap(ixFirst, iContributingFaceI) = vecContributingFaceWeights[i];
-			
-		}					
-										
+
+		}
+
 	}
 
 }
@@ -3025,7 +3052,7 @@ void LinearRemapFVtoGLL_Simple(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -3131,6 +3158,8 @@ void LinearRemapFVtoGLL_Simple(
 			nOverlapFaces++;
 		}
 
+		if( nOverlapFaces == 0 ) continue;
+
 		// Loop through all Overlap Faces
 		for (int i = 0; i < nOverlapFaces; i++) {
 
@@ -3140,13 +3169,16 @@ void LinearRemapFVtoGLL_Simple(
 			// Quantities from the Second Mesh
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
+
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
 			const Face & faceSecond = meshOutput.faces[ixSecondFace];
 
 			for (int s = 0; s < nP; s++) {
 			for (int t = 0; t < nP; t++) {
-				
+
 				// Determine if this Node is in faceFirst
 				Node node;
 				Node dDx1G;
@@ -3230,7 +3262,7 @@ void LinearRemapFVtoGLL_Simple(
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder; q++) {
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 				for (int p = 0; p < nOrder; p++) {
 				for (int q = 0; q < nOrder - p; q++) {
 #endif
@@ -3302,7 +3334,7 @@ void LinearRemapFVtoGLL_Volumetric(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -3450,7 +3482,7 @@ void LinearRemapFVtoGLL_Volumetric(
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
 		int ixOverlapEnd = ixOverlapBegin;
-	
+
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
 
 			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
@@ -3469,6 +3501,9 @@ void LinearRemapFVtoGLL_Volumetric(
 		for (int i = ixOverlapBegin; i < ixOverlapEnd; i++) {
 
 			int iTargetFace = meshOverlap.vecTargetFaceIx[i];
+
+			// signal to not participate, because it is a ghost target
+			if( iTargetFace < 0 ) continue;  // skip and do not do anything
 
 			int iSubElementBegin =  iTargetFace      * nP * nP;
 			int iSubElementEnd   = (iTargetFace + 1) * nP * nP;
@@ -3628,6 +3663,9 @@ void LinearRemapFVtoGLL_Volumetric(
 			int ixSecondFace =
 				meshOverlap.vecTargetFaceIx[ixOverlap + ixElement];
 
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
+
 			for (int k = 0; k < nP * nP; k++) {
 				dRedistributedArray(i,j) +=
 					dComposedArray(i,ixElement * nP * nP + k)
@@ -3706,7 +3744,7 @@ void LinearRemapFVtoGLL(
 #ifdef RECTANGULAR_TRUNCATION
 	int nCoefficients = nOrder * nOrder;
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 	int nCoefficients = nOrder * (nOrder + 1) / 2;
 #endif
 
@@ -3792,6 +3830,8 @@ void LinearRemapFVtoGLL(
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
 		int nTotalOverlapTriangles = nAllTotalOverlapTriangles[ixFirst];
 
+		if( nOverlapFaces == 0 ) continue;
+
 		// Loop through all Overlap Faces
 		for (int i = 0; i < nOverlapFaces; i++) {
 
@@ -3802,6 +3842,9 @@ void LinearRemapFVtoGLL(
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
@@ -3927,7 +3970,7 @@ void LinearRemapFVtoGLL(
 						for (int p = 0; p < nOrder; p++) {
 						for (int q = 0; q < nOrder; q++) {
 #endif
-#ifdef TRIANGULAR_TRUNCATION 
+#ifdef TRIANGULAR_TRUNCATION
 						for (int p = 0; p < nOrder; p++) {
 						for (int q = 0; q < nOrder - p; q++) {
 #endif
@@ -4006,6 +4049,9 @@ void LinearRemapFVtoGLL(
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 			for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 
 				memcpy(&(dTemp[0]),
@@ -4033,11 +4079,17 @@ void LinearRemapFVtoGLL(
 	for (int i = 0; i < meshOverlap.faces.size(); i++) {
 		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
+		// signal to not participate, because it is a ghost target
+		if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 		vecReverseFaceIx[ixSecond].push_back(i);
 	}
 /*
 	for (int ixOverlap = 0; ixOverlap < meshOverlap.faces.size(); ixOverlap++) {
 		int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap];
+
+    // signal to not participate, because it is a ghost target
+    if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 		for (int ixp = 0; ixp < dGlobalIntArray.GetRows(); ixp++) {
 		for (int ixs = 0; ixs < dGlobalIntArray.GetSubColumns(); ixs++) {
@@ -4135,6 +4187,9 @@ void LinearRemapFVtoGLL(
 		int ixFirst = meshOverlap.vecSourceFaceIx[i];
 		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
+    // signal to not participate, because it is a ghost target
+    if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 		for (int s = 0; s < nP * nP; s++) {
 			//dConsistency += dGlobalIntArray(0,i,s)
 			dConservation += dGlobalIntArray(0,i,s)
@@ -4159,6 +4214,9 @@ void LinearRemapFVtoGLL(
 	for (int s = 0; s < nP * nP; s++) {
 		int ixSecond = meshOverlap.vecTargetFaceIx[i];
 
+    // signal to not participate, because it is a ghost target
+    if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 		dIntSums[ixSecond][s] += dGlobalIntArray[0][i][s];
 	}
 	}
@@ -4176,6 +4234,9 @@ void LinearRemapFVtoGLL(
 	for (int s = 0; s < nP * nP; s++) {
 		int ixFirst = meshOverlap.vecSourceFaceIx[i];
 		int ixSecond = meshOverlap.vecTargetFaceIx[i];
+
+    // signal to not participate, because it is a ghost target
+    if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 		dMassSums[ixFirst] += dGlobalIntArray[0][i][s]
 			* dataGLLJacobian[s/nP][s%nP][ixSecond]
@@ -4224,6 +4285,9 @@ void LinearRemapFVtoGLL(
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 			for (int s = 0; s < nP * nP; s++) {
 				dTotal += dGlobalIntArray[0][ixOverlap + i][s]
 					* dataGLLJacobian[s/nP][s%nP][ixSecond]
@@ -4241,6 +4305,9 @@ void LinearRemapFVtoGLL(
 		for (int p = 0; p < nCoefficients; p++) {
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 			for (int s = 0; s < nP * nP; s++) {
 				dConstraint[p] += dGlobalIntArray[p][ixOverlap + i][s]
@@ -4328,7 +4395,6 @@ void LinearRemapFVtoGLL(
 		DataArray2D<double> dComposedArray(nAdjFaces, nOverlapFaces * nP * nP);
 		if (fSuccess) {
 			for (int j = 0; j < nOverlapFaces; j++) {
-				//int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 				for (int i = 0; i < nAdjFaces; i++) {
 				for (int s = 0; s < nP * nP; s++) {
@@ -4345,7 +4411,6 @@ void LinearRemapFVtoGLL(
 		// dFitArrayPlus(0,0) = 1 and all other entries are zero.
 		} else {
 			for (int j = 0; j < nOverlapFaces; j++) {
-				//int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 				for (int s = 0; s < nP * nP; s++) {
 					dComposedArray[0][j * nP * nP + s] +=
@@ -4359,6 +4424,9 @@ void LinearRemapFVtoGLL(
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixFirstFace = vecAdjFaces[i].first;
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
 
 			for (int s = 0; s < nP; s++) {
 			for (int t = 0; t < nP; t++) {
@@ -4476,6 +4544,8 @@ void LinearRemapGLLtoGLL2(
 
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
+
+		if( nOverlapFaces == 0 ) continue;
 /*
 		// Calculate total element Jacobian
 		double dTotalJacobian = 0.0;
@@ -4493,6 +4563,10 @@ void LinearRemapGLLtoGLL2(
 			const NodeVector & nodesOverlap = meshOverlap.nodes;
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
+
 			const NodeVector & nodesSecond = meshOutput.nodes;
 			const Face & faceSecond = meshOutput.faces[ixSecond];
 			int nbEdges = faceOverlap.edges.size();
@@ -4656,6 +4730,9 @@ void LinearRemapGLLtoGLL2(
 
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + i];
 
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
+
 			int ixp = 0;
 			for (int p = 0; p < nPin; p++) {
 			for (int q = 0; q < nPin; q++) {
@@ -4695,6 +4772,9 @@ void LinearRemapGLLtoGLL2(
 
 		for (int i = 0; i < nOverlapFaces; i++) {
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 			int ixs = 0;
 			for (int s = 0; s < nPout; s++) {
@@ -4840,9 +4920,14 @@ void LinearRemapGLLtoGLL2(
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
 
+		if( nOverlapFaces == 0 ) continue;
+
 		// Put composed array into map
 		for (int j = 0; j < nOverlapFaces; j++) {
 			int ixSecondFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecondFace < 0 ) continue;  // skip and do not do anything
 
 			dRedistributedOp.Zero();
 			for (int p = 0; p < nPin * nPin; p++) {
@@ -4990,6 +5075,8 @@ void LinearRemapGLLtoGLL2_Pointwise(
 		// Number of overlapping Faces and triangles
 		int nOverlapFaces = nAllOverlapFaces[ixFirst];
 
+		if( nOverlapFaces == 0 ) continue;
+
 		// Loop through all Overlap Faces
 		for (int i = 0; i < nOverlapFaces; i++) {
 
@@ -5000,6 +5087,9 @@ void LinearRemapGLLtoGLL2_Pointwise(
 
 			// Quantities from the Second Mesh
 			int ixSecond = meshOverlap.vecTargetFaceIx[ixOverlap + i];
+
+			// signal to not participate, because it is a ghost target
+			if( ixSecond < 0 ) continue;  // skip and do not do anything
 
 			const NodeVector & nodesSecond = meshOutput.nodes;
 
