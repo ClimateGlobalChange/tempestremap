@@ -68,11 +68,11 @@
 #   special exception to the GPL to apply to your modified version as well.
 
 AC_DEFUN([AX_BLAS], [
-AC_PREREQ(2.50)
+AC_PREREQ([2.69])
 ax_blas_ok=no
 
 AC_ARG_WITH(blas,
-  [AC_HELP_STRING([--with-blas=<lib>], [use BLAS library <lib>])])
+  [AS_HELP_STRING([--with-blas=<lib>],[use BLAS library <lib>])])
 case $with_blas in
   yes | "") ;;
   no) acx_blas_ok=disable ;;
@@ -115,7 +115,7 @@ fi
 # ax_blas_ok to yes, and execute ACTION-IF-FOUND.  On failure, set ax_blas_ok
 # to no and execute ACTION-IF-NOT-FOUND.
 AC_DEFUN([_AX_BLAS], [
-AC_PREREQ(2.50)
+AC_PREREQ([2.71])
 ax_blas_ok=no
 
 # Get fortran linker names of BLAS functions to check for.
