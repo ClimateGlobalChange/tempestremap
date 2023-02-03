@@ -1593,13 +1593,12 @@ void LinearRemapGeneralizedBarycentric(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-
-
+	
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
 	}
-
+	
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 4;
 
@@ -1611,199 +1610,451 @@ void LinearRemapGeneralizedBarycentric(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	//If there are no holes on the source mesh, use the (global) dual of the source.
+	
+	if(!DoesMeshHaveHoles(meshInput)){
+	
+		//Dual mesh
+		Mesh meshInputDual = meshInput;
+		
+		//Construct dual mesh
+		Dual(meshInputDual);
+		
+		//Reverse node array
+		meshInputDual.ConstructReverseNodeArray();	
+		
+		//Construct edge map
+		meshInputDual.ConstructEdgeMap();
+		
+		//kd-tree of dual mesh centers
+		kdtree * kdDual = kd_create(3);
+		
+		// Vector of centers of the source mesh
+		for (int i = 0; i < meshInputDual.faces.size(); i++){
 
-	//Dual mesh
-	Mesh meshInputDual = meshInput;
+			const Face & face = meshInputDual.faces[i];
 
-	//Construct dual mesh
-	Dual(meshInputDual);
-
-	//Reverse node array
-	meshInputDual.ConstructReverseNodeArray();
-
-	//Construct edge map
-	meshInputDual.ConstructEdgeMap();
-
-	//kd-tree of dual mesh centers
-    kdtree * kdTarget = kd_create(3);
-
-	// Vector of centers of the source mesh
-	for (int i = 0; i < meshInputDual.faces.size(); i++){
-
-		const Face & face = meshInputDual.faces[i];
-
-		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-
-		nodeCentroid = nodeCentroid.Normalized();
-
-		kd_insert3(
-			kdTarget,
-			nodeCentroid.x,
-			nodeCentroid.y,
-			nodeCentroid.z,
-			(void*)(&(meshInputDual.faces[i])));
-
-	}
-
-
-	// Loop through all target faces
-	for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
-
-		// Output every 1000 overlap elements
-		if (ixFirst % 1000 == 0) {
-			Announce("Element %i/%i", ixFirst, meshOutput.faces.size());
+			Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
+		
+			kd_insert3(
+				kdDual,
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshInputDual.faces[i])));
+		
+			
 		}
+		
+		// Loop through all target faces
+		for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
 
-		// This Face
-		const Face & faceFirst = meshOutput.faces[ixFirst];
-
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshOutput.faces.size());
+			}
+	
+			// This Face
+			const Face & faceFirst = meshOutput.faces[ixFirst];
+	
 			// Get node coordinates of each target face center
 			Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
 
 			nodeQ = nodeQ.Normalized();
 
-					//Get the dual mesh face whose center is nearest to the target face
+			//Get the dual mesh face whose center is nearest to the target face
 
-					kdres * kdresTarget =
-						kd_nearest3(
-							kdTarget,
-							nodeQ.x,
-							nodeQ.y,
-							nodeQ.z);
+			kdres * kdresTarget =
+				kd_nearest3(
+					kdDual,
+					nodeQ.x,
+					nodeQ.y,
+					nodeQ.z);
 
-					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+			Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
 
-					int iNearestFace = pFace - &(meshInputDual.faces[0]);
+			int iNearestFace = pFace - &(meshInputDual.faces[0]);
 
-					// Find triangle that contains nodeQ.
-					// This is the face whose local index is iFaceFinal
+			// Find triangle that contains nodeQ.
+			// This is the face whose local index is iFaceFinal
 
-					int iFaceFinal = 0;
+			int iFaceFinal = 0;
 
-					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
+			GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
+			
+			int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
+			
+			//Current dual mesh face
+			
+			Face faceDualFace = meshInputDual.faces[iFaceFinal];
+			
+			//Vector of nodes on current dual face
+			
+			NodeVector nodesDualFace;
+			
+			for (int i = 0; i < iEdges; i++){
+				
+				nodesDualFace.push_back(meshInputDual.nodes[faceDualFace[i]]);
+				
+			}
+			
+			//Vector of contributing weights
+			
+			std::vector<double> vecWeights(iEdges);
+			
+			//Compute generalized barycentric coordinates
+			
+			GeneralizedBarycentricCoordinates(nodeQ, nodesDualFace, vecWeights);	
+		
+			//Add weights to map
+			
+			for (int i = 0; i < iEdges; i++){
 
-					//Pre-compute all triangle areas and subareas
+				int iContributingFaceI = meshInputDual.faces[iFaceFinal][i];
 
-					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
+				smatMap(ixFirst, iContributingFaceI) = vecWeights[i];
+				
+			}
+			
+		}
+		
+	}
+	
+	else{
 
-					//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
-					std::vector<double> vecTriangleSubAreas(iEdges);
+		//kd-tree of dual mesh centers
+		kdtree * kdTarget = kd_create(3);
+    
+		//Vector of source face centers
+		NodeVector vecSourceCenterArray;
+    
+		//Vector of target face centers
+		NodeVector vecTargetCenterArray;
 
-					//Subtriangles without sample point as a vertex (m-1,m,m+1)
-					std::vector<double> vecTriangleAreas(iEdges);
+		// Vector of centers of the source mesh
+		for (int i = 0; i < meshInput.faces.size(); i++){
+	
+			const Face & face = meshInput.faces[i];
+	
+			Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+			
+			nodeCentroid = nodeCentroid.Normalized();
+			
+			vecSourceCenterArray.push_back(nodeCentroid);
+	
+				
+		}
+		
+		for (int i = 0; i < meshOutput.faces.size(); i++){
 
-					for (int m = 0; m < iEdges; m++){
+			const Face & face = meshOutput.faces[i];
 
-						Face faceTriangleM(3); //Triangle with vertices m-1,m,m+1
+			Node nodeCentroid = GetFaceCentroid(face, meshOutput.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
 
-						Face faceSubTriangleM(3); //Triangle with vertices q,m,m+1
-
-						faceTriangleM.SetNode(0,0);
-						faceTriangleM.SetNode(1,1);
-						faceTriangleM.SetNode(2,2);
-
-						faceSubTriangleM.SetNode(0,0);
-						faceSubTriangleM.SetNode(1,1);
-						faceSubTriangleM.SetNode(2,2);
-
-						NodeVector nodesTriangleM;
-
-						NodeVector nodesSubTriangleM;
-
-						Node nodeM(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].x,
-								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].y,
-								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].z);
-
-						//c++ doesn't like the modulo operator when the argument is negative
-
-						int iMMinusOne = m - 1;
-
-						if (m == 0){
-
-							iMMinusOne = iEdges - 1;
-
-						}
-
-
-						Node nodeMMinusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].x,
-										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].y,
-										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].z);
-
-						Node nodeMPlusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].x,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].y,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);
-
-						nodesTriangleM.push_back(nodeMMinusOne);
-						nodesTriangleM.push_back(nodeM);
-						nodesTriangleM.push_back(nodeMPlusOne);
-
-						nodesSubTriangleM.push_back(nodeQ);
-						nodesSubTriangleM.push_back(nodeM);
-						nodesSubTriangleM.push_back(nodeMPlusOne);
-
-						double dSubAreaM = CalculateFaceArea(faceSubTriangleM, nodesSubTriangleM);
-
-						vecTriangleSubAreas[m] = dSubAreaM;
-
-						double dTriangleAreaM = CalculateFaceArea(faceTriangleM, nodesTriangleM);
-
-						vecTriangleAreas[m] = dTriangleAreaM;
-
-
-					}
-
-					double dfacearea = CalculateFaceArea(meshInputDual.faces[iFaceFinal],meshInputDual.nodes);
-
-					std::vector<double> vecWeights(iEdges,1);
-
-					double dWeightTotal = 0;
-
-					//Double loop over all nodes of the face because each weight depends on all
-					//triangle subareas
-
-					for (int m = 0; m < iEdges; m++){
-
-						for (int l = 0; l < iEdges; l++){
-
-							int iLMinusOne = l - 1;
-
-								if (l == 0){
-
-									iLMinusOne = iEdges - 1;
-
-								}
-
-							if (l != m && l != iLMinusOne){
-
-
-								vecWeights[m] *= vecTriangleSubAreas[iLMinusOne]*vecTriangleSubAreas[l];
-
-							}
-
-						}
-
-						vecWeights[m] *= vecTriangleAreas[m];
-
-						dWeightTotal += vecWeights[m];
-
-					}
-
-					for (int m = 0; m < iEdges; m++){
-
-						vecWeights[m] /= dWeightTotal;
-
-					}
-
-					// Contribution of this quadrature point to the map
-					for (int i = 0; i < iEdges; i++){
-
-						int iContributingFaceI = meshInputDual.faces[iFaceFinal][i];
-
-						smatMap(ixFirst, iContributingFaceI) = vecWeights[i];
-
-					}
+			kd_insert3(
+				kdTarget,
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshOutput.faces[i])));
+			
+			vecTargetCenterArray.push_back(nodeCentroid);
+			
+		}
+		
+		std::set<int> setAllTargets;
+		
+		// Loop through all source faces
+		
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 source elements
+			if (ixFirst % 1000 == 0) {
+				
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+				
+			}
+			
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+			
+			//Find the maximum distance from the current source face center to its nodes
+			
+			double dMaxNodeDist = 0.0;
+			
+			Node faceFirstCenter = vecSourceCenterArray[ixFirst];
+			
+			int iEdges = faceFirst.edges.size();
+			
+			for (int i = 0; i < iEdges; i++){
+				
+				//Great circle distance is just the arccos of dot product
+				
+				Node nodeI = meshInput.nodes[faceFirst[i]];
+				
+				double dDistToNodeI = acos(DotProduct(nodeI, faceFirstCenter));
+				
+				if ( dDistToNodeI > dMaxNodeDist ){
+					
+					dMaxNodeDist = dDistToNodeI;
+					
 				}
-
+				
+			}
+			
+			//Find all the target face centers that are within a given distance of the given source face center
+			
+			/* find points closest to the origin and within distance radius */
+			//struct *presults;
+										 
+			struct kdres *presults = kd_nearest_range3(kdTarget,faceFirstCenter.x, faceFirstCenter.y, 
+													   faceFirstCenter.z, dMaxNodeDist+.0001);
+			
+										   
+			if( kd_res_size(presults) == 0 ){
+				
+				continue;
+				
+			}										   
+				   
+			//Nodes of the current face
+			
+			NodeVector nodesFaceFirst;
+			
+			for (int i = 0; i < faceFirst.edges.size(); i++){
+				
+				nodesFaceFirst.push_back(meshInput.nodes[faceFirst[i]]);
+				
+			}
+						
+			std::vector<int> vecTargetsInFace;
+			
+			while( !kd_res_end( presults ) ) {
+				
+				
+			    /* get the data and position of the current result item */
+			    Face * pFace = (Face *)kd_res_item_data( presults );
+			    
+			    int iNearestTarget = pFace - &(meshOutput.faces[0]);
+			    			    
+			    if(DoesFaceContainPoint(nodesFaceFirst, vecTargetCenterArray[iNearestTarget].x,
+										vecTargetCenterArray[iNearestTarget].y,vecTargetCenterArray[iNearestTarget].z)) {
+											
+					
+					if( setAllTargets.find(iNearestTarget) == setAllTargets.end() ){
+						
+						setAllTargets.insert(iNearestTarget);
+						vecTargetsInFace.push_back(iNearestTarget);
+						
+					}
+						
+				}
+								
+			    /* go to the next entry */
+			    kd_res_next( presults );
+			    
+			}
+			
+			
+			kd_res_free( presults );
+						
+			std::vector<std::vector<int>> vecContributingFaceI;
+			
+			std::vector<std::vector<double>> vecContributingWeights;
+												
+				
+			//Loop through all centers of the target faces in the given source face
+			for (int i = 0; i < vecTargetsInFace.size(); i++){
+				
+				vecContributingFaceI.clear();
+				vecContributingWeights.clear();
+				
+				//Current target face center
+				
+				Node nodeQ = vecTargetCenterArray[vecTargetsInFace[i]];
+			
+				std::vector<double> vecWeightsCurrentFace(iEdges);
+				
+				GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecWeightsCurrentFace);
+				
+				//loop through all nodes on source face
+				
+				for (int k = 0; k < iEdges; k++){
+					
+					//Global index of current node
+						
+					int iCurrentNode = meshInput.faces[ixFirst][k];
+					
+					//Number of nodes on local dual test face
+					
+					int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
+										
+					Face faceLocalDual(iEdgesTestK);
+					
+					NodeVector nodesLocalDual;
+					
+					
+					//Current source face node shared by one source face
+					if ( iEdgesTestK == 1){
+						
+						std::vector<double> vecLocalWeights;
+						std::vector<int> vecLocalContributingFaces;
+						
+						vecLocalWeights.push_back(vecWeightsCurrentFace[k]);
+						vecLocalContributingFaces.push_back(ixFirst);
+						
+						vecContributingWeights.push_back(vecLocalWeights);
+						vecContributingFaceI.push_back(vecLocalContributingFaces);
+												
+						
+					}
+					
+					//Current source node shared by two source faces
+					
+					else if (iEdgesTestK == 2){
+						
+						std::set<int>::const_iterator iterRevNodeI = meshInput.revnodearray[iCurrentNode].begin();
+						std::set<int>::const_iterator iterRevNodeII = meshInput.revnodearray[iCurrentNode].end();
+						
+						std::vector<double> vecLocalWeights;
+						std::vector<int> vecLocalContributingFaces;
+						
+						vecLocalContributingFaces.push_back(*iterRevNodeI);
+						vecLocalContributingFaces.push_back(*iterRevNodeII);
+						
+						vecLocalWeights.push_back(vecWeightsCurrentFace[k]*0.5);
+						vecLocalWeights.push_back(vecWeightsCurrentFace[k]*0.5);
+						
+						vecContributingFaceI.push_back(vecLocalContributingFaces);
+						vecContributingWeights.push_back(vecLocalWeights);
+						
+						
+					}
+					
+					//Local dual face has at least three edges
+					
+					else{
+												
+						//Construct local dual face
+						
+						Face faceLocalDual(iEdgesTestK);
+						
+						NodeVector nodesLocalDual;
+												
+						ConstructLocalDualFace(meshInput,vecSourceCenterArray,iCurrentNode,faceLocalDual,nodesLocalDual);
+										
+						//Put the dual face nodes in an ccw oriented vector
+				
+						NodeVector nodesLocalDualReordered;
+				
+						for (int j = 0; j < nodesLocalDual.size(); j++){
+							
+							nodesLocalDualReordered.push_back(vecSourceCenterArray[faceLocalDual[j]]);
+							
+						}
+						
+						std::vector<double> vecLocalWeights(iEdgesTestK);
+						std::vector<int> vecLocalContributingFaces(iEdgesTestK);
+						
+						
+						//If the local dual face around the current node contains the target, then quit
+						
+						if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
+							
+								vecContributingWeights.clear();
+								vecContributingFaceI.clear();
+						
+								GeneralizedBarycentricCoordinates(nodeQ, nodesLocalDualReordered, vecLocalWeights);
+						
+								for ( int m = 0; m < iEdgesTestK; m++){
+							
+									vecLocalContributingFaces[m] = faceLocalDual[m];
+									
+								}			
+							
+								vecContributingFaceI.push_back(vecLocalContributingFaces);
+								vecContributingWeights.push_back(vecLocalWeights);
+								
+								break;
+								
+						}
+						
+						else {
+							
+							//If the local dual face around the current node doesn't contain the target, 
+							//use simple average or barycentric coorindates depending on whether the dual face 
+							//contains the current node or not
+							
+							Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
+							
+							if (DoesFaceContainPoint(nodesLocalDualReordered, nodeCurrentNode.x, nodeCurrentNode.y, 
+													nodeCurrentNode.z)){
+								
+								//Compute generalized barycentric coordinate of current source face node wrt the local dual face
+							
+								GeneralizedBarycentricCoordinates(nodeCurrentNode, nodesLocalDualReordered, vecLocalWeights);
+								
+												
+								for ( int m = 0; m < iEdgesTestK; m++ ){
+							
+									vecLocalContributingFaces[m] = faceLocalDual[m];
+									
+									vecLocalWeights[m] *= vecWeightsCurrentFace[k];
+						
+								}
+								
+								vecContributingFaceI.push_back(vecLocalContributingFaces);
+								vecContributingWeights.push_back(vecLocalWeights);
+								
+							}
+							
+							
+							else {
+								
+								for ( int m = 0; m < iEdgesTestK; m++ ){
+									
+									vecLocalContributingFaces[m] = (faceLocalDual[m]);
+									
+									vecLocalWeights[m] = vecWeightsCurrentFace[k]*(1.0/iEdgesTestK);
+									
+								}
+								
+								vecContributingFaceI.push_back(vecLocalContributingFaces);
+								vecContributingWeights.push_back(vecLocalWeights);
+								
+							}
+							
+						}
+					
+					
+					}
+								
+				}
+				
+				//Add contributions to map
+				
+				for (int m = 0; m < vecContributingWeights.size(); m++){
+					
+					for (int j = 0; j < vecContributingWeights[m].size(); j++){
+												
+						int iContributingFace = vecContributingFaceI[m][j];
+						
+						smatMap(vecTargetsInFace[i],iContributingFace) += vecContributingWeights[m][j];
+						
+					}
+					
+				}
+					
+			}
+			
+		}
+	}
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2463,7 +2714,7 @@ void LinearRemapIntegratedBilinear(
 
 						}
 
-						TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
+						TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
 
 						vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
 						vecContributingFaceWeights.push_back(dCoeffs[1]);
@@ -2489,7 +2740,7 @@ void LinearRemapIntegratedBilinear(
 
 						}
 
-						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);
+						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs);
 
 						for (int i = 0; i < iEdges; i++){
 
@@ -2525,7 +2776,7 @@ void LinearRemapIntegratedBilinear(
 
 							if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
 
-								TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
+								TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
 
 								vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
 								vecContributingFaceWeights.push_back(dCoeffs[1]);
@@ -2574,13 +2825,13 @@ void LinearRemapIntegratedBilinear(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void LinearRemapBilinear(
+void LinearRemapBilinear(	
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-
+	
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -2597,197 +2848,492 @@ void LinearRemapBilinear(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	if (!DoesMeshHaveHoles(meshInput)) {
+		
+		Mesh meshInputDual = meshInput;
+		
+		//Construct dual mesh
+		std::cout << "\nCreating the dual mesh\n";
+		Dual(meshInputDual);
+			
+		//Construct edge map
+		
+		meshInputDual.ConstructEdgeMap();
+		
+		//kd-tree of dual mesh centers
+		
+	    kdtree * kdTarget = kd_create(3);
+	    
+		for (int i = 0; i < meshInputDual.faces.size(); i++){
 
-    std::cout << "\nCreating the dual mesh\n";
-    Mesh meshInputDual(meshInput);
+			const Face & face = meshInputDual.faces[i];
 
-	//Construct dual mesh
-	Dual(meshInputDual);
+			Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
 
-	//Construct edge map
-  meshInputDual.ConstructEdgeMap();
-
-	//kd-tree of dual mesh centers
-  kdtree * kdTarget = kd_create(3);
-
-	// Vector of centers of the source mesh
-	for (int i = 0; i < meshInputDual.faces.size(); i++){
-
-		const Face & face = meshInputDual.faces[i];
-
-		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-
-		nodeCentroid = nodeCentroid.Normalized();
-
-		kd_insert3(
-			kdTarget,
-			nodeCentroid.x,
-			nodeCentroid.y,
-			nodeCentroid.z,
-			(void*)(&(meshInputDual.faces[i])));
-
-	}
-
-  std::vector<double> vecContributingFaceWeights;
-
-	std::vector<int> vecContributingFaceI;
-
-		// Loop through all target faces
-	for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
-
-		// Output every 1000 overlap elements
-		if (ixFirst % 1000 == 0) {
-			Announce("Element %i/%i", ixFirst, meshOutput.faces.size());
-		}
-
-		// This Face
-		const Face & faceFirst = meshOutput.faces[ixFirst];
-
-		// Get node coordinates of each target face center
-		Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
-
-		nodeQ = nodeQ.Normalized();
-
-		//Get the dual mesh face whose center is nearest to the target face
-
-		kdres * kdresTarget =
-			kd_nearest3(
+			kd_insert3(
 				kdTarget,
-				nodeQ.x,
-				nodeQ.y,
-				nodeQ.z);
-
-		Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
-
-		int iNearestFace = pFace - &(meshInputDual.faces[0]);
-
-		// Find face that contains nodeQ.
-		// This is the face whose local index is iFaceFinal
-
-		int iFaceFinal = 0;
-
-		GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-
-		int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-
-		vecContributingFaceWeights.clear();
-
-		vecContributingFaceI.clear();
-
-		DataArray1D<double> dCoeffs(3);
-
-		double dCond = 0;
-
-		bool fConverged = false;
-
-		if( iEdges == 3 ){
-
-			NodeVector nodesP;
-
-			for (int i = 0; i < 3; i++){
-
-				Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-
-				nodesP.push_back(nodeI);
-
-			}
-
-			TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-
-			vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
-			vecContributingFaceWeights.push_back(dCoeffs[1]);
-			vecContributingFaceWeights.push_back(dCoeffs[2]);
-
-			for (int i = 0; i < iEdges; i++){
-
-				vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-
-			}
-
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshInputDual.faces[i])));
+			
 		}
-
-		else if ( iEdges == 4 ){
-
-			NodeVector nodesP;
-
-			for (int i = 0; i < 4; i++){
-
-				Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-
-				nodesP.push_back(nodeI);
-
+		
+		// Loop through all target faces
+		for (int ixFirst = 0; ixFirst < meshOutput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshOutput.faces.size());
 			}
-
-			NewtonQuadrilateral(nodeQ, nodesP, dCoeffs, fConverged);
-
+	
+			// This Face
+			const Face & faceFirst = meshOutput.faces[ixFirst];
+			
+			// Get node coordinates of each target face center
+			Node nodeQ = GetFaceCentroid(faceFirst,meshOutput.nodes);
+			
+			nodeQ = nodeQ.Normalized();
+					
+			//Get the dual mesh face whose center is nearest to the target face
+			
+			kdres * kdresTarget =
+				kd_nearest3(
+					kdTarget,
+					nodeQ.x,
+					nodeQ.y,
+					nodeQ.z);
+					
+			Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+	
+			int iNearestFace = pFace - &(meshInputDual.faces[0]);
+			
+			// Find face that contains nodeQ
+			// This is the face whose local index is iFaceFinal
+			
+			int iFaceFinal = 0;
+			
+			GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
+			
+			int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
+			
+			//NodeVector nodesCurrentFace(iEdges);
+			NodeVector nodesCurrentFace;
+			
 			for (int i = 0; i < iEdges; i++){
-
-				vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-
+				
+				nodesCurrentFace.push_back(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]]);
+				
 			}
-
-			vecContributingFaceWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
-			vecContributingFaceWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
-			vecContributingFaceWeights.push_back(dCoeffs[0]*dCoeffs[1]);
-			vecContributingFaceWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
-
-		}
-
-		else {
-			//Loop over the subtrianges until we find one that contains the sample point
-
-			int nSubTriangles = iEdges - 2;
-
-			for (int k = 0; k < nSubTriangles; k++) {
-
-				Node & node0 = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][0]];
-				Node & nodeKPlusOne = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+1]];
-				Node & nodeKPlusTwo = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+2]];
-
-				NodeVector nodesP;
-
-				nodesP.push_back(node0);
-				nodesP.push_back(nodeKPlusOne);
-				nodesP.push_back(nodeKPlusTwo);
-
-				if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
-
-					TriangleLineIntersection(nodeQ, nodesP, dCoeffs, dCond);
-
-					vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
-					vecContributingFaceWeights.push_back(dCoeffs[1]);
-					vecContributingFaceWeights.push_back(dCoeffs[2]);
-
-					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][0]);
-					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+1]);
-					vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+2]);
-
-					break;
-
+						
+			std::vector<double> vecContributingFaceWeights;
+		
+			std::vector<int> vecContributingFaceI;		
+				
+			DataArray1D<double> dCoeffs(3);
+			
+			BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
+			
+			// Contribution of each point to the map
+			for (int i = 0; i < vecContributingFaceI.size(); i++){
+				
+				if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
+								
+					_EXCEPTIONT("Non-monotone weight");
+								
 				}
-
-			}
-
+				
+				int iContributingFaceI = vecContributingFaceI[i];
+				
+				smatMap(ixFirst, iContributingFaceI) = vecContributingFaceWeights[i];
+				
+			}					
+											
 		}
+		
+	}
+	
+	else {
 
-		// Contribution of each point to the map
-		for (int i = 0; i < vecContributingFaceI.size(); i++){
+		//kd-tree of dual mesh centers
+		kdtree * kdTarget = kd_create(3);
+    
+		//Vector of source face centers
+		NodeVector vecSourceCenterArray;
+    
+		//Vector of target face centers
+		NodeVector vecTargetCenterArray;
 
-			if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
+		// Vector of centers of the source mesh
+		for (int i = 0; i < meshInput.faces.size(); i++){
+	
+			const Face & face = meshInput.faces[i];
+	
+			Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+			
+			nodeCentroid = nodeCentroid.Normalized();
+			
+			vecSourceCenterArray.push_back(nodeCentroid);
+	
+				
+		}
+		
+		for (int i = 0; i < meshOutput.faces.size(); i++){
 
-				_EXCEPTIONT("Non-monotone weight");
+			const Face & face = meshOutput.faces[i];
 
+			Node nodeCentroid = GetFaceCentroid(face, meshOutput.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
+
+			kd_insert3(
+				kdTarget,
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshOutput.faces[i])));
+			
+			vecTargetCenterArray.push_back(nodeCentroid);
+			
+		}		
+		
+		std::set<int> setAllTargets;
+		
+		// Loop through all source faces
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 			}
+			
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+			
+			//Find the maximum distance from the current source face center to its nodes
+			
+			double dMaxNodeDist = 0.0;
+			
+			Node faceFirstCenter = vecSourceCenterArray[ixFirst];
+			
+			int iEdges = faceFirst.edges.size();
+			
+			for (int i = 0; i < iEdges; i++){
+				
+				//Great circle distance is just the arccos of dot product
+				
+				Node nodeI = meshInput.nodes[faceFirst[i]];
+				
+				double dDistToNodeI = acos(DotProduct(nodeI, faceFirstCenter));
+				
+				if ( dDistToNodeI > dMaxNodeDist ){
+					
+					dMaxNodeDist = dDistToNodeI;
+					
+				}
+				
+			}
+			
+			//Find all the target face centers that are within a given distance of the given source face center
+			
+			/* find points closest to the origin and within distance radius */
+			//struct *presults;
+										 
+			struct kdres *presults = kd_nearest_range3(kdTarget,faceFirstCenter.x, faceFirstCenter.y, 
+													   faceFirstCenter.z, dMaxNodeDist+.0001);
+			
+										   
+			if( kd_res_size(presults) == 0 ){
+				
+				continue;
+				
+			}										   
+					   
+			//Nodes of the current face
+			
+			NodeVector nodesFaceFirst;
+			
+			for (int i = 0; i < faceFirst.edges.size(); i++){
+				
+				nodesFaceFirst.push_back(meshInput.nodes[faceFirst[i]]);
+				
+			}
+			
+			//set of target faces that have already been used.  This is necessry to avoid double
+			//counting of target face centers that lie on a source face edge/node
+			
+			std::vector<int> vecTargetsInFace;
+			
+			while( !kd_res_end( presults ) ) {
+				
+				
+			    /* get the data and position of the current result item */
+			    Face * pFace = (Face *)kd_res_item_data( presults );
+			    
+			    int iNearestTarget = pFace - &(meshOutput.faces[0]);
+			    			    
+			    if(DoesFaceContainPoint(nodesFaceFirst, vecTargetCenterArray[iNearestTarget].x,
+										vecTargetCenterArray[iNearestTarget].y,vecTargetCenterArray[iNearestTarget].z)) {
+										
+					if( setAllTargets.find(iNearestTarget) == setAllTargets.end() ){
+						
+						setAllTargets.insert(iNearestTarget);
+						vecTargetsInFace.push_back(iNearestTarget);
+						
+					}
+						
+				}
+								
+			    /* go to the next entry */
+			    kd_res_next( presults );
+			    
+			}
+			
+			kd_res_free( presults );
 
-			int iContributingFaceI = vecContributingFaceI[i];
+			//Loop through all centers of the target faces in the given source face
+			for (int i = 0; i < vecTargetsInFace.size(); i++){
+				
+				//These are the weights that are input into the spares matrix map
+				
+				std::vector<std::vector<int>> vecContributingFaceI;
+			
+				std::vector<std::vector<double>> vecContributingFaceWeights;
+				
+				//These are the temporary weights associated with each source face node.
+				//They are used if the current target face isn't in any of the local dual faces
+				
+				std::vector<std::vector<int>> vecLocalFacesTemp;
+				
+				std::vector<std::vector<double>> vecLocalWeightsTemp;
+				
+				//Current target face center
+				
+				Node nodeQ = vecTargetCenterArray[vecTargetsInFace[i]];
+				
+				//Bilinear weights of current target center wrt to nodes of current face
+			
+				std::vector<double> vecWeightsCurrentFace(iEdges);
+								
+				//Number of nodes we've visited
+				int iCountK = 0;
+				
+				//loop through all nodes on source face
+				
+				for (int k = 0; k < iEdges; k++){
+					
+					//Global index of current node
+						
+					int iCurrentNode = meshInput.faces[ixFirst][k];
+					
+					//Number of nodes on local dual test face
+					
+					int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
+										
+					Face faceLocalDual(iEdgesTestK);
+					
+					NodeVector nodesLocalDual;
+					
+					//Current source face node shared by one source face
+					if ( iEdgesTestK == 1){
+						
+						std::vector<double> vecLocalWeights;
+						std::vector<int> vecLocalContributingFaces;
+						
+						vecLocalWeights.push_back(1);
+						vecLocalContributingFaces.push_back(ixFirst);
+						
+						vecLocalWeightsTemp.push_back(vecLocalWeights);
+						vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+						
+						iCountK += 1;
 
-			smatMap(ixFirst, iContributingFaceI) = vecContributingFaceWeights[i];
-
+						
+					}
+					
+					//Current source node shared by two source faces
+					
+					else if (iEdgesTestK == 2){
+						
+						std::set<int>::const_iterator iterRevNodeI = meshInput.revnodearray[iCurrentNode].begin();
+						std::set<int>::const_iterator iterRevNodeII = meshInput.revnodearray[iCurrentNode].end();
+						
+						std::vector<double> vecLocalWeights;
+						std::vector<int> vecLocalContributingFaces;
+						
+						vecLocalContributingFaces.push_back(*iterRevNodeI);
+						vecLocalContributingFaces.push_back(*iterRevNodeII);
+						
+						vecLocalWeights.push_back(0.5);
+						vecLocalWeights.push_back(0.5);
+									
+						vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+						vecLocalWeightsTemp.push_back(vecLocalWeights);
+						
+						iCountK += 1;
+						
+						
+					}
+					
+					//Local dual face has at least three edges, i.e. current source node shared by more than 3 faces
+					
+					else{
+		
+						Face faceLocalDual(iEdgesTestK);
+						
+						NodeVector nodesLocalDual;
+												
+						ConstructLocalDualFace(meshInput,vecSourceCenterArray,iCurrentNode,faceLocalDual,nodesLocalDual);
+										
+						//Put the dual face nodes in an ccw oriented vector
+				
+						NodeVector nodesLocalDualReordered;
+				
+						for (int j = 0; j < nodesLocalDual.size(); j++){
+							
+							nodesLocalDualReordered.push_back(vecSourceCenterArray[faceLocalDual[j]]);
+							
+						}
+						
+						std::vector<double> vecLocalWeights;
+						std::vector<int> vecLocalContributingFaces;
+						
+						//If the local dual face around the current node contains the target, then quit
+						
+						if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
+							
+								vecContributingFaceWeights.clear();
+								vecContributingFaceI.clear();
+								
+								//Bilinear weights
+								
+								BilinearWeights(nodeQ,nodesLocalDualReordered,faceLocalDual,vecLocalWeights,vecLocalContributingFaces);
+								
+								vecContributingFaceI.push_back(vecLocalContributingFaces);
+								vecContributingFaceWeights.push_back(vecLocalWeights);								
+								
+								break;
+										
+						}
+						
+						else {
+							
+							//Add to count
+							iCountK += 1;
+							
+							//If the local dual face around the current node doesn't contain the target, 
+							//use simple average or bilinear depending on whether the dual face 
+							//contains the current node or not
+							
+							Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
+							
+							if (DoesFaceContainPoint(nodesLocalDualReordered, nodeCurrentNode.x, nodeCurrentNode.y, 
+													nodeCurrentNode.z)){
+								
+								//Compute bilinear weights of current source face node wrt the local dual face
+							
+								BilinearWeights(nodeCurrentNode,nodesLocalDualReordered,faceLocalDual,vecLocalWeights,
+												vecLocalContributingFaces);
+								
+								
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+								vecLocalWeightsTemp.push_back(vecLocalWeights);
+								
+							}
+							
+							else {
+								
+								vecLocalWeights.resize(iEdgesTestK);
+								vecLocalContributingFaces.resize(iEdgesTestK);
+								
+								for ( int m = 0; m < iEdgesTestK; m++ ){
+									
+									vecLocalContributingFaces[m] = (faceLocalDual[m]);
+									
+									vecLocalWeights[m] = (1.0/iEdgesTestK);
+									
+								}
+								
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+								vecLocalWeightsTemp.push_back(vecLocalWeights);	
+								
+								
+							}					
+							
+						}
+									
+					}
+					
+				}
+				
+				//If we've visited very node of the current source face, we need to do another interpolation
+				//from these nodes to the current target face center
+				
+				if( iCountK == iEdges ){
+					
+					//New vectors to store bilinear weights of current source face wrt current target face center
+					
+					std::vector<int> vecLocalFaces;
+					std::vector<double> vecLocalWeights;
+					
+					//New face with local ordering
+					Face faceCurrentLocal(iEdges);
+					
+					for ( int r = 0; r < iEdges; r++ ) {
+						
+						faceCurrentLocal.SetNode(r,r);
+						
+					}
+					
+					//compute bilinear weights
+					
+					BilinearWeights(nodeQ, nodesFaceFirst, faceCurrentLocal, vecLocalWeights, vecLocalFaces);
+					
+					for (int r = 0; r < vecLocalFaces.size(); r++) {
+							
+							for (int q = 0; q < vecLocalWeightsTemp[vecLocalFaces[r]].size(); q++ ){
+								
+								vecLocalWeightsTemp[vecLocalFaces[r]][q] *= vecLocalWeights[r];
+								
+							}
+							
+							//Push back to weight and face vectors
+							vecContributingFaceI.push_back(vecLocalFacesTemp[vecLocalFaces[r]]);
+							vecContributingFaceWeights.push_back(vecLocalWeightsTemp[vecLocalFaces[r]]);
+						
+					}
+				
+				}
+			
+				for (int m = 0; m < vecContributingFaceWeights.size(); m++){
+					
+					for (int j = 0; j < vecContributingFaceWeights[m].size(); j++){
+												
+						int iContributingFace = vecContributingFaceI[m][j];
+						
+						if( vecContributingFaceWeights[m][j] < 0 || vecContributingFaceWeights[m][j] > 1 ){
+								
+						_EXCEPTIONT("Non-monotone weight");
+								
+						}
+						
+						smatMap(vecTargetsInFace[i],iContributingFace) += vecContributingFaceWeights[m][j];
+						
+					}
+					
+				}
+			
+			}
+		
 		}
 
 	}
 
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 

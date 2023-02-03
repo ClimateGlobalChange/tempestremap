@@ -764,8 +764,7 @@ void MatVectorMult(const DataArray2D<double> & dMat,
 void TriangleLineIntersection(
 	Node & nodeQ,
 	NodeVector & nodesP,
-	DataArray1D<double> & dCoeffs,
-	double & dCond
+	DataArray1D<double> & dCoeffs
 ) {
 	
 	_ASSERT(dCoeffs.GetRows() == 3);
@@ -821,41 +820,41 @@ void TriangleLineIntersection(
 			&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 			
 
-	//A inverse column sums
-	for (int j = 0; j < 3; j++) {
+	////A inverse column sums
+	//for (int j = 0; j < 3; j++) {
 	
-		for (int k = 0; k < 3; k++) {
+		//for (int k = 0; k < 3; k++) {
 		
-			dColSumAInv[j] += fabs(dInterpMat(j,k));
+			//dColSumAInv[j] += fabs(dInterpMat(j,k));
 		
-		}
+		//}
 	
-	}
+	//}
 	
 	
-	//max column sums of A and A inverse
-	double dMaxColSumA = dColSumA[0];
+	////max column sums of A and A inverse
+	//double dMaxColSumA = dColSumA[0];
 	
-	double dMaxColSumAInv = dColSumAInv[0];
+	//double dMaxColSumAInv = dColSumAInv[0];
 	
-	for (int k = 1; k < 3; k++) {
+	//for (int k = 1; k < 3; k++) {
 		
-		if (dColSumA[k] > dMaxColSumA) {
-			dMaxColSumA = dColSumA[k];
-		}
-		if (dColSumAInv[k] > dMaxColSumAInv) {
-			dMaxColSumAInv = dColSumAInv[k];
-		}
-	}		
+		//if (dColSumA[k] > dMaxColSumA) {
+			//dMaxColSumA = dColSumA[k];
+		//}
+		//if (dColSumAInv[k] > dMaxColSumAInv) {
+			//dMaxColSumAInv = dColSumAInv[k];
+		//}
+	//}		
 	
-	dCond = dMaxColSumAInv * dMaxColSumA;
+	//dCond = dMaxColSumAInv * dMaxColSumA;
 		
-	if (info < 0) {
-		_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
-	}
-	if (info > 0) {
-		Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
-	}
+	//if (info < 0) {
+		//_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
+	//}
+	//if (info > 0) {
+		//Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
+	//}
 	
 	//Set right hand side of linear system
 	
@@ -877,13 +876,12 @@ void TriangleLineIntersection(
 void NewtonQuadrilateral(
 	Node & nodeQ,
 	NodeVector & nodesP,
-	DataArray1D<double> & dCoeffs,
-	bool & fConverged
+	DataArray1D<double> & dCoeffs
 ) {
 	
 	_ASSERT(dCoeffs.GetRows() == 3);
 	
-	int iMaxIterations = 100;
+	int iMaxIterations = 150;
 	
 	//This algorithm is essentially the one that is used in ESMF
 	
@@ -930,9 +928,9 @@ void NewtonQuadrilateral(
 		F[2] = dA*dB*A[2] + dA*B[2] + dB*C[2] + dC*D[2] + E[2];
 		
 	    // If we're close enough to 0.0 then exit
-		if (F[0]*F[0]+F[1]*F[1]+F[2]*F[2] < 1.0E-15) {
+		if (F[0]*F[0]+F[1]*F[1]+F[2]*F[2] < 1.0E-31) {
 			
-			fConverged = true;
+			//fConverged = true;
 			break;
 			
 		}
@@ -1695,6 +1693,296 @@ void InvertFitArray_LeastSquares(
 		dFitArrayPlus(i,j) *= dFitWeights[i];
 	}
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void GeneralizedBarycentricCoordinates(
+	Node & nodeQ,
+	NodeVector & nodesFaceI,
+	std::vector<double> & vecWeights
+) {
+			
+		int iEdges = nodesFaceI.size();
+		
+		for (int i = 0; i < iEdges; i++){
+						
+			Node nodeI = nodesFaceI[i];
+			
+			Node nodeDiff = nodeI - nodeQ;
+			
+			double dMagNodeDiff = nodeDiff.Magnitude();	
+			
+			if ( dMagNodeDiff < 1e-10 ){
+
+				for (int j = 0; j < iEdges; j++){
+					
+					if (j == i){
+						
+						vecWeights[j] = 1;
+						
+					}
+					else {
+						
+						vecWeights[j] = 0;
+						
+					}
+					
+				}
+				
+				return;
+				
+			}
+			
+		}
+		
+	
+		//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
+		std::vector<double> vecTriangleSubAreas(iEdges);
+		
+		//Subtriangles without sample point as a vertex (m-1,m,m+1)
+		std::vector<double> vecTriangleAreas(iEdges);
+		
+		//Initialize weights to one
+		
+		for (int i = 0; i < iEdges; i++){
+			
+			vecWeights[i] = 1.0;
+			
+		}
+		
+		for (int m = 0; m < iEdges; m++){
+			
+			Face faceTriangleM(3); //Triangle with vertices m-1,m,m+1
+			
+			Face faceSubTriangleM(3); //Triangle with vertices q,m,m+1
+			
+			faceTriangleM.SetNode(0,0);
+			faceTriangleM.SetNode(1,1);
+			faceTriangleM.SetNode(2,2);
+			
+			faceSubTriangleM.SetNode(0,0);
+			faceSubTriangleM.SetNode(1,1);
+			faceSubTriangleM.SetNode(2,2);
+			
+			NodeVector nodesTriangleM;
+			
+			NodeVector nodesSubTriangleM;
+			
+			Node nodeM = nodesFaceI[m];
+			
+			//c++ doesn't like the modulo operator when the argument is negative
+			
+			int iMMinusOne = m - 1;
+			
+			if (m == 0){
+				
+				iMMinusOne = iEdges - 1;
+				
+			}
+			
+			Node nodeMMinusOne = nodesFaceI[iMMinusOne];
+			
+			Node nodeMPlusOne = nodesFaceI[(m+1)%iEdges];
+			
+			nodesTriangleM.push_back(nodeMMinusOne);
+			nodesTriangleM.push_back(nodeM);
+			nodesTriangleM.push_back(nodeMPlusOne);
+			
+			nodesSubTriangleM.push_back(nodeQ);
+			nodesSubTriangleM.push_back(nodeM);
+			nodesSubTriangleM.push_back(nodeMPlusOne);
+			
+			double dSubAreaM = CalculateFaceArea(faceSubTriangleM, nodesSubTriangleM);
+			
+			vecTriangleSubAreas[m] = dSubAreaM;
+			
+			double dTriangleAreaM = CalculateFaceArea(faceTriangleM, nodesTriangleM);
+			
+			vecTriangleAreas[m] = dTriangleAreaM;	
+			
+		}
+		
+		double dWeightTotal = 0;
+		
+		//Double loop over all nodes of the face because each weight depends on all
+		//triangle subareas
+		
+		for (int m = 0; m < iEdges; m++){
+			
+			for (int l = 0; l < iEdges; l++){
+				
+				int iLMinusOne = l - 1;
+			
+					if (l == 0){
+				
+						iLMinusOne = iEdges - 1;
+				
+					}
+				
+				if (l != m && l != iLMinusOne){
+					
+					
+					vecWeights[m] *= vecTriangleSubAreas[iLMinusOne]*vecTriangleSubAreas[l];
+					
+				}
+			
+			}
+			
+			vecWeights[m] *= vecTriangleAreas[m];
+			
+			dWeightTotal += vecWeights[m];
+			
+		}
+				
+		for (int m = 0; m < iEdges; m++){
+			
+			vecWeights[m] /= dWeightTotal;
+			
+		}
+	
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void BilinearWeights(
+	Node & nodeQ,
+	NodeVector & nodesFaceI,
+	Face & faceFaceI,
+	std::vector<double> & vecWeights,
+	std::vector<int> & vecContributingFaces
+) {
+	
+	DataArray1D<double> dCoeffs(3);
+		
+	int iEdges = nodesFaceI.size();
+	
+	for (int i = 0; i < iEdges; i++){
+						
+			Node nodeI = nodesFaceI[i];
+			
+			Node nodeDiff = nodeI - nodeQ;
+			
+			double dMagNodeDiff = nodeDiff.Magnitude();	
+			
+			if ( dMagNodeDiff < 1e-12 ){
+				
+				for (int j = 0; j < iEdges; j++){
+					
+					vecContributingFaces.push_back(faceFaceI[j]);
+					
+					if (j == i){
+						
+						vecWeights.push_back(1);
+						
+					}
+					else {
+						
+						vecWeights.push_back(0);
+						
+					}
+					
+				}
+				
+				return;
+				
+			}
+			
+		}	
+	
+	
+	if( iEdges == 3 ){
+		
+		NodeVector nodesP;
+		
+		for (int i = 0; i < 3; i++){
+			
+			Node nodeI = nodesFaceI[i];
+			
+			nodesP.push_back(nodeI);
+							
+		}
+		
+		TriangleLineIntersection(nodeQ, nodesFaceI, dCoeffs);
+			
+		vecWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
+		vecWeights.push_back(dCoeffs[1]);
+		vecWeights.push_back(dCoeffs[2]);
+		
+		for (int i = 0; i < iEdges; i++){
+			
+			vecContributingFaces.push_back(faceFaceI[i]);
+			
+		}
+		
+	}
+	
+	else if ( iEdges == 4 ){
+								
+		NodeVector nodesP;
+		
+		for (int i = 0; i < 4; i++){
+			
+			Node nodeI = nodesFaceI[i];
+			
+			nodesP.push_back(nodeI);
+							
+		}
+								
+		NewtonQuadrilateral(nodeQ, nodesP, dCoeffs);			
+			
+		for (int i = 0; i < iEdges; i++){
+			
+			vecContributingFaces.push_back(faceFaceI[i]);
+				
+		}
+		
+		vecWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
+		vecWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
+		vecWeights.push_back(dCoeffs[0]*dCoeffs[1]);
+		vecWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
+		
+	}
+	
+	else {				
+		//Loop over the subtriangles until we find one that contains the sample point
+					
+		int nSubTriangles = iEdges - 2;
+						
+		for (int k = 0; k < nSubTriangles; k++) {
+
+			Node & node0 = nodesFaceI[0];
+			Node & nodeKPlusOne = nodesFaceI[k+1];
+			Node & nodeKPlusTwo = nodesFaceI[k+2];
+			
+			NodeVector nodesP;
+											
+			nodesP.push_back(node0);
+			nodesP.push_back(nodeKPlusOne);
+			nodesP.push_back(nodeKPlusTwo);
+			
+			
+			if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
+								
+				TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
+									
+				vecWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
+				vecWeights.push_back(dCoeffs[1]);
+				vecWeights.push_back(dCoeffs[2]);
+								
+				vecContributingFaces.push_back(faceFaceI[0]);
+				vecContributingFaces.push_back(faceFaceI[k+1]);
+				vecContributingFaces.push_back(faceFaceI[k+2]);
+													
+				break;
+				
+			}		
+			
+		}
+		
+	}
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1142,6 +1142,18 @@ void Dual(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Construct the local dual face around a given node
+///	</summary>
+void ConstructLocalDualFace(
+	const Mesh & mesh,
+	NodeVector & meshCenters,
+	int & iNodeX,
+	Face & faceLocalDual,
+	NodeVector & nodesFaceLocal
+);
+
+///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
 ///		Find the maximum edge length of an element.
@@ -1172,6 +1184,13 @@ Real CalculateFaceAreaTriQuadratureSplit(
 	const NodeVector & nodes,
 	int & nOrder
 );
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Determine whether the mesh has holes.
+///	</summary>
+bool DoesMeshHaveHoles(const Mesh & meshInput);
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -3232,3 +3232,143 @@ void Dual(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void ConstructLocalDualFace(
+	const Mesh & mesh,
+	NodeVector & meshCenters,
+	int & iNodeX,
+	Face & faceLocalDual,
+	NodeVector & nodesFaceLocal
+) {
+		
+	std::set<int>::const_iterator iterRevNode = mesh.revnodearray[iNodeX].begin();
+	
+	for (; iterRevNode != mesh.revnodearray[iNodeX].end(); iterRevNode++) {
+		
+		Node node;
+		
+		for (int j = 0; j < mesh.faces[*iterRevNode].edges.size(); j++){
+		
+			node.x += mesh.nodes[mesh.faces[*iterRevNode][j]].x;
+			node.y += mesh.nodes[mesh.faces[*iterRevNode][j]].y;
+			node.z += mesh.nodes[mesh.faces[*iterRevNode][j]].z;
+			
+		}
+		
+		node.x /= static_cast<double>(mesh.faces[*iterRevNode].edges.size());
+		node.y /= static_cast<double>(mesh.faces[*iterRevNode].edges.size());
+		node.z /= static_cast<double>(mesh.faces[*iterRevNode].edges.size());
+
+		double dMag = node.Magnitude();
+
+		node.x /= dMag;
+		node.y /= dMag;
+		node.z /= dMag;
+
+		nodesFaceLocal.push_back(node);
+		
+		
+	}
+
+	const int nEdges = mesh.revnodearray[iNodeX].size();
+	
+	
+	//Face face(mesh.revnodearray[iNodeX].size());
+	Face faceTemp(mesh.revnodearray[iNodeX].size());
+
+	int ixNode = 0;
+	std::set<int>::const_iterator iter = mesh.revnodearray[iNodeX].begin();
+	for (; iter != mesh.revnodearray[iNodeX].end(); iter++) {
+		faceTemp.SetNode(ixNode, *iter);
+		ixNode++;
+	}
+
+	// Reorient Faces
+	Node nodeCentral = mesh.nodes[iNodeX];
+	
+	Node node0 = meshCenters[faceTemp[0]] - nodeCentral;
+
+	Node nodeCross = CrossProduct(meshCenters[faceTemp[0]], nodeCentral);
+	
+	double dNode0Mag = node0.Magnitude();
+
+	// Determine the angles about the central Node of each Face Node
+	std::vector<double> dAngles;
+	dAngles.resize(faceTemp.edges.size());
+	dAngles[0] = 0.0;
+
+	for (int j = 1; j < nEdges; j++) {
+		Node nodeDiff = meshCenters[faceTemp[j]] - nodeCentral;
+		double dNodeDiffMag = nodeDiff.Magnitude();
+
+		double dSide = DotProduct(nodeCross, nodeDiff);
+
+		double dDotNorm =
+			DotProduct(node0, nodeDiff) / (dNode0Mag * dNodeDiffMag);
+
+		double dAngle;
+		if (dDotNorm > 1.0) {
+			dDotNorm = 1.0;
+		}
+
+		dAngles[j] = acos(dDotNorm);
+
+		if (dSide > 0.0) {
+			dAngles[j] = - dAngles[j] + 2.0 * M_PI;
+		}
+	}
+
+	// Orient each Face by putting Nodes in order of increasing angle
+	double dCurrentAngle = 0.0;
+	faceLocalDual.SetNode(0, faceTemp[0]);
+	for (int j = 1; j < nEdges; j++) {
+		int ixNextNode = 1;
+		double dNextAngle = 2.0 * M_PI;
+
+		for (int k = 1; k < nEdges; k++) {
+			if ((dAngles[k] > dCurrentAngle) && (dAngles[k] < dNextAngle)) {
+				ixNextNode = k;
+				dNextAngle = dAngles[k];
+			}
+		}
+
+		faceLocalDual.SetNode(j, faceTemp[ixNextNode]);
+		dCurrentAngle = dNextAngle;
+	}
+
+
+
+}
+///////////////////////////////////////////////////////////////////////////////
+
+bool DoesMeshHaveHoles(const Mesh & meshInput) {
+	
+	if (meshInput.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
+	}
+	
+	//Loop over source mesh and check
+	for (int i = 0; i < meshInput.faces.size(); i++){
+		
+		const Face & faceCurrent = meshInput.faces[i];
+		
+		for (int k = 0; k < faceCurrent.edges.size(); k++){
+			
+			const FacePair & facepair =
+				meshInput.edgemap.find(faceCurrent.edges[k])->second;
+
+			if(facepair[0] == InvalidFace || facepair[1] == InvalidFace){
+				
+				return true;
+				
+			}
+			
+		}
+		
+	}
+	
+	return false;
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
