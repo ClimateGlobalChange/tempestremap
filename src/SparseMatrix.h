@@ -145,6 +145,26 @@ public:
 		}
 	}
 
+	///	<summary>
+	///		Normalize the rows of the sparse matrix (row sums equal 1).
+	///	</summary>
+	void NormalizeRows() {
+
+		if (m_nRows < 1) {
+			return;
+		}
+
+		DataArray1D<DataType> dRowSums(m_nRows);
+
+		for (SparseMapIterator iter = m_mapEntries.begin(); iter != m_mapEntries.end(); iter++) {
+			dRowSums[iter->first.first] += iter->second;
+		}
+
+		for (SparseMapIterator iter = m_mapEntries.begin(); iter != m_mapEntries.end(); iter++) {
+			iter->second /= dRowSums[iter->first.first];
+		}
+	}
+
 public:
 	///	<summary>
 	///		Apply the sparse matrix to a DataArray1D.
