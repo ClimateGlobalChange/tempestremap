@@ -115,7 +115,7 @@ fi
 # ax_blas_ok to yes, and execute ACTION-IF-FOUND.  On failure, set ax_blas_ok
 # to no and execute ACTION-IF-NOT-FOUND.
 AC_DEFUN([_AX_BLAS], [
-AC_PREREQ([2.71])
+AC_PREREQ([2.69])
 ax_blas_ok=no
 
 # Get fortran linker names of BLAS functions to check for.
