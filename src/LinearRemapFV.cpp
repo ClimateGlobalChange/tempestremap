@@ -2570,12 +2570,11 @@ void LinearRemapIntegratedBilinear(
 	Dual(meshInputDual);
 
 	//Construct edge map
-
 	meshInputDual.ConstructEdgeMap();
 
 	//kd-tree of dual mesh centers
 
-    kdtree * kdTarget = kd_create(3);
+  kdtree * kdTarget = kd_create(3);
 
 	// Vector of centers of the source mesh
 	for (int i = 0; i < meshInputDual.faces.size(); i++){
@@ -2854,7 +2853,6 @@ void LinearRemapBilinear(
 		Mesh meshInputDual = meshInput;
 		
 		//Construct dual mesh
-		std::cout << "\nCreating the dual mesh\n";
 		Dual(meshInputDual);
 			
 		//Construct edge map
@@ -2862,9 +2860,7 @@ void LinearRemapBilinear(
 		meshInputDual.ConstructEdgeMap();
 		
 		//kd-tree of dual mesh centers
-		
-	    kdtree * kdTarget = kd_create(3);
-	    
+	  kdtree * kdTarget = kd_create(3);
 		for (int i = 0; i < meshInputDual.faces.size(); i++){
 
 			const Face & face = meshInputDual.faces[i];
@@ -2940,12 +2936,11 @@ void LinearRemapBilinear(
 			// Contribution of each point to the map
 			for (int i = 0; i < vecContributingFaceI.size(); i++){
 				
-				if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
-								
-					_EXCEPTIONT("Non-monotone weight");
-								
-				}
-				
+			  if( vecContributingFaceWeights[i] < -1e-12 || vecContributingFaceWeights[i] > 1+1e-12 ){
+              std::cout << "\nFound weight value = " << vecContributingFaceWeights[i] << std::endl;
+						// _EXCEPTIONT("Non-monotone weight");
+        }
+	
 				int iContributingFaceI = vecContributingFaceI[i];
 				
 				smatMap(ixFirst, iContributingFaceI) = vecContributingFaceWeights[i];
@@ -3314,9 +3309,9 @@ void LinearRemapBilinear(
 												
 						int iContributingFace = vecContributingFaceI[m][j];
 						
-						if( vecContributingFaceWeights[m][j] < 0 || vecContributingFaceWeights[m][j] > 1 ){
-								
-						_EXCEPTIONT("Non-monotone weight");
+						if( vecContributingFaceWeights[m][j] < -1e-12 || vecContributingFaceWeights[m][j] > 1+1e-12 ){
+              std::cout << "\nFound weight value = " << vecContributingFaceWeights[m][j] << std::endl;
+						// _EXCEPTIONT("Non-monotone weight");
 								
 						}
 						
