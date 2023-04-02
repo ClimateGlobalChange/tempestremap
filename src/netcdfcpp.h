@@ -47,7 +47,7 @@ public:
 		FileMode = ReadOnly,
 		size_t *bufrsizeptr = NULL,     // optional tuning parameters
 		size_t initialsize = 0,
-		FileFormat = Classic
+		FileFormat = Netcdf4
 	);
 
 	NcBool is_valid( void ) const;      // opened OK in ctr, still valid
