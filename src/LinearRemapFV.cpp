@@ -2938,7 +2938,7 @@ void LinearRemapBilinear(
 				
 			  if( vecContributingFaceWeights[i] < -1e-12 || vecContributingFaceWeights[i] > 1+1e-12 ){
               std::cout << "\nFound weight value = " << vecContributingFaceWeights[i] << std::endl;
-						// _EXCEPTIONT("Non-monotone weight");
+						 _EXCEPTIONT("Non-monotone weight");
         }
 	
 				int iContributingFaceI = vecContributingFaceI[i];
@@ -3311,7 +3311,7 @@ void LinearRemapBilinear(
 						
 						if( vecContributingFaceWeights[m][j] < -1e-12 || vecContributingFaceWeights[m][j] > 1+1e-12 ){
               std::cout << "\nFound weight value = " << vecContributingFaceWeights[m][j] << std::endl;
-						// _EXCEPTIONT("Non-monotone weight");
+						 _EXCEPTIONT("Non-monotone weight");
 								
 						}
 						
