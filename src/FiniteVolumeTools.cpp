@@ -1866,7 +1866,7 @@ void BilinearWeights(
 			
 			double dMagNodeDiff = nodeDiff.Magnitude();	
 			
-			if ( dMagNodeDiff < 1e-12 ){
+			if ( dMagNodeDiff < 1e-8 ){
 				
 				for (int j = 0; j < iEdges; j++){
 					
