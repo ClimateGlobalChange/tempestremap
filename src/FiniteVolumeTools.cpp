@@ -411,19 +411,9 @@ bool DoesFaceContainPoint(
 
 ){
 	
-	//Convert sample point to lat/lon coordinates
-	
-	double dLonRad0 = 0.0;
-	double dLatRad0 = 0.0;
-	
-	XYZtoRLL_Rad(dX,dY,dZ,dLonRad0,dLatRad0);
-	
 	int iEdges = mesh.faces[iFace].edges.size();
 	
-	NodeVector nodesPlane;
-	
-	double dCenterX = 0;
-	double dCenterY = 0;
+	NodeVector nodes;
 	
 	// Project face nodes onto plane tangent to the sphere at the sample point whose 
 	// coordinates are dX, dY, dZ
@@ -431,72 +421,10 @@ bool DoesFaceContainPoint(
 		
 		Node nodeCurrent = mesh.nodes[mesh.faces[iFace][i]];
 		
-		double dLonRad = 0.0;
-		double dLatRad = 0.0;
-		
-		//Convert to lat/lon coordinates
-		
-		XYZtoRLL_Rad(nodeCurrent.x,nodeCurrent.y,nodeCurrent.z,dLonRad,dLatRad);
-		
-		//Project on tangent plane at sample point
-		
-		double dGX = 0.0;
-		double dGY = 0.0;
-		
-		GnomonicProjection(dLonRad0,dLatRad0,dLonRad,dLatRad,dGX,dGY);
-		
-		Node nodeI(dGX,dGY,0.0);
-		
-		nodesPlane.push_back(nodeI);
-		
-		//add contributions to planar face centroid
-		dCenterX += dGX;
-		dCenterY += dGY;
-		
+		nodes.push_back(nodeCurrent);
 	}
 	
-	//Compute coordinates of planar face centroid and turn it into a Node
-	
-	dCenterX /= iEdges;
-	dCenterY /= iEdges;
-		
-	Node nodeCenter(dCenterX,dCenterY,0);
-	
-	//loop over all edges
-	for (int i = 0; i < iEdges; i++){
-		
-		Node nodeI = nodesPlane[i];
-		
-		Node nodeIPlusOne = nodesPlane[(i+1)%iEdges];
-		
-		Node nodeEdge(nodeIPlusOne.x - nodeI.x,
-					  nodeIPlusOne.y - nodeI.y,
-					  0.0);
-		
-		Node nodeEdgeNormal(-nodeEdge.y, nodeEdge.x, 0.0);
-		
-		
-		Node nodeCenterMinusI(nodeCenter.x - nodeI.x,
-							  nodeCenter.y - nodeI.y,
-							  0.0);
-		
-		//This is the projected sampled point (whose coordinates are zero in the gnomonic plane)
-		//minus nodeI
-						  
-		Node nodeQ(-nodeI.x,-nodeI.y,0.0);
-					
-		//If the signs of the dot products are different, than the sample point is outside the polygon		  
-		
-		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0 && DotProduct(nodeQ,nodeEdgeNormal) < 0) ||
-			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0 && DotProduct(nodeQ,nodeEdgeNormal) > 0)){
-				
-				return false;
-				
-		}
-		
-	}
-	
-	return true;
+	return DoesFaceContainPoint(nodes, dX, dY, dZ);
 	
 }
 
@@ -510,89 +438,44 @@ bool DoesFaceContainPoint(
 
 ){
 	
-	//Convert sample point to lat/lon coordinates
-	
-	double dLonRad0 = 0.0;
-	double dLatRad0 = 0.0;
-	
-	XYZtoRLL_Rad(dX,dY,dZ,dLonRad0,dLatRad0);
+	//project nodesP to gnomonic plane tangent at dX, dY, dZ
+    // dX, dY, dZ is a point on unit sphere
 	
 	int iEdges = nodesP.size();
 	
-	NodeVector nodesPlane;
+	Node T(dX, dY, dZ);
 	
-	double dCenterX = 0;
-	double dCenterY = 0;
+	NodeVector nP; // these nodes will be on plane tangent at dX, dY, dZ (the gnomonic plane)
 	
-	// Project face nodes onto plane tangent to the sphere at the sample point whose 
-	// coordinates are dX, dY, dZ
+	// Project face nodes onto plane tangent to the sphere at T
+	// T is on unit sphere
 	for (int i = 0; i < iEdges; i++){
 		
-		Node nodeCurrent = nodesP[i];
+		Node N = nodesP[i];
 		
-		double dLonRad = 0.0;
-		double dLatRad = 0.0;
+		Node G;
 		
-		//Convert to lat/lon coordinates
+		SimpleGnomonicProjection(N.x, N.y, N.z, T.x, T.y, T.z, G.x, G.y, G.z);
 		
-		XYZtoRLL_Rad(nodeCurrent.x,nodeCurrent.y,nodeCurrent.z,dLonRad,dLatRad);
-		
-		//Project on tangent plane at sample point
-		
-		double dGX = 0.0;
-		double dGY = 0.0;
-		
-		GnomonicProjection(dLonRad0,dLatRad0,dLonRad,dLatRad,dGX,dGY);
-		
-		Node nodeI(dGX,dGY,0.0);
-		
-		nodesPlane.push_back(nodeI);
-		
-		//add contributions to planar face centroid
-		dCenterX += dGX;
-		dCenterY += dGY;
+		nP.push_back(G);
 		
 	}
 	
-	//Compute coordinates of planar face centroid and turn it into a Node
-	
-	dCenterX /= iEdges;
-	dCenterY /= iEdges;
-		
-	Node nodeCenter(dCenterX,dCenterY,0);
-	
-	//loop over all edges
-	for (int i = 0; i < iEdges; i++){
-		
-		Node nodeI = nodesPlane[i];
-		
-		Node nodeIPlusOne = nodesPlane[(i+1)%iEdges];
-		
-		Node nodeEdge(nodeIPlusOne.x - nodeI.x,
-					  nodeIPlusOne.y - nodeI.y,
-					  0.0);
-		
-		Node nodeEdgeNormal(-nodeEdge.y, nodeEdge.x, 0.0);
-		
-		
-		Node nodeCenterMinusI(nodeCenter.x - nodeI.x,
-							  nodeCenter.y - nodeI.y,
-							  0.0);
-		
-		//This is the projected sampled point (whose coordinates are zero in the gnomonic plane)
-		//minus nodeI
-						  
-		Node nodeQ(-nodeI.x,-nodeI.y,0.0);
-					
-		//If the signs of the dot products are different, than the sample point is outside the polygon		  
-		
-		if((DotProduct(nodeCenterMinusI,nodeEdgeNormal) > 0.0 && DotProduct(nodeQ,nodeEdgeNormal) < 0.0) ||
-			(DotProduct(nodeCenterMinusI,nodeEdgeNormal) < 0.0 && DotProduct(nodeQ,nodeEdgeNormal) > 0.0)){
-				
-				return false;
-				
-		}
-		
+	// first determine orientation of polygon nP; plane is perpendicular to vector T
+	Node normal1 = CrossProduct(nP[1] - nP[0], nP[2] - nP[1]);
+	double orientation = DotProduct (T, normal1);
+	_ASSERT(orientation != 0.);
+	// assume that the polygon is convex
+	// also, we already verified that the point T is not close to any of the points nP
+	for (int i = 0; i< iEdges; i++)
+	{
+	    Node N = nodesP[i];
+	    int nextI = (i+1)%iEdges;
+	    Node N1 = nodesP[nextI];
+	    Node normal = CrossProduct(N - T, N1 - N);
+	    double orient = DotProduct (T, normal);
+	    if (orient * orientation < 0)
+	        return false;
 	}
 	
 	return true;
@@ -1866,7 +1749,7 @@ void BilinearWeights(
 			
 			double dMagNodeDiff = nodeDiff.Magnitude();	
 			
-			if ( dMagNodeDiff < 1e-8 ){
+			if ( dMagNodeDiff < 1e-12 ){
 				
 				for (int j = 0; j < iEdges; j++){
 					
