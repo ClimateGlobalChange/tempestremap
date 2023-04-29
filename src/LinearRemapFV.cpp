@@ -1723,6 +1723,8 @@ void LinearRemapGeneralizedBarycentric(
 		
 	}
 	
+	//If the source mesh has holes, use local dual faces
+	
 	else{
 
 		//kd-tree of dual mesh centers
@@ -2848,6 +2850,8 @@ void LinearRemapBilinear(
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
 	
+	//If there are no holes on the source mesh, use the (global) dual of the source.
+	
 	if (!DoesMeshHaveHoles(meshInput)) {
 		
 		Mesh meshInputDual = meshInput;
@@ -2950,6 +2954,8 @@ void LinearRemapBilinear(
 		}
 		
 	}
+	
+	//If the source mesh has holes, use local dual faces
 	
 	else {
 

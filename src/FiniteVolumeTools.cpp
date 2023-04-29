@@ -695,49 +695,54 @@ void TriangleLineIntersection(
 	
 	DataArray1D<double> dColSumAInv(3);
 	
+	//LU factorization
 	dgetrf_(&m, &n, &(dInterpMat(0,0)),
 			&lda, &(iPIV[0]), &info);
 
-		
+	//Use LU factorization to find the inverse
 	dgetri_(&n, &(dInterpMat(0,0)),
 			&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 			
-
-	////A inverse column sums
-	//for (int j = 0; j < 3; j++) {
+	if (info < 0) {
+		_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
+	}
+	if (info > 0) {
+		Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
+	}
 	
-		//for (int k = 0; k < 3; k++) {
+	//A inverse column sums
+	for (int j = 0; j < 3; j++) {
+	
+		for (int k = 0; k < 3; k++) {
 		
-			//dColSumAInv[j] += fabs(dInterpMat(j,k));
+			dColSumAInv[j] += fabs(dInterpMat(j,k));
 		
-		//}
+		}
 	
-	//}
+	}
 	
+	//max column sums of A and A inverse
+	double dMaxColSumA = dColSumA[0];
 	
-	////max column sums of A and A inverse
-	//double dMaxColSumA = dColSumA[0];
+	double dMaxColSumAInv = dColSumAInv[0];
 	
-	//double dMaxColSumAInv = dColSumAInv[0];
-	
-	//for (int k = 1; k < 3; k++) {
+	for (int k = 1; k < 3; k++) {
 		
-		//if (dColSumA[k] > dMaxColSumA) {
-			//dMaxColSumA = dColSumA[k];
-		//}
-		//if (dColSumAInv[k] > dMaxColSumAInv) {
-			//dMaxColSumAInv = dColSumAInv[k];
-		//}
-	//}		
+		if (dColSumA[k] > dMaxColSumA) {
+			dMaxColSumA = dColSumA[k];
+		}
+		if (dColSumAInv[k] > dMaxColSumAInv) {
+			dMaxColSumAInv = dColSumAInv[k];
+		}
+	}		
 	
-	//dCond = dMaxColSumAInv * dMaxColSumA;
-		
-	//if (info < 0) {
-		//_EXCEPTION1("dgetrf_ reports matrix had an illegal value (%i)", info);
-	//}
-	//if (info > 0) {
-		//Announce("WARNING: Singular matrix detected in fit (likely colinear elements)");
-	//}
+	//Product of max absolute column sum of A and A inverse for estimate of condition number of A
+	
+	double dCond = dMaxColSumAInv * dMaxColSumA;
+	
+	if (dCond > FVConditionNumberThreshold) {
+		Announce("WARNING: Poor conditioning in matrix (%1.15e);", dCond);
+	}
 	
 	//Set right hand side of linear system
 	
@@ -750,7 +755,6 @@ void TriangleLineIntersection(
 	//Solve linear system with matrix multiply
 	
 	MatVectorMult(dInterpMat, dRHS, dCoeffs);
-	
 	
 }
 
@@ -799,6 +803,12 @@ void NewtonQuadrilateral(
 	E[1] = nodeQ0.y - nodeQ.y;
 	E[2] = nodeQ0.z - nodeQ.z;
 	
+	DataArray1D<int> iPIV;
+	iPIV.Allocate(3);
+		
+	DataArray1D<double> dWork;
+	dWork.Allocate(3);
+	
 	for (int i = 0; i < iMaxIterations; i++){
 		
 		double dA = dCoeffs[0];
@@ -811,7 +821,7 @@ void NewtonQuadrilateral(
 		F[2] = dA*dB*A[2] + dA*B[2] + dB*C[2] + dC*D[2] + E[2];
 		
 	    // If we're close enough to 0.0 then exit
-		if (F[0]*F[0]+F[1]*F[1]+F[2]*F[2] < 1.0E-31) {
+		if (sqrt(F[0]*F[0]+F[1]*F[1]+F[2]*F[2]) < 1e-15 ) {
 			
 			//fConverged = true;
 			break;
@@ -837,13 +847,22 @@ void NewtonQuadrilateral(
 		int lda = 3;
 		int info;
 		
-		DataArray1D<int> iPIV;
-		iPIV.Allocate(3);
-		
-		DataArray1D<double> dWork;
-		dWork.Allocate(3);
-		
 		int lWork = 3;
+	
+		//Column sums for A and A inverse
+		DataArray1D<double> dColSumA(3);
+	
+		for (int j = 0; j < 3; j++) {
+		
+			for (int k = 0; k < 3; k++) {
+			
+				dColSumA[j] += fabs(dJacobian(j,k));
+			
+			}
+		
+		}
+	
+		DataArray1D<double> dColSumAInv(3);
 		
 		//LU decomposition
 		dgetrf_(&m, &n, &(dJacobian(0,0)),
@@ -854,7 +873,41 @@ void NewtonQuadrilateral(
 				&lda, &(iPIV[0]), &(dWork[0]), &lWork, &info);
 			
 		if (info != 0) {
-			_EXCEPTIONT("Mass matrix inversion error");
+			_EXCEPTIONT("Matrix inversion error");
+		}
+		
+		//A inverse column sums
+		for (int j = 0; j < 3; j++) {
+		
+			for (int k = 0; k < 3; k++) {
+			
+				dColSumAInv[j] += fabs(dJacobian(j,k));
+			
+			}
+		
+		}
+		
+		//max column sums of A and A inverse
+		double dMaxColSumA = dColSumA[0];
+		
+		double dMaxColSumAInv = dColSumAInv[0];
+		
+		for (int k = 1; k < 3; k++) {
+			
+			if (dColSumA[k] > dMaxColSumA) {
+				dMaxColSumA = dColSumA[k];
+			}
+			if (dColSumAInv[k] > dMaxColSumAInv) {
+				dMaxColSumAInv = dColSumAInv[k];
+			}
+		}		
+		
+		//Product of max absolute column sum of A and A inverse for estimate of condition number of A
+		
+		double dCond = dMaxColSumAInv * dMaxColSumA;
+		
+		if (dCond > FVConditionNumberThreshold) {
+			Announce("WARNING: Poor conditioning in matrix (%1.15e);", dCond);
 		}
 		
 		DataArray1D<double> dDeltaX(3);
@@ -1585,7 +1638,9 @@ void GeneralizedBarycentricCoordinates(
 	NodeVector & nodesFaceI,
 	std::vector<double> & vecWeights
 ) {
-			
+		
+		_ASSERT(vecWeights.size() == nodesFaceI.size());
+		
 		int iEdges = nodesFaceI.size();
 		
 		for (int i = 0; i < iEdges; i++){
@@ -1596,7 +1651,7 @@ void GeneralizedBarycentricCoordinates(
 			
 			double dMagNodeDiff = nodeDiff.Magnitude();	
 			
-			if ( dMagNodeDiff < 1e-10 ){
+			if ( dMagNodeDiff < 1e-8 ){
 
 				for (int j = 0; j < iEdges; j++){
 					
@@ -1742,60 +1797,52 @@ void BilinearWeights(
 	int iEdges = nodesFaceI.size();
 	
 	for (int i = 0; i < iEdges; i++){
-						
-			Node nodeI = nodesFaceI[i];
 			
-			Node nodeDiff = nodeI - nodeQ;
+		Node nodeI = nodesFaceI[i];
+		
+		Node nodeDiff = nodeI - nodeQ;
+		
+		double dMagNodeDiff = nodeDiff.Magnitude();	
+		
+		if ( dMagNodeDiff < 1e-8 ){
 			
-			double dMagNodeDiff = nodeDiff.Magnitude();	
+			vecWeights.resize(iEdges,0.0);
 			
-			if ( dMagNodeDiff < 1e-12 ){
+			vecContributingFaces.resize(iEdges);
+			
+			for (int j = 0; j < iEdges; j++){
 				
-				for (int j = 0; j < iEdges; j++){
+				vecContributingFaces[j] = faceFaceI[j];
+				
+				if (j == i){
 					
-					vecContributingFaces.push_back(faceFaceI[j]);
-					
-					if (j == i){
-						
-						vecWeights.push_back(1);
-						
-					}
-					else {
-						
-						vecWeights.push_back(0);
-						
-					}
+					vecWeights[j] = 1.0;
 					
 				}
 				
-				return;
-				
 			}
 			
-		}	
-	
+			return;
+			
+		}
+		
+	}
 	
 	if( iEdges == 3 ){
 		
-		NodeVector nodesP;
+		vecWeights.resize(iEdges);
 		
-		for (int i = 0; i < 3; i++){
-			
-			Node nodeI = nodesFaceI[i];
-			
-			nodesP.push_back(nodeI);
-							
-		}
+		vecContributingFaces.resize(iEdges);
 		
 		TriangleLineIntersection(nodeQ, nodesFaceI, dCoeffs);
-			
-		vecWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
-		vecWeights.push_back(dCoeffs[1]);
-		vecWeights.push_back(dCoeffs[2]);
+		
+		vecWeights[0] = 1 - dCoeffs[1] - dCoeffs[2];
+		vecWeights[1] = dCoeffs[1];
+		vecWeights[2] = dCoeffs[2];
 		
 		for (int i = 0; i < iEdges; i++){
 			
-			vecContributingFaces.push_back(faceFaceI[i]);
+			vecContributingFaces[i] = faceFaceI[i];
 			
 		}
 		
@@ -1803,34 +1850,27 @@ void BilinearWeights(
 	
 	else if ( iEdges == 4 ){
 								
-		NodeVector nodesP;
-		
-		for (int i = 0; i < 4; i++){
-			
-			Node nodeI = nodesFaceI[i];
-			
-			nodesP.push_back(nodeI);
-							
-		}
-								
-		NewtonQuadrilateral(nodeQ, nodesP, dCoeffs);			
+		NewtonQuadrilateral(nodeQ, nodesFaceI, dCoeffs);			
 			
 		for (int i = 0; i < iEdges; i++){
 			
-			vecContributingFaces.push_back(faceFaceI[i]);
+			vecContributingFaces[i] = faceFaceI[i];
 				
 		}
 		
-		vecWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
-		vecWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
-		vecWeights.push_back(dCoeffs[0]*dCoeffs[1]);
-		vecWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
+		vecWeights[0] = 1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1];
+		vecWeights[1] = dCoeffs[0]*(1.0 - dCoeffs[1]);
+		vecWeights[2] = dCoeffs[0]*dCoeffs[1];
+		vecWeights[3] = dCoeffs[1]*(1.0 - dCoeffs[0]);
 		
 	}
 	
 	else {				
 		//Loop over the subtriangles until we find one that contains the sample point
-					
+		
+		vecWeights.resize(3);
+		vecContributingFaces.resize(3);
+		
 		int nSubTriangles = iEdges - 2;
 						
 		for (int k = 0; k < nSubTriangles; k++) {
@@ -1849,14 +1889,14 @@ void BilinearWeights(
 			if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
 								
 				TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
-									
-				vecWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
-				vecWeights.push_back(dCoeffs[1]);
-				vecWeights.push_back(dCoeffs[2]);
-								
-				vecContributingFaces.push_back(faceFaceI[0]);
-				vecContributingFaces.push_back(faceFaceI[k+1]);
-				vecContributingFaces.push_back(faceFaceI[k+2]);
+				
+				vecWeights[0] = 1 - dCoeffs[1] - dCoeffs[2];
+				vecWeights[1] = dCoeffs[1];
+				vecWeights[2] = dCoeffs[2];
+				
+				vecContributingFaces[0] = faceFaceI[0];
+				vecContributingFaces[1] = faceFaceI[k+1];
+				vecContributingFaces[2] = faceFaceI[k+2];
 													
 				break;
 				
