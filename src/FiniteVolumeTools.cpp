@@ -650,9 +650,8 @@ void TriangleLineIntersection(
 	DataArray1D<double> & dCoeffs
 ) {
 	
-	_ASSERT(dCoeffs.GetRows() == 3);
+	//_ASSERT(dCoeffs.GetRows() == 3);
 	
-
 	//Setup up columns of 3x3 matrix
 	DataArray2D<double> dInterpMat(3,3);
 	
@@ -1849,7 +1848,11 @@ void BilinearWeights(
 	}
 	
 	else if ( iEdges == 4 ){
-								
+		
+		vecWeights.resize(iEdges);
+		
+		vecContributingFaces.resize(iEdges);
+		
 		NewtonQuadrilateral(nodeQ, nodesFaceI, dCoeffs);			
 			
 		for (int i = 0; i < iEdges; i++){
