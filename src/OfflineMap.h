@@ -405,6 +405,11 @@ public:
 		const OfflineMap & mapIn
 	);
 
+	///	<summary>
+	///		Enforce consistency in the map (ensure all rows add to one).
+	///	</summary>
+	void EnforceConsistency();
+
 private:
 	///	<summary>
 	///		Determine if the map is first-order accurate.
