@@ -91,6 +91,8 @@ libTempestRemap_la_SOURCES = \
 	src/triangle.cpp \
 	src/node_multimap_3d.h
 
+libTempestRemap_la_LIBADD = ${NETCDF_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${LIBS}
+
 # Load system-specific defaults
 AM_CPPFLAGS = -I$(srcdir)/src -I$(builddir)/src ${NETCDF_CPPFLAGS}
 AM_LDFLAGS = ${LDFLAGS} ${NETCDF_LDFLAGS}

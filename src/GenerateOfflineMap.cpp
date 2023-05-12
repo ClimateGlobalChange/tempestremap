@@ -218,6 +218,7 @@ try {
 	std::string strMapAlgorithm("");
 	int nMonotoneType = (optsAlg.fMonotone)?(1):(0);
 	bool fNoConservation = optsAlg.fNoConservation;
+	bool fNormalize = false;
 
 	for (auto it : setMethodStrings) {
 
@@ -279,6 +280,10 @@ try {
 			} else {
 				strMapAlgorithm = "mono3";
 			}
+
+		// Normalize rows
+		} else if (it == "normalize") {
+			fNormalize = true;
 
 		// Integrated bilinear with generalized Barycentric coordinates
 		} else if (it == "intbilingb") {
@@ -797,6 +802,12 @@ try {
 
 	} else {
 		_EXCEPTIONT("Not implemented");
+	}
+
+	if (fNormalize) {
+		AnnounceStartBlock("Normalizing weights");
+		mapRemap.EnforceConsistency();
+		AnnounceEndBlock("Done");
 	}
 
 	Announce("Map generation complete");
