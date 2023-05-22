@@ -225,8 +225,7 @@ void MatVectorMult(
 void TriangleLineIntersection(
 	Node & nodeQ,
 	NodeVector & nodesP,
-	DataArray1D<double> & dCoeffs,
-	double & dCond
+	DataArray1D<double> & dCoeffs
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,8 +236,7 @@ void TriangleLineIntersection(
 void NewtonQuadrilateral(
 	Node & nodeQ,
 	NodeVector & nodesP,
-	DataArray1D<double> & dCoeffs,
-	bool & fConverged
+	DataArray1D<double> & dCoeffs
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -299,6 +297,32 @@ void InvertFitArray_LeastSquares(
 	DataArray2D<double> & dFitArray,
 	DataArray1D<double> & dFitWeights,
 	DataArray2D<double> & dFitArrayPlus
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Get the generalized barycentric coordinates for a point.
+///	</summary>
+
+void GeneralizedBarycentricCoordinates(
+	Node & nodeQ,
+	NodeVector & nodesFaceI,
+	std::vector<double> & vecWeights
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Get the bilinear weights for a point in a polygon.
+///	</summary>
+
+void BilinearWeights(
+	Node & nodeQ,
+	NodeVector & nodesFaceI,
+	Face & faceFaceI,
+	std::vector<double> & vecWeights,
+	std::vector<int> & vecContributingFaces
 );
 
 ///////////////////////////////////////////////////////////////////////////////

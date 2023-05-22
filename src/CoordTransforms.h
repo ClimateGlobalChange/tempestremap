@@ -356,6 +356,26 @@ inline void GnomonicProjection(
 		
 }
 
+// assume Tx, Tx, Tz is on unit sphere
+inline void SimpleGnomonicProjection(
+    double x,
+    double y,
+    double z,
+    double Tx,
+    double Ty,
+    double Tz,
+    double & Gx,
+    double & Gy,
+    double & Gz
+)
+{
+    double dotProduct = x*Tx + y*Ty + z*Tz;
+    _ASSERT(dotProduct!=0);
+    Gx = x/dotProduct;
+    Gy = y/dotProduct;
+    Gz = z/dotProduct;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 
