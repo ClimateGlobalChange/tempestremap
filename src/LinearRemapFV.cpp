@@ -1768,6 +1768,8 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 			
 		}
 		
+		smatMap.NormalizeRows();
+		
 	}
 
 }
@@ -2864,6 +2866,8 @@ void LinearRemapIntegratedNearestNeighbor(
 		
 	}
 	
+	smatMap.NormalizeRows();
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3402,6 +3406,8 @@ void LinearRemapIntegratedBilinear(
 			ixOverlap += nOverlapFaces;
 			
 		}
+		
+		smatMap.NormalizeRows();
 		
 	}
 
