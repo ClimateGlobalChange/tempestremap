@@ -1297,13 +1297,12 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-
-
+	
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
 	}
-
+	
 	// Order of triangular quadrature rule
 	const int TriQuadRuleOrder = 4;
 
@@ -1315,272 +1314,462 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	//If there are no holes on the source mesh, use the (global) dual of the source.		
+	
+	if (!DoesMeshHaveHoles(meshInput)) {
+		
+		Mesh meshInputDual = meshInput;
+		
+		//Construct dual mesh
+		Dual(meshInputDual);
+			
+		//Construct edge map
+		
+		meshInputDual.ConstructEdgeMap();
+		
+		//kd-tree of dual mesh centers
+	    kdtree * kdTarget = kd_create(3);
+		for (int i = 0; i < meshInputDual.faces.size(); i++){
 
-	Mesh meshInputDual = meshInput;
+			const Face & face = meshInputDual.faces[i];
 
-	//Construct dual mesh
-	Dual(meshInputDual);
+			Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
 
-	//Reverse node array
-	meshInputDual.ConstructReverseNodeArray();
-
-	//Construct edge map
-	meshInputDual.ConstructEdgeMap();
-
-	//kd-tree of dual mesh centers
-
-    kdtree * kdTarget = kd_create(3);
-
-	// Vector of centers of the source mesh
-	for (int i = 0; i < meshInputDual.faces.size(); i++){
-
-		const Face & face = meshInputDual.faces[i];
-
-		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-
-		nodeCentroid = nodeCentroid.Normalized();
-
-		kd_insert3(
-			kdTarget,
-			nodeCentroid.x,
-			nodeCentroid.y,
-			nodeCentroid.z,
-			(void*)(&(meshInputDual.faces[i])));
-
-	}
-
-
-	// Overlap face index
-	int ixOverlap = 0;
-
-	// Loop through all source faces
-	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
-
-		// Output every 1000 overlap elements
-		if (ixFirst % 1000 == 0) {
-			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+			kd_insert3(
+				kdTarget,
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshInputDual.faces[i])));
+			
 		}
-
-		// This Face
-		const Face & faceFirst = meshInput.faces[ixFirst];
-
-		// Find the set of Faces that overlap faceFirst
-		int ixOverlapBegin = ixOverlap;
-		int ixOverlapEnd = ixOverlapBegin;
-
-		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
-			if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
-				break;
+		
+		// Overlap face index
+		int ixOverlap = 0;
+	
+		// Loop through all source faces
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 			}
-		}
-
-		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
-
-		if( nOverlapFaces == 0 ) continue;
-
-		// Loop through all overlap faces associated with this source face
-		for (int j = 0; j < nOverlapFaces; j++) {
-			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
-
-			// signal to not participate, because it is a ghost target
-			if( iTargetFace < 0 ) continue;  // skip and do not do anything
-
-			const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
-
-			int nSubTriangles = faceOverlap.edges.size() - 2;
-
-			// Jacobian at each quadrature point
-			DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
-			DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
-
-			// Compute quadrature area of each overlap face
-			double dQuadratureArea = 0.0;
-
-			for (int k = 0; k < nSubTriangles; k++) {
-				for (int p = 0; p < dW.GetRows(); p++) {
-
-					dQuadPtWeight(k,p) =
-						CalculateSphericalTriangleJacobianBarycentric(
-							meshOverlap.nodes[faceOverlap[0]],
-							meshOverlap.nodes[faceOverlap[k+1]],
-							meshOverlap.nodes[faceOverlap[k+2]],
-							dG(p,0), dG(p,1),
-							&(dQuadPtNodes(k,p)));
-
-					dQuadPtWeight(k,p) *= dW[p];
-
-					dQuadratureArea += dQuadPtWeight(k,p);
+	
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+	
+			// Find the set of Faces that overlap faceFirst
+			int ixOverlapBegin = ixOverlap;
+			int ixOverlapEnd = ixOverlapBegin;
+	
+			for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+				if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+					break;
 				}
 			}
-
-			// Loop through all sub-triangles of this overlap Face
-			for (int k = 0; k < nSubTriangles; k++) {
-
-				// Loop through all quadrature nodes on this overlap Face
-				for (int p = 0; p < dW.GetRows(); p++) {
-
-					// Get quadrature node and pointwise Jacobian
-					const Node & nodeQ = dQuadPtNodes(k,p);
-
-					//Get the dual mesh face whose center is nearest to the sample point
-
-					kdres * kdresTarget =
-						kd_nearest3(
-							kdTarget,
-							nodeQ.x,
-							nodeQ.y,
-							nodeQ.z);
-
-					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
-
-					int iNearestFace = pFace - &(meshInputDual.faces[0]);
-
-					// Find triangle that contains nodeQ.
-					// This is the face whose local index is iFaceFinal
-
-					int iFaceFinal = 0;
-
-					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-
-					//Pre-compute all triangle areas and subareas
-
-					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-
-					//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
-					std::vector<double> vecTriangleSubAreas(iEdges);
-
-					//Subtriangles without sample point as a vertex (m-1,m,m+1)
-					std::vector<double> vecTriangleAreas(iEdges);
-
-					for (int m = 0; m < iEdges; m++){
-
-						Face faceTriangleM(3); //Triangle with vertices m-1,m,m+1
-
-						Face faceSubTriangleM(3); //Triangle with vertices q,m,m+1
-
-						faceTriangleM.SetNode(0,0);
-						faceTriangleM.SetNode(1,1);
-						faceTriangleM.SetNode(2,2);
-
-						faceSubTriangleM.SetNode(0,0);
-						faceSubTriangleM.SetNode(1,1);
-						faceSubTriangleM.SetNode(2,2);
-
-						NodeVector nodesTriangleM;
-
-						NodeVector nodesSubTriangleM;
-
-						Node nodeM(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].x,
-								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].y,
-								   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][m]].z);
-
-						//c++ doesn't like the modulo operator when the argument is negative
-
-						int iMMinusOne = m - 1;
-
-						if (m == 0){
-
-							iMMinusOne = iEdges - 1;
-
-						}
-
-
-						Node nodeMMinusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].x,
-										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].y,
-										   meshInputDual.nodes[meshInputDual.faces[iFaceFinal][iMMinusOne]].z);
-
-						Node nodeMPlusOne(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].x,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].y,
-										  meshInputDual.nodes[meshInputDual.faces[iFaceFinal][(m+1)%iEdges]].z);
-
-						nodesTriangleM.push_back(nodeMMinusOne);
-						nodesTriangleM.push_back(nodeM);
-						nodesTriangleM.push_back(nodeMPlusOne);
-
-						nodesSubTriangleM.push_back(nodeQ);
-						nodesSubTriangleM.push_back(nodeM);
-						nodesSubTriangleM.push_back(nodeMPlusOne);
-
-						double dSubAreaM = CalculateFaceArea(faceSubTriangleM, nodesSubTriangleM);
-
-						vecTriangleSubAreas[m] = dSubAreaM;
-
-						double dTriangleAreaM = CalculateFaceArea(faceTriangleM, nodesTriangleM);
-
-						vecTriangleAreas[m] = dTriangleAreaM;
-
-
+			
+			int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+	
+			if( nOverlapFaces == 0 ) continue;
+	
+			// Loop through all overlap faces associated with this source face
+			for (int j = 0; j < nOverlapFaces; j++) {
+				
+				int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+	
+				// signal to not participate, because it is a ghost target
+				if( iTargetFace < 0 ) continue;  // skip and do not do anything
+	
+				const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+	
+				int nSubTriangles = faceOverlap.edges.size() - 2;
+	
+				// Jacobian at each quadrature point
+				DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+				DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+	
+				// Compute quadrature area of each overlap face
+				double dQuadratureArea = 0.0;
+	
+				for (int k = 0; k < nSubTriangles; k++) {
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						dQuadPtWeight(k,p) =
+							CalculateSphericalTriangleJacobianBarycentric(
+								meshOverlap.nodes[faceOverlap[0]],
+								meshOverlap.nodes[faceOverlap[k+1]],
+								meshOverlap.nodes[faceOverlap[k+2]],
+								dG(p,0), dG(p,1),
+								&(dQuadPtNodes(k,p)));
+	
+						dQuadPtWeight(k,p) *= dW[p];
+	
+						dQuadratureArea += dQuadPtWeight(k,p);
 					}
-
-					std::vector<double> vecWeights(iEdges,1);
-
-					double dWeightTotal = 0;
-
-					//Double loop over all nodes of the face because each weight depends on all
-					//triangle subareas
-
-					for (int m = 0; m < iEdges; m++){
-
-						for (int l = 0; l < iEdges; l++){
-
-							int iLMinusOne = l - 1;
-
-								if (l == 0){
-
-									iLMinusOne = iEdges - 1;
-
-								}
-
-							if (l != m && l != iLMinusOne){
-
-
-								vecWeights[m] *= vecTriangleSubAreas[iLMinusOne]*vecTriangleSubAreas[l];
-
+				}
+	
+				// Loop through all sub-triangles of this overlap Face
+				for (int k = 0; k < nSubTriangles; k++) {
+	
+					// Loop through all quadrature nodes on this overlap Face
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						// Get quadrature node and pointwise Jacobian
+						Node & nodeQ = dQuadPtNodes(k,p);
+	
+						//Get the dual mesh face whose center is nearest to the sample point
+	
+						kdres * kdresTarget =
+							kd_nearest3(
+								kdTarget,
+								nodeQ.x,
+								nodeQ.y,
+								nodeQ.z);
+								
+						
+						Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+		
+						int iNearestFace = pFace - &(meshInputDual.faces[0]);
+						
+						// Find face that contains nodeQ
+						// This is the face whose local index is iFaceFinal
+						
+						int iFaceFinal = 0;
+						
+						GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
+						
+						int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
+						
+						//NodeVector nodesCurrentFace(iEdges);
+						NodeVector nodesCurrentFace;
+						
+						for (int i = 0; i < iEdges; i++){
+							
+							nodesCurrentFace.push_back(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]]);
+							
+						}
+									
+						std::vector<double> vecContributingFaceWeights;
+					
+						std::vector<int> vecContributingFaceI;		
+							
+						DataArray1D<double> dCoeffs(3);
+						
+						BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
+												
+						// Contribution of each point to the map
+						for (int i = 0; i < vecContributingFaceI.size(); i++){
+					
+							if( vecContributingFaceWeights[i] < -1e-12 || vecContributingFaceWeights[i] > 1+1e-12 ){
+								std::cout << "\nFound weight value = " << vecContributingFaceWeights[i] << std::endl;
+								_EXCEPTIONT("Non-monotone weight");
 							}
-
+							
+							smatMap(iTargetFace, vecContributingFaceI[i]) +=
+								vecContributingFaceWeights[i]
+								* dQuadPtWeight(k,p)
+								* meshOverlap.vecFaceArea[ixOverlap + j]
+								/ dQuadratureArea
+								/ meshOutput.vecFaceArea[iTargetFace];
+					
 						}
-
-						vecWeights[m] *= vecTriangleAreas[m];
-
-						dWeightTotal += vecWeights[m];
-
+						
 					}
-
-					for (int m = 0; m < iEdges; m++){
-
-						vecWeights[m] /= dWeightTotal;
-
-					}
-
-					double dFaceArea = CalculateFaceArea(meshInputDual.faces[iFaceFinal],meshInputDual.nodes);
-
-					double dsum = 0;
-
-					for (int s = 0; s < iEdges; s++){
-
-						dsum += vecTriangleSubAreas[s];
-
-					}
-
-					// Contribution of this quadrature point to the map
-					for (int i = 0; i < iEdges; i++){
-
-						int iContributingFaceI = meshInputDual.faces[iFaceFinal][i];
-
-						smatMap(iTargetFace, iContributingFaceI) +=
-							vecWeights[i]
-							* dQuadPtWeight(k,p)
-							* meshOverlap.vecFaceArea[ixOverlap + j]
-							/ dQuadratureArea
-							/ meshOutput.vecFaceArea[iTargetFace];
-
-					}
+					
+				}
+				
+			}
+			 
+			// Increment the current overlap index
+			ixOverlap += nOverlapFaces;
+			
+		}
+	
+	}
+	
+	//If the source mesh has holes, use local dual faces
+	
+	else {
+		
+		//Vector of source face centers
+				
+		NodeVector vecSourceCenterArray;	
+		
+		for (int i = 0; i < meshInput.faces.size(); i++){
+	
+			const Face & face = meshInput.faces[i];
+	
+			Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+			
+			nodeCentroid = nodeCentroid.Normalized();
+			
+			vecSourceCenterArray.push_back(nodeCentroid);
+	
+				
+		}
+		
+		// Overlap face index
+		int ixOverlap = 0;
+	
+		// Loop through all source faces
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+			}
+			
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+			
+			int iEdges = faceFirst.edges.size();
+			
+			//Nodes of the current face
+			
+			NodeVector nodesFaceFirst;
+			
+			for (int i = 0; i < faceFirst.edges.size(); i++){
+				
+				nodesFaceFirst.push_back(meshInput.nodes[faceFirst[i]]);
+				
+			}	
+	
+			// Find the set of Faces that overlap faceFirst
+			int ixOverlapBegin = ixOverlap;
+			
+			int ixOverlapEnd = ixOverlapBegin;
+	
+			for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+				if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+					break;
 				}
 			}
+			
+			int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+	
+			if( nOverlapFaces == 0 ) continue;
+			
+			std::vector<std::vector<int>> vecContributingFaceI;
+			
+			std::vector<std::vector<double>> vecContributingWeights;		
+	
+			// Loop through all overlap faces associated with this source face
+			for (int j = 0; j < nOverlapFaces; j++) {
+				
+				int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+	
+				// signal to not participate, because it is a ghost target
+				if( iTargetFace < 0 ) continue;  // skip and do not do anything
+	
+				const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+	
+				int nSubTriangles = faceOverlap.edges.size() - 2;
+	
+				// Jacobian at each quadrature point
+				DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+				DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+	
+				// Compute quadrature area of each overlap face
+				double dQuadratureArea = 0.0;
+	
+				for (int k = 0; k < nSubTriangles; k++) {
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						dQuadPtWeight(k,p) =
+							CalculateSphericalTriangleJacobianBarycentric(
+								meshOverlap.nodes[faceOverlap[0]],
+								meshOverlap.nodes[faceOverlap[k+1]],
+								meshOverlap.nodes[faceOverlap[k+2]],
+								dG(p,0), dG(p,1),
+								&(dQuadPtNodes(k,p)));
+	
+						dQuadPtWeight(k,p) *= dW[p];
+	
+						dQuadratureArea += dQuadPtWeight(k,p);
+					}
+				}
+	
+				// Loop through all sub-triangles of this overlap Face
+				for (int k = 0; k < nSubTriangles; k++) {
+	
+					// Loop through all quadrature nodes on this overlap Face
+					for (int p = 0; p < dW.GetRows(); p++) {
+						
+						vecContributingFaceI.clear();
+						vecContributingWeights.clear();
+						
+						//Current quadrature node
+						
+						Node & nodeQ = dQuadPtNodes(k,p);
+					
+						std::vector<double> vecWeightsCurrentFace(iEdges);
+						
+						GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecWeightsCurrentFace);
+						
+						//loop through all nodes on source face
+						
+						for (int i = 0; i < iEdges; i++){
+							
+							//Global index of current node
+								
+							int iCurrentNode = meshInput.faces[ixFirst][i];
+							
+							//Number of nodes on local dual test face
+							
+							int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
+							
+							if (iEdgesTestK < 3){
+								
+								std::vector<double> vecLocalWeights;
+								std::vector<int> vecLocalContributingFaces;		
+							
+								for (auto it = meshInput.revnodearray[iCurrentNode].begin(); 
+									  it != meshInput.revnodearray[iCurrentNode].end(); it++){
+											
+									vecLocalContributingFaces.push_back(*it);
+									vecLocalWeights.push_back(vecWeightsCurrentFace[i]/iEdgesTestK);
+								
+								
+								}
+							
+								vecContributingFaceI.push_back(vecLocalContributingFaces);
+								vecContributingWeights.push_back(vecLocalWeights);
+								
+							
+							}
+							
+							//Local dual face has at least 3 edges
+							
+							else{
+														
+								//Construct local dual face
+								
+								Face faceLocalDual(iEdgesTestK);
+								
+								NodeVector nodesLocalDual;
+														
+								ConstructLocalDualFace(meshInput,vecSourceCenterArray,iCurrentNode,faceLocalDual,nodesLocalDual);
+												
+								//Put the dual face nodes in a ccw oriented vector
+						
+								NodeVector nodesLocalDualReordered;
+						
+								for (int l = 0; l < nodesLocalDual.size(); l++){
+									
+									nodesLocalDualReordered.push_back(vecSourceCenterArray[faceLocalDual[l]]);
+									
+								}
+								
+								std::vector<double> vecLocalWeights(iEdgesTestK);
+								std::vector<int> vecLocalContributingFaces(iEdgesTestK);
+								
+								//If the local dual face around the current node contains the target, then quit
+								
+								if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
+									
+									vecContributingWeights.clear();
+									vecContributingFaceI.clear();
+										
+									GeneralizedBarycentricCoordinates(nodeQ, nodesLocalDualReordered, vecLocalWeights);
+									
+									for ( int m = 0; m < iEdgesTestK; m++){
+									
+										vecLocalContributingFaces[m] = faceLocalDual[m];
+													
+									}
+									
+									vecContributingFaceI.push_back(vecLocalContributingFaces);
+									vecContributingWeights.push_back(vecLocalWeights);
+									
+									break;
+										
+								}
+								
+								else {
+									
+									//Use simple average or barycentric coorindates depending on whether the dual face 
+									//contains the current node or not
+									
+									Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
+									
+									if (DoesFaceContainPoint(nodesLocalDualReordered, nodeCurrentNode.x, nodeCurrentNode.y, 
+															nodeCurrentNode.z)){
+										
+										//Compute generalized barycentric coordinate of current source face node wrt the local dual face
+		
+										GeneralizedBarycentricCoordinates(nodeCurrentNode, nodesLocalDualReordered, vecLocalWeights);
+			
+										for ( int m = 0; m < iEdgesTestK; m++ ){
+									
+											vecLocalContributingFaces[m] = faceLocalDual[m];
+											vecLocalWeights[m] *= vecWeightsCurrentFace[i];
+								
+										}
+										
+										vecContributingFaceI.push_back(vecLocalContributingFaces);
+										vecContributingWeights.push_back(vecLocalWeights);
+										
+									}
+									
+									
+									else {
+										
+										//If the local dual face doesn't contain the current node, use averaging
+										
+										for ( int m = 0; m < iEdgesTestK; m++ ){
+											
+											vecLocalContributingFaces[m] = (faceLocalDual[m]);
+											
+											vecLocalWeights[m] = vecWeightsCurrentFace[i]*(1.0/iEdgesTestK);
+											
+										}
+										
+										vecContributingFaceI.push_back(vecLocalContributingFaces);
+										vecContributingWeights.push_back(vecLocalWeights);
+										
+									}
+									
+								}
+							
+							
+							}
+										
+						}
+						
+						//Add contributions to map
+						
+						for (int m = 0; m < vecContributingWeights.size(); m++){
+							
+							for (int l = 0; l < vecContributingWeights[m].size(); l++){
+														
+								int iContributingFace = vecContributingFaceI[m][l];
+								
+								smatMap(iTargetFace,iContributingFace) += vecContributingWeights[m][l]
+											* dQuadPtWeight(k,p)
+											* meshOverlap.vecFaceArea[ixOverlap + j]
+											/ dQuadratureArea
+											/ meshOutput.vecFaceArea[iTargetFace];
+								
+							}
+							
+						}
+						
+					}
+					
+				}
+				
+			}
+			 
+			// Increment the current overlap index
+			ixOverlap += nOverlapFaces;
+			
 		}
-
-		// Increment the current overlap index
-		ixOverlap += nOverlapFaces;
+		
+		smatMap.NormalizeRows();
+		
 	}
 
 }
@@ -1895,47 +2084,23 @@ void LinearRemapGeneralizedBarycentric(
 					//Number of nodes on local dual test face
 					
 					int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
-										
-					Face faceLocalDual(iEdgesTestK);
 					
-					NodeVector nodesLocalDual;
-					
-					
-					//Current source face node shared by one source face
-					if ( iEdgesTestK == 1){
-						
+					if (iEdgesTestK < 3){
+								
 						std::vector<double> vecLocalWeights;
-						std::vector<int> vecLocalContributingFaces;
-						
-						vecLocalWeights.push_back(vecWeightsCurrentFace[k]);
-						vecLocalContributingFaces.push_back(ixFirst);
-						
-						vecContributingWeights.push_back(vecLocalWeights);
-						vecContributingFaceI.push_back(vecLocalContributingFaces);
-												
-						
-					}
+						std::vector<int> vecLocalContributingFaces;		
 					
-					//Current source node shared by two source faces
+						for (auto it = meshInput.revnodearray[iCurrentNode].begin(); 
+							  it != meshInput.revnodearray[iCurrentNode].end(); it++){
+									
+							vecLocalContributingFaces.push_back(*it);
+							vecLocalWeights.push_back(vecWeightsCurrentFace[k]/iEdgesTestK);
+									
+						}
 					
-					else if (iEdgesTestK == 2){
-						
-						std::set<int>::const_iterator iterRevNodeI = meshInput.revnodearray[iCurrentNode].begin();
-						std::set<int>::const_iterator iterRevNodeII = meshInput.revnodearray[iCurrentNode].end();
-						
-						std::vector<double> vecLocalWeights;
-						std::vector<int> vecLocalContributingFaces;
-						
-						vecLocalContributingFaces.push_back(*iterRevNodeI);
-						vecLocalContributingFaces.push_back(*iterRevNodeII);
-						
-						vecLocalWeights.push_back(vecWeightsCurrentFace[k]*0.5);
-						vecLocalWeights.push_back(vecWeightsCurrentFace[k]*0.5);
-						
 						vecContributingFaceI.push_back(vecLocalContributingFaces);
 						vecContributingWeights.push_back(vecLocalWeights);
-						
-						
+					
 					}
 					
 					//Local dual face has at least three edges
@@ -1988,8 +2153,7 @@ void LinearRemapGeneralizedBarycentric(
 						
 						else {
 							
-							//If the local dual face around the current node doesn't contain the target, 
-							//use simple average or barycentric coorindates depending on whether the dual face 
+							//Use simple average or barycentric coorindates depending on whether the dual face 
 							//contains the current node or not
 							
 							Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
@@ -2542,13 +2706,13 @@ void LinearRemapTriangulation(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void LinearRemapIntegratedBilinear(
+void LinearRemapIntegratedNearestNeighbor(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,
 	const Mesh & meshOverlap,
 	OfflineMap & mapRemap
 ) {
-
+	
 	// Verify ReverseNodeArray has been calculated
 	if (meshInput.edgemap.size() == 0) {
 		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
@@ -2565,44 +2729,30 @@ void LinearRemapIntegratedBilinear(
 
 	// Get SparseMatrix representation of the OfflineMap
 	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	//kd-tree of source mesh centers
+	kdtree * kdSource = kd_create(3);
+	
+	for (int i = 0; i < meshInput.faces.size(); i++){
 
-	Mesh meshInputDual = meshInput;
+		const Face & face = meshInput.faces[i];
 
-	//Construct dual mesh
-	Dual(meshInputDual);
-
-	//Construct edge map
-	meshInputDual.ConstructEdgeMap();
-
-	//kd-tree of dual mesh centers
-
-  kdtree * kdTarget = kd_create(3);
-
-	// Vector of centers of the source mesh
-	for (int i = 0; i < meshInputDual.faces.size(); i++){
-
-		const Face & face = meshInputDual.faces[i];
-
-		Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
-
+		Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+	
 		nodeCentroid = nodeCentroid.Normalized();
 
 		kd_insert3(
-			kdTarget,
+			kdSource,
 			nodeCentroid.x,
 			nodeCentroid.y,
 			nodeCentroid.z,
-			(void*)(&(meshInputDual.faces[i])));
-
+			(void*)(&(meshInput.faces[i])));
+		
 	}
-
-	std::vector<double> vecContributingFaceWeights;
-
-	std::vector<int> vecContributingFaceI;
-
+	
 	// Overlap face index
 	int ixOverlap = 0;
-
+	
 	// Loop through all source faces
 	for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
 
@@ -2610,12 +2760,25 @@ void LinearRemapIntegratedBilinear(
 		if (ixFirst % 1000 == 0) {
 			Announce("Element %i/%i", ixFirst, meshInput.faces.size());
 		}
-
+		
 		// This Face
 		const Face & faceFirst = meshInput.faces[ixFirst];
+		
+		int iEdges = faceFirst.edges.size();
+		
+		//Nodes of the current face
+		
+		NodeVector nodesFaceFirst;
+		
+		for (int i = 0; i < faceFirst.edges.size(); i++){
+			
+			nodesFaceFirst.push_back(meshInput.nodes[faceFirst[i]]);
+			
+		}	
 
 		// Find the set of Faces that overlap faceFirst
 		int ixOverlapBegin = ixOverlap;
+		
 		int ixOverlapEnd = ixOverlapBegin;
 
 		for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
@@ -2623,13 +2786,15 @@ void LinearRemapIntegratedBilinear(
 				break;
 			}
 		}
-
+		
 		int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 
 		if( nOverlapFaces == 0 ) continue;
 
 		// Loop through all overlap faces associated with this source face
 		for (int j = 0; j < nOverlapFaces; j++) {
+			
+			//int iTargetFace = meshOverlap.vecTargetFaceIx[ixFirst];
 			int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
 
 			// signal to not participate, because it is a ghost target
@@ -2669,157 +2834,581 @@ void LinearRemapIntegratedBilinear(
 				// Loop through all quadrature nodes on this overlap Face
 				for (int p = 0; p < dW.GetRows(); p++) {
 
-					// Get quadrature node and pointwise Jacobian
+					// Get quadrature node
 					Node & nodeQ = dQuadPtNodes(k,p);
-
-					//Get the dual mesh face whose center is nearest to the sample point
-
-					kdres * kdresTarget =
+					
+					// Find nearest source mesh face
+					kdres * kdresSource =
 						kd_nearest3(
-							kdTarget,
+							kdSource,
 							nodeQ.x,
 							nodeQ.y,
 							nodeQ.z);
 
-					Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+					Face * pFace = (Face *)(kd_res_item_data(kdresSource));
 
-					int iNearestFace = pFace - &(meshInputDual.faces[0]);
-
-					int iFaceFinal = 0;
-
-					//Get the face that contains nodeQ
-
-					GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
-
-					int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
-
-					vecContributingFaceWeights.clear();
-
-					vecContributingFaceI.clear();
-
-					DataArray1D<double> dCoeffs(3);
-
-					double dCond = 0;
-
-					bool fConverged = false;
-
-					if( iEdges == 3 ){
-
-						NodeVector nodesP;
-
-						for (int i = 0; i < 3; i++){
-
-							Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-
-							nodesP.push_back(nodeI);
-
-						}
-
-						TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
-
-						vecContributingFaceWeights.push_back(1 - dCoeffs[1] - dCoeffs[2]);
-						vecContributingFaceWeights.push_back(dCoeffs[1]);
-						vecContributingFaceWeights.push_back(dCoeffs[2]);
-
-						for (int i = 0; i < iEdges; i++){
-
-							vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-
-						}
-
-					}
-
-					else if ( iEdges == 4 ){
-
-						NodeVector nodesP;
-
-						for (int i = 0; i < 4; i++){
-
-							Node nodeI = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]];
-
-							nodesP.push_back(nodeI);
-
-						}
-
-						NewtonQuadrilateral(nodeQ, nodesP, dCoeffs);
-
-						for (int i = 0; i < iEdges; i++){
-
-							vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][i]);
-
-						}
-
-						vecContributingFaceWeights.push_back(1.0 - dCoeffs[0] - dCoeffs[1] + dCoeffs[0]*dCoeffs[1]);
-						vecContributingFaceWeights.push_back(dCoeffs[0]*(1.0 - dCoeffs[1]));
-						vecContributingFaceWeights.push_back(dCoeffs[0]*dCoeffs[1]);
-						vecContributingFaceWeights.push_back(dCoeffs[1]*(1.0 - dCoeffs[0]));
-
-					}
-
-					else {
-						//Loop over the subtrianges until we find one that contains the sample point
-
-						int nSubTriangles = iEdges - 2;
-
-						double dSum;
-
-						for (int k = 0; k < nSubTriangles; k++) {
-
-							Node & node0 = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][0]];
-							Node & nodeKPlusOne = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+1]];
-							Node & nodeKPlusTwo = meshInputDual.nodes[meshInputDual.faces[iFaceFinal][k+2]];
-
-							NodeVector nodesP;
-
-							nodesP.push_back(node0);
-							nodesP.push_back(nodeKPlusOne);
-							nodesP.push_back(nodeKPlusTwo);
-
-							if( DoesFaceContainPoint(nodesP, nodeQ.x, nodeQ.y, nodeQ.z) ){
-
-								TriangleLineIntersection(nodeQ, nodesP, dCoeffs);
-
-								vecContributingFaceWeights.push_back(1.0 - dCoeffs[1] - dCoeffs[2]);
-								vecContributingFaceWeights.push_back(dCoeffs[1]);
-								vecContributingFaceWeights.push_back(dCoeffs[2]);
-
-								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][0]);
-								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+1]);
-								vecContributingFaceI.push_back(meshInputDual.faces[iFaceFinal][k+2]);
-
-								break;
-
-							}
-
-						}
-
-					}
-
-					// Contribution of this quadrature point to the map
-					for (int i = 0; i < vecContributingFaceI.size(); i++){
-
-						if( vecContributingFaceWeights[i] < 0 || vecContributingFaceWeights[i] > 1 ){
-
-							_EXCEPTIONT("Non-monotone weight");
-
-						}
-
-						smatMap(iTargetFace, vecContributingFaceI[i]) +=
-							vecContributingFaceWeights[i]
-							* dQuadPtWeight(k,p)
-							* meshOverlap.vecFaceArea[ixOverlap + j]
-							/ dQuadratureArea
-							/ meshOutput.vecFaceArea[iTargetFace];
-					}
-
+					int iNearestFace = pFace - &(meshInput.faces[0]);		
+			
+					smatMap(iTargetFace, iNearestFace) +=
+						dQuadPtWeight(k,p)
+						* meshOverlap.vecFaceArea[ixOverlap + j]
+						/ dQuadratureArea
+						/ meshOutput.vecFaceArea[iTargetFace];	
+					
 				}
-
+				
 			}
-
+			
 		}
-
+		 
 		// Increment the current overlap index
 		ixOverlap += nOverlapFaces;
+		
+	}
+	
+	smatMap.NormalizeRows();
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void LinearRemapIntegratedBilinear(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+) {
+
+	// Verify ReverseNodeArray has been calculated
+	if (meshInput.edgemap.size() == 0) {
+		_EXCEPTIONT("EdgeMap has not been calculated for meshInput");
+	}
+
+	// Order of triangular quadrature rule
+	const int TriQuadRuleOrder = 4;
+
+	// Triangular quadrature rule
+	TriangularQuadratureRule triquadrule(TriQuadRuleOrder);
+
+	const DataArray2D<double> & dG = triquadrule.GetG();
+	const DataArray1D<double> & dW = triquadrule.GetW();
+
+	// Get SparseMatrix representation of the OfflineMap
+	SparseMatrix<double> & smatMap = mapRemap.GetSparseMatrix();
+	
+	//If there are no holes on the source mesh, use the (global) dual of the source.	
+	
+	if (!DoesMeshHaveHoles(meshInput)) {
+		
+		Mesh meshInputDual = meshInput;
+		
+		//Construct dual mesh
+		Dual(meshInputDual);
+			
+		//Construct edge map
+		
+		meshInputDual.ConstructEdgeMap();
+		
+		//kd-tree of dual mesh centers
+	    kdtree * kdTarget = kd_create(3);
+		for (int i = 0; i < meshInputDual.faces.size(); i++){
+
+			const Face & face = meshInputDual.faces[i];
+
+			Node nodeCentroid = GetFaceCentroid(face, meshInputDual.nodes);
+		
+			nodeCentroid = nodeCentroid.Normalized();
+
+			kd_insert3(
+				kdTarget,
+				nodeCentroid.x,
+				nodeCentroid.y,
+				nodeCentroid.z,
+				(void*)(&(meshInputDual.faces[i])));
+			
+		}
+		
+		// Overlap face index
+		int ixOverlap = 0;
+	
+		// Loop through all source faces
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+			}
+	
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+	
+			// Find the set of Faces that overlap faceFirst
+			int ixOverlapBegin = ixOverlap;
+			int ixOverlapEnd = ixOverlapBegin;
+	
+			for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+				if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+					break;
+				}
+			}
+			
+			int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+	
+			if( nOverlapFaces == 0 ){ 
+				
+				continue;
+				
+			}
+	
+			// Loop through all overlap faces associated with this source face
+			for (int j = 0; j < nOverlapFaces; j++) {
+				
+				int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+	
+				// signal to not participate, because it is a ghost target
+				if( iTargetFace < 0 ) continue;  // skip and do not do anything
+	
+				const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+	
+				int nSubTriangles = faceOverlap.edges.size() - 2;
+	
+				// Jacobian at each quadrature point
+				DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+				DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+	
+				// Compute quadrature area of each overlap face
+				double dQuadratureArea = 0.0;
+	
+				for (int k = 0; k < nSubTriangles; k++) {
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						dQuadPtWeight(k,p) =
+							CalculateSphericalTriangleJacobianBarycentric(
+								meshOverlap.nodes[faceOverlap[0]],
+								meshOverlap.nodes[faceOverlap[k+1]],
+								meshOverlap.nodes[faceOverlap[k+2]],
+								dG(p,0), dG(p,1),
+								&(dQuadPtNodes(k,p)));
+	
+						dQuadPtWeight(k,p) *= dW[p];
+	
+						dQuadratureArea += dQuadPtWeight(k,p);
+					}
+				}
+	
+				// Loop through all sub-triangles of this overlap Face
+				for (int k = 0; k < nSubTriangles; k++) {
+	
+					// Loop through all quadrature nodes on this overlap Face
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						// Get quadrature node and pointwise Jacobian
+						Node & nodeQ = dQuadPtNodes(k,p);
+	
+						//Get the dual mesh face whose center is nearest to the sample point
+	
+						kdres * kdresTarget =
+							kd_nearest3(
+								kdTarget,
+								nodeQ.x,
+								nodeQ.y,
+								nodeQ.z);
+								
+						
+						Face * pFace = (Face *)(kd_res_item_data(kdresTarget));
+		
+						int iNearestFace = pFace - &(meshInputDual.faces[0]);
+						
+						// Find face that contains nodeQ
+						// This is the face whose local index is iFaceFinal
+						
+						int iFaceFinal = 0;
+						
+						GetFaceThatContainsPoint(meshInputDual,iNearestFace,iFaceFinal,nodeQ.x,nodeQ.y,nodeQ.z);
+						
+						int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
+						
+						//NodeVector nodesCurrentFace(iEdges);
+						NodeVector nodesCurrentFace;
+						
+						for (int i = 0; i < iEdges; i++){
+							
+							nodesCurrentFace.push_back(meshInputDual.nodes[meshInputDual.faces[iFaceFinal][i]]);
+							
+						}
+									
+						std::vector<double> vecContributingFaceWeights;
+					
+						std::vector<int> vecContributingFaceI;		
+							
+						DataArray1D<double> dCoeffs(3);
+						
+						BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
+												
+						// Contribution of each point to the map
+						for (int i = 0; i < vecContributingFaceI.size(); i++){
+					
+							if( vecContributingFaceWeights[i] < -1e-12 || vecContributingFaceWeights[i] > 1+1e-12 ){
+								std::cout << "\nFound weight value = " << vecContributingFaceWeights[i] << std::endl;
+								_EXCEPTIONT("Non-monotone weight");
+							}
+							
+							smatMap(iTargetFace, vecContributingFaceI[i]) +=
+								vecContributingFaceWeights[i]
+								* dQuadPtWeight(k,p)
+								* meshOverlap.vecFaceArea[ixOverlap + j]
+								/ dQuadratureArea
+								/ meshOutput.vecFaceArea[iTargetFace];
+					
+						}
+						
+					}
+					
+				}
+				
+			}
+			 
+			// Increment the current overlap index
+			ixOverlap += nOverlapFaces;
+			
+		}
+	
+	}
+	
+	//If the source mesh has holes, use local dual faces
+	
+	else {
+		
+		//Vector of source face centers
+		
+		NodeVector vecSourceCenterArray;	
+		
+		for (int i = 0; i < meshInput.faces.size(); i++){
+	
+			const Face & face = meshInput.faces[i];
+	
+			Node nodeCentroid = GetFaceCentroid(face, meshInput.nodes);
+			
+			nodeCentroid = nodeCentroid.Normalized();
+			
+			vecSourceCenterArray.push_back(nodeCentroid);
+	
+				
+		}
+		
+		// Overlap face index
+		int ixOverlap = 0;
+	
+		// Loop through all source faces
+		for (int ixFirst = 0; ixFirst < meshInput.faces.size(); ixFirst++) {
+	
+			// Output every 1000 overlap elements
+			if (ixFirst % 1000 == 0) {
+				Announce("Element %i/%i", ixFirst, meshInput.faces.size());
+			}
+			
+			// This Face
+			const Face & faceFirst = meshInput.faces[ixFirst];
+			
+			int iEdges = faceFirst.edges.size();
+			
+			//Nodes of the current face
+			
+			NodeVector nodesFaceFirst;
+			
+			for (int i = 0; i < faceFirst.edges.size(); i++){
+				
+				nodesFaceFirst.push_back(meshInput.nodes[faceFirst[i]]);
+				
+			}	
+	
+			// Find the set of Faces that overlap faceFirst
+			int ixOverlapBegin = ixOverlap;
+			
+			int ixOverlapEnd = ixOverlapBegin;
+	
+			for (; ixOverlapEnd < meshOverlap.faces.size(); ixOverlapEnd++) {
+				if (meshOverlap.vecSourceFaceIx[ixOverlapEnd] != ixFirst) {
+					break;
+				}
+			}
+			
+			int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
+	
+			if( nOverlapFaces == 0 ) continue;
+	
+			// Loop through all overlap faces associated with this source face
+			for (int j = 0; j < nOverlapFaces; j++) {
+				
+				int iTargetFace = meshOverlap.vecTargetFaceIx[ixOverlap + j];
+	
+				// signal to not participate, because it is a ghost target
+				if( iTargetFace < 0 ) continue;  // skip and do not do anything
+	
+				const Face & faceOverlap = meshOverlap.faces[ixOverlap + j];
+	
+				int nSubTriangles = faceOverlap.edges.size() - 2;
+				
+				// Jacobian at each quadrature point
+				DataArray2D<double> dQuadPtWeight(nSubTriangles, dW.GetRows());
+				DataArray2D<Node> dQuadPtNodes(nSubTriangles, dW.GetRows());
+	
+				// Compute quadrature area of each overlap face
+				double dQuadratureArea = 0.0;
+	
+				for (int k = 0; k < nSubTriangles; k++) {
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						dQuadPtWeight(k,p) =
+							CalculateSphericalTriangleJacobianBarycentric(
+								meshOverlap.nodes[faceOverlap[0]],
+								meshOverlap.nodes[faceOverlap[k+1]],
+								meshOverlap.nodes[faceOverlap[k+2]],
+								dG(p,0), dG(p,1),
+								&(dQuadPtNodes(k,p)));
+	
+						dQuadPtWeight(k,p) *= dW[p];
+	
+						dQuadratureArea += dQuadPtWeight(k,p);
+					}
+				}
+	
+				// Loop through all sub-triangles of this overlap Face
+				for (int k = 0; k < nSubTriangles; k++) {
+	
+					// Loop through all quadrature nodes on this overlap Face
+					for (int p = 0; p < dW.GetRows(); p++) {
+	
+						//These are the weights that are input into the sparse matrix map
+				
+						std::vector<std::vector<int>> vecContributingFaceI;
+			
+						std::vector<std::vector<double>> vecContributingFaceWeights;
+					
+						//These are the temporary weights associated with each source face node.
+						//They are used if the current target face isn't in any of the local dual faces
+				
+						std::vector<std::vector<int>> vecLocalFacesTemp;
+				
+						std::vector<std::vector<double>> vecLocalWeightsTemp;
+	
+						// Get quadrature node and pointwise Jacobian
+						Node & nodeQ = dQuadPtNodes(k,p);
+		
+						//Bilinear weights of current target center wrt to nodes of current face
+			
+						std::vector<double> vecWeightsCurrentFace(iEdges);
+										
+						//Number of nodes we've visited
+						int iCountK = 0;
+						
+						//loop through all nodes on source face
+						
+						for (int i = 0; i < iEdges; i++){
+							
+							//Global index of current node
+								
+							int iCurrentNode = meshInput.faces[ixFirst][i];
+							
+							//Number of nodes on local dual test face
+							
+							int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
+							
+							if (iEdgesTestK < 3){
+								
+								std::vector<double> vecLocalWeights;
+								std::vector<int> vecLocalContributingFaces;		
+							
+								for (auto it = meshInput.revnodearray[iCurrentNode].begin(); 
+									  it != meshInput.revnodearray[iCurrentNode].end(); it++){
+											
+									vecLocalContributingFaces.push_back(*it);
+									vecLocalWeights.push_back(1.0/iEdgesTestK);
+								
+								
+								}
+							
+								vecLocalWeightsTemp.push_back(vecLocalWeights);
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+							
+								iCountK += 1;
+							
+							}
+							
+							//Local dual face has at least 3 edges, i.e. current source node shared by more than 3 faces
+							
+							else{
+				
+								Face faceLocalDual(iEdgesTestK);
+								
+								NodeVector nodesLocalDual;
+														
+								ConstructLocalDualFace(meshInput,vecSourceCenterArray,iCurrentNode,faceLocalDual,nodesLocalDual);
+												
+								//Put the dual face nodes in an ccw oriented vector
+						
+								NodeVector nodesLocalDualReordered;
+						
+								for (int l = 0; l < nodesLocalDual.size(); l++){
+									
+									nodesLocalDualReordered.push_back(vecSourceCenterArray[faceLocalDual[l]]);
+									
+								}
+								
+								std::vector<double> vecLocalWeights;
+								std::vector<int> vecLocalContributingFaces;
+								
+								//If the local dual face around the current node contains the target, then quit
+								
+								if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
+									
+										vecContributingFaceWeights.clear();
+										vecContributingFaceI.clear();
+										
+										//Bilinear weights
+										
+										BilinearWeights(nodeQ,nodesLocalDualReordered,faceLocalDual,vecLocalWeights,vecLocalContributingFaces);
+										
+										vecContributingFaceI.push_back(vecLocalContributingFaces);
+										vecContributingFaceWeights.push_back(vecLocalWeights);								
+										
+										break;
+												
+								}
+								
+								else {
+									
+									//Add to count
+									iCountK += 1;
+									
+									//Use simple average or bilinear depending on whether the dual face 
+									//contains the current node or not
+									
+									Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
+									
+									if (DoesFaceContainPoint(nodesLocalDualReordered, nodeCurrentNode.x, nodeCurrentNode.y, 
+															nodeCurrentNode.z)){
+										
+										//Compute bilinear weights of current source face node wrt the local dual face
+									
+										BilinearWeights(nodeCurrentNode,nodesLocalDualReordered,faceLocalDual,vecLocalWeights,
+														vecLocalContributingFaces);
+										
+										
+										vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+										vecLocalWeightsTemp.push_back(vecLocalWeights);
+										
+									}
+									
+									else {
+										
+										//Local dual face does not contain current node
+										
+										vecLocalWeights.resize(iEdgesTestK);
+										vecLocalContributingFaces.resize(iEdgesTestK);
+										
+										for ( int m = 0; m < iEdgesTestK; m++ ){
+											
+											vecLocalContributingFaces[m] = faceLocalDual[m];
+											
+											vecLocalWeights[m] = (1.0/iEdgesTestK);
+											
+										}
+										
+										vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+										vecLocalWeightsTemp.push_back(vecLocalWeights);	
+										
+										
+									}
+									
+									
+								}
+											
+							}
+							
+						}
+						
+						//If we've visited very node of the current source face, we need to do another interpolation
+						//from these nodes to the current target face center
+									
+						if( iCountK == iEdges ){
+							
+							//New vectors to store bilinear weights of current source face wrt current quadrature node
+							
+							std::vector<int> vecLocalFaces;
+							std::vector<double> vecLocalWeights;
+							
+							//New face with local ordering
+							Face faceCurrentLocal(iEdges);
+							
+							for ( int r = 0; r < iEdges; r++ ) {
+								
+								faceCurrentLocal.SetNode(r,r);
+								
+							}
+							
+							//compute bilinear weights
+							
+							BilinearWeights(nodeQ, nodesFaceFirst, faceCurrentLocal, vecLocalWeights, vecLocalFaces);
+							
+							for (int r = 0; r < vecLocalFaces.size(); r++) {
+									
+									for (int q = 0; q < vecLocalWeightsTemp[vecLocalFaces[r]].size(); q++ ){
+										
+										vecLocalWeightsTemp[vecLocalFaces[r]][q] *= vecLocalWeights[r];
+										
+									}
+									
+									//Push back to weight and face vectors
+									vecContributingFaceI.push_back(vecLocalFacesTemp[vecLocalFaces[r]]);
+									vecContributingFaceWeights.push_back(vecLocalWeightsTemp[vecLocalFaces[r]]);
+								
+							}
+						
+						}
+						
+						for (int m = 0; m < vecContributingFaceWeights.size(); m++){
+		
+							for (int l = 0; l < vecContributingFaceWeights[m].size(); l++){
+								
+								
+								int iContributingFace = vecContributingFaceI[m][l];
+			
+								if( vecContributingFaceWeights[m][l] < -1e-12 || 
+									vecContributingFaceWeights[m][l] > 1+1e-12 ){
+										
+										std::cout << "\nFound weight value = " << 
+										vecContributingFaceWeights[m][l] << std::endl;
+										
+										_EXCEPTIONT("Non-monotone weight");
+									
+								}
+								
+								smatMap(iTargetFace, iContributingFace) +=
+											
+									vecContributingFaceWeights[m][l]
+									* dQuadPtWeight(k,p)
+									* meshOverlap.vecFaceArea[ixOverlap + j]
+									/ dQuadratureArea
+									/ meshOutput.vecFaceArea[iTargetFace];
+			
+							}
+		
+						}
+						
+					}
+					
+				}
+				
+			}
+			 
+			// Increment the current overlap index
+			ixOverlap += nOverlapFaces;
+			
+		}
+		
+		smatMap.NormalizeRows();
+		
 	}
 
 }
@@ -3133,49 +3722,25 @@ void LinearRemapBilinear(
 					//Number of nodes on local dual test face
 					
 					int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
-										
-					Face faceLocalDual(iEdgesTestK);
 					
-					NodeVector nodesLocalDual;
-					
-					//Current source face node shared by one source face
-					if ( iEdgesTestK == 1){
+					if (iEdgesTestK < 3){
 						
 						std::vector<double> vecLocalWeights;
-						std::vector<int> vecLocalContributingFaces;
+						std::vector<int> vecLocalContributingFaces;		
 						
-						vecLocalWeights.push_back(1);
-						vecLocalContributingFaces.push_back(ixFirst);
+						for (auto it = meshInput.revnodearray[iCurrentNode].begin(); 
+								  it != meshInput.revnodearray[iCurrentNode].end(); it++){
+									  
+							vecLocalContributingFaces.push_back(*it);
+							vecLocalWeights.push_back(1.0/iEdgesTestK);
+							
+						
+						}
 						
 						vecLocalWeightsTemp.push_back(vecLocalWeights);
 						vecLocalFacesTemp.push_back(vecLocalContributingFaces);
 						
 						iCountK += 1;
-
-						
-					}
-					
-					//Current source node shared by two source faces
-					
-					else if (iEdgesTestK == 2){
-						
-						std::set<int>::const_iterator iterRevNodeI = meshInput.revnodearray[iCurrentNode].begin();
-						std::set<int>::const_iterator iterRevNodeII = meshInput.revnodearray[iCurrentNode].end();
-						
-						std::vector<double> vecLocalWeights;
-						std::vector<int> vecLocalContributingFaces;
-						
-						vecLocalContributingFaces.push_back(*iterRevNodeI);
-						vecLocalContributingFaces.push_back(*iterRevNodeII);
-						
-						vecLocalWeights.push_back(0.5);
-						vecLocalWeights.push_back(0.5);
-									
-						vecLocalFacesTemp.push_back(vecLocalContributingFaces);
-						vecLocalWeightsTemp.push_back(vecLocalWeights);
-						
-						iCountK += 1;
-						
 						
 					}
 					
@@ -3225,8 +3790,7 @@ void LinearRemapBilinear(
 							//Add to count
 							iCountK += 1;
 							
-							//If the local dual face around the current node doesn't contain the target, 
-							//use simple average or bilinear depending on whether the dual face 
+							//Use simple average or barycentric coorindates depending on whether the dual face 
 							//contains the current node or not
 							
 							Node nodeCurrentNode = meshInput.nodes[iCurrentNode];

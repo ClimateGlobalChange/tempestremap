@@ -252,5 +252,18 @@ void LinearRemapGLLtoGLL2_Pointwise(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+///	<summary>
+///		Generate the OfflineMap for integrated nearest neighbor weighting.
+///	</summary>
+
+void LinearRemapIntegratedNearestNeighbor(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	const Mesh & meshOverlap,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
 #endif
 

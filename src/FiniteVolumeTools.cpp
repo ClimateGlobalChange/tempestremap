@@ -1673,6 +1673,44 @@ void GeneralizedBarycentricCoordinates(
 			
 		}
 		
+		//Use nearest neighbor weighting if there are too many edges.  This is necessary to avoid numerical instability.  
+		
+		if( iEdges > 30 ){
+		
+			int iNodeMin = 0;
+			
+			Node nodeZero = nodesFaceI[0];
+			
+			Node nodeDiffZeroQ = nodeZero - nodeQ;
+			
+			double dMinDist = nodeDiffZeroQ.Magnitude();
+			
+			for (int i = 0; i < iEdges; i++){
+							
+				Node nodeI = nodesFaceI[i];
+				
+				Node nodeDiff = nodeI - nodeQ;
+				
+				double dMagNodeDiff = nodeDiff.Magnitude();	
+				
+				if ( dMagNodeDiff < dMinDist){
+					
+					dMinDist = dMagNodeDiff;
+					
+					iNodeMin = i;
+					
+				}
+				
+			}
+			
+			std::fill(vecWeights.begin(), vecWeights.end(), 0);
+			
+			vecWeights[iNodeMin] = 1;
+			
+			return;
+			
+		}		
+		
 	
 		//Subtriangles with the sample point as a vertex (q,m,m+1) where q is the sample point
 		std::vector<double> vecTriangleSubAreas(iEdges);
