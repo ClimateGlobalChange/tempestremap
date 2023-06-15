@@ -1443,7 +1443,6 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 						
 						int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
 						
-						//NodeVector nodesCurrentFace(iEdges);
 						NodeVector nodesCurrentFace;
 						
 						for (int i = 0; i < iEdges; i++){
@@ -1452,13 +1451,17 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 							
 						}
 									
-						std::vector<double> vecContributingFaceWeights;
+						std::vector<double> vecContributingFaceWeights(iEdges);
 					
-						std::vector<int> vecContributingFaceI;		
-							
-						DataArray1D<double> dCoeffs(3);
+						std::vector<int> vecContributingFaceI(iEdges);
 						
-						BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
+						for (int i = 0; i < iEdges; i++){
+							
+							vecContributingFaceI[i] = meshInputDual.faces[iFaceFinal][i];
+							
+						}
+						
+						GeneralizedBarycentricCoordinates(nodeQ, nodesCurrentFace, vecContributingFaceWeights);
 												
 						// Contribution of each point to the map
 						for (int i = 0; i < vecContributingFaceI.size(); i++){
@@ -1550,11 +1553,7 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 			
 			int nOverlapFaces = ixOverlapEnd - ixOverlapBegin;
 	
-			if( nOverlapFaces == 0 ) continue;
-			
-			std::vector<std::vector<int>> vecContributingFaceI;
-			
-			std::vector<std::vector<double>> vecContributingWeights;		
+			if( nOverlapFaces == 0 ) continue;	
 	
 			// Loop through all overlap faces associated with this source face
 			for (int j = 0; j < nOverlapFaces; j++) {
@@ -1598,16 +1597,28 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 					// Loop through all quadrature nodes on this overlap Face
 					for (int p = 0; p < dW.GetRows(); p++) {
 						
-						vecContributingFaceI.clear();
-						vecContributingWeights.clear();
-						
-						//Current quadrature node
-						
-						Node & nodeQ = dQuadPtNodes(k,p);
+						//These are the weights that are input into the sparse matrix map
+				
+						std::vector<std::vector<int>> vecContributingFaceI;
+			
+						std::vector<std::vector<double>> vecContributingFaceWeights;
 					
+						//These are the temporary weights associated with each source face node.
+						//They are used if the current target face isn't in any of the local dual faces
+				
+						std::vector<std::vector<int>> vecLocalFacesTemp;
+				
+						std::vector<std::vector<double>> vecLocalWeightsTemp;
+	
+						// Get quadrature node and pointwise Jacobian
+						Node & nodeQ = dQuadPtNodes(k,p);
+		
+						//Bilinear weights of current target center wrt to nodes of current face
+			
 						std::vector<double> vecWeightsCurrentFace(iEdges);
-						
-						GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecWeightsCurrentFace);
+										
+						//Number of nodes we've visited
+						int iCountK = 0;
 						
 						//loop through all nodes on source face
 						
@@ -1630,30 +1641,29 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 									  it != meshInput.revnodearray[iCurrentNode].end(); it++){
 											
 									vecLocalContributingFaces.push_back(*it);
-									vecLocalWeights.push_back(vecWeightsCurrentFace[i]/iEdgesTestK);
+									vecLocalWeights.push_back(1.0/iEdgesTestK);
 								
 								
 								}
 							
-								vecContributingFaceI.push_back(vecLocalContributingFaces);
-								vecContributingWeights.push_back(vecLocalWeights);
-								
+								vecLocalWeightsTemp.push_back(vecLocalWeights);
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+							
+								iCountK += 1;
 							
 							}
 							
-							//Local dual face has at least 3 edges
+							//Local dual face has at least 3 edges, i.e. current source node shared by more than 3 faces
 							
 							else{
-														
-								//Construct local dual face
-								
+				
 								Face faceLocalDual(iEdgesTestK);
 								
 								NodeVector nodesLocalDual;
 														
 								ConstructLocalDualFace(meshInput,vecSourceCenterArray,iCurrentNode,faceLocalDual,nodesLocalDual);
 												
-								//Put the dual face nodes in a ccw oriented vector
+								//Put the dual face nodes in an ccw oriented vector
 						
 								NodeVector nodesLocalDualReordered;
 						
@@ -1670,27 +1680,32 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 								
 								if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
 									
-									vecContributingWeights.clear();
-									vecContributingFaceI.clear();
+										vecContributingFaceWeights.clear();
+										vecContributingFaceI.clear();
 										
-									GeneralizedBarycentricCoordinates(nodeQ, nodesLocalDualReordered, vecLocalWeights);
-									
-									for ( int m = 0; m < iEdgesTestK; m++){
-									
-										vecLocalContributingFaces[m] = faceLocalDual[m];
-													
-									}
-									
-									vecContributingFaceI.push_back(vecLocalContributingFaces);
-									vecContributingWeights.push_back(vecLocalWeights);
-									
-									break;
+										//Barycentric weights
 										
+										GeneralizedBarycentricCoordinates(nodeQ,nodesLocalDualReordered,vecLocalWeights);
+										
+										for ( int m = 0; m < iEdgesTestK; m++){
+							
+											vecLocalContributingFaces[m] = faceLocalDual[m];
+									
+										}	
+										
+										vecContributingFaceI.push_back(vecLocalContributingFaces);
+										vecContributingFaceWeights.push_back(vecLocalWeights);								
+										
+										break;
+												
 								}
 								
 								else {
 									
-									//Use simple average or barycentric coorindates depending on whether the dual face 
+									//Add to count
+									iCountK += 1;
+									
+									//Use simple average or bilinear depending on whether the dual face 
 									//contains the current node or not
 									
 									Node nodeCurrentNode = meshInput.nodes[iCurrentNode];
@@ -1698,56 +1713,103 @@ void LinearRemapIntegratedGeneralizedBarycentric(
 									if (DoesFaceContainPoint(nodesLocalDualReordered, nodeCurrentNode.x, nodeCurrentNode.y, 
 															nodeCurrentNode.z)){
 										
-										//Compute generalized barycentric coordinate of current source face node wrt the local dual face
-		
-										GeneralizedBarycentricCoordinates(nodeCurrentNode, nodesLocalDualReordered, vecLocalWeights);
-			
-										for ( int m = 0; m < iEdgesTestK; m++ ){
-									
-											vecLocalContributingFaces[m] = faceLocalDual[m];
-											vecLocalWeights[m] *= vecWeightsCurrentFace[i];
-								
-										}
+										//Barycentric weights
 										
-										vecContributingFaceI.push_back(vecLocalContributingFaces);
-										vecContributingWeights.push_back(vecLocalWeights);
+										GeneralizedBarycentricCoordinates(nodeCurrentNode,nodesLocalDualReordered,vecLocalWeights);
+										
+										for ( int m = 0; m < iEdgesTestK; m++){
+							
+											vecLocalContributingFaces[m] = faceLocalDual[m];
+									
+										}			
+										
+										vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+										vecLocalWeightsTemp.push_back(vecLocalWeights);
 										
 									}
-									
 									
 									else {
 										
-										//If the local dual face doesn't contain the current node, use averaging
+										//Local dual face does not contain current node
+										
+										vecLocalWeights.resize(iEdgesTestK);
+										vecLocalContributingFaces.resize(iEdgesTestK);
 										
 										for ( int m = 0; m < iEdgesTestK; m++ ){
 											
-											vecLocalContributingFaces[m] = (faceLocalDual[m]);
+											vecLocalContributingFaces[m] = faceLocalDual[m];
 											
-											vecLocalWeights[m] = vecWeightsCurrentFace[i]*(1.0/iEdgesTestK);
+											vecLocalWeights[m] = (1.0/iEdgesTestK);
 											
 										}
 										
-										vecContributingFaceI.push_back(vecLocalContributingFaces);
-										vecContributingWeights.push_back(vecLocalWeights);
+										vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+										vecLocalWeightsTemp.push_back(vecLocalWeights);	
+										
 										
 									}
 									
+									
 								}
+											
+							}
 							
+						}
+						
+						//If we've visited very node of the current source face, we need to do another interpolation
+						//from these nodes to the quadrature node
+									
+						if( iCountK == iEdges ){
 							
+							//New vectors to store barycentric weights of current source face wrt current quadrature node
+							
+							std::vector<int> vecLocalFaces(iEdges);
+							std::vector<double> vecLocalWeights(iEdges);
+							
+							//New face with local ordering
+							Face faceCurrentLocal(iEdges);
+							
+							for ( int r = 0; r < iEdges; r++ ) {
+								
+								faceCurrentLocal.SetNode(r,r);
+								
 							}
 										
-						}
+							//compute generalized barycentric weights
+					
+							GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecLocalWeights);
+					
+							for (int r = 0; r < iEdges; r++){
+						
+								vecLocalFaces[r] = r;
+						
+							}
+							
+							for (int r = 0; r < vecLocalFaces.size(); r++) {
+									
+									for (int q = 0; q < vecLocalWeightsTemp[vecLocalFaces[r]].size(); q++ ){
+										
+										vecLocalWeightsTemp[vecLocalFaces[r]][q] *= vecLocalWeights[r];
+										
+									}
+									
+									//Push back to weight and face vectors
+									vecContributingFaceI.push_back(vecLocalFacesTemp[vecLocalFaces[r]]);
+									vecContributingFaceWeights.push_back(vecLocalWeightsTemp[vecLocalFaces[r]]);
+								
+							}
+						
+						}						
 						
 						//Add contributions to map
 						
-						for (int m = 0; m < vecContributingWeights.size(); m++){
+						for (int m = 0; m < vecContributingFaceWeights.size(); m++){
 							
-							for (int l = 0; l < vecContributingWeights[m].size(); l++){
+							for (int l = 0; l < vecContributingFaceWeights[m].size(); l++){
 														
 								int iContributingFace = vecContributingFaceI[m][l];
 								
-								smatMap(iTargetFace,iContributingFace) += vecContributingWeights[m][l]
+								smatMap(iTargetFace,iContributingFace) += vecContributingFaceWeights[m][l]
 											* dQuadPtWeight(k,p)
 											* meshOverlap.vecFaceArea[ixOverlap + j]
 											/ dQuadratureArea
@@ -2052,26 +2114,34 @@ void LinearRemapGeneralizedBarycentric(
 			}
 			
 			
-			kd_res_free( presults );
-						
-			std::vector<std::vector<int>> vecContributingFaceI;
-			
-			std::vector<std::vector<double>> vecContributingWeights;
-												
+			kd_res_free( presults );						
 				
 			//Loop through all centers of the target faces in the given source face
 			for (int i = 0; i < vecTargetsInFace.size(); i++){
 				
-				vecContributingFaceI.clear();
-				vecContributingWeights.clear();
+				//These are the weights that are input into the sparse matrix map
+				
+				std::vector<std::vector<int>> vecContributingFaceI;
+			
+				std::vector<std::vector<double>> vecContributingFaceWeights;
+				
+				//These are the temporary weights associated with each source face node.
+				//They are used if the current target face isn't in any of the local dual faces
+				
+				std::vector<std::vector<int>> vecLocalFacesTemp;
+				
+				std::vector<std::vector<double>> vecLocalWeightsTemp;
 				
 				//Current target face center
 				
 				Node nodeQ = vecTargetCenterArray[vecTargetsInFace[i]];
+				
+				//Bilinear weights of current target center wrt to nodes of current face
 			
 				std::vector<double> vecWeightsCurrentFace(iEdges);
-				
-				GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecWeightsCurrentFace);
+								
+				//Number of nodes we've visited
+				int iCountK = 0;
 				
 				//loop through all nodes on source face
 				
@@ -2086,29 +2156,30 @@ void LinearRemapGeneralizedBarycentric(
 					int iEdgesTestK = meshInput.revnodearray[iCurrentNode].size();
 					
 					if (iEdgesTestK < 3){
-								
+						
 						std::vector<double> vecLocalWeights;
 						std::vector<int> vecLocalContributingFaces;		
-					
+						
 						for (auto it = meshInput.revnodearray[iCurrentNode].begin(); 
-							  it != meshInput.revnodearray[iCurrentNode].end(); it++){
-									
+								  it != meshInput.revnodearray[iCurrentNode].end(); it++){
+									  
 							vecLocalContributingFaces.push_back(*it);
-							vecLocalWeights.push_back(vecWeightsCurrentFace[k]/iEdgesTestK);
-									
+							vecLocalWeights.push_back(1.0/iEdgesTestK);
+							
+						
 						}
-					
-						vecContributingFaceI.push_back(vecLocalContributingFaces);
-						vecContributingWeights.push_back(vecLocalWeights);
-					
+						
+						vecLocalWeightsTemp.push_back(vecLocalWeights);
+						vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+						
+						iCountK += 1;
+						
 					}
 					
-					//Local dual face has at least three edges
+					//Local dual face has at least three edges, i.e. current source node shared by more than 3 faces
 					
 					else{
-												
-						//Construct local dual face
-						
+		
 						Face faceLocalDual(iEdgesTestK);
 						
 						NodeVector nodesLocalDual;
@@ -2128,30 +2199,34 @@ void LinearRemapGeneralizedBarycentric(
 						std::vector<double> vecLocalWeights(iEdgesTestK);
 						std::vector<int> vecLocalContributingFaces(iEdgesTestK);
 						
-						
 						//If the local dual face around the current node contains the target, then quit
 						
 						if (DoesFaceContainPoint(nodesLocalDualReordered, nodeQ.x, nodeQ.y, nodeQ.z)) {
 							
-								vecContributingWeights.clear();
+								vecContributingFaceWeights.clear();
 								vecContributingFaceI.clear();
-						
+								
+								//barycentric weights
+								
 								GeneralizedBarycentricCoordinates(nodeQ, nodesLocalDualReordered, vecLocalWeights);
-						
+								
 								for ( int m = 0; m < iEdgesTestK; m++){
 							
 									vecLocalContributingFaces[m] = faceLocalDual[m];
 									
-								}			
-							
+								}
+								
 								vecContributingFaceI.push_back(vecLocalContributingFaces);
-								vecContributingWeights.push_back(vecLocalWeights);
+								vecContributingFaceWeights.push_back(vecLocalWeights);								
 								
 								break;
-								
+										
 						}
 						
 						else {
+							
+							//Add to count
+							iCountK += 1;
 							
 							//Use simple average or barycentric coorindates depending on whether the dual face 
 							//contains the current node or not
@@ -2165,52 +2240,98 @@ void LinearRemapGeneralizedBarycentric(
 							
 								GeneralizedBarycentricCoordinates(nodeCurrentNode, nodesLocalDualReordered, vecLocalWeights);
 								
-												
 								for ( int m = 0; m < iEdgesTestK; m++ ){
 							
 									vecLocalContributingFaces[m] = faceLocalDual[m];
-									
-									vecLocalWeights[m] *= vecWeightsCurrentFace[k];
 						
-								}
+								}			
 								
-								vecContributingFaceI.push_back(vecLocalContributingFaces);
-								vecContributingWeights.push_back(vecLocalWeights);
+								
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+								vecLocalWeightsTemp.push_back(vecLocalWeights);
 								
 							}
 							
-							
 							else {
+								
+								vecLocalWeights.resize(iEdgesTestK);
+								vecLocalContributingFaces.resize(iEdgesTestK);
 								
 								for ( int m = 0; m < iEdgesTestK; m++ ){
 									
 									vecLocalContributingFaces[m] = (faceLocalDual[m]);
 									
-									vecLocalWeights[m] = vecWeightsCurrentFace[k]*(1.0/iEdgesTestK);
+									vecLocalWeights[m] = (1.0/iEdgesTestK);
 									
 								}
 								
-								vecContributingFaceI.push_back(vecLocalContributingFaces);
-								vecContributingWeights.push_back(vecLocalWeights);
+								vecLocalFacesTemp.push_back(vecLocalContributingFaces);
+								vecLocalWeightsTemp.push_back(vecLocalWeights);	
+								
+								
+							}					
+							
+						}
+									
+					}
+					
+				}
+				
+				//If we've visited very node of the current source face, we need to do another interpolation
+				//from these nodes to the current target face center
+				
+				if( iCountK == iEdges ){
+					
+					//New vectors to store barycentric weights of current source face wrt current target face center
+					
+					std::vector<int> vecLocalFaces(iEdges);
+					std::vector<double> vecLocalWeights(iEdges);
+					
+					//New face with local ordering
+					Face faceCurrentLocal(iEdges);
+					
+					for ( int r = 0; r < iEdges; r++ ) {
+						
+						faceCurrentLocal.SetNode(r,r);
+						
+					}
+					
+					//compute generalized barycentric weights
+					
+					GeneralizedBarycentricCoordinates(nodeQ, nodesFaceFirst, vecLocalWeights);
+					
+					for (int r = 0; r < iEdges; r++){
+						
+						vecLocalFaces[r] = r;
+						
+					}
+					
+					
+					for (int r = 0; r < vecLocalFaces.size(); r++) {
+							
+							for (int q = 0; q < vecLocalWeightsTemp[vecLocalFaces[r]].size(); q++ ){
+								
+								vecLocalWeightsTemp[vecLocalFaces[r]][q] *= vecLocalWeights[r];
 								
 							}
 							
-						}
-					
-					
+							//Push back to weight and face vectors
+							vecContributingFaceI.push_back(vecLocalFacesTemp[vecLocalFaces[r]]);
+							vecContributingFaceWeights.push_back(vecLocalWeightsTemp[vecLocalFaces[r]]);
+						
 					}
-								
-				}
+				
+				}				
 				
 				//Add contributions to map
 				
-				for (int m = 0; m < vecContributingWeights.size(); m++){
+				for (int m = 0; m < vecContributingFaceWeights.size(); m++){
 					
-					for (int j = 0; j < vecContributingWeights[m].size(); j++){
+					for (int j = 0; j < vecContributingFaceWeights[m].size(); j++){
 												
 						int iContributingFace = vecContributingFaceI[m][j];
 						
-						smatMap(vecTargetsInFace[i],iContributingFace) += vecContributingWeights[m][j];
+						smatMap(vecTargetsInFace[i],iContributingFace) += vecContributingFaceWeights[m][j];
 						
 					}
 					
@@ -3028,7 +3149,6 @@ void LinearRemapIntegratedBilinear(
 						
 						int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
 						
-						//NodeVector nodesCurrentFace(iEdges);
 						NodeVector nodesCurrentFace;
 						
 						for (int i = 0; i < iEdges; i++){
@@ -3039,9 +3159,7 @@ void LinearRemapIntegratedBilinear(
 									
 						std::vector<double> vecContributingFaceWeights;
 					
-						std::vector<int> vecContributingFaceI;		
-							
-						DataArray1D<double> dCoeffs(3);
+						std::vector<int> vecContributingFaceI;
 						
 						BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
 												
@@ -3509,7 +3627,6 @@ void LinearRemapBilinear(
 			
 			int iEdges = meshInputDual.faces[iFaceFinal].edges.size();
 			
-			//NodeVector nodesCurrentFace(iEdges);
 			NodeVector nodesCurrentFace;
 			
 			for (int i = 0; i < iEdges; i++){
@@ -3520,9 +3637,7 @@ void LinearRemapBilinear(
 						
 			std::vector<double> vecContributingFaceWeights;
 		
-			std::vector<int> vecContributingFaceI;		
-				
-			DataArray1D<double> dCoeffs(3);
+			std::vector<int> vecContributingFaceI;
 			
 			BilinearWeights(nodeQ,nodesCurrentFace,meshInputDual.faces[iFaceFinal],vecContributingFaceWeights,vecContributingFaceI);
 			
