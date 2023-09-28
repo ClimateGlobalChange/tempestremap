@@ -131,8 +131,6 @@ public:
         const std::vector<int>& p_tgtDimSizes
     );
 
-protected:
-
 	///	<summary>
 	///		Clip and assured sum function.
 	///	</summary>
@@ -141,6 +139,8 @@ protected:
 		DataArray1D<double> & dataLowerBound,
 		DataArray1D<double> & dataUpperBound,
 		double & dMass);
+
+protected:
 
 	///	<summary>
 	///		Initialize the coordinate arrays for a finite-volume mesh.

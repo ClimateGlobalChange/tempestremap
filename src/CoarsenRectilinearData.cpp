@@ -694,7 +694,7 @@ try {
 	// Remap
 	for (int i = 0; i < nData; i++) {
 		char szBuffer[256];
-		sprintf(szBuffer, "Remapping data instance %i", i);
+		snprintf(szBuffer, 256, "Remapping data instance %i", i);
 		AnnounceStartBlock(szBuffer);
 
 		DataArray1D<long> lDataIx(varData->num_dims());
