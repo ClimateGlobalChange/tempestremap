@@ -2510,12 +2510,12 @@ void OfflineMap::Read(
 
 	for (int i = 0; i < nSrcGridDims; i++) {
 		char szDim[64];
-		sprintf(szDim, "name%i", nSrcGridDims - i - 1);
+		snprintf(szDim, 64, "name%i", nSrcGridDims - i - 1);
 		NcAtt * attDim = varSrcGridDims->get_att(szDim);
 		if (attDim != NULL) {
 			m_vecSourceDimNames[i] = attDim->as_string(0);
 		} else {
-			sprintf(szDim, "dim%i", nSrcGridDims - i - 1);
+			snprintf(szDim, 64, "dim%i", nSrcGridDims - i - 1);
 			m_vecSourceDimNames[i] = szDim;
 		}
 	}
@@ -2528,12 +2528,12 @@ void OfflineMap::Read(
 
 	for (int i = 0; i < nDstGridDims; i++) {
 		char szDim[64];
-		sprintf(szDim, "name%i", nDstGridDims - i - 1);
+		snprintf(szDim, 64, "name%i", nDstGridDims - i - 1);
 		NcAtt * attDim = varDstGridDims->get_att(szDim);
 		if (attDim != NULL) {
 			m_vecTargetDimNames[i] = attDim->as_string(0);
 		} else {
-			sprintf(szDim, "dim%i", nDstGridDims - i - 1);
+			snprintf(szDim, 64, "dim%i", nDstGridDims - i - 1);
 			m_vecTargetDimNames[i] = szDim;
 		}
 	}
@@ -2814,7 +2814,7 @@ void OfflineMap::Write(
 		}
 
 		for (int i = 0; i < m_vecSourceDimSizes.size(); i++) {
-			sprintf(szDim, "name%i", i);
+			snprintf(szDim, 64, "name%i", i);
 			varSrcGridDims->add_att(szDim,
 				m_vecSourceDimNames[nSrcGridDims - i - 1].c_str());
 		}
@@ -2831,7 +2831,7 @@ void OfflineMap::Write(
 		}
 
 		for (int i = 0; i < m_vecTargetDimSizes.size(); i++) {
-			sprintf(szDim, "name%i", i);
+			snprintf(szDim, 64, "name%i", i);
 			varDstGridDims->add_att(szDim,
 				m_vecTargetDimNames[nDstGridDims - i - 1].c_str());
 		}
@@ -3675,10 +3675,10 @@ bool OfflineMap::CheckMap(
 					strHistogram += ",";
 				}
 				if (i == nHistogramRows.GetRows()-1) {
-					sprintf(szBuffer, "[%i, %i, %i]",
+					snprintf(szBuffer, 128, "[%i, %i, %i]",
 						i, nHistogramCols[i], nHistogramRows[i]);
 				} else {
-					sprintf(szBuffer, "[%i, %i, %i]",
+					snprintf(szBuffer, 128, "[%i, %i, %i]",
 						i, nHistogramCols[i], nHistogramRows[i]);
 				}
 				strHistogram += szBuffer;
@@ -3694,49 +3694,49 @@ bool OfflineMap::CheckMap(
 		Announce("..Column 3: # of weights in that bin");
 		strHistogram = "[";
 		if (nHistogramWeights[0] != 0) {
-			sprintf(szBuffer, "[-inf, -10, %i]", nHistogramWeights[0]);
+			snprintf(szBuffer, 128, "[-inf, -10, %i]", nHistogramWeights[0]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[1] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[-10, -1, %i]", nHistogramWeights[1]);
+			snprintf(szBuffer, 128, "[-10, -1, %i]", nHistogramWeights[1]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[2] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[-1, 0, %i]", nHistogramWeights[2]);
+			snprintf(szBuffer, 128, "[-1, 0, %i]", nHistogramWeights[2]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[3] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[0, 1, %i]", nHistogramWeights[3]);
+			snprintf(szBuffer, 128, "[0, 1, %i]", nHistogramWeights[3]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[4] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[1, 2, %i]", nHistogramWeights[4]);
+			snprintf(szBuffer, 128, "[1, 2, %i]", nHistogramWeights[4]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[5] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[2, 10, %i]", nHistogramWeights[5]);
+			snprintf(szBuffer, 128, "[2, 10, %i]", nHistogramWeights[5]);
 			strHistogram += szBuffer;
 		}
 		if (nHistogramWeights[6] != 0) {
 			if (strHistogram.length() != 1) {
 				strHistogram += ",";
 			}
-			sprintf(szBuffer, "[10, inf, %i]", nHistogramWeights[6]);
+			snprintf(szBuffer, 128, "[10, inf, %i]", nHistogramWeights[6]);
 			strHistogram += szBuffer;
 		}
 		strHistogram += "]";

@@ -79,6 +79,7 @@ class Exception {
 		///		Maximum buffer size for exception strings.
 		///	</summary>
 		static const int ExceptionBufferSize = 1024;
+		static const int ExceptionReturnBufferSize = 128;
 
 	public:
 		///	<summary>
@@ -113,7 +114,7 @@ class Exception {
 			va_start(arguments, szText);
 
 			// Write to string
-			vsprintf(szBuffer, szText, arguments);
+			vsnprintf(szBuffer, ExceptionBufferSize, szText, arguments);
 
 			m_strText = szBuffer;
 
@@ -128,17 +129,17 @@ class Exception {
 		std::string ToString() const {
 			std::string strReturn;
 
-			char szBuffer[128];
+			char szBuffer[ExceptionReturnBufferSize];
 
 			// Preamble
-			sprintf(szBuffer, "EXCEPTION (");
+			snprintf(szBuffer, ExceptionReturnBufferSize, "EXCEPTION (");
 			strReturn.append(szBuffer);
 
 			// File name
 			strReturn.append(m_strFile);
 
 			// Line number
-			sprintf(szBuffer, ", Line %u) ", m_uiLine);
+			snprintf(szBuffer, ExceptionReturnBufferSize, ", Line %u) ", m_uiLine);
 			strReturn.append(szBuffer);
 
 			// Text

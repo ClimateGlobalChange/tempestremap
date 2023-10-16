@@ -135,7 +135,7 @@ void AnnounceStartBlock(
 	char szBuffer[AnnouncementBufferSize];
 	va_list arguments;
 	va_start(arguments, szText);
-	vsprintf(szBuffer, szText, arguments);
+	vsnprintf(szBuffer, AnnouncementBufferSize, szText, arguments);
 	va_end(arguments);
 
 	// Output with proper indentation
@@ -195,7 +195,7 @@ void AnnounceEndBlock(
 
 		va_list arguments;
 		va_start(arguments, szText);
-		vsprintf(szBuffer, szText, arguments);
+		vsnprintf(szBuffer, AnnouncementBufferSize, szText, arguments);
 		va_end(arguments);
 
 		if (s_fBlockFlag) {
@@ -266,7 +266,7 @@ void Announce(const char * szText, ...) {
 	va_start(arguments, szText);
 
 	// Write to string
-	vsprintf(szBuffer, szText, arguments);
+	vsnprintf(szBuffer, AnnouncementBufferSize, szText, arguments);
 
 	// Cleans up the argument list
 	va_end(arguments);
@@ -328,7 +328,7 @@ void Announce(
 	va_start(arguments, szText);
 
 	// Write to string
-	vsprintf(szBuffer, szText, arguments);
+	vsnprintf(szBuffer, AnnouncementBufferSize, szText, arguments);
 
 	// Cleans up the argument list
 	va_end(arguments);

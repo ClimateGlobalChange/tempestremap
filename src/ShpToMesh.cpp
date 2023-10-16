@@ -233,7 +233,7 @@ try {
 		}
 
 		char szBuffer[128];
-		sprintf(szBuffer, "Polygon %i", shprechead.iNumber);
+		snprintf(szBuffer, 128, "Polygon %i", shprechead.iNumber);
 		iPolygonIx++;
 		AnnounceStartBlock(szBuffer);
 
