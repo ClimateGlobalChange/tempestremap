@@ -295,7 +295,7 @@ double GenerateMetaData(
 
 	// Verify face areas are available
 	if (!fNoBubble) {
-		if (mesh.vecFaceArea.GetRows() != nElements) {
+		if (mesh.vecFaceArea.size() != nElements) {
 			_EXCEPTIONT("Face area information unavailable or incorrect");
 		}
 	}

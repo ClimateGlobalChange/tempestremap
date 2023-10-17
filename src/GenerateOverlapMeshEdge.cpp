@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    GenerateOverlapMesh.cpp
+///	\file    GenerateOverlapMeshEdge.cpp
 ///	\author  Paul Ullrich
 ///	\version March 7, 2014
 ///
@@ -22,17 +22,36 @@
 #include "OverlapMesh.h"
 
 #include "netcdfcpp.h"
+#include "NetCDFUtilities.h"
 
 #include <cmath>
 
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOverlapMesh_v1(std::string strMeshA, std::string strMeshB, Mesh& meshOverlap, std::string strOverlapMesh, std::string strMethod, bool fNoValidate) {
+int GenerateOverlapMeshEdge(
+	std::string strMeshA,
+	std::string strMeshB,
+	Mesh& meshOverlap,
+	std::string strOverlapMesh,
+	std::string strOutputFormat,
+	std::string strMethod,
+	bool fNoValidate
+) {
 
 	NcError error(NcError::silent_nonfatal);
 
 try {
+	// Check command line parameters (data type arguments)
+	STLStringHelper::ToLower(strOutputFormat);
+
+	NcFile::FileFormat eOutputFormat =
+		GetNcFileFormatFromString(strOutputFormat);
+	if (eOutputFormat == NcFile::BadFormat) {
+		_EXCEPTION1("Invalid \"out_format\" value (%s), "
+			"expected [Classic|Offset64Bits|Netcdf4|Netcdf4Classic]",
+			strOutputFormat.c_str());
+	}
 
 	// Method string
 	OverlapMeshMethod method;
@@ -97,12 +116,12 @@ try {
 	AnnounceEndBlock(NULL);
 
 	AnnounceStartBlock("Construct overlap mesh");
-	GenerateOverlapMesh_v1(meshA, meshB, meshOverlap, method);
+	GenerateOverlapMeshEdge(meshA, meshB, meshOverlap, method);
 	AnnounceEndBlock(NULL);
 
 	// Write the overlap mesh
 	AnnounceStartBlock("Writing overlap mesh");
-	meshOverlap.Write(strOverlapMesh.c_str());
+	meshOverlap.Write(strOverlapMesh.c_str(), eOutputFormat);
 	AnnounceEndBlock(NULL);
 
 } catch(Exception & e) {

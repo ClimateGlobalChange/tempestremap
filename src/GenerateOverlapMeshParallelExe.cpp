@@ -1,11 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-///	\file    GenerateOverlapMeshExe.cpp
+///	\file    GenerateOverlapMeshParallelExe.cpp
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 23, 2021
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2021 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -21,9 +21,18 @@
 
 #include "TempestRemapAPI.h"
 
+#if defined(TEMPEST_MPIOMP)
+#include <mpi.h>
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
+
+#if defined(TEMPEST_MPIOMP)
+	MPI_Init(&argc, &argv);
+	AnnounceOnlyOutputOnRankZero();
+#endif
 
 	// Input mesh A
 	std::string strMeshA;
@@ -56,6 +65,12 @@ int main(int argc, char** argv) {
 	// cause the mesh generator to generate an incomplete overlap mesh)
 	bool fAllowNoOverlap;
 
+	// Run in parallel
+	bool fParallel;
+
+	// Temporary file directory
+	std::string strTempDir;
+
 	// Verbose
 	bool fVerbose;
 
@@ -66,17 +81,22 @@ int main(int argc, char** argv) {
 		CommandLineString(strOverlapMesh, "out", "overlap.g");
 		CommandLineString(strOutputFormat, "out_format", "netcdf4");
 		CommandLineStringD(strMethod, "method", "fuzzy", "(fuzzy|exact|mixed)");
-		CommandLineStringD(strAlgorithm, "alg", "kdx", "(edge|kdx|lint)");
+		CommandLineStringD(strAlgorithm, "alg", "lint", "(lint)");
 		CommandLineBool(fNoValidate, "novalidate");
 		CommandLineBool(fHasConcaveFacesA, "concavea");
 		CommandLineBool(fHasConcaveFacesB, "concaveb");
 		CommandLineBool(fAllowNoOverlap, "allow_no_overlap");
+		CommandLineString(strTempDir, "tmpdir", "/tmp");
 		CommandLineBool(fVerbose, "verbose");
 
 		ParseCommandLine(argc, argv);
 	EndCommandLine(argv)
 
 	AnnounceBanner();
+
+#if !defined(TEMPEST_MPIOMP)
+	_EXCEPTIONT("TempestRemap was not compiled with MPI: Parallel operation not supported");
+#endif
 
 	// Change algorithm to lowercase
 	STLStringHelper::ToLower(strAlgorithm);
@@ -85,40 +105,7 @@ int main(int argc, char** argv) {
 	Mesh meshOverlap;
 
 	// Edge algorithm
-	if (strAlgorithm == "edge") {
-		if (fHasConcaveFacesA) {
-			Announce("WARNING: --alg \"edge\" does not support concave faces.  Argument --concavea ignored.");
-		}
-		if (fHasConcaveFacesB) {
-			Announce("WARNING: --alg \"edge\" does not support concave faces.  Argument --concaveb ignored.");
-		}
-		if (fAllowNoOverlap) {
-			Announce("WARNING: Argument --allow_no_overlap has no effect with --alg \"edge\"");
-		}
-
-		int err =
-			GenerateOverlapMeshEdge(
-				strMeshA, strMeshB,
- 				meshOverlap, strOverlapMesh, strOutputFormat,
-				strMethod, fNoValidate);
-
-		if (err) exit(err);
-
-	// KD-tree search
-	} else if (strAlgorithm == "kdx" ) {
-		int err =
-			GenerateOverlapMeshKdx(
-				strMeshA, strMeshB,
- 				meshOverlap, strOverlapMesh, strOutputFormat,
-				strMethod, fNoValidate,
-				fHasConcaveFacesA, fHasConcaveFacesB,
-				fAllowNoOverlap,
-				fVerbose);
-
-		if (err) exit(err);
-
-	// Line search with interval tree
-	} else if (strAlgorithm == "lint" ) {
+	if (strAlgorithm == "lint" ) {
 		if (fAllowNoOverlap) {
 			Announce("WARNING: Argument --allow_no_overlap has no effect with --alg \"lint\"");
 		}
@@ -129,16 +116,20 @@ int main(int argc, char** argv) {
  				meshOverlap, strOverlapMesh, strOutputFormat,
 				strMethod, fNoValidate,
 				fHasConcaveFacesA, fHasConcaveFacesB,
-				false, "/tmp",
+				true, strTempDir,
 				fVerbose);
 
 		if (err) exit(err);
 
 	} else {
-		_EXCEPTIONT("Invalid value of --alg, expected \"edge\", \"kdx\" or \"lint\"");
+		_EXCEPTIONT("Invalid value of --alg, expected \"lint\"");
 	}
 
 	AnnounceBanner();
+
+#if defined(TEMPEST_MPIOMP)
+	MPI_Finalize();
+#endif
 
 	return 0;
 }

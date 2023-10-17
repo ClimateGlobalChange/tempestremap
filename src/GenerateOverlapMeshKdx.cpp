@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-/// \file    GenerateOverlapMesh.cpp
+/// \file    GenerateOverlapMeshKdx.cpp
 /// \author  Paul Ullrich
 /// \version March 7, 2014
 ///
@@ -29,7 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOverlapWithMeshes (
+int GenerateOverlapWithMeshesKdx (
 	Mesh & meshA,
 	Mesh & meshB,
 	Mesh & meshOverlap,
@@ -81,7 +81,7 @@ int GenerateOverlapWithMeshes (
         meshOverlap.type = Mesh::MeshType_Overlap;
 
         AnnounceStartBlock ( "Construct overlap mesh" );
-        GenerateOverlapMesh_v2 (
+        GenerateOverlapMeshKdx (
 			meshA, meshB,
 			meshOverlap,
 			method,
@@ -145,7 +145,7 @@ int GenerateOverlapWithMeshes (
 ///////////////////////////////////////////////////////////////////////////////
 
 extern "C"
-int GenerateOverlapMesh(
+int GenerateOverlapMeshKdx(
 	std::string strMeshA,
 	std::string strMeshB,
 	Mesh & meshOverlap,
@@ -226,7 +226,7 @@ int GenerateOverlapMesh(
         AnnounceEndBlock ( NULL );
 
         int err =
-			GenerateOverlapWithMeshes (
+			GenerateOverlapWithMeshesKdx (
 				meshA, meshB,
 				meshOverlap,
 				strOverlapMesh,

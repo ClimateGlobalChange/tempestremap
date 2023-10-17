@@ -232,12 +232,16 @@ try {
 		// Build the mesh
 		AnnounceStartBlock("Building mesh");
 
+		long lTotalFaces = 0;
+
 		for (long j = 0; j < lDim0Size; j++) {
 		for (long i = 0; i < lDim1Size; i++) {
 
 			if (dLon(j,i) == dFillValue) {
 				continue;
 			}
+
+			lTotalFaces++;
 
 			int iGivenValues =
 				  ((ixV(j  ,i  ) != InvalidNode)?(1):(0))
@@ -312,6 +316,17 @@ try {
 		}
 
 		AnnounceEndBlock("Done");
+
+		// Store rectilinear coordinates if all points are available
+		if (lTotalFaces == lDim0Size * lDim1Size) {
+			mesh.vecGridDimSize.resize(2);
+			mesh.vecGridDimSize[0] = lDim0Size;
+			mesh.vecGridDimSize[1] = lDim1Size;
+
+			mesh.vecGridDimName.resize(2);
+			mesh.vecGridDimName[0] = "dim0";
+			mesh.vecGridDimName[1] = "dim1";
+		}
 
 		AnnounceEndBlock("Done");
 
