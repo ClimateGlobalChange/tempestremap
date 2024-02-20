@@ -10,6 +10,7 @@ CXX=               CC
 F90=               ftn
 MPICXX=            CC
 MPIF90=            ftn
+CXXFLAGS += -MT -MD -MP -MF
 
 # NetCDF
 NETCDF_ROOT=       $(NETCDF_DIR)
