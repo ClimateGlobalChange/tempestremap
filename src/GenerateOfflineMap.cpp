@@ -270,6 +270,13 @@ try {
 			}
 			strMapAlgorithm = "fvbilin";
 
+		// Accumulation
+		} else if (it == "accum") {
+			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
+				_EXCEPTIONT("--method \"accum\" may only be used for FV->FV remapping");
+			}
+			strMapAlgorithm = "accum";
+
 		// Integrated bilinear (same as mono3 when source grid is CGLL/DGLL)
 		} else if (it == "intbilin") {
 			if (eTargetType != DiscretizationType_FV) {
@@ -300,9 +307,10 @@ try {
 	// Check overlap mesh
 	if (meshOverlap.nodes.size() == 0) {
 		if ((strMapAlgorithm != "delaunay") &&
-		    (strMapAlgorithm != "fvbilin")
+		    (strMapAlgorithm != "fvbilin") &&
+			(strMapAlgorithm != "accum")
 		) {
-			_EXCEPTIONT("Overlap mesh required for all remapping schemes except \"invdist\", \"delaunay\" and \"fvbilin\"");
+			_EXCEPTIONT("Overlap mesh required for all remapping schemes except \"invdist\", \"delaunay\", \"fvbilin\" and \"accum\"");
 		}
 	}
 
