@@ -1015,6 +1015,16 @@ Real CalculateFaceAreaKarneysMethod(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Average the nodes of a face.
+///	</summary>
+Node AverageFaceNodes(
+	const Face & face,
+	const NodeVector & nodes
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Check if the specified Face is concave.
 ///	</summary>
 bool IsFaceConcave(

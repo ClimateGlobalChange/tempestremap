@@ -133,6 +133,17 @@ void LinearRemapIntegratedBilinear(
 ///////////////////////////////////////////////////////////////////////////////
 
 ///	<summary>
+///		Generate an accumulation map.
+///	</summary>
+void LinearRemapFVtoFVAccumulationNN(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	OfflineMap & mapRemap
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
 ///		Generate the OfflineMap for non-integrated remapping from finite volumes to finite
 ///		volumes using the ESMF based bilinear interpolation
 ///	</summary>

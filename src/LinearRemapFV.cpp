@@ -4229,6 +4229,121 @@ void ForceIntArrayConsistencyConservation(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void LinearRemapFVtoFVAccumulationNN(
+	const Mesh & meshInput,
+	const Mesh & meshOutput,
+	OfflineMap & mapRemap
+) {
+
+	std::vector< std::vector<size_t> > vecvecAssociatedFaces;
+	vecvecAssociatedFaces.resize(meshOutput.faces.size());
+
+	// Build KD tree on target grid
+	AnnounceStartBlock("Build kdtree on target grid");
+	kdtree * kdtTarget = kd_create(3);
+	if (kdtTarget == NULL) {
+		_EXCEPTIONT("kd_create(3) failed");
+	}
+
+	for (size_t i = 0; i < meshOutput.faces.size(); i++) {
+		Node nodeCentroid = AverageFaceNodes(meshOutput.faces[i], meshOutput.nodes);
+
+		kd_insert3(kdtTarget, nodeCentroid.x, nodeCentroid.y, nodeCentroid.z, (void*)(i));
+	}
+	AnnounceEndBlock("Done");
+
+	// Find nearest target face to source face
+	AnnounceStartBlock("Find source-target associations");
+	for (size_t j = 0; j < meshInput.faces.size(); j++) {
+
+		if (j % 10000 == 0) {
+			Announce("Element %i/%i", j, meshInput.faces.size());
+		}
+
+		Node nodeCentroid = AverageFaceNodes(meshInput.faces[j], meshInput.nodes);
+
+		kdres * kdresNearest = kd_nearest3(kdtTarget, nodeCentroid.x, nodeCentroid.y, nodeCentroid.z);
+		if (kdresNearest == NULL) {
+			_EXCEPTIONT("kd_nearest3() failed");
+		}
+		int nResSize = kd_res_size(kdresNearest);
+		if (nResSize != 1) {
+			_EXCEPTION1("kd_nearest3() returned incorrect result size (%i)", nResSize);
+		}
+
+		size_t i = (size_t)(kd_res_item_data(kdresNearest));
+
+		kd_res_free(kdresNearest);
+
+		vecvecAssociatedFaces[i].push_back(j);
+	}
+	AnnounceEndBlock("Done");
+
+	// Clean up previous kdtree
+	kd_clear(kdtTarget);
+
+	// Generate map
+	AnnounceStartBlock("Generate map");
+	SparseMatrix<double> & dCoeff = mapRemap.GetSparseMatrix();
+	bool fMapHasZeroValues = false;
+	for (size_t i = 0; i < meshOutput.faces.size(); i++) {
+		double dValue = static_cast<double>(vecvecAssociatedFaces[i].size());
+		if (dValue == 0.0) {
+			fMapHasZeroValues = true;
+			continue;
+		}
+		double dInvValue = 1.0 / dValue;
+		for (size_t k = 0; k < vecvecAssociatedFaces[i].size(); k++) {
+			size_t j = vecvecAssociatedFaces[i][k];
+			dCoeff(i,j) = dInvValue;
+		}
+	}
+	AnnounceEndBlock("Done");
+
+	// Fill in holes in map by stealing from nearest target face
+	if (fMapHasZeroValues) {
+		AnnounceStartBlock("Filling holes in map");
+		kdtree * kdtTargetNonZero = kd_create(3);
+		if (kdtTargetNonZero == NULL) {
+			_EXCEPTIONT("kd_create(3) failed");
+		}
+		for (size_t i = 0; i < meshOutput.faces.size(); i++) {
+			if (vecvecAssociatedFaces[i].size() != 0) {
+				Node nodeCentroid = AverageFaceNodes(meshOutput.faces[i], meshOutput.nodes);
+				kd_insert3(kdtTargetNonZero, nodeCentroid.x, nodeCentroid.y, nodeCentroid.z, (void*)(i));
+			}
+		}
+		for (size_t i = 0; i < meshOutput.faces.size(); i++) {
+			if (vecvecAssociatedFaces[i].size() == 0) {
+				Node nodeCentroid = AverageFaceNodes(meshOutput.faces[i], meshOutput.nodes);
+				
+				kdres * kdresNearest = kd_nearest3(kdtTargetNonZero, nodeCentroid.x, nodeCentroid.y, nodeCentroid.z);
+				if (kdresNearest == NULL) {
+					_EXCEPTIONT("kd_nearest3() failed");
+				}
+				int nResSize = kd_res_size(kdresNearest);
+				if (nResSize != 1) {
+					_EXCEPTION1("kd_nearest3() returned incorrect result size (%i)", nResSize);
+				}
+
+				size_t iOther = (size_t)(kd_res_item_data(kdresNearest));
+
+				double dInvValue = 1.0 / static_cast<double>(vecvecAssociatedFaces[iOther].size());
+				for (size_t k = 0; k < vecvecAssociatedFaces[iOther].size(); k++) {
+					size_t j = vecvecAssociatedFaces[iOther][k];
+					dCoeff(i,j) = dInvValue;
+				}
+			}
+		}
+
+		kd_clear(kdtTargetNonZero);
+
+		AnnounceEndBlock("Done");
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void LinearRemapFVtoGLL_Simple(
 	const Mesh & meshInput,
 	const Mesh & meshOutput,

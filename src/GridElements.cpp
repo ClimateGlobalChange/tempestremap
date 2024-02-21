@@ -2540,6 +2540,29 @@ Real CalculateFaceAreaKarneysMethod(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Node AverageFaceNodes(
+	const Face & face,
+	const NodeVector & nodes
+) {
+	Node nodeAverage;
+	for (size_t k = 0; k < face.edges.size(); k++) {
+		const Node & nodeVertex = nodes[face[k]];
+		nodeAverage.x += nodeVertex.x;
+		nodeAverage.y += nodeVertex.y;
+		nodeAverage.z += nodeVertex.z;
+	}
+
+	double dMag = nodeAverage.Magnitude();
+
+	nodeAverage.x /= dMag;
+	nodeAverage.y /= dMag;
+	nodeAverage.z /= dMag;
+
+	return nodeAverage;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 bool IsFaceConcave(
 	const Face & face,
 	const NodeVector & nodes

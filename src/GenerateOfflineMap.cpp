@@ -271,11 +271,11 @@ try {
 			strMapAlgorithm = "fvbilin";
 
 		// Accumulation
-		} else if (it == "accum") {
+		} else if (it == "accumnn") {
 			if ((eSourceType != DiscretizationType_FV) || (eTargetType != DiscretizationType_FV)) {
-				_EXCEPTIONT("--method \"accum\" may only be used for FV->FV remapping");
+				_EXCEPTIONT("--method \"accumnn\" may only be used for FV->FV remapping");
 			}
-			strMapAlgorithm = "accum";
+			strMapAlgorithm = "accumnn";
 
 		// Integrated bilinear (same as mono3 when source grid is CGLL/DGLL)
 		} else if (it == "intbilin") {
@@ -308,9 +308,9 @@ try {
 	if (meshOverlap.nodes.size() == 0) {
 		if ((strMapAlgorithm != "delaunay") &&
 		    (strMapAlgorithm != "fvbilin") &&
-			(strMapAlgorithm != "accum")
+			(strMapAlgorithm != "accumnn")
 		) {
-			_EXCEPTIONT("Overlap mesh required for all remapping schemes except \"invdist\", \"delaunay\", \"fvbilin\" and \"accum\"");
+			_EXCEPTIONT("Overlap mesh required for all remapping schemes except \"invdist\", \"delaunay\", \"fvbilin\" and \"accumnn\"");
 		}
 	}
 
@@ -522,6 +522,13 @@ try {
 				meshSource,
 				meshTarget,
 				meshOverlap,
+				mapRemap);
+
+		} else if (strMapAlgorithm == "accumnn") {
+			AnnounceStartBlock("Calculating offline map (accumnn)");
+			LinearRemapFVtoFVAccumulationNN(
+				meshSource,
+				meshTarget,
 				mapRemap);
 
 		} else {
