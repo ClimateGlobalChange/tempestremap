@@ -28,8 +28,12 @@ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 AX_CXX_COMPILE_STDCXX([11], [], [mandatory])
 
 ## Checks for some standard libraries.
-#AC_CHECK_LIB(dl, dlopen, LIBS="$LIBS -ldl")
-#AC_CHECK_LIB(m, pow, LIBS="$LIBS -lm")
+AC_CHECK_LIB(dl, dlopen, LIBS="$LIBS -ldl")
+if (test "$cxx_compiler" != "Intel"); then
+  AC_CHECK_LIB(m, pow, LIBS="$LIBS -lm")
+fi
+
+m4_defun([_LT_AC_LANG_F77_CONFIG], [:])
 
 # Checks for BLAS/LAPACK libraries:
 AX_BLAS([], [AC_MSG_ERROR([BLAS library not found])])
