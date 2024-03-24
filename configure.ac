@@ -27,9 +27,13 @@ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS CC=$CC CXX=$CXX FC=$FC"
 # TODO: Should we check for partial C++11 support also ?
 AX_CXX_COMPILE_STDCXX([11], [], [mandatory])
 
-# Checks for some standard libraries.
+## Checks for some standard libraries.
 AC_CHECK_LIB(dl, dlopen, LIBS="$LIBS -ldl")
-AC_CHECK_LIB(m, pow, LIBS="$LIBS -lm")
+if (test "$cxx_compiler" != "Intel"); then
+  AC_CHECK_LIB(m, pow, LIBS="$LIBS -lm")
+fi
+
+m4_defun([_LT_AC_LANG_F77_CONFIG], [:])
 
 # Checks for BLAS/LAPACK libraries:
 AX_BLAS([], [AC_MSG_ERROR([BLAS library not found])])
@@ -41,7 +45,6 @@ ACX_NETCDF([],[AC_MSG_ERROR(cannot find NetCDF library. Please specify the direc
 AC_LANG_POP([C++])
 
 # Checks for header files.
-AC_CHECK_HEADERS([malloc.h stdlib.h string.h unistd.h])
 AC_CHECK_HEADER(unordered_map, [AC_DEFINE([OVERLAPMESH_USE_UNSORTED_MAP], [1], [Use unordered maps in Overlap mesh],[])])
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -55,7 +58,7 @@ AC_TYPE_UINT64_T
 AC_FUNC_ALLOCA
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([memset pow sqrt])
+AC_CHECK_FUNCS([memset])
 
 AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 AC_CONFIG_FILES([Makefile])
