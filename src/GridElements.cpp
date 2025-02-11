@@ -1727,7 +1727,7 @@ void Mesh::Validate() const {
 
 #endif
 */
-			if (dDot > 0.0) {
+			if (dDot > 1.e-15) {
 				printf("\nError detected (orientation):\n");
 				printf("  Face %i, Edge %i, Orientation %1.5e\n",
 					i, j, dDot);
