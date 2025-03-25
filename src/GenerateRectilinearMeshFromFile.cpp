@@ -311,6 +311,14 @@ try {
 		}
 		}
 
+		mesh.vecGridDimSize.resize(2);
+		mesh.vecGridDimSize[0] = lDim0Size;
+		mesh.vecGridDimSize[1] = lDim1Size;
+
+		mesh.vecGridDimName.resize(2);
+		mesh.vecGridDimName[0] = varLon->get_dim(0)->name();
+		mesh.vecGridDimName[1] = varLon->get_dim(1)->name();
+
 		AnnounceEndBlock("Done");
 
 		AnnounceEndBlock("Done");
