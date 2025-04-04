@@ -721,7 +721,9 @@ public:
 	///		Constructor with input mesh parameter.
 	///	</summary>
 	Mesh(const std::string & strFile) {
-		Read(strFile);
+		if (strFile != "") {
+			Read(strFile);
+		}
 	}
 
 public:
