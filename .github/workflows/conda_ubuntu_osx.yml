@@ -74,9 +74,10 @@ jobs:
       run: |
         pwd
         export DYLD_LIBRARY_PATH=/Users/runner/miniconda3/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        export PATH=/Users/runner/miniconda3/envs/test-environment/bin:$PATH
         which python
         ls -ltrh
-        which autoreconf
+        which ncdump h5dump autoreconf
         autoreconf -fi
         ./configure --prefix=$HOME/tr_install --with-netcdf=/Users/runner/miniconda3/envs/test-environment --with-hdf5=/Users/runner/miniconda3/envs/test-environment --with-netcdf-include=/Users/runner/miniconda3/envs/test-environment/include --with-netcdf-lib=/Users/runner/miniconda3/envs/test-environment/lib 
         make -j
@@ -86,8 +87,8 @@ jobs:
       run: |
         pwd
         echo $HOME
-        # ls -ltrh /Users/runner/miniconda3/envs/test-environment/lib/
         export DYLD_LIBRARY_PATH=/Users/runner/miniconda3/envs/test-environment/lib:$DYLD_LIBRARY_PATH
+        export PATH=/Users/runner/miniconda3/envs/test-environment/bin:$PATH
         # setting DYLD alone isn't enough, for each executables runtime path to lookup for libraries are required
         install_name_tool -add_rpath '/Users/runner/miniconda3/envs/test-environment/lib/' $HOME/tr_install/bin/GenerateCSMesh
         install_name_tool -add_rpath '@executable_path' $HOME/tr_install/bin/GenerateCSMesh
