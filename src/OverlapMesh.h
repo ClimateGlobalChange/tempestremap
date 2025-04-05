@@ -2,10 +2,10 @@
 ///
 ///	\file    OverlapMesh.h
 ///	\author  Paul Ullrich
-///	\version March 7, 2014
+///	\version August 19, 2021
 ///
 ///	<remarks>
-///		Copyright 2000-2014 Paul Ullrich
+///		Copyright 2021 Paul Ullrich
 ///
 ///		This file is distributed as part of the Tempest source code package.
 ///		Permission is granted to use, copy, modify and distribute this
@@ -38,12 +38,12 @@ enum OverlapMeshMethod {
 ///		Generate the mesh obtained by overlapping meshes meshSource and
 ///		meshTarget.
 ///	</summary>
-void GenerateOverlapMesh_v1(
+void GenerateOverlapMeshEdge(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
-    const bool verbose = true
+    const bool fVerbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,13 +69,29 @@ void GenerateOverlapFace(
 ///		Generate the mesh obtained by overlapping meshes meshSource and
 ///		meshTarget.
 ///	</summary>
-void GenerateOverlapMesh_v2(
+void GenerateOverlapMeshKdx(
 	const Mesh & meshSource,
 	const Mesh & meshTarget,
 	Mesh & meshOverlap,
     OverlapMeshMethod method,
 	const bool fAllowNoOverlap,
-    const bool verbose = true
+    const bool fVerbose = true
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+///	<summary>
+///		Generate the mesh obtained by overlapping meshes meshSource and
+///		meshTarget.
+///	</summary>
+void GenerateOverlapMeshLint(
+	const Mesh & meshSource,
+	const Mesh & meshTarget,
+	Mesh & meshOverlap,
+    OverlapMeshMethod method,
+	const bool fParallel,
+	std::string strTempDir,
+    const bool fVerbose = true
 );
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -509,15 +509,17 @@ public:
 	///	<summary>
 	///		Set the vector of areas associated with the source mesh.
 	///	</summary>
-	void SetSourceAreas(const DataArray1D<double> & dSourceAreas) {
-		m_dSourceAreas = dSourceAreas;
+	void SetSourceAreas(const std::vector<double> & dSourceAreas) {
+		m_dSourceAreas.Allocate(dSourceAreas.size());
+		memcpy(&(m_dSourceAreas[0]), &(dSourceAreas[0]), dSourceAreas.size() * sizeof(double));
 	}
 
 	///	<summary>
 	///		Set the vector of areas associated with the target mesh.
 	///	</summary>
-	void SetTargetAreas(const DataArray1D<double> & dTargetAreas) {
-		m_dTargetAreas = dTargetAreas;
+	void SetTargetAreas(const std::vector<double> & dTargetAreas) {
+		m_dTargetAreas.Allocate(dTargetAreas.size());
+		memcpy(&(m_dTargetAreas[0]), &(dTargetAreas[0]), dTargetAreas.size() * sizeof(double));
 	}
 
 public:
