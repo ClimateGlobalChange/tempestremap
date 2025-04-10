@@ -12,6 +12,10 @@ ifeq ($(UNAME),Darwin)
   SYSTEM= MACOSX
   SYSTEM_MAKEFILE= macosx.make
 else ifeq ($(UNAME),Linux)
+  ifeq ($(NERSC_HOST),perlmutter)
+    SYSTEM= PERLMUTTER
+    SYSTEM_MAKEFILE= perlmutter.make
+  endif
   ifeq ($(NERSC_HOST),cori)
     SYSTEM= CORI
     SYSTEM_MAKEFILE= cori.make
@@ -27,8 +31,9 @@ else ifeq ($(UNAME),Linux)
   ifeq ($(SYSTEM),)
     SYSTEM= AGRI
     SYSTEM_MAKEFILE= agri.make
-  endif   
+  endif
 endif
+
 
 include $(TEMPESTREMAPDIR)/mk/system/$(SYSTEM_MAKEFILE)
 
