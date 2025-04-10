@@ -31,8 +31,9 @@ else ifeq ($(UNAME),Linux)
   ifeq ($(SYSTEM),)
     SYSTEM= AGRI
     SYSTEM_MAKEFILE= agri.make
-  endif   
+  endif
 endif
+
 
 include $(TEMPESTREMAPDIR)/mk/system/$(SYSTEM_MAKEFILE)
 

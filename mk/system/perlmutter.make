@@ -6,11 +6,12 @@
 
 # NERSC Babbage Testbed
 
+
 CXX=               CC
 F90=               ftn
 MPICXX=            CC
 MPIF90=            ftn
-CXXFLAGS += -MT -MD -MP -MF
+
 
 # NetCDF
 NETCDF_ROOT=       $(NETCDF_DIR)
@@ -18,10 +19,18 @@ NETCDF_CXXFLAGS=   -I$(NETCDF_ROOT)/include
 NETCDF_LIBRARIES=  -lnetcdf
 NETCDF_LDFLAGS=    -L$(NETCDF_ROOT)/lib
 
+
+# HDF5
+HDF5_ROOT=         $(HDF5_DIR)
+CPPFLAGS +=        -I$(HDF5_ROOT)/include
+LDFLAGS  +=        -L$(HDF5_ROOT)/lib
+LDLIBS   +=        -lhdf5_hl -lhdf5
+
 # LAPACK (Intel MKL)
 LAPACK_INTERFACE=  FORTRAN
 LAPACK_CXXFLAGS=
 LAPACK_LIBRARIES=
 LAPACK_LDFLAGS=   
+
 
 # DO NOT DELETE
