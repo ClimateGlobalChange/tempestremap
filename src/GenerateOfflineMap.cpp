@@ -297,6 +297,15 @@ try {
 		}
 	}
 
+	// Check overlap mesh
+	if (meshOverlap.nodes.size() == 0) {
+		if ((strMapAlgorithm != "delaunay") &&
+		    (strMapAlgorithm != "fvbilin")
+		) {
+			_EXCEPTIONT("Overlap mesh required for all remapping schemes except \"invdist\", \"delaunay\" and \"fvbilin\"");
+		}
+	}
+
 	// Initialize dimension information from file
 	if (!mapRemap.AreDimensionsInitialized()) {
 		AnnounceStartBlock("Initializing dimensions of map");
@@ -346,38 +355,42 @@ try {
 	}
 
 	// Check for forward correspondence in overlap mesh
-	if (ixSourceFaceMax == meshSource.faces.size() //&&
-		//(ixTargetFaceMax == meshTarget.faces.size())
-	) {
-		Announce("Overlap mesh forward correspondence found");
+	if (meshOverlap.nodes.size() != 0) {
+		if (ixSourceFaceMax == meshSource.faces.size() //&&
+			//(ixTargetFaceMax == meshTarget.faces.size())
+		) {
+			Announce("Overlap mesh forward correspondence found");
 
-	// Check for reverse correspondence in overlap mesh
-	} else if (
-		ixSourceFaceMax == meshTarget.faces.size() //&&
-		//(ixTargetFaceMax == meshSource.faces.size())
-	) {
-		Announce("Overlap mesh reverse correspondence found (reversing)");
+		// Check for reverse correspondence in overlap mesh
+		} else if (
+			ixSourceFaceMax == meshTarget.faces.size() //&&
+			//(ixTargetFaceMax == meshSource.faces.size())
+		) {
+			Announce("Overlap mesh reverse correspondence found (reversing)");
 
-		// Reorder overlap mesh
-		meshOverlap.ExchangeFirstAndSecondMesh();
+			// Reorder overlap mesh
+			meshOverlap.ExchangeFirstAndSecondMesh();
 
-	// No correspondence found
-	} else {
-		_EXCEPTION2("Invalid overlap mesh:\n"
-			"	No correspondence found with input and output meshes (%i,%i)",
-			ixSourceFaceMax, ixTargetFaceMax);
+		// No correspondence found
+		} else {
+			_EXCEPTION2("Invalid overlap mesh:\n"
+				"	No correspondence found with input and output meshes (%i,%i)",
+				ixSourceFaceMax, ixTargetFaceMax);
+		}
 	}
-
 	AnnounceEndBlock(NULL);
 
 	// Calculate Face areas
-	AnnounceStartBlock("Calculating overlap mesh Face areas");
-	Real dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
-	Announce("Overlap Mesh Area: %1.15e (%1.15e)", dTotalAreaOverlap, dTotalAreaOverlap / (4.0 * M_PI));
-	AnnounceEndBlock(NULL);
+	Real dTotalAreaOverlap = 0.0;
+	if (meshOverlap.nodes.size() != 0) {
+		AnnounceStartBlock("Calculating overlap mesh Face areas");
+		dTotalAreaOverlap = meshOverlap.CalculateFaceAreas(false);
+		Announce("Overlap Mesh Area: %1.15e (%1.15e)", dTotalAreaOverlap, dTotalAreaOverlap / (4.0 * M_PI));
+		AnnounceEndBlock(NULL);
+	}
 
 	// Correct areas to match the areas calculated in the overlap mesh
-	if (!optsAlg.fNoCorrectAreas) {
+	if ((!optsAlg.fNoCorrectAreas) && (meshOverlap.nodes.size() != 0)) {
 		AnnounceStartBlock("Correcting source/target areas to overlap mesh areas");
 		DataArray1D<double> dSourceArea(meshSource.faces.size());
 		DataArray1D<double> dTargetArea(meshTarget.faces.size());
@@ -429,11 +442,13 @@ try {
 	bool fCheckMonotonicity = (!optsAlg.fNoCheck) && (nMonotoneType != 0);
 
 	// Partial cover on input
-	if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
-		if (fCheckConsistency) {
-			Announce("WARNING: Significant mismatch between overlap mesh area "
-				"and input mesh area.\n  Disabling checks for consistency.");
-			fCheckConsistency = false;
+	if (meshOverlap.nodes.size() != 0) {
+		if (fabs(dTotalAreaOverlap - dTotalAreaInput) > 1.0e-10) {
+			if (fCheckConsistency) {
+				Announce("WARNING: Significant mismatch between overlap mesh area "
+					"and input mesh area.\n  Disabling checks for consistency.");
+				fCheckConsistency = false;
+			}
 		}
 	}
 
@@ -903,11 +918,6 @@ try {
 	}
 	if (strTargetMesh == "") {
 		_EXCEPTIONT("No output mesh (--out_mesh) specified");
-	}
-
-	// Overlap mesh
-	if (strOverlapMesh == "") {
-		_EXCEPTIONT("No overlap mesh specified");
 	}
 
 	// Initialize dimension information from file
