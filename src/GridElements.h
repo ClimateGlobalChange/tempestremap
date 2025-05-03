@@ -21,6 +21,7 @@
 
 #include "Defines.h"
 #include "CoordTransforms.h"
+#include "LatLonBox.h"
 
 #include <vector>
 #include <set>
@@ -205,10 +206,32 @@ public:
 	}
 
 	///	<summary>
+	///		Project node onto the unit sphere
+	///	</summary>
+	void NormalizeInPlace() {
+		Real mag = Magnitude();
+		x /= mag;
+		y /= mag;
+		z /= mag;
+	}
+
+	///	<summary>
 	///		Magnitude of this node.
 	///	</summary>
 	Real Magnitude() const {
 		return sqrt(x * x + y * y + z * z);
+	}
+
+	///	<summary>
+	///		Lat/lon coordinates of this node in radians.
+	///		Return value of lat is in the interval [-0.5 * M_PI, 0.5 * M_PI]
+	///		Return value of lon is in the interval [0.0, 2.0 * M_PI)
+	///	</summary>
+	void ToLatLonRad(
+		double & lat,
+		double & lon
+	) const {
+		XYZtoRLL_Rad(x, y, z, lon, lat);
 	}
 
 	///	<summary>
@@ -228,7 +251,7 @@ typedef std::vector<Node> NodeVector;
 ///	<summary>
 ///		A map between Nodes and indices.
 ///	</summary>
-#if defined(OVERLAPMESH_RETAIN_REPEATED_NODES)
+#if defined(OVERLAPMESH_USE_SORTED_MAP)
 typedef std::map<Node, int> NodeMap;
 #endif
 
@@ -577,6 +600,13 @@ public:
 	}
 
 	///	<summary>
+	///		Face size.
+	///	</summary>
+	size_t size() const {
+		return edges.size();
+	}
+
+	///	<summary>
 	///		Set a node.
 	///	</summary>
 	void SetNode(int ixLocal, int ixNode) {
@@ -677,12 +707,17 @@ public:
 	///	<summary>
 	///		Vector of Face areas.
 	///	</summary>
-	DataArray1D<double> vecFaceArea;
+	std::vector<double> vecFaceArea;
 
 	///	<summary>
 	///		Vector storing mask variable for this mesh.
 	///	</summary>
 	std::vector<int> vecMask;
+
+	///	<summary>
+	///		A NodeMap used for appending Meshes.
+	///	</summary>
+	NodeMap nodemap;
 
 	///	<summary>
 	///		EdgeMap for this mesh.
@@ -743,6 +778,11 @@ public:
 	void ConstructReverseNodeArray();
 
 	///	<summary>
+	///		Sum the Face areas.
+	///	</summary>
+	Real SumFaceAreas() const;
+
+	///	<summary>
 	///		Calculate Face areas.
 	///	</summary>
 	Real CalculateFaceAreas(
@@ -755,6 +795,13 @@ public:
 	Real CalculateFaceAreasFromOverlap(
 		const Mesh & meshOverlap
 	);
+
+	///	<summary>
+	///		Generate the lat-lon rectangles for all faces in the mesh.
+	///	</summary>
+	void GenerateLatLonBoxes(
+		std::vector< LatLonBox<double> > & vecLatLonBoxes
+	) const;
 
 	///	<summary>
 	///		Sort Faces by the opposite source mesh.
@@ -796,6 +843,34 @@ public:
 	///		Read the mesh from a NetCDF file.
 	///	</summary>
 	void Read(const std::string & strFile);
+
+	///	<summary>
+	///		Split the mesh into the given number of pieces and write it to
+	///		multiple files.
+	///	</summary>
+	void SplitAndWrite(
+		const std::string & strFilePrefix,
+		size_t sPieces
+	);
+
+	///	<summary>
+	///		Indicate that we are beginning to append other Meshes to this Mesh.
+	///		It is not mandatory to call this prior to calling Append(), but
+	///		it does improve performance.
+	///	</summary>
+	void BeginAppend();
+
+	///	<summary>
+	///		Append meshOther to this Mesh.
+	///	</summary>
+	void Append(
+		const Mesh & meshOther
+	);
+
+	///	<summary>
+	///		Indicate that we are done appending other Meshes to this Mesh.
+	///	</summary>
+	void EndAppend();
 
 	///	<summary>
 	///		Remove zero edges from all Faces.
