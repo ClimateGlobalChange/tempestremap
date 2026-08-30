@@ -405,9 +405,9 @@ void Mesh::Write(
 		strftime(szDate, sizeof(szDate), "%m/%d/%Y", timestruct);
 		strftime(szTime, sizeof(szTime), "%X", timestruct);
 
-		char szTitle[128];
-		snprintf(szTitle, 128, "tempest(%s) %s: %s", strFile.c_str(), szDate, szTime);
-		ncOut.add_att("title", szTitle);
+		std::string strTitle =
+			std::string("tempest(") + strFile + ") " + szDate + ": " + szTime;
+		ncOut.add_att("title", strTitle.c_str());
 
 		// Time_whole (unused)
 		NcVar * varTimeWhole = ncOut.add_var("time_whole", ncDouble, dimTime);
