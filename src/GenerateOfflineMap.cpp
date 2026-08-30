@@ -384,10 +384,10 @@ try {
 
 		_ASSERT(meshOverlap.vecSourceFaceIx.size() == meshOverlap.faces.size());
 		_ASSERT(meshOverlap.vecTargetFaceIx.size() == meshOverlap.faces.size());
-		_ASSERT(meshOverlap.vecFaceArea.GetRows() == meshOverlap.faces.size());
+		_ASSERT(meshOverlap.vecFaceArea.size() == meshOverlap.faces.size());
 
-		_ASSERT(meshSource.vecFaceArea.GetRows() == meshSource.faces.size());
-		_ASSERT(meshTarget.vecFaceArea.GetRows() == meshTarget.faces.size());
+		_ASSERT(meshSource.vecFaceArea.size() == meshSource.faces.size());
+		_ASSERT(meshTarget.vecFaceArea.size() == meshTarget.faces.size());
 
 		for (int i = 0; i < meshOverlap.faces.size(); i++) {
 			dSourceArea[ meshOverlap.vecSourceFaceIx[i] ] += meshOverlap.vecFaceArea[i];

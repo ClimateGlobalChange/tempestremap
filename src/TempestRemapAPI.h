@@ -172,17 +172,57 @@ extern "C" {
 		bool fAllowNoOverlap = false,
 		bool fVerbose = true );
 
-	// Old version of the implementation to compute the overlap mesh
-	// given a source and target mesh file names
-	int GenerateOverlapMesh_v1 (
+	///	<summary>
+	///		Old version of the implementation to compute the overlap mesh
+	///		given a source and target mesh file names.
+	///	</summary>
+	int GenerateOverlapMeshEdge (
 		std::string strMeshA,
 		std::string strMeshB,
 		Mesh& meshOverlap,
 		std::string strOverlapMesh,
+		std::string strOutputFormat,
 		std::string strMethod,
 		const bool fNoValidate = true );
 
-	// Generate the Gauss-Lobatto-Legendre metadata for the given Mesh
+	///	<summary>
+	///		Compute the overlap mesh given a source and target mesh file names
+	///		using the kd-tree algorithm.
+	///	</summary>
+	int GenerateOverlapMeshKdx (
+		std::string strMeshA,
+		std::string strMeshB,
+		Mesh & meshOverlap,
+		std::string strOverlapMesh,
+		std::string strOutputFormat,
+		std::string strMethod,
+		bool fNoValidate,
+		bool fHasConcaveFacesA = false,
+		bool fHasConcaveFacesB = false,
+		bool fAllowNoOverlap = false,
+		bool fVerbose = true );
+
+	///	<summary>
+	///		Compute the overlap mesh given a source and target mesh file names
+	///		using the line sweep algorithm.
+	///	</summary>
+	int GenerateOverlapMeshLint (
+		std::string strMeshA,
+		std::string strMeshB,
+		Mesh & meshOverlap,
+		std::string strOverlapMesh,
+		std::string strOutputFormat,
+		std::string strMethod,
+		bool fNoValidate,
+		bool fHasConcaveFacesA = false,
+		bool fHasConcaveFacesB = false,
+		bool fParallel = false,
+		std::string strTempDir = "/tmp",
+		bool fVerbose = true );
+
+	///	<summary>
+	///		Generate the Gauss-Lobatto-Legendre metadata for the given Mesh.
+	///	</summary>
 	int GenerateGLLMetaData (
 		std::string strMesh,
 		Mesh & meshOut,
@@ -481,7 +521,6 @@ extern "C" {
 	int GenerateConnectivityData(
 		const Mesh & meshIn,
 		std::vector< std::set<int> > & vecConnectivity );
-
 }
 
 #endif // TEMPESTREMAP_API_H

@@ -23,6 +23,7 @@ libTempestRemap_la_include_HEADERS = \
 	src/TriangularQuadrature.h \
 	src/CommandLine.h \
 	src/Defines.h \
+	src/FunctionTimer.h \
 	src/GaussLobattoQuadrature.h \
 	src/kdtree.h \
 	src/order32.h \
@@ -55,6 +56,7 @@ libTempestRemap_la_include_HEADERS = \
 libTempestRemap_la_SOURCES = \
 	src/Announce.cpp \
 	src/PolynomialInterp.cpp \
+	src/FunctionTimer.cpp \
 	src/GridElements.cpp \
 	src/MeshUtilities.cpp \
 	src/MeshUtilitiesFuzzy.cpp \
@@ -68,8 +70,9 @@ libTempestRemap_la_SOURCES = \
 	src/GenerateUTMMesh.cpp \
 	src/GenerateGLLMetaData.cpp \
 	src/GenerateLambertConfConicMesh.cpp \
-	src/GenerateOverlapMesh.cpp \
-	src/GenerateOverlapMesh_v1.cpp \
+	src/GenerateOverlapMeshEdge.cpp \
+	src/GenerateOverlapMeshKdx.cpp \
+	src/GenerateOverlapMeshLint.cpp \
 	src/GaussQuadrature.cpp \
 	src/GaussLobattoQuadrature.cpp \
 	src/LegendrePolynomial.cpp \
@@ -112,12 +115,11 @@ GenerateVolumetricMesh_SOURCES = src/GenerateVolumetricMesh.cpp
 
 # Overlap mesh generators
 GenerateOverlapMesh_SOURCES = src/GenerateOverlapMeshExe.cpp
-GenerateOverlapMesh_v1_SOURCES = src/GenerateOverlapMeshExe_v1.cpp
+GenerateOverlapMeshParallel_SOURCES = src/GenerateOverlapMeshParallelExe.cpp
 
 # Compute and apply the offline mapping weights
 ApplyOfflineMap_SOURCES = src/ApplyOfflineMapExe.cpp
 GenerateOfflineMap_SOURCES = src/GenerateOfflineMapExe.cpp 
-# GenerateOfflineMap_v1_SOURCES = src/GenerateOfflineMap_v1.cpp
 
 GenerateGLLMetaData_SOURCES = src/GenerateGLLMetaDataExe.cpp
 GenerateTransposeMap_SOURCES = src/GenerateTransposeMap.cpp
@@ -137,7 +139,7 @@ bin_PROGRAMS = GenerateTestData \
 				GenerateCSMesh GenerateTransectMesh GenerateStereographicMesh GenerateRLLMesh \
 				GenerateUTMMesh GenerateICOMesh GenerateRectilinearMeshFromFile \
 				GenerateVolumetricMesh GenerateLambertConfConicMesh \
-				GenerateOverlapMesh GenerateOverlapMesh_v1 \
+				GenerateOverlapMesh GenerateOverlapMeshParallel \
 				ApplyOfflineMap GenerateOfflineMap \
 				CalculateDiffNorms GenerateGLLMetaData \
 				GenerateTransposeMap CoarsenRectilinearData \

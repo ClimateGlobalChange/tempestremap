@@ -15,6 +15,7 @@ include $(TEMPESTREMAPDIR)/mk/framework.make
 UTIL_FILES= Announce.cpp \
             FiniteElementTools.cpp \
 			FiniteVolumeTools.cpp \
+			FunctionTimer.cpp \
             GaussLobattoQuadrature.cpp \
             GaussQuadrature.cpp \
             GridElements.cpp \
@@ -39,8 +40,9 @@ UTIL_FILES= Announce.cpp \
             GenerateICOMesh.cpp \
             GenerateLambertConfConicMesh.cpp \
             GenerateOfflineMap.cpp \
-            GenerateOverlapMesh.cpp \
-            GenerateOverlapMesh_v1.cpp \
+            GenerateOverlapMeshEdge.cpp \
+            GenerateOverlapMeshKdx.cpp \
+            GenerateOverlapMeshLint.cpp \
             GenerateRLLMesh.cpp \
 			GenerateRectilinearMeshFromFile.cpp \
             GenerateUTMMesh.cpp \
@@ -63,7 +65,7 @@ GenerateVolumetricMesh_FILES= GenerateVolumetricMesh.cpp
 
 # Overlap mesh generators
 GenerateOverlapMesh_FILES= GenerateOverlapMeshExe.cpp
-GenerateOverlapMesh_v1_FILES= GenerateOverlapMeshExe_v1.cpp
+GenerateOverlapMeshParallel_FILES= GenerateOverlapMeshParallelExe.cpp
 
 # Compute and apply the offline mapping weights
 ApplyOfflineMap_FILES= ApplyOfflineMapExe.cpp
@@ -100,7 +102,7 @@ EXEC_TARGETS= ApplyOfflineMap \
               GenerateLambertConfConicMesh \
               GenerateOfflineMap \
               GenerateOverlapMesh \
-              GenerateOverlapMesh_v1 \
+              GenerateOverlapMeshParallel \
               GenerateRLLMesh \
               GenerateRectilinearMeshFromFile \
               GenerateUTMMesh \
@@ -134,7 +136,7 @@ GenerateICOMesh_EXE: $(GenerateICOMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateLambertConfConicMesh_EXE: $(GenerateLambertConfConicMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateVolumetricMesh_EXE: $(GenerateVolumetricMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateOverlapMesh_EXE: $(GenerateOverlapMesh_FILES:%.cpp=$(BUILDDIR)/%.o)
-GenerateOverlapMesh_v1_EXE: $(GenerateOverlapMesh_v1_FILES:%.cpp=$(BUILDDIR)/%.o)
+GenerateOverlapMeshParallel_EXE: $(GenerateOverlapMeshParallel_FILES:%.cpp=$(BUILDDIR)/%.o)
 ApplyOfflineMap_EXE: $(ApplyOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o)
 GenerateOfflineMap_EXE: $(GenerateOfflineMap_FILES:%.cpp=$(BUILDDIR)/%.o) 
 GenerateGLLMetaData_EXE: $(GenerateGLLMetaData_FILES:%.cpp=$(BUILDDIR)/%.o)
